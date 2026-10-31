@@ -2,11 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import type { EditorMeta } from '../adapters/editorLoad.js';
 import type { EditorTypeKey } from '../types.js';
 
-import { restoreEditorDraft, type Snapshot } from '../editorValidation.js';
+import {
+  restoreEditorDraft,
+  restoreEditorDraftWithTime,
+  type Snapshot,
+} from '../editorValidation.js';
 type DraftScope = {
   actorId: string | null;
   version: string | number | null;
   canEditBody: boolean;
+  /** Meta values from the route that win over a recovered draft (a new quest's `?series`). */
+  pinned?: Record<string, unknown>;
 };
 
 export function draftStorageKey(
@@ -25,6 +31,23 @@ function loadDraft(key: string | null): Snapshot | null {
   } catch {
     return null;
   }
+}
+
+function loadDraftWithTime(
+  key: string | null,
+): { snapshot: Snapshot; savedAt: string } | null {
+  if (!key) return null;
+  try {
+    return restoreEditorDraftWithTime(localStorage.getItem(key));
+  } catch {
+    return null;
+  }
+}
+
+function withPinned(value: Snapshot, pinned: Record<string, unknown> | undefined): Snapshot {
+  if (!pinned || Object.keys(pinned).length === 0) return value;
+  const differs = Object.entries(pinned).some(([k, v]) => value.meta[k] !== v);
+  return differs ? { ...value, meta: { ...value.meta, ...pinned } } : value;
 }
 
 type RevisionDraft = { key: string; revision: number; snapshot: Snapshot };
@@ -92,25 +115,47 @@ export function useEditorDraft(
     : null;
   const server: Snapshot = { meta: initial.meta, body: initial.body ?? '' };
   const signature = JSON.stringify(server);
+  const pinned = scope.pinned;
+  const pinnedSignature = JSON.stringify(pinned ?? null);
   const makeState = () => {
-    const saved = loadDraft(key);
+    const loaded = loadDraftWithTime(key);
+    const saved = loaded?.snapshot;
     const value = saved
-      ? { meta: saved.meta, body: scope.canEditBody ? saved.body : server.body }
+      ? withPinned(
+          { meta: saved.meta, body: scope.canEditBody ? saved.body : server.body },
+          pinned,
+        )
       : server;
     return {
       identity,
       key,
       baseline: signature,
+      /** What the form showed when it opened: the server copy or a recovered draft. */
+      opened: JSON.stringify(value),
       values: value,
       history: [value],
       cursor: 0,
       editableBody: scope.canEditBody,
+      /** When the recovered draft was saved, if the form opened from one that differs from the server. */
+      restoredAt:
+        loaded && JSON.stringify(value) !== signature ? loaded.savedAt : (null as string | null),
+      /** The recovered draft's title, so the notice can say which draft came back. */
+      restoredTitle:
+        saved && typeof saved.meta.title === 'string' ? saved.meta.title.trim() : '',
+      /** Route-pinned values (a new quest's `?series`) replaced the recovered draft's own. */
+      restoredPinned:
+        !!saved &&
+        !!pinned &&
+        Object.entries(pinned).some(([k, v]) => saved.meta[k] !== v),
     };
   };
   const [state, setState] = useState(makeState);
   // Never render a previous account/record's state while waiting for an effect.
   const current = state.identity === identity ? state : makeState();
-  const dirty = JSON.stringify(current.values) !== current.baseline;
+  const valuesSignature = JSON.stringify(current.values);
+  const dirty = valuesSignature !== current.baseline;
+  // A recovered draft differs from the server but loses nothing on leave until it is edited here.
+  const touched = valuesSignature !== current.opened;
   const stale = current.key !== key;
   const values = scope.canEditBody
     ? current.values
@@ -124,25 +169,33 @@ export function useEditorDraft(
         return {
           ...makeState(),
           key: old.key,
+          opened: JSON.stringify(value),
           values: value,
           history: [value],
         };
       }
       if (old.baseline === signature && old.key === key) return old;
-      if (JSON.stringify(old.values) !== old.baseline) return old;
+      if (JSON.stringify(old.values) !== old.baseline) {
+        // Keep the edits, but a value the route pins (a new quest's series) still wins.
+        const value = withPinned(old.values, pinned);
+        if (value === old.values) return old;
+        const history = [...old.history.slice(0, old.cursor + 1), value].slice(-100);
+        return { ...old, values: value, history, cursor: history.length - 1 };
+      }
       return makeState();
     });
-  }, [identity, key, signature, scope.canEditBody]);
+  }, [identity, key, signature, pinnedSignature, scope.canEditBody]);
   const change = useCallback(
     (update: (old: Snapshot) => Snapshot) => {
       setState((old) => {
         const base = old.identity === identity ? old : makeState();
         const value = update(base.values);
+        const history = [...base.history.slice(0, base.cursor + 1), value].slice(-100);
         const next = {
           ...base,
           values: value,
-          history: [...base.history.slice(0, base.cursor + 1), value],
-          cursor: base.cursor + 1,
+          history,
+          cursor: history.length - 1,
         };
         persist(base.key, value);
         return next;
@@ -176,11 +229,23 @@ export function useEditorDraft(
   };
   const clearDraft = useCallback(() => {
     removeDraft(current.key);
-    setState((old) => ({ ...old, baseline: JSON.stringify(old.values) }));
+    setState((old) => ({
+      ...old,
+      baseline: JSON.stringify(old.values),
+      opened: JSON.stringify(old.values),
+      restoredAt: null,
+    }));
   }, [current.key]);
   const resetDraft = () => {
     removeDraft(current.key);
-    setState({ ...makeState(), values: server, history: [server], cursor: 0 });
+    setState({
+      ...makeState(),
+      opened: signature,
+      values: server,
+      history: [server],
+      cursor: 0,
+      restoredAt: null,
+    });
   };
   const recoverableDrafts = loadOlderDrafts(typeKey, recordId, scope);
   return {
@@ -188,7 +253,15 @@ export function useEditorDraft(
     setMeta,
     setBody,
     isDirty: dirty,
+    /** Edited since the form opened; leaving now would lose those edits. */
+    isTouched: dirty && touched,
     stale,
+    /** When the draft this form opened with was saved on this device; null when it opened fresh. */
+    restoredAt: current.restoredAt,
+    /** Title of the recovered draft; empty when it has none. */
+    restoredTitle: current.restoredTitle,
+    /** The link's pinned values overrode the recovered draft's (e.g. its series). */
+    restoredPinned: current.restoredPinned,
     saveDraft: () => persist(current.key, values),
     recoverableDrafts,
     recoverDraft: (savedKey: string) => {
@@ -197,8 +270,10 @@ export function useEditorDraft(
       setState({
         ...makeState(),
         key: saved.key,
+        opened: JSON.stringify(saved.snapshot),
         values: saved.snapshot,
         history: [saved.snapshot],
+        restoredAt: null,
       });
     },
     clearDraft,

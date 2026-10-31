@@ -4,12 +4,12 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"log/slog"
-	"reflect"
 	"slices"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 // Operation is the exact case-sensitive SDL Query or Mutation wire identity.
@@ -34,6 +34,10 @@ type ArchonReader interface {
 	HasArchon(ctx context.Context, memberID, regionID string) (bool, error)
 }
 
+type ArchonBatchReader interface {
+	ArchonRegions(ctx context.Context, memberID string, regionIDs []string) (map[string]bool, error)
+}
+
 type LieutenantReader interface {
 	HasLieutenant(ctx context.Context, memberID, documentID string) (bool, error)
 }
@@ -49,7 +53,7 @@ type Assignments struct {
 }
 
 func NewAssignments(archons ArchonReader, lieutenants LieutenantReader) (*Assignments, error) {
-	if missingPolicyDependency(archons) || missingPolicyDependency(lieutenants) {
+	if product.MissingDependency(archons) || product.MissingDependency(lieutenants) {
 		return nil, apierr.New(apierr.Internal, "assignment providers required")
 	}
 	return &Assignments{Archons: archons, Lieutenants: lieutenants}, nil
@@ -57,6 +61,21 @@ func NewAssignments(archons ArchonReader, lieutenants LieutenantReader) (*Assign
 
 func (a *Assignments) HasArchon(ctx context.Context, memberID, regionID string) (bool, error) {
 	return a.Archons.HasArchon(ctx, memberID, regionID)
+}
+
+func (a *Assignments) ArchonRegions(ctx context.Context, memberID string, regionIDs []string) (map[string]bool, error) {
+	if batch, ok := a.Archons.(ArchonBatchReader); ok {
+		return batch.ArchonRegions(ctx, memberID, regionIDs)
+	}
+	facts := make(map[string]bool, len(regionIDs))
+	for _, regionID := range regionIDs {
+		assigned, err := a.Archons.HasArchon(ctx, memberID, regionID)
+		if err != nil {
+			return nil, err
+		}
+		facts[regionID] = assigned
+	}
+	return facts, nil
 }
 
 func (a *Assignments) HasLieutenant(ctx context.Context, memberID, documentID string) (bool, error) {
@@ -83,23 +102,10 @@ func NewSafeOverrideObserver(logger *slog.Logger) (*SafeOverrideObserver, error)
 type ReceiptOverrideRecorder struct{ Replay idempotency.Repository }
 
 func NewOverrideRecorder(replay idempotency.Repository) (*ReceiptOverrideRecorder, error) {
-	if missingPolicyDependency(replay) {
+	if product.MissingDependency(replay) {
 		return nil, apierr.New(apierr.Internal, "override receipt repository required")
 	}
 	return &ReceiptOverrideRecorder{Replay: replay}, nil
-}
-
-func missingPolicyDependency(value any) bool {
-	if value == nil {
-		return true
-	}
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
-		return v.IsNil()
-	default:
-		return false
-	}
 }
 
 // Observe receives only safe factual metadata, after the caller has established
@@ -185,6 +191,8 @@ type DocumentWriteFacts struct {
 	ID, AuthorID, Kind string
 	Category           *string
 	LinkedRegionIDs    []string
+	// NewCategory is the category an edit sets, when it sets one.
+	NewCategory *string
 }
 
 func (DocumentWriteFacts) policyInput() {}
@@ -210,10 +218,6 @@ type PreviewFacts struct {
 }
 
 func (PreviewFacts) policyInput() {}
-
-type RequestDecisionFacts struct{ ID, TargetDMID string }
-
-func (RequestDecisionFacts) policyInput() {}
 
 type DiscordLookupFacts struct{ RequestedDiscordID string }
 
@@ -307,11 +311,49 @@ type Policy struct{ providers PolicyProviders }
 
 func NewPolicy(providers PolicyProviders) (*Policy, error) {
 	for _, dependency := range []any{providers.Assignments, providers.Audience, providers.Identities, providers.SummaryRelationships} {
-		if missingPolicyDependency(dependency) {
+		if product.MissingDependency(dependency) {
 			return nil, apierr.New(apierr.Internal, "policy providers required")
 		}
 	}
 	return &Policy{providers: providers}, nil
+}
+
+type archonSnapshot struct {
+	AssignmentReader
+	memberID string
+	regions  map[string]bool
+}
+
+func (s archonSnapshot) HasArchon(ctx context.Context, memberID, regionID string) (bool, error) {
+	if assigned, ok := s.regions[regionID]; ok && memberID == s.memberID {
+		return assigned, nil
+	}
+	return s.AssignmentReader.HasArchon(ctx, memberID, regionID)
+}
+
+func (p *Policy) WithArchonAssignments(ctx context.Context, actor Authority, regionIDs []string) (*Policy, error) {
+	batch, ok := p.providers.Assignments.(ArchonBatchReader)
+	if !ok || actor.claims.Anonymous() || len(regionIDs) == 0 {
+		return p, nil
+	}
+	regions := make(map[string]bool, len(regionIDs))
+	ids := make([]string, 0, len(regionIDs))
+	for _, id := range regionIDs {
+		if _, exists := regions[id]; !exists {
+			regions[id] = false
+			ids = append(ids, id)
+		}
+	}
+	facts, err := batch.ArchonRegions(ctx, actor.claims.MemberID, ids)
+	if err != nil {
+		return nil, err
+	}
+	for id := range regions {
+		regions[id] = facts[id]
+	}
+	copy := *p
+	copy.providers.Assignments = archonSnapshot{p.providers.Assignments, actor.claims.MemberID, regions}
+	return &copy, nil
 }
 
 type policyRule uint8
@@ -323,7 +365,6 @@ const (
 	ruleStaff
 	ruleDMSelf
 	rulePlayerSelf
-	ruleDMInbox
 	ruleDiscord
 	ruleCatalog
 	ruleBackstory
@@ -344,7 +385,6 @@ const (
 	ruleQuestCreate
 	ruleArc
 	ruleSummary
-	ruleRequest
 )
 
 var operationRules = map[Operation]policyRule{
@@ -390,6 +430,7 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.setMemberRolesBatch":                ruleAdmin,
 	"Mutation.setMyAvailability":                  rulePlayerSelf,
 	"Mutation.setPointcrawlEdge":                  ruleMap,
+	"Mutation.setPointcrawlNodeState":             ruleAdmin,
 	"Mutation.setQuestPointcrawlLinks":            ruleQuest,
 	"Mutation.setUnlockableActive":                ruleAdmin,
 	"Mutation.signupForQuest":                     ruleSignup,
@@ -405,6 +446,7 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.updateCharacterProfile":             ruleCharacter,
 	"Mutation.updateDocument":                     ruleDocumentWrite,
 	"Mutation.updateGameCalendar":                 ruleAdmin,
+	"Mutation.updateDiscordSettings":              ruleAdmin,
 	"Mutation.updateHomeBanner":                   ruleAdmin,
 	"Mutation.updateMyDmProfile":                  ruleDMSelf,
 	"Mutation.updateMyProfile":                    ruleSelf,
@@ -412,6 +454,7 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.setMyPrivateNotes":                  ruleSelf,
 	"Mutation.updateQuest":                        ruleQuest,
 	"Mutation.updateQuestAnnouncementRoleSetting": ruleAdmin,
+	"Mutation.updateMap":                          ruleMap,
 	"Mutation.updateRegion":                       ruleRegion,
 	"Mutation.updateTimeAnchor":                   ruleAdmin,
 	"Mutation.upsertCreationCatalogEntry":         ruleAdmin,
@@ -438,6 +481,7 @@ var operationRules = map[Operation]policyRule{
 	"Query.communityDirectory":                    rulePublic,
 	"Query.creationCatalog":                       ruleCatalog,
 	"Query.discordDeliveryMode":                   ruleAdmin,
+	"Query.discordSettings":                       ruleAdmin,
 	"Query.dmSessionHistory":                      rulePublic,
 	"Query.dmStats":                               rulePublic,
 	"Query.dmSummaries":                           rulePublic,
@@ -476,8 +520,10 @@ var operationRules = map[Operation]policyRule{
 	"Query.pendingCharacterVerifications":         ruleStaff,
 	"Query.pendingDmProfileVerifications":         ruleStaff,
 	"Query.previewBody":                           rulePreview,
+	"Query.auditBody":                             rulePreview,
 	"Query.quest":                                 rulePublic,
 	"Query.questAnnouncementRoleSetting":          rulePublic,
+	"Query.questVoiceChannels":                    ruleDMSelf,
 	"Query.questArc":                              rulePublic,
 	"Query.questArcs":                             rulePublic,
 	"Query.questBoard":                            rulePublic,
@@ -512,6 +558,7 @@ func copyPolicyString(value *string) *string {
 }
 func copyDocumentFacts(f DocumentWriteFacts) DocumentWriteFacts {
 	f.Category = copyPolicyString(f.Category)
+	f.NewCategory = copyPolicyString(f.NewCategory)
 	f.LinkedRegionIDs = slices.Clone(f.LinkedRegionIDs)
 	return f
 }
@@ -549,7 +596,7 @@ func policyRequest(op Operation, input policyInput, allowed ...policyRule) (Requ
 	return Request{operation: op, input: input}, nil
 }
 func ForOperation(op Operation) (Request, error) {
-	return policyRequest(op, noPolicyFacts{}, rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleDMInbox, ruleCharacterCreate, ruleLieutenantWrite)
+	return policyRequest(op, noPolicyFacts{}, rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleCharacterCreate, ruleLieutenantWrite)
 }
 func ForCharacter(op Operation, facts CharacterFacts) (Request, error) {
 	if !canonicalPolicyID(facts.ID) || !canonicalPolicyID(facts.OwnerID) {
@@ -640,17 +687,17 @@ func ForPreview(facts PreviewFacts) (Request, error) {
 	facts.AuthorID = copyPolicyString(facts.AuthorID)
 	return policyRequest("Query.previewBody", facts, rulePreview)
 }
+
+// ForAuditBody admits exactly whom a PLAYER previewBody without authorId
+// admits: auditing an unsaved body reveals nothing a preview would not.
+func ForAuditBody() (Request, error) {
+	return policyRequest("Query.auditBody", PreviewFacts{Audience: PreviewPlayer}, rulePreview)
+}
 func ForDiscordLookup(facts DiscordLookupFacts) (Request, error) {
 	if facts.RequestedDiscordID == "" {
 		return Request{}, policyContractError()
 	}
 	return policyRequest("Query.memberByDiscordId", facts, ruleDiscord)
-}
-func ForRequestDecision(facts RequestDecisionFacts) (Request, error) {
-	if !canonicalPolicyID(facts.ID) || !canonicalPolicyID(facts.TargetDMID) {
-		return Request{}, policyContractError()
-	}
-	return policyRequest("Mutation.decideRequest", facts, ruleRequest)
 }
 func ForSummary(facts SummaryFacts) (Request, error) {
 	if !optionalPolicyID(facts.DocumentID) || !optionalPolicyID(facts.AuthorID) || !optionalPolicyID(facts.CharacterID) || (facts.DocumentID == nil) != (facts.AuthorID == nil) || len(facts.QuestIDs) == 0 || !validRegionSet(facts.QuestIDs) {
@@ -763,7 +810,7 @@ func validatePolicyRequest(p *Policy, request Request) error {
 	if request.input == nil {
 		return policyContractError()
 	}
-	if p == nil || missingPolicyDependency(p.providers.Assignments) || missingPolicyDependency(p.providers.Audience) || missingPolicyDependency(p.providers.Identities) || missingPolicyDependency(p.providers.SummaryRelationships) {
+	if p == nil || product.MissingDependency(p.providers.Assignments) || product.MissingDependency(p.providers.Audience) || product.MissingDependency(p.providers.Identities) || product.MissingDependency(p.providers.SummaryRelationships) {
 		return policyContractError()
 	}
 	return nil
@@ -771,9 +818,9 @@ func validatePolicyRequest(p *Policy, request Request) error {
 
 func (p *Policy) dispatchRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
 	switch rule {
-	case rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleDMInbox, ruleCharacterCreate, ruleLieutenantWrite, ruleCatalog, ruleBackstory, ruleCharacterHistory:
+	case rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleCharacterCreate, ruleLieutenantWrite, ruleCatalog, ruleBackstory, ruleCharacterHistory:
 		return p.decideBaseRule(ctx, actor, request, rule, admin, bypass)
-	case ruleCharacter, ruleSignup, ruleRequest:
+	case ruleCharacter, ruleSignup:
 		return p.decideOwnershipRule(actor, request, rule)
 	case ruleQuestCreate, ruleArc, rulePreview, ruleDiscord, ruleDocumentCreate, ruleDocumentWrite, ruleRevisions:
 		return p.decideContentRule(ctx, actor, request, rule, admin, bypass)
@@ -791,7 +838,7 @@ func (p *Policy) dispatchRule(ctx context.Context, actor Authority, request Requ
 func (p *Policy) decideBaseRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
 	f := policyFailures{}
 	switch rule {
-	case rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleDMInbox, ruleCharacterCreate, ruleLieutenantWrite:
+	case rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleCharacterCreate, ruleLieutenantWrite:
 		if _, ok := request.input.(noPolicyFacts); !ok {
 			return Decision{}, policyContractError()
 		}
@@ -829,9 +876,7 @@ func requiredRoleFailure(rule policyRule, actor Authority, admin bool) bool {
 	case ruleDMSelf:
 		return !admin && !actor.claims.Has(DM)
 	case rulePlayerSelf:
-		return !admin && !actor.claims.Has(Player)
-	case ruleDMInbox:
-		return !actor.LiveDM()
+		return !admin && !actor.claims.Has(Player) && !actor.claims.Has(Guest)
 	default:
 		return false
 	}
@@ -844,13 +889,10 @@ func (p *Policy) decideOwnershipRule(actor Authority, request Request, rule poli
 		if !ok {
 			return Decision{}, policyContractError()
 		}
-		return policyResult(policyFailures{ownership: facts.OwnerID != actor.claims.MemberID}, false), nil
-	case ruleRequest:
-		facts, ok := request.input.(RequestDecisionFacts)
-		if !ok {
-			return Decision{}, policyContractError()
-		}
-		return policyResult(policyFailures{role: !actor.LiveDM(), ownership: facts.TargetDMID != actor.claims.MemberID}, false), nil
+		return policyResult(policyFailures{
+			role:      actor.claims.Has(Guest) && !actor.claims.Has(Player) && request.operation == "Mutation.signupForQuest",
+			ownership: facts.OwnerID != actor.claims.MemberID,
+		}, false), nil
 	default:
 		return Decision{}, policyContractError()
 	}
@@ -941,6 +983,9 @@ func (p *Policy) decideDocumentCreateRule(ctx context.Context, actor Authority, 
 	if facts.Kind == "rule" {
 		failures.role = !admin && !actor.claims.Has(Verifier)
 	}
+	if isHallOfFame(facts.Kind, facts.Category) {
+		failures.role = !admin
+	}
 	if facts.Kind == "codex_entry" && facts.Category != nil && *facts.Category == "Locations" {
 		gates, err := p.locationFailures(ctx, actor, facts.LinkedRegionIDs)
 		if err != nil {
@@ -963,7 +1008,10 @@ func (p *Policy) decideDocumentWriteRule(ctx context.Context, actor Authority, r
 	if rule == ruleDocumentWrite && facts.Kind == "rule" {
 		failures.role = !admin && !actor.claims.Has(Verifier)
 	}
-	if facts.Kind == "codex_entry" && facts.Category != nil && *facts.Category == "Locations" {
+	if rule == ruleDocumentWrite && (isHallOfFame(facts.Kind, facts.Category) || isHallOfFame(facts.Kind, facts.NewCategory)) {
+		failures.role = !admin
+	}
+	if isLocationDocument(facts.Kind, facts.Category) || isLocationDocument(facts.Kind, facts.NewCategory) {
 		gates, err := p.locationFailures(ctx, actor, facts.LinkedRegionIDs)
 		if err != nil {
 			return Decision{}, err
@@ -971,6 +1019,16 @@ func (p *Policy) decideDocumentWriteRule(ctx context.Context, actor Authority, r
 		failures = documentWriteLocationFailures(rule, failures, gates)
 	}
 	return policyResult(failures, bypass), nil
+}
+
+func isLocationDocument(kind string, category *string) bool {
+	return kind == "codex_entry" && category != nil && *category == "Locations"
+}
+
+// isHallOfFame reports the community Document that renders as the site Hall of
+// Fame; the category is matched exactly, as the web adapter does.
+func isHallOfFame(kind string, category *string) bool {
+	return kind == "community" && category != nil && *category == "hall_of_fame"
 }
 
 func documentWriteLocationFailures(rule policyRule, failures, gates policyFailures) policyFailures {
@@ -1157,7 +1215,7 @@ func (p *Policy) decideSummaryRule(ctx context.Context, actor Authority, request
 		return Decision{}, err
 	}
 	f := policyFailures{
-		role:      !actor.claims.Has(Player) && !actor.LiveDM() && !admin,
+		role:      !actor.claims.Has(Player) && !actor.claims.Has(Guest) && !actor.LiveDM() && !admin,
 		ownership: characterOwner || relationOwnership || (facts.AuthorID != nil && *facts.AuthorID != actor.claims.MemberID),
 	}
 	return policyResult(f, bypass), nil

@@ -55,7 +55,7 @@
 .entryBody :global(.cr-prose) {
   max-width: none;
   color: var(--color-text);
-  font-family: var(--font-narrative);
+  font-family: var(--font-body);
   font-size: 1.0625rem;
   line-height: 1.75;
 }
@@ -156,7 +156,7 @@
   display: -webkit-box;
   overflow: hidden;
   color: var(--color-text-2);
-  font-family: var(--font-narrative);
+  font-family: var(--font-body);
   font-size: 13px;
   line-height: 1.55;
   -webkit-box-orient: vertical;

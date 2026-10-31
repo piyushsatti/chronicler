@@ -41,12 +41,6 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.connection {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-2);
-}
 .nodeList {
   list-style: none;
   padding: 0;
@@ -77,12 +71,9 @@
 .linkedEmpty {
   padding: var(--sp-3);
 }
-.entryPreview {
-  margin-block: var(--sp-3);
-}
-.entryPreview summary {
+.entrySummary {
+  margin-block: var(--sp-2) var(--sp-3);
   color: var(--color-text-2);
-  cursor: pointer;
 }
 .disclosure {
   padding: 15px 20px;
@@ -90,19 +81,6 @@
 .disclosure summary {
   cursor: pointer;
   font: 550 13px/1.5 var(--font-title);
-}
-.connections {
-  list-style: none;
-  padding: 0;
-  display: grid;
-  gap: var(--sp-3);
-}
-.connections li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
 }
 .coordinates {
   display: grid;
@@ -174,7 +152,11 @@
 .questTitle:hover {
   color: var(--color-accent);
 }
+/* Column chain (card > link > body) so the region / Open atlas foot pins to
+   the bottom and lines up across the row. */
 .mapCard {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--color-border);
@@ -182,7 +164,9 @@
   background: var(--color-bg-panel);
 }
 .mapCardLink {
-  display: block;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   color: inherit;
   text-decoration: none;
 }
@@ -214,6 +198,12 @@
   width: 100%;
   height: 100%;
 }
+.previewImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .previewArt line {
   stroke: var(--color-accent);
   stroke-width: 2;
@@ -230,6 +220,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  /* Keeps the label legible over painted map art. */
+  background: color-mix(in srgb, var(--color-bg-panel) 82%, transparent);
   color: var(--color-text-2);
   font-size: 12px;
 }
@@ -241,6 +235,9 @@
   background: var(--color-good);
 }
 .mapCardBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   padding: 17px 18px 15px;
 }
 .mapCardTop {
@@ -260,7 +257,7 @@
 }
 .mapDescription {
   min-height: 40px;
-  margin: 0;
+  margin: 0 0 16px;
   color: var(--color-text-2);
   font-size: 13px;
   line-height: 1.55;
@@ -270,7 +267,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid var(--color-border-2);
   color: var(--color-text-2);
@@ -294,6 +291,7 @@
   stroke-width: 1.3;
 }
 .cardRetry {
+  align-self: flex-start;
   margin: 0 18px 14px;
   color: var(--color-accent);
   background: transparent;
@@ -353,6 +351,20 @@
   width: 100%;
   text-align: center;
   color: var(--color-text-2);
+  pointer-events: none;
+}
+.cursorReadout {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 4;
+  padding: 3px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-panel);
+  color: var(--color-text-2);
+  font: 500 12px/1.4 var(--font-mono);
+  font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
 .edge {
@@ -416,12 +428,6 @@
   stroke: var(--color-good);
   stroke-width: 5px;
 }
-.pinNumber {
-  fill: var(--color-bg-panel);
-  font-family: var(--font-mono);
-  font-weight: 700;
-  pointer-events: none;
-}
 .labelPlate {
   fill: var(--color-bg-panel);
   stroke: var(--color-border);
@@ -432,6 +438,65 @@
   font-family: var(--font-body);
   font-weight: 500;
   pointer-events: none;
+}
+.hexGrid polygon {
+  fill: none;
+  stroke: color-mix(in srgb, var(--color-text-3) 45%, transparent);
+  stroke-width: 1px;
+}
+.routesToggle {
+  margin-inline-end: 8px;
+  white-space: nowrap;
+}
+.ring {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 3px;
+}
+[data-map-ring='hover'] .ring {
+  stroke-dasharray: 4 3;
+}
+[data-map-ring='selected'] .ring {
+  stroke: var(--color-good);
+}
+/* Hex cells: the whole cell is the click target; it stays invisible over the art. */
+.hexTarget {
+  fill: transparent;
+  stroke: none;
+}
+.node:focus-visible .hexTarget {
+  stroke: var(--color-map-ring);
+  stroke-width: 2px;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+/* White rings read on painted art in both themes; the dark halo keeps them on pale tiles. */
+.hexRing,
+[data-map-ring='hover'] .hexRing,
+[data-map-ring='selected'] .hexRing {
+  stroke: var(--color-map-ring);
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 1.5px var(--color-map-ring-halo));
+}
+[data-map-ring='hover'] .hexRing {
+  stroke-width: 2px;
+  opacity: 0.85;
+}
+[data-map-ring='selected'] .hexRing {
+  stroke-width: 4px;
+}
+.ringPlate {
+  fill: var(--color-bg-panel);
+  stroke: var(--color-accent);
+  stroke-width: 1px;
+}
+[data-map-ring='selected'] .ringPlate {
+  stroke: var(--color-good);
+}
+.ringLabel {
+  fill: var(--color-text);
+  font-family: var(--font-mono);
+  font-weight: 700;
 }
 .mapMetaRow {
   grid-row: 3;
@@ -552,7 +617,8 @@
   border: 1px solid var(--color-border);
   border-radius: 18px;
   background: var(--color-bg-panel);
-  overflow-wrap: anywhere;
+  /* Break between words; only a word wider than the panel breaks inside. */
+  overflow-wrap: break-word;
   scroll-margin-top: 18px;
 }
 .detailHeader {
@@ -620,15 +686,6 @@
   min-width: 0;
   padding: 24px 20px 20px;
 }
-.detailDescription {
-  margin: 0 0 17px;
-  color: var(--color-text);
-  font: 400 15px/1.65 var(--font-narrative);
-}
-.detailDescription :global(.cr-prose) {
-  color: inherit;
-  font: inherit;
-}
 .linkedHeading {
   display: flex;
   align-items: center;
@@ -652,19 +709,13 @@
 }
 .linkedDocument h4 {
   margin: 0;
-  font-size: 12px;
+  font: 650 15px/1.3 var(--font-title);
 }
-.linkedDocument .docMeta {
-  margin: 4px 0 0;
-  font-size: 10px;
+.linkedDocument .docLink {
+  color: var(--color-text);
 }
-.relationChip {
-  margin-left: auto;
-  padding: 4px 7px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  color: var(--color-text-2);
-  font-size: 11px;
+.linkedDocument .docLink:hover {
+  color: var(--color-accent);
 }
 .submapLink {
   display: block;
@@ -824,6 +875,15 @@
   }
 }
 
-.regionGrid {
-  align-items: start;
+/* Region hub cards stretch to the row height; their last line (Open map, the
+   kind and map count) pins to the bottom. */
+.regionGrid .pinEnd {
+  margin-block-start: auto;
+}
+
+/* RegionCard is a clickable Card: the unlayered .card--clickable
+   `display:block` beats the layered .stack, so restore the column here. */
+.regionGrid .pinCard {
+  display: flex;
+  flex-direction: column;
 }

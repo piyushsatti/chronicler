@@ -3,41 +3,43 @@
 **App:** `apps/agent`  
 **Implements:** [agent-qa-http](/docs/interfaces/agent-qa-http.md)
 
-## Verdict
+## Current status
 
-Archive retains **canonical public document projections** as token-bounded passages in LanceDB and exposes them over MCP for the answer worker. It is the authority for public eligibility, canonical URLs, and content versions. Search hits alone cannot support a citation.
+Archive indexes current anonymous GraphQL projections as token-bounded passages in LanceDB and exposes them over MCP. The API owns disclosure through `effectiveBody`. Search hits require a current read before citation.
 
-**Port status:** `pi.chronicler.archive` and `pi.chronicler.qa` live under `apps/agent`. Deploy outline: [agent-archive-local.md](/deploy/docs/agent-archive-local.md).
+The database view `archive_documents_v1` (migration `0015`) supplies only the IDs of documents an anonymous reader may see, using `document_readable`. Bodies come from the anonymous GraphQL API, already projected in Go ([D50](/docs/decisions/D50-Archive-Uses-Current-Anonymous-Projections.md)). See [local stack](/deploy/docs/agent-archive-local.md).
 
 ## Responsibilities
 
-| Concern                             | Owner                                                            |
-| ----------------------------------- | ---------------------------------------------------------------- |
-| Eligibility / projection digest     | `pi.chronicler.qa` helpers                                       |
-| Chunking + embeddings + Lance index | `pi.chronicler.archive`                                          |
-| Live corpus snapshot                | Anonymous GraphQL (`documents` / `documentById`) on `apps/api`   |
-| MCP tools                           | `search_documents`, `read_document` (passage-aware when enabled) |
+| Concern                                    | Owner                                                       |
+| ------------------------------------------ | ----------------------------------------------------------- |
+| Document eligibility and marker projection | API Document Specification and `effectiveBody`              |
+| Candidate IDs                              | `ProjectionReader`, expecting `archive_documents_v1`        |
+| Current body and projection digest         | Anonymous GraphQL `documentById` and `pi.chronicler.qa`     |
+| Chunking, embeddings, and LanceDB          | `pi.chronicler.archive`                                     |
+| MCP tools                                  | `search_documents`, `read_document`, `read_document_by_url` |
 
-## Retrieval profile (inherited)
+The source batches anonymous revalidation in groups of four. Requested IDs must remain eligible in the current candidate projection. The source obtains body text from GraphQL, never from frozen snapshot text.
 
-Evaluated defaults from legacy Archive (do not change without a new quality receipt):
+## Bootstrap and synchronization
 
-- Chunk target **256** tokens, overlap **32**, separate from embedding model max input.
-- Hybrid dense + full-text with reciprocal-rank fusion.
-- Optional Cohere-compatible rerank (`RERANK_MODEL`) is **opt-in**; do not enable for release until quality beats hybrid-RRF on held-out gates.
-- Tokenizer/revision/dimension/hash pins are required at startup — no runtime Hugging Face downloads in production images.
+A snapshot pins file SHA-256 and document count. Before promotion, snapshot IDs limit the candidate set, and current candidate eligibility plus anonymous GraphQL govern reads and indexing. Frozen text cannot disclose withdrawn or changed content.
 
-## GraphQL verification (before Phase C cutover)
+The configured minimum of current, canonically revalidated documents triggers promotion. The durable marker binds promotion to the snapshot SHA-256. Promotion remains in effect after restart. Legitimate edits and withdrawals do not require the current corpus to match the historical snapshot. Configure all five `ARCHIVE_BOOTSTRAP_*` values together.
 
-Archive’s anonymous source must match Go GraphQL fields for published public documents. Checklist:
+An identical desired passage set skips replacement. An empty sync over a nonempty index fails and preserves existing passages. Current revalidation still hides withdrawn documents retained in that index. A fresh empty index is allowed. Changed rebuilds retain the existing non-atomic replacement mechanism.
 
-1. Confirm `documents` filters (`kind`, `status`, `visibility`) and `documentById` against `packages/contracts` SDL.
-2. Confirm projection fields used for digest (id, slug, kind, category, status, visibility, title, updatedAt, frontmatter, effectiveBody).
-3. Run a contract test against a local API once Phase C lands — do not assume FastAPI field names.
+Exact URL reads query matching passages through `url_passages` rather than materializing every stored passage.
 
-## Bootstrap
+## Retrieval contract
 
-Empty LanceDB needs a bootstrap snapshot or a successful index sync (`INDEX_INTERVAL_SECONDS`, bootstrap path/sha env — see [environment.md](/apps/agent/docs/environment.md)). Dev CLI: `chronicler-archive-reindex-dev` (Phase C).
+- Chunk target is 256 tokens with 32-token overlap, separate from the embedding maximum input.
+- Search combines dense and full-text results with reciprocal-rank fusion.
+- Reranking is optional through `RERANK_MODEL`. Keep release reranking disabled until it beats hybrid reciprocal-rank fusion on held-out quality gates.
+- Compose requires exact operator-supplied model aliases, revision, dimensions, tokenizer hash, maximum input, and query prefix.
+- Tokenizer assets and database CA files are staged locally and mounted read-only. No tokenizer download is part of Archive startup.
+
+The anonymous source accepts `/v1/graphql` and the compatible `/graphql` path. HTTPS is required except for the exact local hosts `localhost`, `127.0.0.1`, `::1`, and `host.docker.internal`. Credentials, queries, fragments, and redirects are rejected.
 
 ## Related
 

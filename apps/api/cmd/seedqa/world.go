@@ -192,7 +192,7 @@ func (w *world) addDoc(kind, category, title, body, status, visibility string, a
 	}
 	row := map[string]any{
 		"public_id": id, "kind": kind, "slug": sl, "title": title, "body": body,
-		"status": status, "visibility": visibility, "version": 0,
+		"status": status, "visibility": visibility, "version": 1,
 		"published_by": nil, "deleted_by": nil,
 	}
 	if category != "" {
@@ -622,7 +622,7 @@ func (w *world) addQuests() {
 	specs := []qspec{}
 	for i, item := range questBriefs {
 		st := "open"
-		signup := []string{"open", "application", "invite"}[i%3]
+		signup := []string{"last_game_played", "dm_pick"}[i%2]
 		filled := i % 4
 		slots := 5
 		switch {

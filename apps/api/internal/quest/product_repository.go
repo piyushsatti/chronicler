@@ -8,7 +8,6 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 )
@@ -63,7 +62,7 @@ type QuestWriteRepository interface {
 	LockSetQuestHexes(ctx context.Context, spec SetQuestHexesSpec) (SetQuestHexesState, error)
 	StoreSetQuestHexes(ctx context.Context, write SetQuestHexesWrite) ([]QuestHexView, error)
 	LockSignupForQuest(ctx context.Context, spec SignupForQuestSpec) (SignupForQuestState, error)
-	StoreSignupForQuest(ctx context.Context, write SignupForQuestWrite) (QuestParticipantView, error)
+	StoreSignupForQuest(ctx context.Context, write SignupForQuestWrite) (QuestParticipantView, string, error)
 	LockSyncQuestDiscord(ctx context.Context, spec SyncQuestDiscordSpec) (SyncQuestDiscordState, error)
 	StoreSyncQuestDiscord(ctx context.Context, write SyncQuestDiscordWrite) (DeliveryReceipt, error)
 	LockTransitionQuestStatus(ctx context.Context, spec TransitionQuestStatusSpec) (TransitionQuestStatusState, error)
@@ -77,10 +76,8 @@ type QuestWriteRepository interface {
 }
 
 type ProductBatchRepository interface {
-	ReadBatchQuests(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[QuestView], error)
 	ReadBatchParticipants(ctx context.Context, actor auth.Authority, keys []ParticipantsKey) ([]product.BatchResult[ParticipantList], error)
 	ReadBatchQuestHexes(ctx context.Context, actor auth.Authority, keys []QuestHexesKey) ([]product.BatchResult[HexList], error)
-	ReadBatchQuestRegions(ctx context.Context, actor auth.Authority, keys []QuestRegionsKey) ([]product.BatchResult[RegionIDList], error)
 	ReadBatchArcs(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[QuestArcView], error)
 	ReadBatchArcQuests(ctx context.Context, actor auth.Authority, keys []ArcQuestsKey) ([]product.BatchResult[QuestList], error)
 	ReadBatchDelivery(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[QuestDiscordDeliveryView], error)
@@ -122,7 +119,6 @@ type ProductCommandRepos struct {
 	Brief            document.BriefWriter
 	Summaries        document.SummaryWriter
 	Places           spatial.PlaceReader
-	Jobs             jobs.Writer
 	Tags             TagNormalizer
 	Withdrawals      character.QuestWithdrawalWriter
 	Rewards          character.QuestRewardWriter

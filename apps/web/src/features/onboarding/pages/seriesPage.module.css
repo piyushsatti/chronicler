@@ -1,0 +1,10 @@
+/* Stretch each quest card to its grid row, matching the quest board and home lists. */
+.cardItem {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cardItem > article {
+  flex: 1;
+}

@@ -11,7 +11,8 @@ on:
           - staging
           - production
 
-# Production promotions run only through this workflow (D33).
+# Image publication only. Releases run from tags through deploy-staging.yml and
+# deploy-production.yml (D33), which build their own images on the target runner.
 
 jobs:
   build-and-push:

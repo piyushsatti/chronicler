@@ -96,14 +96,6 @@ function mapItem(n: z.infer<typeof notificationSchema>): NotificationView {
   };
 }
 
-export function parseNotifications(wire: unknown): AdapterResult<NotificationView[]> {
-  const parsed = connectionSchema.safeParse(wire);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
-  return { ok: true, data: parsed.data.items.map(mapItem) };
-}
-
 export function parseNotificationPage(wire: unknown): AdapterResult<NotificationPage> {
   const parsed = connectionSchema.safeParse(wire);
   if (!parsed.success) {

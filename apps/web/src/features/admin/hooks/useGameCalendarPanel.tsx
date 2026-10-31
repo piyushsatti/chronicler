@@ -1,4 +1,9 @@
 import {
+  calendarEraIssues,
+  calendarPeriodIssues,
+  calendarWritesPeriods,
+  newCalendarPeriodDraft,
+  hasCalendarPeriodIssues,
   calendarPreset,
   calendarInput,
   type CalendarForm as FormState,
@@ -11,8 +16,15 @@ import {
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { loadGameCalendar, updateGameCalendar } from '../adapters/adminAdapter.js';
+import { safeAppError } from '../../../errors/toAppError.js';
+import { TransportError } from '../../../errors/types.js';
 
 const KEY = ['adminGameCalendar'] as const;
+
+function isRejectedDefinition(err: unknown): boolean {
+  const cause = err && typeof err === 'object' && 'cause' in err ? err.cause : err;
+  return cause instanceof TransportError && cause.code === 'INVALID';
+}
 
 export function useGameCalendarPanel() {
   const authority = useAdminAuthority();
@@ -28,6 +40,7 @@ export function useGameCalendarPanel() {
     daysPerWeek: '',
     weekdays: '',
     rate: '',
+    periods: [],
   });
   const [definition, setDefinition] = useState<Record<string, unknown>>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -42,8 +55,19 @@ export function useGameCalendarPanel() {
     mutationKey: ['adminCommand', authority.commandKey, 'useGameCalendarPanel'],
     networkMode: 'always',
     retry: false,
-    mutationFn: authority.guardMutation((command) => {
-      return updateGameCalendar(calendarInput(definition, form), command);
+    mutationFn: authority.guardMutation(async (command) => {
+      try {
+        return await updateGameCalendar(calendarInput(definition, form), command);
+      } catch (err) {
+        // The API is the authority on the definition: say it refused, rather than "try again".
+        if (isRejectedDefinition(err))
+          throw safeAppError(
+            'The server rejected this calendar. Check the era name, abbreviation and periods, then save again.',
+            'admin:calendar:update',
+            err,
+          );
+        throw err;
+      }
     }),
     onSuccess: async () => {
       if (!authority.isCurrent()) return;
@@ -52,6 +76,8 @@ export function useGameCalendarPanel() {
     },
   });
   useAuthorityFailures(calendar.error, save.error);
+  const periodIssues = calendarPeriodIssues(form.periods);
+  const eraIssues = calendarEraIssues(form, calendarWritesPeriods(definition, form));
   return {
     GREYHAWK_PRESET: calendarPreset.definition,
     presetForm: calendarPreset.form,
@@ -66,6 +92,11 @@ export function useGameCalendarPanel() {
     ),
     form,
     setForm,
+    periodIssues,
+    eraIssues,
+    newPeriod: newCalendarPeriodDraft,
+    periodsBlocked:
+      hasCalendarPeriodIssues(periodIssues) || Boolean(eraIssues.name || eraIssues.abbrev),
     definition,
     setDefinition,
     message,

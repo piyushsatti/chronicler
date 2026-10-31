@@ -22,6 +22,7 @@ extend type Query {
 }
 extend type Mutation {
   createMap(input: MapCreateInput!, meta: CommandMeta!): MapType!
+  updateMap(id: ID!, input: MapUpdateInput!, meta: CommandMeta!): MapType!
   createRegion(input: RegionInput!, meta: CommandMeta!): RegionType!
   updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionType!
   transitionRegion(id: ID!, to: String!, note: String!, meta: CommandMeta!): RegionType!
@@ -39,6 +40,12 @@ extend type Mutation {
   upsertPointcrawlNode(
     mapId: ID!
     input: PointcrawlNodeInput!
+    meta: CommandMeta!
+  ): PointcrawlNodeType!
+  setPointcrawlNodeState(
+    mapId: ID!
+    nodeId: ID!
+    state: PointcrawlNodeState!
     meta: CommandMeta!
   ): PointcrawlNodeType!
   setPointcrawlEdge(

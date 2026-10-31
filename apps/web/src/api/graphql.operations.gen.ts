@@ -23,6 +23,20 @@ export type BackstoryInput = {
   sourceRegionId?: string | null | undefined;
 };
 
+/**
+ * Why an audited body span matters: DM and MEMBER spans are hidden from other
+ * readers, MALFORMED spans from everyone; SPOILER spans are visible but blurred;
+ * LOOKALIKE spans are visible text whose callout looks like a marker but is not.
+ * LIST_NESTED is a diagnostic: a marker does not protect the whole list item.
+ */
+export type BodySpanKind =
+  | 'DM'
+  | 'LIST_NESTED'
+  | 'LOOKALIKE'
+  | 'MALFORMED'
+  | 'MEMBER'
+  | 'SPOILER';
+
 export type CharacterFiltersInput = {
   guildId?: string | null | undefined;
   namePrefix?: string | null | undefined;
@@ -88,6 +102,7 @@ export type CreateQuestInput = {
   slotsMax?: number;
   tags?: Array<string>;
   title: string;
+  voiceChannelId?: string | null | undefined;
 };
 
 export type CreationCatalogFiltersInput = {
@@ -99,6 +114,17 @@ export type CreationCatalogFiltersInput = {
 export type Density =
   | 'COMFORTABLE'
   | 'COMPACT';
+
+export type DiscordSettingsInput = {
+  announceChannelId?: string | null | undefined;
+  roleId?: string | null | undefined;
+  voiceChannels: Array<DiscordVoiceChannelInput>;
+};
+
+export type DiscordVoiceChannelInput = {
+  channelId: string;
+  name: string;
+};
 
 export type DocumentAudienceInput = {
   policy?: Array<string> | null | undefined;
@@ -149,9 +175,17 @@ export type MapCreateInput = {
   assetPath?: string | null | undefined;
   atlasCode: string;
   family: string;
+  grid?: string;
   mapKind: string;
   name: string;
   regionId?: string | null | undefined;
+};
+
+export type MapUpdateInput = {
+  assetPath?: string | null | undefined;
+  family: string;
+  grid: string;
+  name: string;
 };
 
 export type MemberRoleBatchInput = {
@@ -198,6 +232,12 @@ export type PointcrawlNodeInput = {
   y: number;
 };
 
+/** Admin-set exploration label on a hex. Display only: it does not change who can see or reach the hex. */
+export type PointcrawlNodeState =
+  | 'LOCKED'
+  | 'MAPPED'
+  | 'UNLOCKED';
+
 export type PreviewAudience =
   | 'DM'
   | 'PLAYER';
@@ -218,6 +258,7 @@ export type QuestEditInput = {
   slotsMax?: number | null | undefined;
   tags?: Array<string> | null | undefined;
   title?: string | null | undefined;
+  voiceChannelId?: string | null | undefined;
 };
 
 export type QuestFiltersInput = {
@@ -365,6 +406,11 @@ export type AdminCreationCatalogQueryVariables = Exact<{
 
 export type AdminCreationCatalogQuery = { creationCatalog: { total: number, items: Array<{ id: string, kind: string, name: string, description: string | null, available: boolean, retired: boolean, introducedByRegionId: string | null }> } };
 
+export type AdminDiscordSettingsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AdminDiscordSettingsQuery = { discordSettings: { announceChannelId: string | null, roleId: string | null, voiceChannels: Array<{ name: string, channelId: string }> } };
+
 export type AdminGameCalendarQueryVariables = Exact<{
   realFrom: string;
   realTo: string;
@@ -508,6 +554,15 @@ export type PendingDmProfilesQueryVariables = Exact<{
 
 export type PendingDmProfilesQuery = { pendingDmProfileVerifications: { total: number, entries: Array<{ memberId: string, handle: string, displayName: string, dmProfileStatus: string | null, dmProfileReviewRevision: number | null }> } };
 
+export type RedriveDiscordDeliveryMutationVariables = Exact<{
+  jobId: string;
+  reason: string;
+  meta: CommandMeta;
+}>;
+
+
+export type RedriveDiscordDeliveryMutation = { redriveDiscordDelivery: { jobId: string, desiredRevision: number, appliedRevision: number, deliveryStatus: string } };
+
 export type RevokeArchonMutationVariables = Exact<{
   memberId: string;
   regionId: string;
@@ -553,6 +608,14 @@ export type UpdateBackstoryMutationVariables = Exact<{
 
 
 export type UpdateBackstoryMutation = { updateBackstory: { id: string, name: string, retired: boolean } };
+
+export type UpdateDiscordSettingsMutationVariables = Exact<{
+  input: DiscordSettingsInput;
+  meta: CommandMeta;
+}>;
+
+
+export type UpdateDiscordSettingsMutation = { updateDiscordSettings: { announceChannelId: string | null, roleId: string | null, voiceChannels: Array<{ name: string, channelId: string }> } };
 
 export type UpdateGameCalendarMutationVariables = Exact<{
   definition: unknown;
@@ -867,6 +930,13 @@ export type CommunityEntryRelatedQueryVariables = Exact<{
 
 export type CommunityEntryRelatedQuery = { documents: { items: Array<{ id: string, slug: string, title: string, kind: string, category: string | null }> } };
 
+export type CommunityHallOfFameQueryVariables = Exact<{
+  slug: string;
+}>;
+
+
+export type CommunityHallOfFameQuery = { document: { id: string, slug: string, kind: string, category: string | null, title: string, effectiveBody: string | null, canEditBody: boolean, canEditMetadata: boolean } | null };
+
 export type CommunityRegionsQueryVariables = Exact<{
   limit: number;
   offset: number;
@@ -881,6 +951,13 @@ export type DocumentQueryVariables = Exact<{
 
 
 export type DocumentQuery = { document: { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, author: { handle: string } | null } | null };
+
+export type AuditBodyQueryVariables = Exact<{
+  body: string;
+}>;
+
+
+export type AuditBodyQuery = { auditBody: Array<{ startLine: number, endLine: number, kind: BodySpanKind, handle: string | null, suggestion: string | null, token: string | null, tokenLine: number | null, tokenColumn: number | null }> };
 
 export type CreateDocumentMutationVariables = Exact<{
   input: DocumentDraftInput;
@@ -955,13 +1032,36 @@ export type EditorDocumentBySlugQueryVariables = Exact<{
 
 export type EditorDocumentBySlugQuery = { document: { id: string, slug: string, kind: string, category: string | null, title: string, status: string, version: number, canEditMetadata: boolean, canEditBody: boolean, visibility: string, policy: Array<string> | null, readerIds: Array<string> | null, authorId: string, frontmatter: unknown, effectiveBody: string | null, summaryDerived: { authoring: { questIds: Array<string>, characterId: string | null, complete: boolean } | null, quests: Array<{ id: string, shortCode: string, title: string | null }> } | null } | null };
 
+export type EditorGuideGroupsQueryVariables = Exact<{
+  limit: number;
+  offset: number;
+}>;
+
+
+export type EditorGuideGroupsQuery = { documents: { total: number, items: Array<{ category: string | null }> } };
+
+export type EditorMapOptionsQueryVariables = Exact<{
+  offset?: number;
+}>;
+
+
+export type EditorMapOptionsQuery = { maps: Array<{ id: string, atlasCode: string, name: string, canEdit: boolean }> };
+
+export type EditorMapPlacesQueryVariables = Exact<{
+  atlasCode: string;
+  offset?: number;
+}>;
+
+
+export type EditorMapPlacesQuery = { map: { id: string, atlasCode: string, name: string, canEdit: boolean, pointcrawlNodes: Array<{ id: string, name: string }> } | null };
+
 export type EditorQuestLoadQueryVariables = Exact<{
   id?: string | null | undefined;
   shortCode?: string | null | undefined;
 }>;
 
 
-export type EditorQuestLoadQuery = { quest: { id: string, shortCode: string, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, genres: Array<string>, tags: Array<string>, apl: number | null, signupType: string | null, regions: Array<string>, updatedAt: string, briefDocument: { id: string, slug: string, title: string, status: string, version: number, canEditMetadata: boolean, canEditBody: boolean, frontmatter: unknown, effectiveBody: string | null } | null } | null };
+export type EditorQuestLoadQuery = { quest: { id: string, shortCode: string, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, genres: Array<string>, tags: Array<string>, apl: number | null, signupType: string | null, voiceChannelId: string | null, regions: Array<string>, updatedAt: string, arcId: string | null, arc: { id: string, name: string } | null, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string }>, briefDocument: { id: string, slug: string, title: string, status: string, version: number, canEditMetadata: boolean, canEditBody: boolean, frontmatter: unknown, effectiveBody: string | null } | null } | null };
 
 export type EditorRegionsQueryVariables = Exact<{
   kind?: string | null | undefined;
@@ -986,6 +1086,22 @@ export type EditorRevisionsQueryVariables = Exact<{
 
 
 export type EditorRevisionsQuery = { documentRevisions: { total: number, items: Array<{ id: string, rev: number, title: string, body: string, reason: string, recordedAt: string }> } };
+
+export type EditorSeriesOptionsQueryVariables = Exact<{
+  offset?: number;
+}>;
+
+
+export type EditorSeriesOptionsQuery = { questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string }> } };
+
+export type EditorSetQuestPlacesMutationVariables = Exact<{
+  questId: string;
+  links: Array<QuestPointcrawlLinkInput> | QuestPointcrawlLinkInput;
+  meta: CommandMeta;
+}>;
+
+
+export type EditorSetQuestPlacesMutation = { setQuestPointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string }> };
 
 export type EditorSummaryCharactersQueryVariables = Exact<{
   offset: number;
@@ -1026,10 +1142,18 @@ export type EditorUpsertQuestSummaryMutationVariables = Exact<{
 
 export type EditorUpsertQuestSummaryMutation = { upsertQuestSummary: { id: string, slug: string, version: number } };
 
-export type EntityLinkCodexDirectoryQueryVariables = Exact<{ [key: string]: never; }>;
+export type EditorVoiceChannelsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type EntityLinkCodexDirectoryQuery = { codexDirectory: { items: Array<{ id: string, slug: string, title: string, category: string | null }> } };
+export type EditorVoiceChannelsQuery = { questVoiceChannels: Array<{ name: string, channelId: string }> };
+
+export type EntityLinkCodexDirectoryQueryVariables = Exact<{
+  limit: number;
+  offset: number;
+}>;
+
+
+export type EntityLinkCodexDirectoryQuery = { codexDirectory: { total: number, items: Array<{ id: string, slug: string, title: string, category: string | null }> } };
 
 export type EntityLinkQuestBoardQueryVariables = Exact<{
   limit: number;
@@ -1050,6 +1174,7 @@ export type PreviewBodyQueryVariables = Exact<{
   body: string;
   audience: PreviewAudience;
   authorId?: string | null | undefined;
+  memberHandle?: string | null | undefined;
 }>;
 
 
@@ -1107,6 +1232,13 @@ export type HomeQuestParticipantsQueryVariables = Exact<{
 
 export type HomeQuestParticipantsQuery = { quest: { participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberAvatarUrl: string | null, status: string }> } | null };
 
+export type HomeRecentChroniclesQueryVariables = Exact<{
+  limit: number;
+}>;
+
+
+export type HomeRecentChroniclesQuery = { documents: { items: Array<{ id: string, slug: string, title: string, visibility: string, publishedAt: string | null, author: { handle: string } | null, summaryDerived: { occurredAt: string | null } | null }> } };
+
 export type HomeUpcomingQueryVariables = Exact<{
   upcomingFrom: string;
   upcomingTo: string;
@@ -1146,7 +1278,7 @@ export type MapAtlasQueryVariables = Exact<{
 }>;
 
 
-export type MapAtlasQuery = { map: { id: string, canEdit: boolean, name: string, atlasCode: string, family: string, mapKind: string, assetPath: string | null, regionId: string | null, createdAt: string, pointcrawlNodes: Array<{ id: string, mapId: string, x: number, y: number, name: string, submapId: string | null, createdAt: string, linkedEntries: Array<{ mapId: string, nodeId: string, documentId: string, relation: string, createdAt: string, createdBy: string }> }>, pointcrawlEdges: Array<{ id: string, mapId: string, nodeA: string, nodeB: string, directed: boolean, kind: string, label: string | null, documentId: string | null }> } | null };
+export type MapAtlasQuery = { map: { id: string, canEdit: boolean, name: string, atlasCode: string, family: string, grid: string, mapKind: string, assetPath: string | null, regionId: string | null, createdAt: string, pointcrawlNodes: Array<{ id: string, mapId: string, x: number, y: number, name: string, state: PointcrawlNodeState, submapId: string | null, createdAt: string, linkedEntries: Array<{ mapId: string, nodeId: string, documentId: string, relation: string, createdAt: string, createdBy: string }> }>, pointcrawlEdges: Array<{ id: string, mapId: string, nodeA: string, nodeB: string, directed: boolean, kind: string, label: string | null, documentId: string | null }> } | null };
 
 export type MapAssignmentsQueryVariables = Exact<{
   memberId?: string | null | undefined;
@@ -1156,6 +1288,15 @@ export type MapAssignmentsQueryVariables = Exact<{
 
 
 export type MapAssignmentsQuery = { archonAssignments: { total: number, items: Array<{ memberId: string, regionId: string, grantedAt: string }> } };
+
+export type MapContainmentQueryVariables = Exact<{
+  atlasCode: string;
+  limit?: number;
+  offset?: number;
+}>;
+
+
+export type MapContainmentQuery = { map: { id: string, pointcrawlNodes: Array<{ submapId: string | null }> } | null };
 
 export type MapCreateMutationVariables = Exact<{
   input: MapCreateInput;
@@ -1171,7 +1312,7 @@ export type MapDirectoryQueryVariables = Exact<{
 }>;
 
 
-export type MapDirectoryQuery = { maps: Array<{ id: string, canEdit: boolean, name: string, atlasCode: string, family: string, mapKind: string, assetPath: string | null, regionId: string | null, createdAt: string }>, regions: Array<{ canCreateMap: boolean, id: string, name: string, kind: string, charterDeadline: string | null, documentId: string | null, createdAt: string }> };
+export type MapDirectoryQuery = { maps: Array<{ id: string, canEdit: boolean, name: string, atlasCode: string, family: string, grid: string, mapKind: string, assetPath: string | null, regionId: string | null, createdAt: string }>, regions: Array<{ canCreateMap: boolean, id: string, name: string, kind: string, charterDeadline: string | null, documentId: string | null, createdAt: string }> };
 
 export type MapDocumentQueryVariables = Exact<{
   id: string;
@@ -1260,6 +1401,16 @@ export type MapSaveNodeMutationVariables = Exact<{
 
 export type MapSaveNodeMutation = { upsertPointcrawlNode: { id: string } };
 
+export type MapSetNodeStateMutationVariables = Exact<{
+  mapId: string;
+  nodeId: string;
+  state: PointcrawlNodeState;
+  meta: CommandMeta;
+}>;
+
+
+export type MapSetNodeStateMutation = { setPointcrawlNodeState: { id: string, state: PointcrawlNodeState } };
+
 export type MapUnlinkEntryMutationVariables = Exact<{
   mapId: string;
   nodeId: string;
@@ -1270,6 +1421,15 @@ export type MapUnlinkEntryMutationVariables = Exact<{
 
 
 export type MapUnlinkEntryMutation = { unlinkPointcrawlEntry: { replayed: boolean } };
+
+export type MapUpdateMutationVariables = Exact<{
+  id: string;
+  input: MapUpdateInput;
+  meta: CommandMeta;
+}>;
+
+
+export type MapUpdateMutation = { updateMap: { id: string, atlasCode: string } };
 
 export type MemberHubQueryVariables = Exact<{
   memberId: string;
@@ -1349,7 +1509,7 @@ export type RetainedCalendarQueryVariables = Exact<{
 }>;
 
 
-export type RetainedCalendarQuery = { gameCalendar: { currentGameDay: number | null, currentGameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null, monthGrid: Array<{ realDate: string, gameDay: number | null }> }, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null };
+export type RetainedCalendarQuery = { gameCalendar: { currentGameDay: number | null, currentGameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null, monthGrid: Array<{ realDate: string, gameDay: number | null, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null }> }, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null };
 
 export type RetainedCalendarQuestsQueryVariables = Exact<{
   filters: QuestFiltersInput;
@@ -1536,7 +1696,7 @@ export type QuestBoardChromeQueryVariables = Exact<{
 }>;
 
 
-export type QuestBoardChromeQuery = { communityDirectory: { total: number, entries: Array<{ memberId: string, handle: string, acceptingPlayers: boolean | null, isDm: boolean }> } };
+export type QuestBoardChromeQuery = { communityDirectory: { total: number, entries: Array<{ memberId: string, handle: string, displayName: string, acceptingPlayers: boolean | null, isDm: boolean }> } };
 
 export type CloseQuestMutationVariables = Exact<{
   id: string;
@@ -1553,7 +1713,7 @@ export type QuestQueryVariables = Exact<{
 }>;
 
 
-export type QuestQuery = { quest: { id: string, shortCode: string, status: string, dmId: string, updatedAt: string, arcId: string | null, scheduledAt: string, durationHours: number, slotsMax: number, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, arc: { id: string, name: string } | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null, frontmatter: unknown } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, status: string }>, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string }> } | null };
+export type QuestQuery = { quest: { id: string, shortCode: string, status: string, dmId: string, updatedAt: string, arcId: string | null, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, signupType: string | null, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, regions: Array<string>, arc: { id: string, name: string } | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null, frontmatter: unknown } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, status: string }>, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string }> } | null };
 
 export type QuestListQueryVariables = Exact<{
   filters: QuestFiltersInput;

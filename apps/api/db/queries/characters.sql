@@ -13,55 +13,6 @@ LEFT JOIN backstories b ON b.id = c.backstory_id
 LEFT JOIN regions r ON r.id = c.region_id
 WHERE c.public_id = $1;
 
--- name: GetCharacterByShortCode :one
-SELECT c.public_id AS id,
-       c.short_code,
-       c.name,
-       o.public_id AS owner_id,
-       c.status,
-       b.public_id AS backstory_id,
-       r.public_id AS region_id,
-       c.player_xp AS pcxp
-FROM characters c
-JOIN members o ON o.id = c.owner_id
-LEFT JOIN backstories b ON b.id = c.backstory_id
-LEFT JOIN regions r ON r.id = c.region_id
-WHERE c.short_code = $1;
-
--- name: ListCharactersByOwner :many
-SELECT c.public_id AS id,
-       c.short_code,
-       c.name,
-       o.public_id AS owner_id,
-       c.status,
-       b.public_id AS backstory_id,
-       r.public_id AS region_id,
-       c.player_xp AS pcxp
-FROM characters c
-JOIN members o ON o.id = c.owner_id
-LEFT JOIN backstories b ON b.id = c.backstory_id
-LEFT JOIN regions r ON r.id = c.region_id
-WHERE o.public_id = sqlc.arg(owner_id)
-ORDER BY c.created_at DESC
-LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
-
--- name: ListCharacters :many
-SELECT c.public_id AS id,
-       c.short_code,
-       c.name,
-       o.public_id AS owner_id,
-       c.status,
-       b.public_id AS backstory_id,
-       r.public_id AS region_id,
-       c.player_xp AS pcxp
-FROM characters c
-JOIN members o ON o.id = c.owner_id
-LEFT JOIN backstories b ON b.id = c.backstory_id
-LEFT JOIN regions r ON r.id = c.region_id
-WHERE ($1::text IS NULL OR c.status = $1)
-ORDER BY c.created_at DESC
-LIMIT $2 OFFSET $3;
-
 -- name: ListCharacterProgression :many
 SELECT l.public_id AS id,
        c.public_id AS character_id,

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
@@ -221,20 +220,6 @@ type MyPersonalizationView struct {
 	Settings *MemberSettingsView
 }
 
-type RequestPage struct {
-	Items []RequestView
-	Total int32
-}
-
-type RequestView struct {
-	Id          string
-	Kind        string
-	Note        *string
-	RequesterId string
-	Status      string
-	TargetDmId  string
-}
-
 type RoleChangePage struct {
 	Items []RoleChangeView
 	Total int32
@@ -333,27 +318,11 @@ type WeekActivityView struct {
 	VoiceMinutes float64
 }
 
-type CreateRequestSpec struct {
-	TargetDmId string
-	Kind       string
-	Note       *string
-}
-
 type DecideDmProfileVerificationSpec struct {
 	MemberId         string
 	ExpectedRevision int32
 	Verdict          VerificationVerdict
 	Note             *string
-}
-
-type DecideRequestSpec struct {
-	RequestId string
-	Decision  string
-	Note      *string
-}
-
-type FollowPersonSpec struct {
-	MemberId string
 }
 
 type GrantUnlockSpec struct {
@@ -385,10 +354,6 @@ type SubmitDmProfileForVerificationSpec struct {
 	ExpectedRevision int32
 }
 
-type UnfollowPersonSpec struct {
-	MemberId string
-}
-
 type UpdateMyDmProfileSpec struct {
 	Input UpdateDmProfileFields
 }
@@ -410,15 +375,6 @@ type CommunityDirectorySpec struct {
 	Filters *CommunityDirectoryFiltersFields
 	Limit   int32
 	Offset  int32
-}
-
-type DmRequestsSpec struct {
-	Limit  int32
-	Offset int32
-}
-
-type IsFollowingSpec struct {
-	MemberId string
 }
 
 type MemberSpec struct {
@@ -464,11 +420,6 @@ type MyAvailabilitySpec struct {
 type MyPersonalizationSpec struct {
 }
 
-type MyRequestsSpec struct {
-	Limit  int32
-	Offset int32
-}
-
 type MyUnlocksSpec struct {
 	Limit  int32
 	Offset int32
@@ -485,17 +436,6 @@ type UnlockablesCatalogSpec struct {
 	Offset     int32
 }
 
-type CreateRequestState struct {
-	Exists          bool
-	SubjectID       string
-	OwnerID         string
-	Version         int64
-	UpdatedAt       *time.Time
-	Before          *RequestView
-	TargetMemberIDs []string
-	ReviewRevision  int64
-}
-
 type DecideDmProfileVerificationState struct {
 	Exists            bool
 	SubjectID         string
@@ -507,29 +447,6 @@ type DecideDmProfileVerificationState struct {
 	ReviewRevision    int64
 	Profile           DmProfileView
 	LatestReviewEvent *DmProfileReviewEvent
-}
-
-type DecideRequestState struct {
-	Exists          bool
-	SubjectID       string
-	OwnerID         string
-	Version         int64
-	UpdatedAt       *time.Time
-	Before          *RequestView
-	TargetMemberIDs []string
-	ReviewRevision  int64
-	Parties         notification.RequestParties
-	PriorDecision   *RequestDecisionRecord
-}
-
-type FollowPersonState struct {
-	Exists          bool
-	SubjectID       string
-	OwnerID         string
-	Version         int64
-	UpdatedAt       *time.Time
-	TargetMemberIDs []string
-	ReviewRevision  int64
 }
 
 type GrantUnlockState struct {
@@ -597,16 +514,6 @@ type SubmitDmProfileForVerificationState struct {
 	LatestReviewEvent *DmProfileReviewEvent
 }
 
-type UnfollowPersonState struct {
-	Exists          bool
-	SubjectID       string
-	OwnerID         string
-	Version         int64
-	UpdatedAt       *time.Time
-	TargetMemberIDs []string
-	ReviewRevision  int64
-}
-
 type UpdateMyDmProfileState struct {
 	Exists            bool
 	SubjectID         string
@@ -654,19 +561,6 @@ type UpsertUnlockableState struct {
 	ReviewRevision  int64
 }
 
-type CreateRequestWrite struct {
-	ActorID        string
-	At             time.Time
-	Input          CreateRequestSpec
-	Locked         CreateRequestState
-	ValidatedInput CreateRequestSpec
-	RequestID      string
-	HistoryID      *string
-	DecisionID     *string
-	RevisionID     *string
-	EventKey       *string
-}
-
 type DecideDmProfileVerificationWrite struct {
 	ActorID        string
 	At             time.Time
@@ -678,30 +572,6 @@ type DecideDmProfileVerificationWrite struct {
 	RevisionID     *string
 	EventKey       *string
 	ReviewEvent    DmProfileReviewEvent
-}
-
-type DecideRequestWrite struct {
-	ActorID        string
-	At             time.Time
-	Input          DecideRequestSpec
-	Locked         DecideRequestState
-	ValidatedInput DecideRequestSpec
-	HistoryID      *string
-	DecisionID     *string
-	RevisionID     *string
-	EventKey       *string
-}
-
-type FollowPersonWrite struct {
-	ActorID        string
-	At             time.Time
-	Input          FollowPersonSpec
-	Locked         FollowPersonState
-	ValidatedInput FollowPersonSpec
-	HistoryID      *string
-	DecisionID     *string
-	RevisionID     *string
-	EventKey       *string
 }
 
 type GrantUnlockWrite struct {
@@ -778,18 +648,6 @@ type SubmitDmProfileForVerificationWrite struct {
 	ReviewEvent    DmProfileReviewEvent
 }
 
-type UnfollowPersonWrite struct {
-	ActorID        string
-	At             time.Time
-	Input          UnfollowPersonSpec
-	Locked         UnfollowPersonState
-	ValidatedInput UnfollowPersonSpec
-	HistoryID      *string
-	DecisionID     *string
-	RevisionID     *string
-	EventKey       *string
-}
-
 type UpdateMyDmProfileWrite struct {
 	ActorID        string
 	At             time.Time
@@ -854,14 +712,6 @@ type LockedMemberState struct {
 	Status    string
 	Version   int64
 	UpdatedAt time.Time
-}
-
-type RequestDecisionRecord struct {
-	ID         string
-	RequestID  string
-	Decision   string
-	ActorID    string
-	RecordedAt time.Time
 }
 
 type VoiceChannelList struct {

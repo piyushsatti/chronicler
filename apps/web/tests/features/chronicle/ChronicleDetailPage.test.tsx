@@ -73,6 +73,72 @@ describe('Summary and Chronicle reader', () => {
     );
   });
 
+  it('shows the back link, kind chip, game date, author row and Quest details bar', async () => {
+    reader('/chronicles/vault-delve');
+    expect(await screen.findByRole('heading', { name: detail.title })).toBeVisible();
+    expect(screen.getByRole('link', { name: /All chronicles/ })).toHaveAttribute(
+      'href',
+      '/chronicles',
+    );
+    const bar = screen.getByRole('region', { name: 'Quest details' });
+    expect(within(bar).getByText('Quest details')).toBeVisible();
+    expect(within(bar).getByText(/Quests summarized/)).toBeVisible();
+    expect(within(bar).getByRole('link', { name: 'Q-14' })).toHaveAttribute(
+      'href',
+      '/quests/Q-14',
+    );
+    expect(within(bar).getByRole('link', { name: 'Dalmond' })).toHaveAttribute(
+      'href',
+      `/regions/${detail.summaryDerived.regions[0].id}`,
+    );
+    expect(within(bar).getByText(/^DM ·/)).toBeVisible();
+    expect((await screen.findAllByRole('link', { name: 'Mira' })).length).toBeGreaterThan(1);
+    // Session details and Related entries stay.
+    expect(screen.getByLabelText('Session details')).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Related entries' })).toBeVisible();
+  });
+
+  it('puts Written by and Related entries in one row under the title, body full width (owner item 17)', async () => {
+    reader('/chronicles/vault-delve');
+    const title = await screen.findByRole('heading', { level: 1, name: detail.title });
+    const author = screen.getByRole('region', { name: 'Author' });
+    const related = screen.getByRole('region', { name: 'Related entries' });
+    const row = author.parentElement!;
+    expect(row).toHaveAttribute('data-el', 'chronicle.about');
+    expect(related.parentElement).toBe(row);
+    expect(title.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const body = document.querySelector('.summary-prose')!;
+    expect(row.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(document.querySelector('.detail-layout__rail')).toBeNull();
+    expect(document.querySelector('.reading-column')).toBeNull();
+  });
+
+  it('puts the in-game date in the header', async () => {
+    server.use(graphql.query('ChronicleDetail', () => HttpResponse.json({
+      data: { bySlug: {
+        ...detail,
+        summaryDerived: {
+          ...detail.summaryDerived,
+          gameDate: { eraAbbrev: 'Pw', year: 102, periodName: 'Oktavros', periodIndex: 7, periodType: 'month', day: 1 },
+        },
+      } },
+    })));
+    reader('/chronicles/vault-delve');
+    await screen.findByRole('heading', { name: detail.title });
+    expect(document.querySelector('[data-el="chronicle.gameDate"]')).toHaveTextContent(
+      'Pw 102 · Oktavros 1',
+    );
+  });
+
+  it('omits the Quest details bar when there are no quests, regions or DMs', async () => {
+    server.use(graphql.query('ChronicleDetail', () => HttpResponse.json({
+      data: { bySlug: { ...detail, summaryDerived: null } },
+    })));
+    reader('/chronicles/vault-delve');
+    await screen.findByRole('heading', { name: detail.title });
+    expect(screen.queryByRole('region', { name: 'Quest details' })).not.toBeInTheDocument();
+  });
+
   it('shows loading until a server response arrives', async () => {
     let release!: () => void;
     const pending = new Promise<void>((resolve) => {

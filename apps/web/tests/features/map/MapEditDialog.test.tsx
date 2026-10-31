@@ -8,13 +8,13 @@ import type { MapEdit } from '../../../src/features/map/hooks/useMapEdit.js';
 import * as adapter from '../../../src/features/map/adapters/mapAdapter.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
-import good from '../../fixtures/wire/map/good.json';
+import good from '../../fixtures/wire/map/goodMap.js';
 
 const map = { ...good, canEdit: true };
 const region = { id: 'ffffffff-ffff-4fff-8fff-ffffffffffff', name: 'Coast', canCreateMap: true, kind: 'charter', charterDeadline: null, documentId: null, createdAt: good.createdAt };
 const location = { id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', title: 'Harbor', slug: 'harbor', kind: 'codex_entry', category: 'Locations', effectiveBody: '' };
 function show(edit: MapEdit) {
-  renderWithProviders(<MapEditDialog edit={edit} scopeKey="test" admit={() => true} onClose={vi.fn()} onSaved={async () => {}} onDenied={async () => {}} />);
+  return renderWithProviders(<MapEditDialog edit={edit} scopeKey="test" admit={() => true} onClose={vi.fn()} onSaved={async () => {}} onDenied={async () => {}} />);
 }
 function form() {
   const value = screen.getByRole('button', { name: 'Save' }).closest('form');
@@ -51,26 +51,69 @@ it('preserves the optional global-map choice and the selected submap', async () 
   expect(new FormData(form()).get('submapId')).toBe('');
 });
 
-it('submits the default endpoints and changed endpoint values from the hidden inputs', async () => {
-  const save = vi.spyOn(adapter, 'saveEdge').mockResolvedValue({ id: good.pointcrawlEdges[0]!.id });
-  show({ kind: 'edge', map, edge: null, nodes: good.pointcrawlNodes });
-  expect(new FormData(form()).get('nodeA')).toBe(good.pointcrawlNodes[0]!.id);
-  expect(new FormData(form()).get('nodeB')).toBe(good.pointcrawlNodes[1]!.id);
-  await choose('From location', 'River Crossing');
-  await choose('To location', 'Lightfall Gate');
+it('creates a hex map with a plain-word address, group and image address', async () => {
+  const create = vi.spyOn(adapter, 'createMap').mockResolvedValue({ id: good.id, atlasCode: 'LIGHTFALL-HEXFLOWER' });
+  show({ kind: 'create', global: false, regions: [region] });
+  expect(screen.getByText('Type of map')).toBeVisible();
+  expect(screen.getByText('Map address')).toBeVisible();
+  expect(screen.getByText('Map group')).toBeVisible();
+  expect(screen.queryByText('Atlas code')).toBeNull();
+  expect(screen.queryByText('Family')).toBeNull();
+  expect(new FormData(form()).get('grid')).toBe('point');
+  expect(new FormData(form()).get('family')).toBe('campaign');
+  await userEvent.click(screen.getByRole('button', { name: 'Hex map' }));
+  expect(new FormData(form()).get('grid')).toBe('hex');
+  await userEvent.type(screen.getByRole('textbox', { name: /^Map name/ }), 'Lightfall Hexflower');
+  await userEvent.type(screen.getByRole('textbox', { name: /^Map image/ }), '/maps/hexflower.png');
   fireEvent.submit(form());
-  await waitFor(() => expect(save).toHaveBeenCalledWith(map.id, expect.objectContaining({ nodeA: good.pointcrawlNodes[2]!.id, nodeB: good.pointcrawlNodes[0]!.id }), expect.any(String)));
+  await waitFor(() => expect(create).toHaveBeenCalledWith(
+    expect.objectContaining({ name: 'Lightfall Hexflower', atlasCode: 'LIGHTFALL-HEXFLOWER', family: 'campaign', grid: 'hex', mapKind: 'pointcrawl', assetPath: '/maps/hexflower.png' }),
+    expect.any(String),
+  ));
 });
 
-it('requires a Location document, then submits the menu choice', async () => {
+it('edits a map: shows its current values and saves name, type, group and image', async () => {
+  const update = vi.spyOn(adapter, 'updateMap').mockResolvedValue({ id: map.id, atlasCode: map.atlasCode });
+  show({ kind: 'map', map: { ...map, assetPath: '/maps/old.png' } });
+  expect(screen.getByRole('dialog', { name: 'Edit map' })).toBeVisible();
+  expect(screen.getByRole('textbox', { name: /^Map name/ })).toHaveValue(map.name);
+  expect(screen.getByRole('textbox', { name: /^Map image/ })).toHaveValue('/maps/old.png');
+  expect(screen.queryByText('Map address')).toBeNull();
+  await userEvent.clear(screen.getByRole('textbox', { name: /^Map name/ }));
+  await userEvent.type(screen.getByRole('textbox', { name: /^Map name/ }), 'Renamed map');
+  await userEvent.click(screen.getByRole('button', { name: 'Hex map' }));
+  await userEvent.clear(screen.getByRole('textbox', { name: /^Map image/ }));
+  fireEvent.submit(form());
+  await waitFor(() => expect(update).toHaveBeenCalledWith(
+    map.id,
+    { name: 'Renamed map', family: map.family, grid: 'hex', assetPath: null },
+    expect.any(String),
+  ));
+});
+
+it('prefills the position when a location is added from a right-click', () => {
+  show({ kind: 'node', map, node: null, maps: [map], at: { x: 120.5, y: 48.25 } });
+  expect(screen.getByRole('dialog', { name: 'Add location' })).toBeVisible();
+  expect(new FormData(form()).get('x')).toBe('120.5');
+  expect(new FormData(form()).get('y')).toBe('48.25');
+});
+
+it('names the hex map place a hex, never a location', () => {
+  show({ kind: 'node', map: { ...map, grid: 'hex' }, node: good.pointcrawlNodes[0]!, maps: [map] });
+  expect(screen.getByRole('dialog', { name: 'Edit hex' })).toBeVisible();
+  expect(screen.getByText('Hex number')).toBeVisible();
+  expect(screen.queryByText('Location name')).toBeNull();
+});
+
+it('requires a Location, then submits the menu choice', async () => {
   server.use(graphql.query('MapLocationDocuments', () => HttpResponse.json({ data: { documents: { items: [location], total: 1 } } })));
   const save = vi.spyOn(adapter, 'changeEntry').mockResolvedValue(undefined);
   show({ kind: 'link', map, node: good.pointcrawlNodes[0]! });
-  await screen.findByRole('button', { name: /^Location document/ });
+  await screen.findByRole('button', { name: /^Location/ });
   fireEvent.submit(form());
   expect(await screen.findByRole('alert')).toHaveTextContent('Please select an item in the list.');
   expect(save).not.toHaveBeenCalled();
-  await choose('Location document', 'Harbor');
+  await choose('Location', 'Harbor');
   expect(new FormData(form()).get('documentId')).toBe(location.id);
   fireEvent.submit(form());
   await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ documentId: location.id }), false, expect.any(String)));
@@ -83,26 +126,52 @@ it.each(['search', 'page'] as const)('clears a selected document when the result
   })));
   const save = vi.spyOn(adapter, 'changeEntry').mockResolvedValue(undefined);
   show({ kind: 'link', map, node: good.pointcrawlNodes[0]! });
-  await screen.findByRole('button', { name: /^Location document/ });
-  await choose('Location document', 'Harbor');
-  if (change === 'search') await userEvent.type(screen.getByRole('textbox', { name: 'Find Location documents' }), 'Forest');
+  await screen.findByRole('button', { name: /^Location/ });
+  await choose('Location', 'Harbor');
+  if (change === 'search') await userEvent.type(screen.getByRole('textbox', { name: 'Find Locations' }), 'Forest');
   else await userEvent.click(screen.getByRole('button', { name: 'Next' }));
-  await waitFor(() => expect(screen.getByRole('button', { name: /^Location document/ })).toHaveTextContent('Choose a readable Location document'));
+  await waitFor(() => expect(screen.getByRole('button', { name: /^Location/ })).toHaveTextContent('Choose a Location'));
   expect(new FormData(form()).get('documentId')).toBe('');
   fireEvent.submit(form());
   expect(await screen.findByRole('alert')).toHaveTextContent('Please select an item in the list.');
   expect(save).not.toHaveBeenCalled();
-  await choose('Location document', 'Forest');
+  await choose('Location', 'Forest');
   fireEvent.submit(form());
   await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ documentId: next.id }), false, expect.any(String)));
 });
 
-it.each(['create', 'edge'] as const)('blocks an empty required %s choice before saving', async (kind) => {
+it('blocks an empty required region choice before saving', async () => {
   const create = vi.spyOn(adapter, 'createMap');
-  const edge = vi.spyOn(adapter, 'saveEdge');
-  show(kind === 'create' ? { kind, global: false, regions: [] } : { kind, map, edge: null, nodes: [] });
+  show({ kind: 'create', global: false, regions: [] });
   fireEvent.submit(form());
   expect(await screen.findByRole('alert')).toHaveTextContent('Please select an item in the list.');
   expect(create).not.toHaveBeenCalled();
-  expect(edge).not.toHaveBeenCalled();
+});
+
+it('saves a bare site path from the image hint as a site-root path', async () => {
+  const create = vi.spyOn(adapter, 'createMap').mockResolvedValue({ id: good.id, atlasCode: 'X' });
+  const created = show({ kind: 'create', global: false, regions: [region] });
+  await userEvent.type(screen.getByRole('textbox', { name: /^Map name/ }), 'X');
+  await userEvent.type(screen.getByRole('textbox', { name: /^Map image/ }), 'maps/x.png');
+  fireEvent.submit(form());
+  await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ assetPath: '/maps/x.png' }), expect.any(String)));
+  created.unmount();
+  const update = vi.spyOn(adapter, 'updateMap').mockResolvedValue({ id: map.id, atlasCode: map.atlasCode });
+  show({ kind: 'map', map: { ...map, assetPath: 'maps/x.png' } });
+  fireEvent.submit(form());
+  await waitFor(() => expect(update).toHaveBeenCalledWith(map.id, expect.objectContaining({ assetPath: '/maps/x.png' }), expect.any(String)));
+});
+
+it('keeps Previous when the list shrinks to one page while on the second page', async () => {
+  server.use(graphql.query('MapLocationDocuments', ({ variables }) => HttpResponse.json({
+    data: { documents: variables.offset ? { total: 50, items: [] } : { total: 51, items: [location] } },
+  })));
+  show({ kind: 'link', map, node: good.pointcrawlNodes[0]! });
+  await screen.findByRole('button', { name: /^Location/ });
+  await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+  await screen.findByText('50 to choose from');
+  await userEvent.click(screen.getByRole('button', { name: 'Previous' }));
+  await screen.findByText('51 to choose from');
+  await choose('Location', 'Harbor');
+  expect(new FormData(form()).get('documentId')).toBe(location.id);
 });

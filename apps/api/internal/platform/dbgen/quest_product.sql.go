@@ -22,247 +22,6 @@ func (q *Queries) ProductQuestArcInternalID(ctx context.Context, arcID pgtype.UU
 	return id, err
 }
 
-const productQuestBatchArcQuests = `-- name: ProductQuestBatchArcQuests :many
-WITH requested AS (
-    SELECT k.ordinality::int AS key_ordinal,
-           (k.value->>'parent_id')::uuid AS parent_id,
-           (k.value->>'limit')::int AS row_limit,
-           (k.value->>'offset')::int AS row_offset
-    FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY AS k(value, ordinality)
-), ranked AS (
-    SELECT r.key_ordinal, r.parent_id, r.row_limit, r.row_offset,
-           q.public_id, q.short_code, q.kinds, q.status,
-           quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, $2::timestamptz) AS display_status,
-           dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
-           q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
-           doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-           q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-           q.discord_message_id, q.discord_event_id, q.event_url,
-           creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
-           row_number() OVER (PARTITION BY r.key_ordinal ORDER BY q.scheduled_at, q.public_id) AS rn
-    FROM requested r
-    JOIN quest_arcs arc ON arc.public_id = r.parent_id
-    JOIN quests q ON q.arc_id = arc.id AND q.deleted_at IS NULL
-    JOIN members dm ON dm.id = q.dm_id
-    JOIN members creator ON creator.id = q.created_by
-    LEFT JOIN documents doc ON doc.id = q.document_id
-)
-SELECT key_ordinal, parent_id, true AS parent_exists,
-       public_id, short_code, kinds, status, display_status, dm_public_id, arc_public_id,
-       scheduled_at, duration_hours, slots_max, filled_count, document_public_id,
-       tags, genres, apl, signup_type, discord_desired_revision, discord_applied_revision,
-       discord_message_id, discord_event_id, event_url, created_by_public_id, created_at, updated_at
-FROM ranked
-WHERE rn > row_offset AND rn <= row_offset + row_limit
-UNION ALL
-SELECT r.key_ordinal, r.parent_id, (arc.id IS NOT NULL) AS parent_exists,
-       NULL::uuid, NULL::text, NULL::text[], NULL::text, NULL::text, NULL::uuid, NULL::uuid,
-       NULL::timestamptz, NULL::double precision, NULL::integer, NULL::integer, NULL::uuid,
-       NULL::text[], NULL::text[], NULL::integer, NULL::text, NULL::integer, NULL::integer,
-       NULL::text, NULL::text, NULL::text, NULL::uuid, NULL::timestamptz, NULL::timestamptz
-FROM requested r
-LEFT JOIN quest_arcs arc ON arc.public_id = r.parent_id
-WHERE NOT EXISTS (
-    SELECT 1 FROM ranked x
-    WHERE x.key_ordinal = r.key_ordinal
-      AND x.rn > r.row_offset AND x.rn <= r.row_offset + r.row_limit
-)
-ORDER BY key_ordinal, scheduled_at NULLS LAST, public_id NULLS LAST
-`
-
-type ProductQuestBatchArcQuestsParams struct {
-	Keys []byte             `json:"keys"`
-	AsOf pgtype.Timestamptz `json:"as_of"`
-}
-
-type ProductQuestBatchArcQuestsRow struct {
-	KeyOrdinal             int32              `json:"key_ordinal"`
-	ParentID               pgtype.UUID        `json:"parent_id"`
-	ParentExists           bool               `json:"parent_exists"`
-	PublicID               pgtype.UUID        `json:"public_id"`
-	ShortCode              string             `json:"short_code"`
-	Kinds                  []string           `json:"kinds"`
-	Status                 string             `json:"status"`
-	DisplayStatus          string             `json:"display_status"`
-	DmPublicID             pgtype.UUID        `json:"dm_public_id"`
-	ArcPublicID            pgtype.UUID        `json:"arc_public_id"`
-	ScheduledAt            pgtype.Timestamptz `json:"scheduled_at"`
-	DurationHours          float64            `json:"duration_hours"`
-	SlotsMax               int32              `json:"slots_max"`
-	FilledCount            int32              `json:"filled_count"`
-	DocumentPublicID       pgtype.UUID        `json:"document_public_id"`
-	Tags                   []string           `json:"tags"`
-	Genres                 []string           `json:"genres"`
-	Apl                    pgtype.Int4        `json:"apl"`
-	SignupType             pgtype.Text        `json:"signup_type"`
-	DiscordDesiredRevision int32              `json:"discord_desired_revision"`
-	DiscordAppliedRevision int32              `json:"discord_applied_revision"`
-	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
-	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
-	EventUrl               pgtype.Text        `json:"event_url"`
-	CreatedByPublicID      pgtype.UUID        `json:"created_by_public_id"`
-	CreatedAt              pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
-}
-
-func (q *Queries) ProductQuestBatchArcQuests(ctx context.Context, arg ProductQuestBatchArcQuestsParams) ([]ProductQuestBatchArcQuestsRow, error) {
-	rows, err := q.db.Query(ctx, productQuestBatchArcQuests, arg.Keys, arg.AsOf)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestBatchArcQuestsRow{}
-	for rows.Next() {
-		var i ProductQuestBatchArcQuestsRow
-		if err := rows.Scan(
-			&i.KeyOrdinal,
-			&i.ParentID,
-			&i.ParentExists,
-			&i.PublicID,
-			&i.ShortCode,
-			&i.Kinds,
-			&i.Status,
-			&i.DisplayStatus,
-			&i.DmPublicID,
-			&i.ArcPublicID,
-			&i.ScheduledAt,
-			&i.DurationHours,
-			&i.SlotsMax,
-			&i.FilledCount,
-			&i.DocumentPublicID,
-			&i.Tags,
-			&i.Genres,
-			&i.Apl,
-			&i.SignupType,
-			&i.DiscordDesiredRevision,
-			&i.DiscordAppliedRevision,
-			&i.DiscordMessageID,
-			&i.DiscordEventID,
-			&i.EventUrl,
-			&i.CreatedByPublicID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productQuestBatchArcs = `-- name: ProductQuestBatchArcs :many
-SELECT input.ordinality::integer AS input_index,
-       arc.public_id, arc.name, creator.public_id AS created_by_public_id,
-       arc.created_at, count(q.id)::integer AS quest_count
-FROM unnest($1::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
-LEFT JOIN quest_arcs arc ON arc.public_id = input.public_id
-LEFT JOIN members creator ON creator.id = arc.created_by
-LEFT JOIN quests q ON q.arc_id = arc.id AND q.deleted_at IS NULL
-GROUP BY input.ordinality, arc.public_id, arc.name, creator.public_id, arc.created_at
-ORDER BY input.ordinality
-`
-
-type ProductQuestBatchArcsRow struct {
-	InputIndex        int32              `json:"input_index"`
-	PublicID          pgtype.UUID        `json:"public_id"`
-	Name              pgtype.Text        `json:"name"`
-	CreatedByPublicID pgtype.UUID        `json:"created_by_public_id"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	QuestCount        int32              `json:"quest_count"`
-}
-
-// Nested loaders (K1): batch slot order matches unnest ordinality / jsonb key ordinality.
-func (q *Queries) ProductQuestBatchArcs(ctx context.Context, arcIds []pgtype.UUID) ([]ProductQuestBatchArcsRow, error) {
-	rows, err := q.db.Query(ctx, productQuestBatchArcs, arcIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestBatchArcsRow{}
-	for rows.Next() {
-		var i ProductQuestBatchArcsRow
-		if err := rows.Scan(
-			&i.InputIndex,
-			&i.PublicID,
-			&i.Name,
-			&i.CreatedByPublicID,
-			&i.CreatedAt,
-			&i.QuestCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productQuestBatchDelivery = `-- name: ProductQuestBatchDelivery :many
-SELECT input.ordinality::integer AS input_index,
-       q.public_id AS quest_public_id,
-       q.discord_desired_revision, q.discord_applied_revision,
-       job.public_id AS job_public_id, job.state AS job_state,
-       job.next_run_at, job.safe_error_code, job.error_message
-FROM unnest($1::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
-LEFT JOIN quests q ON q.public_id = input.public_id AND q.deleted_at IS NULL
-LEFT JOIN LATERAL (
-    SELECT b.public_id, b.state, b.next_run_at, b.safe_error_code, b.error_message
-    FROM background_jobs b
-    WHERE b.kind IN ('quest_discord_delivery','quest_discord')
-      AND b.payload->>'public_id' = q.public_id::text
-    ORDER BY b.updated_at DESC, b.public_id DESC
-    LIMIT 1
-) job ON TRUE
-ORDER BY input.ordinality
-`
-
-type ProductQuestBatchDeliveryRow struct {
-	InputIndex             int32              `json:"input_index"`
-	QuestPublicID          pgtype.UUID        `json:"quest_public_id"`
-	DiscordDesiredRevision pgtype.Int4        `json:"discord_desired_revision"`
-	DiscordAppliedRevision pgtype.Int4        `json:"discord_applied_revision"`
-	JobPublicID            pgtype.UUID        `json:"job_public_id"`
-	JobState               string             `json:"job_state"`
-	NextRunAt              pgtype.Timestamptz `json:"next_run_at"`
-	SafeErrorCode          pgtype.Text        `json:"safe_error_code"`
-	ErrorMessage           pgtype.Text        `json:"error_message"`
-}
-
-func (q *Queries) ProductQuestBatchDelivery(ctx context.Context, questIds []pgtype.UUID) ([]ProductQuestBatchDeliveryRow, error) {
-	rows, err := q.db.Query(ctx, productQuestBatchDelivery, questIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestBatchDeliveryRow{}
-	for rows.Next() {
-		var i ProductQuestBatchDeliveryRow
-		if err := rows.Scan(
-			&i.InputIndex,
-			&i.QuestPublicID,
-			&i.DiscordDesiredRevision,
-			&i.DiscordAppliedRevision,
-			&i.JobPublicID,
-			&i.JobState,
-			&i.NextRunAt,
-			&i.SafeErrorCode,
-			&i.ErrorMessage,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const productQuestBatchParticipants = `-- name: ProductQuestBatchParticipants :many
 SELECT input.ordinality::integer AS input_index, input.quest_id::uuid AS quest_id,
        qp.status AS filter_status, qp.character_id,
@@ -278,7 +37,17 @@ LEFT JOIN quests q ON q.public_id = input.quest_id AND q.deleted_at IS NULL
 LEFT JOIN quest_participants qp ON qp.quest_id = q.id AND (status_input.status IS NULL OR status_input.status = '' OR qp.status = status_input.status)
 LEFT JOIN members m ON m.id = qp.member_id
 LEFT JOIN characters c ON c.id = qp.character_id
-ORDER BY input.ordinality, qp.created_at, c.public_id
+LEFT JOIN LATERAL (
+    -- When this member last played another quest. No row means they have never played.
+    SELECT max(prior.scheduled_at) AS last_played_at
+    FROM quest_participants played
+    JOIN quests prior ON prior.id = played.quest_id AND prior.deleted_at IS NULL
+    WHERE played.member_id = qp.member_id AND played.status = 'played' AND prior.id <> q.id
+) last_game ON q.signup_type = 'last_game_played'
+ORDER BY input.ordinality,
+         (last_game.last_played_at IS NOT NULL),
+         last_game.last_played_at,
+         qp.created_at, c.public_id
 `
 
 type ProductQuestBatchParticipantsParams struct {
@@ -304,6 +73,7 @@ type ProductQuestBatchParticipantsRow struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
+// Last Game Played quests list new players first, then the longest wait since a played game.
 func (q *Queries) ProductQuestBatchParticipants(ctx context.Context, arg ProductQuestBatchParticipantsParams) ([]ProductQuestBatchParticipantsRow, error) {
 	rows, err := q.db.Query(ctx, productQuestBatchParticipants, arg.QuestIds, arg.Statuses)
 	if err != nil {
@@ -329,241 +99,6 @@ func (q *Queries) ProductQuestBatchParticipants(ctx context.Context, arg Product
 			&i.Manual,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productQuestBatchPointcrawlLinks = `-- name: ProductQuestBatchPointcrawlLinks :many
-WITH requested AS (
-    SELECT k.ordinality::int AS key_ordinal,
-           (k.value->>'parent_id')::uuid AS parent_id,
-           (k.value->>'limit')::int AS row_limit,
-           (k.value->>'offset')::int AS row_offset,
-           NULLIF(k.value->>'role', '') AS role_filter
-    FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY AS k(value, ordinality)
-), ranked AS (
-    SELECT r.key_ordinal, r.parent_id, r.row_limit, r.row_offset,
-           q.public_id::text AS quest_id, n.public_id::text AS node_id, qpn.role,
-           row_number() OVER (PARTITION BY r.key_ordinal ORDER BY n.public_id, qpn.role) AS rn
-    FROM requested r
-    JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
-    JOIN quest_pointcrawl_nodes qpn ON qpn.quest_id = q.id
-    JOIN pointcrawl_nodes n ON n.id = qpn.node_id
-    WHERE r.role_filter IS NULL OR qpn.role = r.role_filter
-)
-SELECT key_ordinal, parent_id, true AS parent_exists, quest_id, node_id, role
-FROM ranked
-WHERE rn > row_offset AND rn <= row_offset + row_limit
-UNION ALL
-SELECT r.key_ordinal, r.parent_id, (q.id IS NOT NULL) AS parent_exists,
-       NULL::text, NULL::text, NULL::text
-FROM requested r
-LEFT JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
-WHERE NOT EXISTS (
-    SELECT 1 FROM ranked x
-    WHERE x.key_ordinal = r.key_ordinal
-      AND x.rn > r.row_offset AND x.rn <= r.row_offset + r.row_limit
-)
-ORDER BY key_ordinal, node_id NULLS LAST, role NULLS LAST
-`
-
-type ProductQuestBatchPointcrawlLinksRow struct {
-	KeyOrdinal   int32       `json:"key_ordinal"`
-	ParentID     pgtype.UUID `json:"parent_id"`
-	ParentExists bool        `json:"parent_exists"`
-	QuestID      string      `json:"quest_id"`
-	NodeID       string      `json:"node_id"`
-	Role         string      `json:"role"`
-}
-
-func (q *Queries) ProductQuestBatchPointcrawlLinks(ctx context.Context, keys []byte) ([]ProductQuestBatchPointcrawlLinksRow, error) {
-	rows, err := q.db.Query(ctx, productQuestBatchPointcrawlLinks, keys)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestBatchPointcrawlLinksRow{}
-	for rows.Next() {
-		var i ProductQuestBatchPointcrawlLinksRow
-		if err := rows.Scan(
-			&i.KeyOrdinal,
-			&i.ParentID,
-			&i.ParentExists,
-			&i.QuestID,
-			&i.NodeID,
-			&i.Role,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productQuestBatchRead = `-- name: ProductQuestBatchRead :many
-SELECT input.ordinality::integer AS input_index, input.public_id::uuid AS requested_id,
-       q.id, q.public_id, q.short_code, q.kinds, q.status,
-       coalesce(quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, $1::timestamptz), '')::text AS display_status,
-       dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
-       q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
-       doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-       q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url,
-       creator.public_id AS created_by_public_id, q.created_at, q.updated_at
-FROM unnest($2::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
-LEFT JOIN quests q ON q.public_id = input.public_id AND q.deleted_at IS NULL
-LEFT JOIN members dm ON dm.id = q.dm_id
-LEFT JOIN quest_arcs arc ON arc.id = q.arc_id
-LEFT JOIN documents doc ON doc.id = q.document_id
-LEFT JOIN members creator ON creator.id = q.created_by
-ORDER BY input.ordinality
-`
-
-type ProductQuestBatchReadParams struct {
-	AsOf     pgtype.Timestamptz `json:"as_of"`
-	QuestIds []pgtype.UUID      `json:"quest_ids"`
-}
-
-type ProductQuestBatchReadRow struct {
-	InputIndex             int32              `json:"input_index"`
-	RequestedID            pgtype.UUID        `json:"requested_id"`
-	ID                     pgtype.Int8        `json:"id"`
-	PublicID               pgtype.UUID        `json:"public_id"`
-	ShortCode              pgtype.Text        `json:"short_code"`
-	Kinds                  []string           `json:"kinds"`
-	Status                 pgtype.Text        `json:"status"`
-	DisplayStatus          string             `json:"display_status"`
-	DmPublicID             pgtype.UUID        `json:"dm_public_id"`
-	ArcPublicID            pgtype.UUID        `json:"arc_public_id"`
-	ScheduledAt            pgtype.Timestamptz `json:"scheduled_at"`
-	DurationHours          pgtype.Float8      `json:"duration_hours"`
-	SlotsMax               pgtype.Int4        `json:"slots_max"`
-	FilledCount            pgtype.Int4        `json:"filled_count"`
-	DocumentPublicID       pgtype.UUID        `json:"document_public_id"`
-	Tags                   []string           `json:"tags"`
-	Genres                 []string           `json:"genres"`
-	Apl                    pgtype.Int4        `json:"apl"`
-	SignupType             pgtype.Text        `json:"signup_type"`
-	DiscordDesiredRevision pgtype.Int4        `json:"discord_desired_revision"`
-	DiscordAppliedRevision pgtype.Int4        `json:"discord_applied_revision"`
-	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
-	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
-	EventUrl               pgtype.Text        `json:"event_url"`
-	CreatedByPublicID      pgtype.UUID        `json:"created_by_public_id"`
-	CreatedAt              pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
-}
-
-func (q *Queries) ProductQuestBatchRead(ctx context.Context, arg ProductQuestBatchReadParams) ([]ProductQuestBatchReadRow, error) {
-	rows, err := q.db.Query(ctx, productQuestBatchRead, arg.AsOf, arg.QuestIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestBatchReadRow{}
-	for rows.Next() {
-		var i ProductQuestBatchReadRow
-		if err := rows.Scan(
-			&i.InputIndex,
-			&i.RequestedID,
-			&i.ID,
-			&i.PublicID,
-			&i.ShortCode,
-			&i.Kinds,
-			&i.Status,
-			&i.DisplayStatus,
-			&i.DmPublicID,
-			&i.ArcPublicID,
-			&i.ScheduledAt,
-			&i.DurationHours,
-			&i.SlotsMax,
-			&i.FilledCount,
-			&i.DocumentPublicID,
-			&i.Tags,
-			&i.Genres,
-			&i.Apl,
-			&i.SignupType,
-			&i.DiscordDesiredRevision,
-			&i.DiscordAppliedRevision,
-			&i.DiscordMessageID,
-			&i.DiscordEventID,
-			&i.EventUrl,
-			&i.CreatedByPublicID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productQuestBatchRegions = `-- name: ProductQuestBatchRegions :many
-WITH requested AS (
-    SELECT k.ordinality::int AS key_ordinal,
-           (k.value->>'parent_id')::uuid AS parent_id,
-           (k.value->>'limit')::int AS row_limit,
-           (k.value->>'offset')::int AS row_offset
-    FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY AS k(value, ordinality)
-), ranked AS (
-    SELECT r.key_ordinal, r.parent_id, r.row_limit, r.row_offset,
-           reg.public_id::text AS region_id,
-           row_number() OVER (PARTITION BY r.key_ordinal ORDER BY reg.public_id) AS rn
-    FROM requested r
-    JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
-    JOIN quest_regions qr ON qr.quest_id = q.id
-    JOIN regions reg ON reg.id = qr.region_id
-)
-SELECT key_ordinal, parent_id, true AS parent_exists, region_id
-FROM ranked
-WHERE rn > row_offset AND rn <= row_offset + row_limit
-UNION ALL
-SELECT r.key_ordinal, r.parent_id, (q.id IS NOT NULL) AS parent_exists, NULL::text
-FROM requested r
-LEFT JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
-WHERE NOT EXISTS (
-    SELECT 1 FROM ranked x
-    WHERE x.key_ordinal = r.key_ordinal
-      AND x.rn > r.row_offset AND x.rn <= r.row_offset + r.row_limit
-)
-ORDER BY key_ordinal, region_id NULLS LAST
-`
-
-type ProductQuestBatchRegionsRow struct {
-	KeyOrdinal   int32       `json:"key_ordinal"`
-	ParentID     pgtype.UUID `json:"parent_id"`
-	ParentExists bool        `json:"parent_exists"`
-	RegionID     string      `json:"region_id"`
-}
-
-func (q *Queries) ProductQuestBatchRegions(ctx context.Context, keys []byte) ([]ProductQuestBatchRegionsRow, error) {
-	rows, err := q.db.Query(ctx, productQuestBatchRegions, keys)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestBatchRegionsRow{}
-	for rows.Next() {
-		var i ProductQuestBatchRegionsRow
-		if err := rows.Scan(
-			&i.KeyOrdinal,
-			&i.ParentID,
-			&i.ParentExists,
-			&i.RegionID,
 		); err != nil {
 			return nil, err
 		}
@@ -873,24 +408,6 @@ func (q *Queries) ProductQuestCountParticipants(ctx context.Context, arg Product
 	var total int64
 	err := row.Scan(&total)
 	return total, err
-}
-
-const productQuestDeleteParticipant = `-- name: ProductQuestDeleteParticipant :execrows
-DELETE FROM quest_participants
-WHERE quest_id = $1::bigint AND character_id = $2::bigint
-`
-
-type ProductQuestDeleteParticipantParams struct {
-	QuestID     int64 `json:"quest_id"`
-	CharacterID int64 `json:"character_id"`
-}
-
-func (q *Queries) ProductQuestDeleteParticipant(ctx context.Context, arg ProductQuestDeleteParticipantParams) (int64, error) {
-	result, err := q.db.Exec(ctx, productQuestDeleteParticipant, arg.QuestID, arg.CharacterID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
 }
 
 const productQuestDisplayStatusAt = `-- name: ProductQuestDisplayStatusAt :one
@@ -1261,17 +778,15 @@ UPDATE quests q SET filled_count = q.filled_count + $1::integer,
            WHEN q.status = 'open' AND q.filled_count + $1::integer >= q.slots_max THEN 'full'
            WHEN q.status = 'full' AND q.filled_count + $1::integer < q.slots_max THEN 'open'
            ELSE q.status
-       END,
-       updated_at = $2::timestamptz
-WHERE q.id = $3::bigint
+       END
+WHERE q.id = $2::bigint
   AND q.filled_count + $1::integer BETWEEN 0 AND q.slots_max
 RETURNING q.id, q.public_id, q.status, q.slots_max, q.filled_count, q.updated_at
 `
 
 type ProductQuestIncrementCapacityParams struct {
-	Delta   int32              `json:"delta"`
-	At      pgtype.Timestamptz `json:"at"`
-	QuestID int64              `json:"quest_id"`
+	Delta   int32 `json:"delta"`
+	QuestID int64 `json:"quest_id"`
 }
 
 type ProductQuestIncrementCapacityRow struct {
@@ -1284,7 +799,7 @@ type ProductQuestIncrementCapacityRow struct {
 }
 
 func (q *Queries) ProductQuestIncrementCapacity(ctx context.Context, arg ProductQuestIncrementCapacityParams) (ProductQuestIncrementCapacityRow, error) {
-	row := q.db.QueryRow(ctx, productQuestIncrementCapacity, arg.Delta, arg.At, arg.QuestID)
+	row := q.db.QueryRow(ctx, productQuestIncrementCapacity, arg.Delta, arg.QuestID)
 	var i ProductQuestIncrementCapacityRow
 	err := row.Scan(
 		&i.ID,
@@ -1301,34 +816,35 @@ const productQuestInsert = `-- name: ProductQuestInsert :one
 INSERT INTO quests (
     public_id, short_code, kinds, dm_id, arc_id, scheduled_at, duration_hours, slots_max,
     document_id, tags, genres, avg_party_level, signup_type, created_by,
-    created_at, updated_at, discord_desired_revision
+    created_at, updated_at, discord_desired_revision, discord_voice_channel_id
 ) VALUES (
     $1::uuid, $2::text, $3::text[], $4::bigint, $5::bigint,
     $6::timestamptz, $7::double precision,
     $8::integer, $9::bigint, $10::text[], $11::text[],
     $12::integer, $13::text, $14::bigint,
-    $15::timestamptz, $15::timestamptz, 1
+    $15::timestamptz, $15::timestamptz, 1, $16::text
 )
 RETURNING id, public_id, short_code, status, scheduled_at, duration_hours,
           slots_max, filled_count, created_at, updated_at, discord_desired_revision
 `
 
 type ProductQuestInsertParams struct {
-	PublicID      pgtype.UUID        `json:"public_id"`
-	ShortCode     string             `json:"short_code"`
-	Kinds         []string           `json:"kinds"`
-	DmID          int64              `json:"dm_id"`
-	ArcID         pgtype.Int8        `json:"arc_id"`
-	ScheduledAt   pgtype.Timestamptz `json:"scheduled_at"`
-	DurationHours float64            `json:"duration_hours"`
-	SlotsMax      int32              `json:"slots_max"`
-	DocumentID    int64              `json:"document_id"`
-	Tags          []string           `json:"tags"`
-	Genres        []string           `json:"genres"`
-	Apl           pgtype.Int4        `json:"apl"`
-	SignupType    pgtype.Text        `json:"signup_type"`
-	CreatedBy     int64              `json:"created_by"`
-	At            pgtype.Timestamptz `json:"at"`
+	PublicID       pgtype.UUID        `json:"public_id"`
+	ShortCode      string             `json:"short_code"`
+	Kinds          []string           `json:"kinds"`
+	DmID           int64              `json:"dm_id"`
+	ArcID          pgtype.Int8        `json:"arc_id"`
+	ScheduledAt    pgtype.Timestamptz `json:"scheduled_at"`
+	DurationHours  float64            `json:"duration_hours"`
+	SlotsMax       int32              `json:"slots_max"`
+	DocumentID     int64              `json:"document_id"`
+	Tags           []string           `json:"tags"`
+	Genres         []string           `json:"genres"`
+	Apl            pgtype.Int4        `json:"apl"`
+	SignupType     pgtype.Text        `json:"signup_type"`
+	CreatedBy      int64              `json:"created_by"`
+	At             pgtype.Timestamptz `json:"at"`
+	VoiceChannelID pgtype.Text        `json:"voice_channel_id"`
 }
 
 type ProductQuestInsertRow struct {
@@ -1345,6 +861,7 @@ type ProductQuestInsertRow struct {
 	DiscordDesiredRevision int32              `json:"discord_desired_revision"`
 }
 
+// Command locks and writes remain bound to the caller's existing transaction.
 func (q *Queries) ProductQuestInsert(ctx context.Context, arg ProductQuestInsertParams) (ProductQuestInsertRow, error) {
 	row := q.db.QueryRow(ctx, productQuestInsert,
 		arg.PublicID,
@@ -1362,6 +879,7 @@ func (q *Queries) ProductQuestInsert(ctx context.Context, arg ProductQuestInsert
 		arg.SignupType,
 		arg.CreatedBy,
 		arg.At,
+		arg.VoiceChannelID,
 	)
 	var i ProductQuestInsertRow
 	err := row.Scan(
@@ -1421,7 +939,17 @@ type ProductQuestInsertParticipantParams struct {
 	At          pgtype.Timestamptz `json:"at"`
 }
 
-func (q *Queries) ProductQuestInsertParticipant(ctx context.Context, arg ProductQuestInsertParticipantParams) (QuestParticipant, error) {
+type ProductQuestInsertParticipantRow struct {
+	QuestID     int64              `json:"quest_id"`
+	MemberID    int64              `json:"member_id"`
+	CharacterID int64              `json:"character_id"`
+	Status      string             `json:"status"`
+	Manual      bool               `json:"manual"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ProductQuestInsertParticipant(ctx context.Context, arg ProductQuestInsertParticipantParams) (ProductQuestInsertParticipantRow, error) {
 	row := q.db.QueryRow(ctx, productQuestInsertParticipant,
 		arg.QuestID,
 		arg.MemberID,
@@ -1430,7 +958,7 @@ func (q *Queries) ProductQuestInsertParticipant(ctx context.Context, arg Product
 		arg.Manual,
 		arg.At,
 	)
-	var i QuestParticipant
+	var i ProductQuestInsertParticipantRow
 	err := row.Scan(
 		&i.QuestID,
 		&i.MemberID,
@@ -1783,7 +1311,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status, q.dm_id,
        q.discord_desired_revision, q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.event_url,
        q.created_by, q.created_at, q.updated_at, q.closed_at, q.deleted_at,
-       q.deleted_by
+       q.deleted_by, q.discord_voice_channel_id, q.discord_thread_id
 FROM quests q
 WHERE q.public_id = $1::uuid
 FOR UPDATE OF q
@@ -1820,81 +1348,8 @@ func (q *Queries) ProductQuestLockByID(ctx context.Context, questID pgtype.UUID)
 		&i.ClosedAt,
 		&i.DeletedAt,
 		&i.DeletedBy,
-	)
-	return i, err
-}
-
-const productQuestLockByShortCode = `-- name: ProductQuestLockByShortCode :one
-SELECT q.id, q.public_id, q.short_code, q.status, q.dm_id, q.arc_id,
-       q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
-       q.document_id, q.tags, q.genres, q.avg_party_level, q.signup_type,
-       q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url,
-       q.created_by, q.created_at, q.updated_at, q.closed_at, q.deleted_at,
-       q.deleted_by
-FROM quests q WHERE q.short_code = $1::text FOR UPDATE OF q
-`
-
-type ProductQuestLockByShortCodeRow struct {
-	ID                     int64              `json:"id"`
-	PublicID               pgtype.UUID        `json:"public_id"`
-	ShortCode              string             `json:"short_code"`
-	Status                 string             `json:"status"`
-	DmID                   int64              `json:"dm_id"`
-	ArcID                  pgtype.Int8        `json:"arc_id"`
-	ScheduledAt            pgtype.Timestamptz `json:"scheduled_at"`
-	DurationHours          float64            `json:"duration_hours"`
-	SlotsMax               int32              `json:"slots_max"`
-	FilledCount            int32              `json:"filled_count"`
-	DocumentID             int64              `json:"document_id"`
-	Tags                   []string           `json:"tags"`
-	Genres                 []string           `json:"genres"`
-	AvgPartyLevel          pgtype.Int4        `json:"avg_party_level"`
-	SignupType             pgtype.Text        `json:"signup_type"`
-	DiscordDesiredRevision int32              `json:"discord_desired_revision"`
-	DiscordAppliedRevision int32              `json:"discord_applied_revision"`
-	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
-	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
-	EventUrl               pgtype.Text        `json:"event_url"`
-	CreatedBy              int64              `json:"created_by"`
-	CreatedAt              pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
-	ClosedAt               pgtype.Timestamptz `json:"closed_at"`
-	DeletedAt              pgtype.Timestamptz `json:"deleted_at"`
-	DeletedBy              pgtype.Int8        `json:"deleted_by"`
-}
-
-// Command locks and writes remain bound to the caller's existing transaction.
-func (q *Queries) ProductQuestLockByShortCode(ctx context.Context, shortCode string) (ProductQuestLockByShortCodeRow, error) {
-	row := q.db.QueryRow(ctx, productQuestLockByShortCode, shortCode)
-	var i ProductQuestLockByShortCodeRow
-	err := row.Scan(
-		&i.ID,
-		&i.PublicID,
-		&i.ShortCode,
-		&i.Status,
-		&i.DmID,
-		&i.ArcID,
-		&i.ScheduledAt,
-		&i.DurationHours,
-		&i.SlotsMax,
-		&i.FilledCount,
-		&i.DocumentID,
-		&i.Tags,
-		&i.Genres,
-		&i.AvgPartyLevel,
-		&i.SignupType,
-		&i.DiscordDesiredRevision,
-		&i.DiscordAppliedRevision,
-		&i.DiscordMessageID,
-		&i.DiscordEventID,
-		&i.EventUrl,
-		&i.CreatedBy,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.ClosedAt,
-		&i.DeletedAt,
-		&i.DeletedBy,
+		&i.DiscordVoiceChannelID,
+		&i.DiscordThreadID,
 	)
 	return i, err
 }
@@ -2157,18 +1612,19 @@ func (q *Queries) ProductQuestOpenSeatsPage(ctx context.Context, arg ProductQues
 
 const productQuestPromoteParticipants = `-- name: ProductQuestPromoteParticipants :many
 UPDATE quest_participants participant
-SET status = 'signed_up', manual = false, updated_at = $1::timestamptz
+SET status = 'signed_up', manual = false, dm_picked = $1::boolean, updated_at = $2::timestamptz
 FROM quests q, characters c, members owner
 WHERE participant.quest_id = q.id AND participant.character_id = c.id AND participant.member_id = owner.id
-  AND q.public_id = $2::uuid AND c.public_id = ANY($3::uuid[])
+  AND q.public_id = $3::uuid AND c.public_id = ANY($4::uuid[])
   AND participant.status = 'waitlisted'
 RETURNING q.public_id AS quest_id, c.public_id AS character_id, owner.public_id AS member_id,
           c.name AS character_name, owner.handle AS member_handle, owner.display_name AS member_display_name,
-          owner.avatar_url AS member_avatar_url, participant.status, participant.manual,
+          owner.avatar_url AS member_avatar_url, participant.status, participant.manual, participant.dm_picked,
           participant.created_at, participant.updated_at
 `
 
 type ProductQuestPromoteParticipantsParams struct {
+	DmPicked     bool               `json:"dm_picked"`
 	At           pgtype.Timestamptz `json:"at"`
 	QuestID      pgtype.UUID        `json:"quest_id"`
 	CharacterIds []pgtype.UUID      `json:"character_ids"`
@@ -2184,12 +1640,18 @@ type ProductQuestPromoteParticipantsRow struct {
 	MemberAvatarUrl   pgtype.Text        `json:"member_avatar_url"`
 	Status            string             `json:"status"`
 	Manual            bool               `json:"manual"`
+	DmPicked          bool               `json:"dm_picked"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 func (q *Queries) ProductQuestPromoteParticipants(ctx context.Context, arg ProductQuestPromoteParticipantsParams) ([]ProductQuestPromoteParticipantsRow, error) {
-	rows, err := q.db.Query(ctx, productQuestPromoteParticipants, arg.At, arg.QuestID, arg.CharacterIds)
+	rows, err := q.db.Query(ctx, productQuestPromoteParticipants,
+		arg.DmPicked,
+		arg.At,
+		arg.QuestID,
+		arg.CharacterIds,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -2207,6 +1669,7 @@ func (q *Queries) ProductQuestPromoteParticipants(ctx context.Context, arg Produ
 			&i.MemberAvatarUrl,
 			&i.Status,
 			&i.Manual,
+			&i.DmPicked,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -2271,7 +1734,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
        q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url,
+       q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
        q.closed_at, q.deleted_at, deleted_by.public_id AS deleted_by_public_id
 FROM quests q
@@ -2312,6 +1775,7 @@ type ProductQuestReadByIDRow struct {
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
 	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
 	EventUrl               pgtype.Text        `json:"event_url"`
+	DiscordVoiceChannelID  pgtype.Text        `json:"discord_voice_channel_id"`
 	CreatedByPublicID      pgtype.UUID        `json:"created_by_public_id"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
@@ -2347,6 +1811,7 @@ func (q *Queries) ProductQuestReadByID(ctx context.Context, arg ProductQuestRead
 		&i.DiscordMessageID,
 		&i.DiscordEventID,
 		&i.EventUrl,
+		&i.DiscordVoiceChannelID,
 		&i.CreatedByPublicID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -2364,7 +1829,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
        q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url,
+       q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
        q.closed_at, q.deleted_at, deleted_by.public_id AS deleted_by_public_id
 FROM quests q
@@ -2405,6 +1870,7 @@ type ProductQuestReadByShortCodeRow struct {
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
 	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
 	EventUrl               pgtype.Text        `json:"event_url"`
+	DiscordVoiceChannelID  pgtype.Text        `json:"discord_voice_channel_id"`
 	CreatedByPublicID      pgtype.UUID        `json:"created_by_public_id"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
@@ -2440,6 +1906,7 @@ func (q *Queries) ProductQuestReadByShortCode(ctx context.Context, arg ProductQu
 		&i.DiscordMessageID,
 		&i.DiscordEventID,
 		&i.EventUrl,
+		&i.DiscordVoiceChannelID,
 		&i.CreatedByPublicID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -2578,35 +2045,6 @@ func (q *Queries) ProductQuestReadRegionIDs(ctx context.Context, questIds []pgty
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productQuestReadRegions = `-- name: ProductQuestReadRegions :many
-SELECT r.public_id::text AS region_id
-FROM quest_regions qr
-JOIN quests q ON q.id = qr.quest_id
-JOIN regions r ON r.id = qr.region_id
-WHERE q.public_id = $1::uuid
-ORDER BY r.public_id
-`
-
-func (q *Queries) ProductQuestReadRegions(ctx context.Context, questID pgtype.UUID) ([]string, error) {
-	rows, err := q.db.Query(ctx, productQuestReadRegions, questID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []string{}
-	for rows.Next() {
-		var region_id string
-		if err := rows.Scan(&region_id); err != nil {
-			return nil, err
-		}
-		items = append(items, region_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -2774,7 +2212,7 @@ func (q *Queries) ProductQuestRegionInternalIDs(ctx context.Context, regionIds [
 }
 
 const productQuestRejoinParticipant = `-- name: ProductQuestRejoinParticipant :one
-UPDATE quest_participants SET status = $1::text, manual = false,
+UPDATE quest_participants SET status = $1::text, manual = false, dm_picked = false,
        created_at = $2::timestamptz, updated_at = $2::timestamptz
 WHERE quest_id = $3::bigint AND character_id = $4::bigint AND status = 'withdrawn'
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at
@@ -2787,14 +2225,26 @@ type ProductQuestRejoinParticipantParams struct {
 	CharacterID int64              `json:"character_id"`
 }
 
-func (q *Queries) ProductQuestRejoinParticipant(ctx context.Context, arg ProductQuestRejoinParticipantParams) (QuestParticipant, error) {
+type ProductQuestRejoinParticipantRow struct {
+	QuestID     int64              `json:"quest_id"`
+	MemberID    int64              `json:"member_id"`
+	CharacterID int64              `json:"character_id"`
+	Status      string             `json:"status"`
+	Manual      bool               `json:"manual"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Rejoining is always an ordinary signup, never a DM pick: clear any dm_picked left over
+// from a prior DM selection of this same character, or it would wrongly stay bump-immune.
+func (q *Queries) ProductQuestRejoinParticipant(ctx context.Context, arg ProductQuestRejoinParticipantParams) (ProductQuestRejoinParticipantRow, error) {
 	row := q.db.QueryRow(ctx, productQuestRejoinParticipant,
 		arg.Status,
 		arg.At,
 		arg.QuestID,
 		arg.CharacterID,
 	)
-	var i QuestParticipant
+	var i ProductQuestRejoinParticipantRow
 	err := row.Scan(
 		&i.QuestID,
 		&i.MemberID,
@@ -2874,35 +2324,61 @@ func (q *Queries) ProductQuestRewardCoverage(ctx context.Context, questIds []pgt
 	return items, nil
 }
 
-const productQuestSetArc = `-- name: ProductQuestSetArc :one
-UPDATE quests q SET arc_id = $1::bigint, updated_at = $2::timestamptz
-WHERE q.public_id = $3::uuid
-RETURNING q.id, q.public_id, q.arc_id, q.updated_at
+const productQuestSeatPriority = `-- name: ProductQuestSeatPriority :many
+SELECT qp.character_id, c.public_id AS character_public_id, qp.status, qp.manual, qp.dm_picked,
+       qp.created_at, last_game.last_played_at
+FROM quest_participants qp
+JOIN quests q ON q.id = qp.quest_id
+JOIN characters c ON c.id = qp.character_id
+LEFT JOIN LATERAL (
+    SELECT max(prior.scheduled_at)::timestamptz AS last_played_at
+    FROM quest_participants played
+    JOIN quests prior ON prior.id = played.quest_id AND prior.deleted_at IS NULL
+    WHERE played.member_id = qp.member_id AND played.status = 'played' AND prior.id <> q.id
+) last_game ON TRUE
+WHERE q.public_id = $1::uuid AND qp.status IN ('signed_up', 'waitlisted')
+ORDER BY (last_game.last_played_at IS NOT NULL), last_game.last_played_at,
+         qp.created_at, c.public_id
 `
 
-type ProductQuestSetArcParams struct {
-	ArcID   int64              `json:"arc_id"`
-	At      pgtype.Timestamptz `json:"at"`
-	QuestID pgtype.UUID        `json:"quest_id"`
+type ProductQuestSeatPriorityRow struct {
+	CharacterID       int64              `json:"character_id"`
+	CharacterPublicID pgtype.UUID        `json:"character_public_id"`
+	Status            string             `json:"status"`
+	Manual            bool               `json:"manual"`
+	DmPicked          bool               `json:"dm_picked"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	LastPlayedAt      pgtype.Timestamptz `json:"last_played_at"`
 }
 
-type ProductQuestSetArcRow struct {
-	ID        int64              `json:"id"`
-	PublicID  pgtype.UUID        `json:"public_id"`
-	ArcID     pgtype.Int8        `json:"arc_id"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-}
-
-func (q *Queries) ProductQuestSetArc(ctx context.Context, arg ProductQuestSetArcParams) (ProductQuestSetArcRow, error) {
-	row := q.db.QueryRow(ctx, productQuestSetArc, arg.ArcID, arg.At, arg.QuestID)
-	var i ProductQuestSetArcRow
-	err := row.Scan(
-		&i.ID,
-		&i.PublicID,
-		&i.ArcID,
-		&i.UpdatedAt,
-	)
-	return i, err
+// Seated and waitlisted participants in Last Game Played seat order: players who have never
+// played another quest first, then the oldest last played game, then the earlier signup.
+func (q *Queries) ProductQuestSeatPriority(ctx context.Context, questID pgtype.UUID) ([]ProductQuestSeatPriorityRow, error) {
+	rows, err := q.db.Query(ctx, productQuestSeatPriority, questID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductQuestSeatPriorityRow{}
+	for rows.Next() {
+		var i ProductQuestSeatPriorityRow
+		if err := rows.Scan(
+			&i.CharacterID,
+			&i.CharacterPublicID,
+			&i.Status,
+			&i.Manual,
+			&i.DmPicked,
+			&i.CreatedAt,
+			&i.LastPlayedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const productQuestSetDeleted = `-- name: ProductQuestSetDeleted :one
@@ -3285,9 +2761,15 @@ UPDATE quests q SET
     scheduled_at = $4::timestamptz,
     duration_hours = $5::double precision,
     slots_max = $6::integer, tags = $7::text[], genres = $8::text[],
+    status = CASE
+        WHEN q.status = 'open' AND q.filled_count >= $6::integer THEN 'full'
+        WHEN q.status = 'full' AND q.filled_count < $6::integer THEN 'open'
+        ELSE q.status
+    END,
     avg_party_level = $9::integer, signup_type = $10::text,
-    updated_at = $11::timestamptz
-WHERE q.public_id = $12::uuid AND q.updated_at = $13::timestamptz
+    discord_voice_channel_id = $11::text,
+    updated_at = $12::timestamptz
+WHERE q.public_id = $13::uuid AND q.updated_at = $14::timestamptz
 RETURNING q.id, q.public_id, q.short_code, q.status, q.scheduled_at,
           q.duration_hours, q.slots_max, q.filled_count, q.updated_at
 `
@@ -3303,6 +2785,7 @@ type ProductQuestUpdateMetadataParams struct {
 	Genres            []string           `json:"genres"`
 	Apl               pgtype.Int4        `json:"apl"`
 	SignupType        pgtype.Text        `json:"signup_type"`
+	VoiceChannelID    pgtype.Text        `json:"voice_channel_id"`
 	At                pgtype.Timestamptz `json:"at"`
 	QuestID           pgtype.UUID        `json:"quest_id"`
 	ExpectedUpdatedAt pgtype.Timestamptz `json:"expected_updated_at"`
@@ -3332,6 +2815,7 @@ func (q *Queries) ProductQuestUpdateMetadata(ctx context.Context, arg ProductQue
 		arg.Genres,
 		arg.Apl,
 		arg.SignupType,
+		arg.VoiceChannelID,
 		arg.At,
 		arg.QuestID,
 		arg.ExpectedUpdatedAt,
@@ -3366,7 +2850,17 @@ type ProductQuestUpdateParticipantParams struct {
 	CharacterID int64              `json:"character_id"`
 }
 
-func (q *Queries) ProductQuestUpdateParticipant(ctx context.Context, arg ProductQuestUpdateParticipantParams) (QuestParticipant, error) {
+type ProductQuestUpdateParticipantRow struct {
+	QuestID     int64              `json:"quest_id"`
+	MemberID    int64              `json:"member_id"`
+	CharacterID int64              `json:"character_id"`
+	Status      string             `json:"status"`
+	Manual      bool               `json:"manual"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ProductQuestUpdateParticipant(ctx context.Context, arg ProductQuestUpdateParticipantParams) (ProductQuestUpdateParticipantRow, error) {
 	row := q.db.QueryRow(ctx, productQuestUpdateParticipant,
 		arg.Status,
 		arg.Manual,
@@ -3374,7 +2868,7 @@ func (q *Queries) ProductQuestUpdateParticipant(ctx context.Context, arg Product
 		arg.QuestID,
 		arg.CharacterID,
 	)
-	var i QuestParticipant
+	var i ProductQuestUpdateParticipantRow
 	err := row.Scan(
 		&i.QuestID,
 		&i.MemberID,

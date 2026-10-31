@@ -62,7 +62,10 @@ export function EditorDocumentControls({
         title="Leave with unsaved changes?"
         onClose={view.stay}
       >
-        <p>Your recovery copy stays in this browser for this account and revision.</p>
+        <p>
+          Your unsaved changes are kept as a draft in this browser. You can come back to
+          them.
+        </p>
         <div className="row">
           <Button type="button" onClick={view.stay}>
             Keep editing
@@ -72,7 +75,28 @@ export function EditorDocumentControls({
           </Button>
         </div>
       </Modal>
-      {view.stale || view.mutationError ? (
+      <Modal
+        open={view.confirming !== null}
+        title={
+          view.confirming === 'reload' ? 'Discard your local edits?' : 'Discard this draft?'
+        }
+        onClose={view.cancelConfirm}
+      >
+        <p>
+          {view.confirming === 'reload'
+            ? 'Your local edits are deleted and the latest saved version loads.'
+            : 'This deletes your unsaved draft.'}
+        </p>
+        <div className="row">
+          <Button type="button" onClick={view.cancelConfirm}>
+            Keep editing
+          </Button>
+          <Button type="button" variant="danger" onClick={view.acceptConfirm}>
+            {view.confirming === 'reload' ? 'Discard and reload' : 'Discard draft'}
+          </Button>
+        </div>
+      </Modal>
+      {view.stale || view.mutationNeedsReload ? (
         <div className="stack">
           <p className="type-caption">
             Your edits remain in this account’s recovery copy. Reload before retrying a
@@ -198,7 +222,7 @@ export function EditorDocumentControls({
                   onChange={(event) => view.audience.setSearch(event.target.value)}
                 />
               </label>
-              <ul className={styles.items} aria-label="Selected readers">
+              <ul className={`stack ${styles.items}`} data-gap="2" aria-label="Selected readers">
                 {view.audience.selected.map((reader) => (
                   <li key={reader.id}>
                     {reader.label}{' '}
@@ -220,7 +244,7 @@ export function EditorDocumentControls({
                 />
               ) : null}
               {view.audience.loading ? <StatePanel status="loading" /> : null}
-              <ul className={styles.items} aria-label="Matching members">
+              <ul className={`stack ${styles.items}`} data-gap="2" aria-label="Matching members">
                 {view.audience.matches.map((member, index) => (
                   <li key={member.memberId}>
                     {memberNames[index]}{' '}

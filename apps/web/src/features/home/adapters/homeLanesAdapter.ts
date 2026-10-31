@@ -23,7 +23,8 @@ import {
 } from './homeLanes.wire.schema.js';
 import type { QuestCardStatus } from '../../../view-models/questCard.js';
 import { toCardStatus } from '../../../view-models/questCard.js';
-import { formatScheduled } from '../../../utils/format.js';
+import { formatScheduled, formatScheduledShort } from '../../../utils/format.js';
+import { isDiscordDeliveryTerminal } from '../../../utils/discordDelivery.js';
 import type { QuestCardProps } from '../../../components/domain/QuestCard.js';
 
 export type DmAcceptingView = {
@@ -84,7 +85,6 @@ export type HomeLanesViewModel = {
   };
 };
 
-const TERMINAL_DELIVERY = new Set(['applied', 'failed', 'cancelled', 'skipped']);
 const SEATED = new Set(['signed_up', 'played', 'selected']);
 
 type WireQuestItem = (typeof questListWireSchema)['_output']['items'][number];
@@ -94,7 +94,6 @@ function mapQuestItem(
   regionNameById: Map<string, string>,
 ): HomeQuestView {
   const status = item.displayStatus ?? item.status;
-  const deliveryStatus = item.discordDelivery.overallStatus.toLowerCase();
   const participants: HomeQuestParticipantView[] = item.participants.map((p) => ({
     memberId: p.memberId,
     characterId: p.characterId,
@@ -131,9 +130,7 @@ function mapQuestItem(
       desiredRevision: item.discordDelivery.desiredRevision,
       appliedRevision: item.discordDelivery.appliedRevision,
       overallStatus: item.discordDelivery.overallStatus,
-      isTerminal:
-        TERMINAL_DELIVERY.has(deliveryStatus) ||
-        item.discordDelivery.desiredRevision === item.discordDelivery.appliedRevision,
+      isTerminal: isDiscordDeliveryTerminal(item.discordDelivery),
     },
   };
 }
@@ -296,6 +293,7 @@ export function mapToQuestCardProps(
     waitlistCount: quest.waitlistCount,
     totalSlots: quest.slotsMax,
     when: formatScheduled(quest.scheduledAt, opts.timeZone),
+    whenShort: formatScheduledShort(quest.scheduledAt, opts.timeZone),
   };
 }
 

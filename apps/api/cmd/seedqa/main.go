@@ -2,6 +2,8 @@
 //
 // Each line is one row. Foreign keys are public_id references, never bigint ids.
 // Re-running is safe: rows use ON CONFLICT DO NOTHING.
+// A members ref may set "platform_owner" instead of public_id; it resolves
+// through PLATFORM_OWNER_DISCORD_ID at load time, so the ID never sits in a fixture.
 //
 //	DATABASE_URL=postgres://... go run ./cmd/seedqa
 package main
@@ -67,6 +69,12 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "parse: %v\n", err)
 		os.Exit(1)
+	}
+	if needsPlatformOwner(lines) {
+		if _, err := platformOwnerDiscordID(); err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	n, err := apply(ctx, pool, lines)
@@ -136,8 +144,39 @@ func latestMigrationVersion(dir string) (int, error) {
 }
 
 type ref struct {
-	Table    string `json:"table"`
-	PublicID string `json:"public_id"`
+	Table         string `json:"table"`
+	PublicID      string `json:"public_id,omitempty"`
+	PlatformOwner bool   `json:"platform_owner,omitempty"`
+}
+
+const ownerEnv = "PLATFORM_OWNER_DISCORD_ID"
+
+// platformOwnerDiscordID mirrors config.validateDiscordOwnerID. Errors never echo the value.
+func platformOwnerDiscordID() (string, error) {
+	id := os.Getenv(ownerEnv)
+	if id == "" {
+		return "", fmt.Errorf("%s is not set; this fixture needs it to resolve the platform owner member", ownerEnv)
+	}
+	if len(id) < 17 || len(id) > 20 {
+		return "", fmt.Errorf("invalid %s", ownerEnv)
+	}
+	for i := 0; i < len(id); i++ {
+		if id[i] < '0' || id[i] > '9' {
+			return "", fmt.Errorf("invalid %s", ownerEnv)
+		}
+	}
+	return id, nil
+}
+
+func needsPlatformOwner(lines []line) bool {
+	for _, row := range lines {
+		for _, r := range row.Refs {
+			if r.PlatformOwner {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 type line struct {
@@ -181,8 +220,11 @@ func validate(row line) error {
 		}
 	}
 	for col, r := range row.Refs {
-		if !ident.MatchString(col) || !ident.MatchString(r.Table) || r.PublicID == "" {
+		if !ident.MatchString(col) || !ident.MatchString(r.Table) || (r.PublicID == "") == !r.PlatformOwner {
 			return fmt.Errorf("bad ref %q", col)
+		}
+		if r.PlatformOwner && r.Table != "members" {
+			return fmt.Errorf("bad ref %q: platform_owner needs table members", col)
 		}
 	}
 	for col := range row.Row {
@@ -290,6 +332,19 @@ func bind(ctx context.Context, q pgx.Tx, row line) ([]any, []string, error) {
 	}
 	for col, r := range row.Refs {
 		var id int64
+		if r.PlatformOwner {
+			discordID, err := platformOwnerDiscordID()
+			if err != nil {
+				return nil, nil, err
+			}
+			err = q.QueryRow(ctx, "SELECT id FROM members WHERE discord_id = $1 AND status = 'active'", discordID).Scan(&id)
+			if err != nil {
+				return nil, nil, fmt.Errorf("%s -> platform owner: no active member for %s: %w", col, ownerEnv, err)
+			}
+			cols = append(cols, col)
+			args = append(args, id)
+			continue
+		}
 		err := q.QueryRow(ctx, fmt.Sprintf(
 			"SELECT id FROM %s WHERE public_id = $1", r.Table,
 		), r.PublicID).Scan(&id)

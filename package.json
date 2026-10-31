@@ -15,7 +15,6 @@
     "codegen": "bun run build:contracts",
     "export-schema": "bash scripts/merge-graphql-schema",
     "check-schema": "bash scripts/merge-graphql-schema && git diff --exit-code -- packages/contracts/schema.graphql",
-    "codegen:openapi": "openapi-typescript packages/contracts/openapi.yaml -o apps/web/src/api/openapi.gen.ts",
     "lint": "bun run lint:js && bun run lint:py",
     "lint:js": "eslint .",
     "lint:py": "uv run ruff check . && uv run --directory apps/agent ruff check .",
@@ -41,8 +40,7 @@
     "graphql": "^16.9.0",
     "prettier": "^3.3.0",
     "typescript": "^5.6.0",
-    "typescript-eslint": "^8.0.0",
-    "openapi-typescript": "^7.8.0"
+    "typescript-eslint": "^8.0.0"
   },
   "trustedDependencies": [
     "esbuild",

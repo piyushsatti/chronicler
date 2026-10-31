@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { nextCivilDay } from '../../utils/format.js';
+import { dayRangeInZone, nextCivilDay } from '../../utils/format.js';
 
 const civilDate = z
   .string()
@@ -53,22 +53,19 @@ export function moveCivilMonth(value: string, delta: number): string {
   return date.toISOString().slice(0, 7);
 }
 
-export function lastCivilDay(value: string): string {
-  const date = new Date(`${moveCivilMonth(value, 1)}-01T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() - 1);
-  return date.toISOString().slice(0, 10);
-}
-
-export function calendarWindow(state: CalendarState) {
+export function calendarWindow(state: CalendarState, timeZone: string | null = null) {
   const realFrom = `${state.month}-01`;
   const realTo = `${moveCivilMonth(state.month, 1)}-01`;
   const scheduleFrom = state.day ?? realFrom;
   const scheduleTo = state.day ? nextCivilDay(state.day) : realTo;
+  const start = dayRangeInZone(scheduleFrom, timeZone);
+  const end = dayRangeInZone(scheduleTo, timeZone);
+  if (!start || !end) throw new Error('Invalid calendar location');
   return {
     realFrom,
     realTo,
     selectedDate: state.day ?? realFrom,
-    scheduledFrom: `${scheduleFrom}T00:00:00Z`,
-    scheduledTo: `${scheduleTo}T00:00:00Z`,
+    scheduledFrom: start.scheduledFrom,
+    scheduledTo: end.scheduledFrom,
   };
 }

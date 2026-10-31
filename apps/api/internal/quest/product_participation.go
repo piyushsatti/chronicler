@@ -8,10 +8,11 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 func ownedQuestCharacterRequest(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation auth.Operation, characterID string) (auth.Request, error) {
-	if commandDependencyMissing(repos.Characters) {
+	if product.MissingDependency(repos.Characters) {
 		return auth.Request{}, apierr.New(apierr.Internal, "character admission reader required")
 	}
 	owner, err := repos.Characters.ReadImmutableOwner(ctx, characterID)
@@ -84,7 +85,7 @@ func questParticipant(roster []QuestParticipantView, characterID string) *QuestP
 }
 
 func recordQuestParticipation(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, kind notification.EventKind, key, questID, characterID string, from *string, to string, at time.Time) error {
-	if commandDependencyMissing(repos.Producer) {
+	if product.MissingDependency(repos.Producer) {
 		return apierr.New(apierr.Internal, "quest notification producer required")
 	}
 	return repos.Producer.Record(ctx, repos.Notice, notification.Event{Key: key, Kind: kind, SubjectType: "quest", SubjectID: questID, ActorID: actor.Claims().MemberID, OccurredAt: at,

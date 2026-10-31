@@ -1166,6 +1166,25 @@ func (r *mutationResolver) UpdateQuestAnnouncementRoleSetting(ctx context.Contex
 	return toQuestAnnouncementRoleSettingType(view), nil
 }
 
+// UpdateDiscordSettings is the resolver for the updateDiscordSettings field.
+func (r *mutationResolver) UpdateDiscordSettings(ctx context.Context, input DiscordSettingsInput, meta CommandMeta) (*DiscordSettingsType, error) {
+	if r.Services.SiteCommands == nil {
+		return nil, fmt.Errorf("site commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SiteCommands.UpdateDiscordSettings(ctx, actor, site.UpdateDiscordSettingsSpec{
+		Input: toDiscordSettingsFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDiscordSettingsType(view), nil
+}
+
 // RedriveDiscordDelivery is the resolver for the redriveDiscordDelivery field.
 func (r *mutationResolver) RedriveDiscordDelivery(ctx context.Context, jobID string, reason string, meta CommandMeta) (*DeliveryReceipt, error) {
 	if r.Services.SiteCommands == nil {
@@ -1197,6 +1216,26 @@ func (r *mutationResolver) CreateMap(ctx context.Context, input MapCreateInput, 
 	}
 	view, err := r.Services.SpatialCommands.CreateMap(ctx, actor, spatial.CreateMapSpec{
 		Input: toMapCreateFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toMapViewType(view), nil
+}
+
+// UpdateMap is the resolver for the updateMap field.
+func (r *mutationResolver) UpdateMap(ctx context.Context, id string, input MapUpdateInput, meta CommandMeta) (*MapType, error) {
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.UpdateMap(ctx, actor, spatial.UpdateMapSpec{
+		MapId: id,
+		Input: toMapUpdateFields(input),
 	}, commandMeta)
 	if err != nil {
 		return nil, err
@@ -1413,6 +1452,27 @@ func (r *mutationResolver) UpsertPointcrawlNode(ctx context.Context, mapID strin
 	view, err := r.Services.SpatialCommands.UpsertPointcrawlNode(ctx, actor, spatial.UpsertPointcrawlNodeSpec{
 		MapId: mapID,
 		Input: toPointcrawlNodeFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toPointcrawlNodeType(view), nil
+}
+
+// SetPointcrawlNodeState is the resolver for the setPointcrawlNodeState field.
+func (r *mutationResolver) SetPointcrawlNodeState(ctx context.Context, mapID string, nodeID string, state PointcrawlNodeState, meta CommandMeta) (*PointcrawlNodeType, error) {
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.SetPointcrawlNodeState(ctx, actor, spatial.SetPointcrawlNodeStateSpec{
+		MapId:  mapID,
+		NodeId: nodeID,
+		State:  toSpatialPointcrawlNodeState(state),
 	}, commandMeta)
 	if err != nil {
 		return nil, err
@@ -1936,7 +1996,7 @@ func (r *queryResolver) DocumentsTrash(ctx context.Context, limit int, offset in
 }
 
 // PreviewBody is the resolver for the previewBody field.
-func (r *queryResolver) PreviewBody(ctx context.Context, body string, audience PreviewAudience, authorID *string) (string, error) {
+func (r *queryResolver) PreviewBody(ctx context.Context, body string, audience PreviewAudience, authorID *string, memberHandle *string) (string, error) {
 	if r.Services.DocumentQueries == nil {
 		return "", fmt.Errorf("document queries unavailable")
 	}
@@ -1945,10 +2005,27 @@ func (r *queryResolver) PreviewBody(ctx context.Context, body string, audience P
 		return "", err
 	}
 	return r.Services.DocumentQueries.PreviewBody(ctx, actor, document.PreviewBodySpec{
-		Body:     body,
-		Audience: toPreviewAudience(audience),
-		AuthorId: authorID,
+		Body:         body,
+		Audience:     toPreviewAudience(audience),
+		AuthorId:     authorID,
+		MemberHandle: memberHandle,
 	})
+}
+
+// AuditBody is the resolver for the auditBody field.
+func (r *queryResolver) AuditBody(ctx context.Context, body string) ([]*BodySpanAudit, error) {
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	records, err := r.Services.DocumentQueries.AuditBody(ctx, actor, body)
+	if err != nil {
+		return nil, err
+	}
+	return toBodySpanAudits(records), nil
 }
 
 // LieutenantAssignments is the resolver for the lieutenantAssignments field.
@@ -2578,7 +2655,7 @@ func (r *queryResolver) Home(ctx context.Context) (*HomeType, error) {
 	if err != nil {
 		return nil, err
 	}
-	view, err := r.Services.SiteQueries.Home(ctx, actor, site.HomeSpec{})
+	view, err := r.Services.SiteQueries.Home(ctx, actor, site.HomeSpec{IncludeActivity: collectedSelection(ctx, "communityStats", "activity")})
 	if err != nil {
 		return nil, err
 	}
@@ -2630,7 +2707,7 @@ func (r *queryResolver) SiteStats(ctx context.Context) (*SiteStatsType, error) {
 	if err != nil {
 		return nil, err
 	}
-	snapshot, err := r.Services.SiteQueries.SiteStats(ctx, actor, site.SiteStatsSpec{})
+	snapshot, err := r.Services.SiteQueries.SiteStats(ctx, actor, site.SiteStatsSpec{IncludeActivity: collectedSelection(ctx, "activity")})
 	if err != nil {
 		return nil, err
 	}
@@ -2679,6 +2756,38 @@ func (r *queryResolver) QuestAnnouncementRoleSetting(ctx context.Context) (*Ques
 		return nil, err
 	}
 	return toQuestAnnouncementRoleSettingType(view), nil
+}
+
+// DiscordSettings is the resolver for the discordSettings field.
+func (r *queryResolver) DiscordSettings(ctx context.Context) (*DiscordSettingsType, error) {
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SiteQueries.DiscordSettings(ctx, actor, site.DiscordSettingsSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toDiscordSettingsType(view), nil
+}
+
+// QuestVoiceChannels is the resolver for the questVoiceChannels field.
+func (r *queryResolver) QuestVoiceChannels(ctx context.Context) ([]*DiscordVoiceChannelType, error) {
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	channels, err := r.Services.SiteQueries.QuestVoiceChannels(ctx, actor, site.QuestVoiceChannelsSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toDiscordVoiceChannelTypes(channels), nil
 }
 
 // Map is the resolver for the map field.

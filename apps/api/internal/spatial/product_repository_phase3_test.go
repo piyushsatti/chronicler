@@ -51,8 +51,11 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 		reflect.TypeFor[ContainmentWriter](),
 		reflect.TypeFor[DocumentReferenceReader](),
 		reflect.TypeFor[CreateMapSpec](),
+		reflect.TypeFor[UpdateMapSpec](),
 		reflect.TypeFor[CreateMapState](),
+		reflect.TypeFor[UpdateMapState](),
 		reflect.TypeFor[CreateMapWrite](),
+		reflect.TypeFor[UpdateMapWrite](),
 		reflect.TypeFor[CreateRegionSpec](),
 		reflect.TypeFor[CreateRegionState](),
 		reflect.TypeFor[CreateRegionWrite](),
@@ -62,37 +65,20 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 		reflect.TypeFor[DeleteRegionSpec](),
 		reflect.TypeFor[DeleteRegionState](),
 		reflect.TypeFor[DeleteRegionWrite](),
-		reflect.TypeFor[EdgeList](),
 		reflect.TypeFor[GameCalendarSpec](),
 		reflect.TypeFor[GameCalendarView](),
 		reflect.TypeFor[GameDateSpec](),
 		reflect.TypeFor[GameDayCellView](),
-		reflect.TypeFor[HexChangePage](),
-		reflect.TypeFor[HexEdgeView](),
-		reflect.TypeFor[HexEntryLinkView](),
-		reflect.TypeFor[HexHistorySpec](),
-		reflect.TypeFor[HexLinkList](),
-		reflect.TypeFor[HexLinksKey](),
-		reflect.TypeFor[HexList](),
-		reflect.TypeFor[HexSpec](),
-		reflect.TypeFor[HexView](),
 		reflect.TypeFor[PointcrawlAdmission](),
 		reflect.TypeFor[QuestPointcrawlCandidate](),
-		reflect.TypeFor[LinkHexEntrySpec](),
-		reflect.TypeFor[LinkHexEntryState](),
-		reflect.TypeFor[LinkHexEntryWrite](),
 		reflect.TypeFor[LinkPointcrawlEntrySpec](),
 		reflect.TypeFor[LinkPointcrawlEntryState](),
 		reflect.TypeFor[LinkPointcrawlEntryWrite](),
-		reflect.TypeFor[MapEdgesKey](),
-		reflect.TypeFor[MapHexesKey](),
 		reflect.TypeFor[MapNodeEdgesKey](),
 		reflect.TypeFor[MapNodesKey](),
 		reflect.TypeFor[MapReadRepository](),
 		reflect.TypeFor[MapSpec](),
 		reflect.TypeFor[MapView](),
-		reflect.TypeFor[MapViewSpec](),
-		reflect.TypeFor[MapViewView](),
 		reflect.TypeFor[MapWriteRepository](),
 		reflect.TypeFor[PlaceReader](),
 		reflect.TypeFor[MapsSpec](),
@@ -100,20 +86,14 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 		reflect.TypeFor[NodeLinkList](),
 		reflect.TypeFor[NodeLinksKey](),
 		reflect.TypeFor[NodeList](),
-		reflect.TypeFor[POIsKey](),
-		reflect.TypeFor[PoiList](),
-		reflect.TypeFor[PoiPage](),
-		reflect.TypeFor[PoiView](),
 		reflect.TypeFor[PointcrawlEdgeView](),
 		reflect.TypeFor[PointcrawlEntryLinkView](),
 		reflect.TypeFor[PointcrawlNodeView](),
-		reflect.TypeFor[PoisForHexSpec](),
 		reflect.TypeFor[ProductBatchRepository](),
 		reflect.TypeFor[ProductCommandRepos](),
 		reflect.TypeFor[ProductReadRepos](),
 		reflect.TypeFor[RealDatePage](),
 		reflect.TypeFor[RealDatesSpec](),
-		reflect.TypeFor[RecentHexChangesSpec](),
 		reflect.TypeFor[RegionActivitySpec](),
 		reflect.TypeFor[RegionActivityView](),
 		reflect.TypeFor[RegionCountsSpec](),
@@ -128,16 +108,12 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 		reflect.TypeFor[RevokeArchonSpec](),
 		reflect.TypeFor[RevokeArchonState](),
 		reflect.TypeFor[RevokeArchonWrite](),
-		reflect.TypeFor[SetHexEdgeSpec](),
-		reflect.TypeFor[SetHexEdgeState](),
-		reflect.TypeFor[SetHexEdgeWrite](),
 		reflect.TypeFor[SetPointcrawlEdgeSpec](),
 		reflect.TypeFor[SetPointcrawlEdgeState](),
 		reflect.TypeFor[SetPointcrawlEdgeWrite](),
 		reflect.TypeFor[TimeAnchorPage](),
 		reflect.TypeFor[TimeAnchorView](),
 		reflect.TypeFor[TimeAnchorsSpec](),
-		reflect.TypeFor[TimeBatchReadRepository](),
 		reflect.TypeFor[TimeCalendarSnapshot](),
 		reflect.TypeFor[TimeDateSnapshot](),
 		reflect.TypeFor[TimeReadRepository](),
@@ -145,58 +121,48 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 		reflect.TypeFor[TransitionRegionSpec](),
 		reflect.TypeFor[TransitionRegionState](),
 		reflect.TypeFor[TransitionRegionWrite](),
-		reflect.TypeFor[UnlinkHexEntrySpec](),
-		reflect.TypeFor[UnlinkHexEntryState](),
-		reflect.TypeFor[UnlinkHexEntryWrite](),
 		reflect.TypeFor[UnlinkPointcrawlEntrySpec](),
 		reflect.TypeFor[UnlinkPointcrawlEntryState](),
 		reflect.TypeFor[UnlinkPointcrawlEntryWrite](),
 		reflect.TypeFor[UpdateGameCalendarSpec](),
 		reflect.TypeFor[UpdateGameCalendarState](),
 		reflect.TypeFor[UpdateGameCalendarWrite](),
-		reflect.TypeFor[UpdateHexSpec](),
-		reflect.TypeFor[UpdateHexState](),
-		reflect.TypeFor[UpdateHexWrite](),
 		reflect.TypeFor[UpdateRegionSpec](),
 		reflect.TypeFor[UpdateRegionState](),
 		reflect.TypeFor[UpdateRegionWrite](),
 		reflect.TypeFor[UpdateTimeAnchorSpec](),
 		reflect.TypeFor[UpdateTimeAnchorState](),
 		reflect.TypeFor[UpdateTimeAnchorWrite](),
-		reflect.TypeFor[UpsertPoiSpec](),
-		reflect.TypeFor[UpsertPoiState](),
-		reflect.TypeFor[UpsertPoiWrite](),
 		reflect.TypeFor[UpsertPointcrawlNodeSpec](),
 		reflect.TypeFor[UpsertPointcrawlNodeState](),
 		reflect.TypeFor[UpsertPointcrawlNodeWrite](),
+		reflect.TypeFor[SetPointcrawlNodeStateSpec](),
+		reflect.TypeFor[SetPointcrawlNodeStateState](),
+		reflect.TypeFor[SetPointcrawlNodeStateWrite](),
 	}
 	types := map[string]reflect.Type{
-		"string":                                        reflect.TypeFor[string](),
-		"bool":                                          reflect.TypeFor[bool](),
-		"int32":                                         reflect.TypeFor[int32](),
-		"error":                                         reflect.TypeFor[error](),
-		"context.Context":                               reflect.TypeFor[context.Context](),
-		"json.RawMessage":                               reflect.TypeFor[json.RawMessage](),
-		"auth.MapRef":                                   reflect.TypeFor[auth.MapRef](),
-		"auth.Authority":                                reflect.TypeFor[auth.Authority](),
-		"auth.Policy":                                   reflect.TypeFor[auth.Policy](),
-		"auth.AuthorityResolver":                        reflect.TypeFor[auth.AuthorityResolver](),
-		"auth.OverrideRecorder":                         reflect.TypeFor[auth.OverrideRecorder](),
-		"idempotency.Repository":                        reflect.TypeFor[idempotency.Repository](),
-		"notification.EventProducer":                    reflect.TypeFor[notification.EventProducer](),
-		"notification.ProducerRepos":                    reflect.TypeFor[notification.ProducerRepos](),
-		"product.CommandReceipt":                        reflect.TypeFor[product.CommandReceipt](),
-		"product.Date":                                  reflect.TypeFor[product.Date](),
-		"document.DocumentView":                         reflect.TypeFor[document.DocumentView](),
-		"document.ReferenceAudienceReader":              reflect.TypeFor[document.ReferenceAudienceReader](),
-		"document.LocationAdmissionReader":              reflect.TypeFor[document.LocationAdmissionReader](),
-		"product.BatchResult[spatial.EdgeList]":         reflect.TypeFor[product.BatchResult[EdgeList]](),
-		"product.BatchResult[spatial.HexLinkList]":      reflect.TypeFor[product.BatchResult[HexLinkList]](),
-		"product.BatchResult[spatial.HexList]":          reflect.TypeFor[product.BatchResult[HexList]](),
+		"string":                           reflect.TypeFor[string](),
+		"bool":                             reflect.TypeFor[bool](),
+		"int32":                            reflect.TypeFor[int32](),
+		"error":                            reflect.TypeFor[error](),
+		"context.Context":                  reflect.TypeFor[context.Context](),
+		"json.RawMessage":                  reflect.TypeFor[json.RawMessage](),
+		"auth.MapRef":                      reflect.TypeFor[auth.MapRef](),
+		"auth.Authority":                   reflect.TypeFor[auth.Authority](),
+		"auth.Policy":                      reflect.TypeFor[auth.Policy](),
+		"auth.AuthorityResolver":           reflect.TypeFor[auth.AuthorityResolver](),
+		"auth.OverrideRecorder":            reflect.TypeFor[auth.OverrideRecorder](),
+		"idempotency.Repository":           reflect.TypeFor[idempotency.Repository](),
+		"notification.EventProducer":       reflect.TypeFor[notification.EventProducer](),
+		"notification.ProducerRepos":       reflect.TypeFor[notification.ProducerRepos](),
+		"product.CommandReceipt":           reflect.TypeFor[product.CommandReceipt](),
+		"product.Date":                     reflect.TypeFor[product.Date](),
+		"document.DocumentView":            reflect.TypeFor[document.DocumentView](),
+		"document.ReferenceAudienceReader": reflect.TypeFor[document.ReferenceAudienceReader](),
+		"document.LocationAdmissionReader": reflect.TypeFor[document.LocationAdmissionReader](),
 		"product.BatchResult[spatial.NodeEdgeList]":     reflect.TypeFor[product.BatchResult[NodeEdgeList]](),
 		"product.BatchResult[spatial.NodeLinkList]":     reflect.TypeFor[product.BatchResult[NodeLinkList]](),
 		"product.BatchResult[spatial.NodeList]":         reflect.TypeFor[product.BatchResult[NodeList]](),
-		"product.BatchResult[spatial.PoiList]":          reflect.TypeFor[product.BatchResult[PoiList]](),
 		"product.BatchResult[spatial.TimeDateSnapshot]": reflect.TypeFor[product.BatchResult[TimeDateSnapshot]](),
 	}
 	for _, typ := range registered {
@@ -254,17 +220,16 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 			cross       bool
 			methodCount int
 		}{
-			{"MapReadRepository", []int{28}, false, 7},
-			{"MapWriteRepository", []int{29}, false, 21},
-			{"ProductBatchRepository", []int{30}, false, 7},
-			{"RegionReadRepository", []int{31}, false, 4},
-			{"RegionWriteRepository", []int{32}, false, 14},
-			{"TimeReadRepository", []int{33}, false, 4},
-			{"TimeWriteRepository", []int{34}, false, 8},
-			{"TimeBatchReadRepository", []int{259}, true, 1},
-			{"ContainmentWriter", []int{409, 410}, true, 2},
-			{"DocumentReferenceReader", nil, true, 1},
-			{"PlaceReader", []int{273}, true, 1},
+			{"MapReadRepository", []int{25}, false, 2},
+			{"MapWriteRepository", []int{26}, false, 15},
+			{"ProductBatchRepository", []int{27}, false, 3},
+			{"RegionReadRepository", []int{28}, false, 4},
+			{"RegionWriteRepository", []int{29}, false, 14},
+			{"TimeReadRepository", []int{30}, false, 4},
+			{"TimeWriteRepository", []int{31}, false, 8},
+			{"ContainmentWriter", []int{349, 350}, true, 2},
+			{"DocumentReferenceReader", []int{364}, true, 1},
+			{"PlaceReader", []int{246}, true, 1},
 		}
 		total := 0
 		for _, port := range ports {
@@ -320,28 +285,20 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 				total += typ.NumMethod()
 			})
 		}
-		if total != 70 {
-			t.Errorf("compiled methods=%d, want 70", total)
+		if total != 54 {
+			t.Errorf("compiled methods=%d, want 54", total)
 		}
 	})
 
 	t.Run("compiled struct fields in canonical order", func(t *testing.T) {
 		totalFields := 0
 		for _, name := range []string{
-			"MapHexesKey",
-			"MapEdgesKey",
 			"MapNodesKey",
 			"MapNodeEdgesKey",
-			"HexLinksKey",
 			"NodeLinksKey",
-			"POIsKey",
-			"HexList",
-			"EdgeList",
 			"NodeList",
 			"NodeEdgeList",
-			"HexLinkList",
 			"NodeLinkList",
-			"PoiList",
 			"TimeDateSnapshot",
 			"TimeCalendarSnapshot",
 			"ContainmentEdge",
@@ -393,8 +350,8 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 				}
 			})
 		}
-		if totalFields != 60 {
-			t.Errorf("compiled fields=%d, want 60", totalFields)
+		if totalFields != 43 {
+			t.Errorf("compiled fields=%d, want 43", totalFields)
 		}
 	})
 
@@ -411,24 +368,15 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 			"RegionWriteRepository":    true,
 			"TimeReadRepository":       true,
 			"TimeWriteRepository":      true,
-			"TimeBatchReadRepository":  true,
 			"ContainmentWriter":        true,
 			"DocumentReferenceReader":  true,
 			"PlaceReader":              true,
-			"MapHexesKey":              true,
-			"MapEdgesKey":              true,
 			"MapNodesKey":              true,
 			"MapNodeEdgesKey":          true,
-			"HexLinksKey":              true,
 			"NodeLinksKey":             true,
-			"POIsKey":                  true,
-			"HexList":                  true,
-			"EdgeList":                 true,
 			"NodeList":                 true,
 			"NodeEdgeList":             true,
-			"HexLinkList":              true,
 			"NodeLinkList":             true,
-			"PoiList":                  true,
 			"TimeDateSnapshot":         true,
 			"TimeCalendarSnapshot":     true,
 			"ContainmentEdge":          true,
@@ -455,34 +403,12 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 				}
 			}
 		}
-		if count != 31 || len(want) != 0 {
+		if count != 22 || len(want) != 0 {
 			t.Fatalf("source declares %d allocated types, missing %v", count, want)
 		}
 	})
 
 	t.Run("comparable keys retain parent and pagination identity", func(t *testing.T) {
-		t.Run("MapHexesKey", func(t *testing.T) {
-			keys := map[MapHexesKey]bool{
-				{ParentID: "a", Limit: 10, Offset: 0}:  true,
-				{ParentID: "b", Limit: 10, Offset: 0}:  true,
-				{ParentID: "a", Limit: 20, Offset: 0}:  true,
-				{ParentID: "a", Limit: 10, Offset: 10}: true,
-			}
-			if len(keys) != 4 {
-				t.Fatal("keys collapsed parent, limit or offset distinctions")
-			}
-		})
-		t.Run("MapEdgesKey", func(t *testing.T) {
-			keys := map[MapEdgesKey]bool{
-				{ParentID: "a", Limit: 10, Offset: 0}:  true,
-				{ParentID: "b", Limit: 10, Offset: 0}:  true,
-				{ParentID: "a", Limit: 20, Offset: 0}:  true,
-				{ParentID: "a", Limit: 10, Offset: 10}: true,
-			}
-			if len(keys) != 4 {
-				t.Fatal("keys collapsed parent, limit or offset distinctions")
-			}
-		})
 		t.Run("MapNodesKey", func(t *testing.T) {
 			keys := map[MapNodesKey]bool{
 				{ParentID: "a", Limit: 10, Offset: 0}:  true,
@@ -505,30 +431,8 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 				t.Fatal("keys collapsed parent, limit or offset distinctions")
 			}
 		})
-		t.Run("HexLinksKey", func(t *testing.T) {
-			keys := map[HexLinksKey]bool{
-				{ParentID: "a", Limit: 10, Offset: 0}:  true,
-				{ParentID: "b", Limit: 10, Offset: 0}:  true,
-				{ParentID: "a", Limit: 20, Offset: 0}:  true,
-				{ParentID: "a", Limit: 10, Offset: 10}: true,
-			}
-			if len(keys) != 4 {
-				t.Fatal("keys collapsed parent, limit or offset distinctions")
-			}
-		})
 		t.Run("NodeLinksKey", func(t *testing.T) {
 			keys := map[NodeLinksKey]bool{
-				{ParentID: "a", Limit: 10, Offset: 0}:  true,
-				{ParentID: "b", Limit: 10, Offset: 0}:  true,
-				{ParentID: "a", Limit: 20, Offset: 0}:  true,
-				{ParentID: "a", Limit: 10, Offset: 10}: true,
-			}
-			if len(keys) != 4 {
-				t.Fatal("keys collapsed parent, limit or offset distinctions")
-			}
-		})
-		t.Run("POIsKey", func(t *testing.T) {
-			keys := map[POIsKey]bool{
 				{ParentID: "a", Limit: 10, Offset: 0}:  true,
 				{ParentID: "b", Limit: 10, Offset: 0}:  true,
 				{ParentID: "a", Limit: 20, Offset: 0}:  true,

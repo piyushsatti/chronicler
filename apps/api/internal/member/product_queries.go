@@ -2,7 +2,6 @@ package member
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"unicode/utf8"
 
@@ -21,16 +20,9 @@ type ProductQueries struct {
 }
 
 func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver, reconciler GrantReconciler) (*ProductQueries, error) {
-	for _, dependency := range []any{reads.Member, reads.Reference, reads.Social, reads.Batch, policy, clock, overrideReads, reconciler} {
-		if dependency == nil {
+	for _, dependency := range []any{reads.Member, reads.Reference, reads.Batch, policy, clock, overrideReads, reconciler} {
+		if product.MissingDependency(dependency) {
 			return nil, apierr.New(apierr.Internal, "member query dependencies required")
-		}
-		value := reflect.ValueOf(dependency)
-		switch value.Kind() {
-		case reflect.Pointer, reflect.Func, reflect.Interface, reflect.Map, reflect.Slice, reflect.Chan:
-			if value.IsNil() {
-				return nil, apierr.New(apierr.Internal, "member query dependencies required")
-			}
 		}
 	}
 	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads, Reconciler: reconciler}, nil
@@ -90,7 +82,7 @@ func queryRole(role *string) error {
 		return nil
 	}
 	switch *role {
-	case "player", "dm", "archon", "lieutenant", "verifier", "admin":
+	case "guest", "player", "dm", "archon", "lieutenant", "verifier", "admin":
 		return nil
 	default:
 		return apierr.New(apierr.Invalid, "invalid member role")
@@ -135,26 +127,6 @@ func (s ProductQueries) CommunityDirectory(ctx context.Context, actor auth.Autho
 		return CommunityDirectoryResult{}, err
 	}
 	return s.Reads.Member.ReadCommunityDirectory(ctx, actor, spec)
-}
-
-func (s ProductQueries) DmRequests(ctx context.Context, actor auth.Authority, spec DmRequestsSpec) (RequestPage, error) {
-	if err := queryPage(spec.Limit, spec.Offset); err != nil {
-		return RequestPage{}, err
-	}
-	if err := s.admit(ctx, actor, "Query.dmRequests", actor.Claims().MemberID); err != nil {
-		return RequestPage{}, err
-	}
-	return s.Reads.Social.ReadDmRequests(ctx, actor, spec)
-}
-
-func (s ProductQueries) IsFollowing(ctx context.Context, actor auth.Authority, spec IsFollowingSpec) (bool, error) {
-	if err := queryID(&spec.MemberId); err != nil {
-		return false, err
-	}
-	if err := s.admit(ctx, actor, "Query.isFollowing", spec.MemberId); err != nil {
-		return false, err
-	}
-	return s.Reads.Social.ReadIsFollowing(ctx, actor, spec)
 }
 
 func (s ProductQueries) Member(ctx context.Context, actor auth.Authority, spec MemberSpec) (*MemberView, error) {
@@ -307,16 +279,6 @@ func (s ProductQueries) MyPersonalization(ctx context.Context, actor auth.Author
 		return nil, err
 	}
 	return s.Reads.Member.ReadMyPersonalization(ctx, actor, spec)
-}
-
-func (s ProductQueries) MyRequests(ctx context.Context, actor auth.Authority, spec MyRequestsSpec) (RequestPage, error) {
-	if err := queryPage(spec.Limit, spec.Offset); err != nil {
-		return RequestPage{}, err
-	}
-	if err := s.admit(ctx, actor, "Query.myRequests", actor.Claims().MemberID); err != nil {
-		return RequestPage{}, err
-	}
-	return s.Reads.Social.ReadMyRequests(ctx, actor, spec)
 }
 
 func (s ProductQueries) PendingDmProfileVerifications(ctx context.Context, actor auth.Authority, spec PendingDmProfileVerificationsSpec) (CommunityDirectoryResult, error) {

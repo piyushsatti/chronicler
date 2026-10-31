@@ -857,6 +857,7 @@ async def _main() -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     try:
         asyncio.run(_main())
     except (KeyboardInterrupt, asyncio.CancelledError):

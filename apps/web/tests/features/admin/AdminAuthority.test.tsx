@@ -26,6 +26,8 @@ import {
   trackPrivilegedRequests,
 } from './authority-test-utils.js';
 import goodMe from '../../fixtures/wire/me/good.json';
+import { server } from '../../../src/mocks/server.js';
+import { seriesAuthority } from '../../seriesAuthority.js';
 import goodMembers from '../../fixtures/wire/admin/members-good.json';
 
 let stopTracking: (() => void) | undefined;
@@ -156,6 +158,7 @@ describe('validated workspace authority', () => {
 
   it('allows the DM route without redirecting a DM or requesting administrator operations', async () => {
     signIn(['dm']);
+    server.use(seriesAuthority(goodMe.id));
     const requested = track();
     const { queryClient } = renderWithProviders(
       <Routes>
@@ -173,7 +176,8 @@ describe('validated workspace authority', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('Redirected home')).not.toBeInTheDocument();
-    expect(requested).toEqual([GRAPHQL_PATH]);
+    // The dashboard read plus the series-create authority check.
+    expect(requested).toEqual([GRAPHQL_PATH, GRAPHQL_PATH]);
     const operations = queryClient.getQueryCache().getAll();
     expect(operations.some((query) => query.queryKey[0] === 'adminOperations')).toBe(
       false,

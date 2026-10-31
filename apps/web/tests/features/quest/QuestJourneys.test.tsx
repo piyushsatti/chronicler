@@ -315,29 +315,4 @@ describe('retained Quest journeys', () => {
     }
   });
 
-  it('keeps quest arc and pointcrawl menu selections connected to their existing actions', async () => {
-    login();
-    const writes: unknown[] = [];
-    server.use(
-      graphql.query('QuestArcOptions', () => HttpResponse.json({ data: { questArcs: { total: 1, items: [{ id: otherId, name: 'Coastal voyages' }] } } })),
-      graphql.query('QuestMapOptions', () => HttpResponse.json({ data: { maps: [{ id: otherId, name: 'Harbor map', atlasCode: 'HARBOR', canEdit: true }] } })),
-      graphql.query('QuestNodeOptions', () => HttpResponse.json({ data: { map: { canEdit: true, pointcrawlNodes: [] } } })),
-      graphql.mutation('QuestSetArc', ({ variables }) => {
-        writes.push(variables);
-        return HttpResponse.json({ data: { updateQuest: { id: detail.id, updatedAt: detail.updatedAt, arcId: otherId } } });
-      }),
-    );
-    renderDetail();
-    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }));
-    const arc = await screen.findByRole('button', { name: /^Arc membership/ });
-    await waitFor(() => expect(arc).toBeEnabled());
-    await userEvent.click(arc);
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Coastal voyages' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Save arc membership' }));
-    await waitFor(() => expect(writes).toHaveLength(1));
-    expect(writes[0]).toMatchObject({ id: detail.id, input: { arcId: otherId } });
-    await userEvent.click(screen.getByRole('button', { name: /^Pointcrawl map/ }));
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Harbor map' }));
-    expect(screen.getByRole('link', { name: 'Open map' })).toHaveAttribute('href', '/map/HARBOR');
-  });
 });

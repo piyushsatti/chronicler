@@ -158,7 +158,7 @@ func TestPhase3TaskSIT03CommunitySnapshotUsesStoredCountsAndRoleMembership(t *te
 		var membersByRole *int32
 		if err := rows.Scan(&totals.members, &totals.characters, &totals.maps,
 			&totals.nodes, &totals.regions, &totals.quests, &totals.dms,
-			&totals.voice, &totals.messages, &totals.reactions, &role, &membersByRole); err != nil {
+			&role, &membersByRole); err != nil {
 			t.Fatal(err)
 		}
 		rowCount++
@@ -175,6 +175,9 @@ func TestPhase3TaskSIT03CommunitySnapshotUsesStoredCountsAndRoleMembership(t *te
 	}
 	if roles["player"] != 3 || roles["dm"] != 2 {
 		t.Fatalf("member role counts=%v, want player=3 dm=2", roles)
+	}
+	if err := fixture.Pool.QueryRow(ctx, siteProductSQL(t, "SiteActivitySummary", ":one")).Scan(&totals.voice, &totals.messages, &totals.reactions); err != nil {
+		t.Fatal(err)
 	}
 	if totals.voice != 12.5 || totals.messages != 3 || totals.reactions != 2 {
 		t.Fatalf("activity totals=%+v, want stored event sums", totals)

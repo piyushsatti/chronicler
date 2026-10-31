@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Production release workflow `deploy-production.yml`: a CalVer tag on `main` deploys the backend to one VM and the frontend to Vercel. Production runs the API behind a Cloudflare Tunnel (`chronicler-cloudflared`) with Supabase PostgreSQL through `DATABASE_URL`, takes a `pg_dump` restore point before migrations (`scripts/backup-db -u`), and publishes at `chronicler-prod-api.piyushsatti.com`. The production runner carries only the `chronicler-production` label, and its pre-job hook (`deploy/runner/production-job-started.sh`) refuses every other job. Decision: [D51](docs/decisions/D51-Production-On-One-VM-Behind-Cloudflare-Tunnel.md).
+- New Discord sign-ins start as guests; approving their first character grants player eligibility for quest signup. Existing members retain their roles.
 - Agent HTTP-first port: `apps/agent` uv project (`pi.chronicler.agent` / `archive` / `qa`), API claim/complete job pipeline, Archive MCP + LanceDB, deploy compose without RabbitMQ, `agent.yml` CI. Docs: [agent-qa-http](docs/interfaces/agent-qa-http.md), D43.
 - Repo CI scaffold: `.github/workflows/repo.yml` and `scripts/verify-repo` (docs lint, Prettier, Ruff, Pyright). Web and agent apps stay out of that job.
 - Monorepo scaffold: `apps/api`, `apps/web`, `apps/discord`, `apps/agent`, `packages/contracts`.
@@ -18,10 +20,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Staging and production share one reusable workflow, `deploy-release.yml`. `deploy/compose.production.yaml` serves both: PostgreSQL moves behind the `local-db` profile and the Cloudflare connector behind the `tunnel` profile. Production API rewrites in `apps/web/vercel.json` now target `chronicler-prod-api.piyushsatti.com`, replacing `api.chronicler.smokebombstudios.com`.
+- Retire Caddy and the DigitalOcean droplet target ([D51](docs/decisions/D51-Production-On-One-VM-Behind-Cloudflare-Tunnel.md)). The `/v1/ingest/*` public block moves from the Caddyfile to a Cloudflare WAF custom rule that is configured outside the repository and not enforced by it. The Caddyfile and `caddy_ingest_test.go` are removed.
+- Retire the legacy notification mark-read HTTP command in favor of GraphQL. Keep the block editor and remove unused OpenAPI client, QA, loader and observation implementations.
+- Require explicit Archive model settings and staged read-only CA and tokenizer assets in local Compose, and add the ID-only `archive_documents_v1` view so the local Archive stack can start (D50).
+- Restore the Discord quest announcement layout, create scheduled events for quests without voice channels, and unlock locked hex neighbours when a hex is mapped. Mapped hexes now draw like unlocked hexes on the map.
+- Paginate Codex autocomplete and limit editor undo history to 100 snapshots. Map navigation reads paginated containment metadata for other maps.
+- GraphQL loaders batch concurrent reads and deduplicate keys within each request. Maintained API DSNs default to a maximum of 10 database connections per pool.
+- Read Discord activity totals only when selected in GraphQL, and batch region and map assignment facts through the existing authorization policy.
 - Port Legacy Home, Tavern Board, Chronicles, Codex, Community, and Rules presentation onto current GraphQL adapters and PageHost. Home drops archive buckets and unsupported beginner counts; media controls remain usable on compact and wide layouts. Codex uses server filters and bounded paging; rule cards open the current document reader. Community uses public availability and character-roster reads, and unavailable avatar images fall back to initials.
 - Make `/codex/:slug` the canonical Codex reader. Typed slug aliases share that reader; typed UUID aliases resolve readable `codex_entry` document metadata first. Existing editor routes retain precedence; new Codex titles normalizing to `new` allocate from `new-entry` so their reader URLs remain reachable.
 - Docs refactor: links flow map → interfaces → app docs; boundary decisions shortened; long-form essays quarantined to gitignored `.local/docs-quarry/`. See [docs/start-here.md](docs/start-here.md).
 - Project license set to GNU GPL version 2 (same as the Linux kernel).
+
+### Fixed
+
+- Revalidate Archive bootstrap candidates against current anonymous projections, accept edits and withdrawals after promotion, and batch requested reads. Skip unchanged index rewrites, preserve nonempty indexes on empty syncs, and query exact URLs directly.
+- Preserve model-supplied tool arguments and valid answers for compound shove questions. Keep the interaction checks in evaluation fixtures.
+- Reject malformed Archive bearer bytes with 401 and suppress routine HTTP polling logs while retaining worker INFO logs.
+- Skip Discord system-message activity and activity in channels that `@everyone` cannot view, including voice reconciliation.
+- Preserve editor query and mutation caches after transient member refresh failures, while retaining invalidation for rejected sessions and changed authority.
+- Calendar today and quest windows follow the member's timezone across daylight-saving changes. Game-calendar cells preserve civil dates across process and database timezones.
+- Link hyphenated mentions and keep trailing punctuation outside mention links.
+- Enforce GraphQL query depth and list-weighted complexity limits while admitting supported web operations.
+- Apply the Locations category authorization gate when moving a Codex entry into that category.
+- Require production JWT and ingest secrets of at least 32 characters and reject public `/v1/ingest/*` traffic at Caddy.
+- Retire legacy quest HTTP commands and character/member HTTP reads so product authorization runs through GraphQL. Remove the quest-only in-memory rate limiter.
+- Quest and DM summaries apply the Document body projection, and character summary lists and totals omit unreadable documents.
+- Scoped quotes protect unquoted continuation lines until a blank separator or new Markdown block. The editor warns about audience markers inside lists and asks for confirmation before publishing them.
+- Member-addressed DM callouts use DM styling and an exact-handle title while retaining authored titles.
+- Card and search excerpts omit spoiler text and callout header tokens while retaining visible prose and redaction bars.
 
 ## [0.0.0] - TBD
 

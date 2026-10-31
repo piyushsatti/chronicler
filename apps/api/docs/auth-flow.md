@@ -8,7 +8,7 @@ The Go API implements the OAuth2 Authorization Code Grant. The web callback owns
 2. `login.Service` redirects to Discord with the configured client ID and redirect URI, `response_type=code`, `scope=identify`, and the supplied state.
 3. Discord returns to the web `/auth/callback` route. `useAuthCallback` consumes the pending nonce before exchanging the code. Missing, mismatched, replayed, damaged, or expired state is rejected. The age must be less than ten minutes.
 4. The member adapter posts `{code, state?}` to `/auth/discord/callback`. The Go service exchanges the code at the fixed Discord token endpoint, then reads the profile at `/users/@me`. Both requests share a ten-second context deadline; the default client does not follow redirects. Responses have bounded decoding and controlled errors.
-5. The Postgres implementation of `MemberStore.EnsureFromDiscord` resolves the stable public member UUID. First login creates a player and initializes display name and avatar from Discord. Later logins preserve the stored profile, including a locally cleared (null) avatar, along with the stable UUID, handle, status, flat roles, and profile update timestamp. The member record is the profile authority; see the [owner decision](/docs/audits/owner-decisions.md#frontend-completion-follow-ups-2026-10-20).
+5. The Postgres implementation of `MemberStore.EnsureFromDiscord` resolves the stable public member UUID. First login creates a guest and initializes display name and avatar from Discord. Later logins preserve the stored profile, including a locally cleared (null) avatar, along with the stable UUID, handle, status, flat roles, and profile update timestamp. The member record is the profile authority; see the [owner decision](/docs/audits/owner-decisions.md#frontend-completion-follow-ups-2026-10-20).
 6. The API returns `{token}`. The web accepts an unexpired token, clears previous account caches, and navigates to a safe internal intended path or Home. The callback guards duplicate effect execution and late responses.
 
 The configured redirect must reach the frontend callback on the initiating browser origin; the API callback is a POST endpoint. This document does not establish any externally registered redirect value. Registration and credentials require the owner's exact authorized configuration.
@@ -24,6 +24,8 @@ The configured redirect must reach the frontend callback on the initiating brows
 `apiHandler` installs `auth.LiveMiddleware`. A valid member token is resolved against current Postgres authority once per request. Missing or inactive members and authority lookup failures fail closed; changed roles take effect without minting another token. Live DM status and the current handle also feed audience policy. See [live-authority](/docs/interfaces/live-authority.md) and [scoped-body](/docs/interfaces/scoped-body.md).
 
 The web uses validated member responses for presentation and role-based navigation, and clears caches on account or authority changes. The server makes the authorization decision for every protected request.
+
+Guests can author summaries and set availability, but cannot sign up for quests. They can withdraw existing participation. The first approved character promotes its guest owner to player within the verification transaction, preserving staff roles and appending role history. Later retirement or deletion does not remove player. See [D47](/docs/decisions/D47-Guest-Onboarding-And-Player-Promotion.md).
 
 ## Verification boundaries
 

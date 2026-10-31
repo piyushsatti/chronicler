@@ -14,6 +14,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 )
 
@@ -48,8 +49,16 @@ func TestSignUpAtomicAndOwnership(t *testing.T) {
 	).Scan(&filled, &desired); err != nil {
 		t.Fatal(err)
 	}
-	if filled != 1 || desired != 1 {
+	// Signups never touch Discord: no revision bump, no delivery job.
+	if filled != 1 || desired != 0 {
 		t.Fatalf("after first signup filled=%d desired=%d", filled, desired)
+	}
+	var jobsN int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM background_jobs WHERE job_key = $1`, jobs.QuestDiscordKey(questID)).Scan(&jobsN); err != nil {
+		t.Fatal(err)
+	}
+	if jobsN != 0 {
+		t.Fatalf("signup enqueued %d discord jobs", jobsN)
 	}
 
 	if err := cmd.SignUp(ctx, actor, questID, ownChar); !errors.Is(err, quest.ErrAlreadySignedUp) {
@@ -60,7 +69,7 @@ func TestSignUpAtomicAndOwnership(t *testing.T) {
 	).Scan(&filled, &desired); err != nil {
 		t.Fatal(err)
 	}
-	if filled != 1 || desired != 1 {
+	if filled != 1 || desired != 0 {
 		t.Fatalf("duplicate must not bump filled/desired; filled=%d desired=%d", filled, desired)
 	}
 }

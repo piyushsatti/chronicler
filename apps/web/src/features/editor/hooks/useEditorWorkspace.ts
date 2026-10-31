@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useBlocker, useNavigate } from 'react-router-dom';
 import { safeAppError, toAppError } from '../../../errors/toAppError.js';
+import { TransportError, type AppError } from '../../../errors/types.js';
 import type { EditorLoadResult } from '../adapters/editorLoad.js';
 import {
   changeDocumentLifecycle,
@@ -16,12 +17,26 @@ import { useEditorAudience } from './useEditorAudience.js';
 import { useEditorHistory } from './useEditorHistory.js';
 import { useEditorOptions } from './useEditorOptions.js';
 import { useEditorPreview } from './useEditorPreview.js';
-import { useEditorPublish } from './useEditorPublish.js';
+import { useBodyAudit } from './useBodyAudit.js';
+import type { BodySpanAudit } from '../adapters/bodyAudit.js';
+import {
+  auditLine,
+  auditTypos,
+  previewHiddenSummary,
+  typoSummary,
+} from '../bodyAuditCopy.js';
+import {
+  editorBodyError,
+  editorFormInvalid,
+  useEditorPublish,
+} from './useEditorPublish.js';
 import { useEntityLinkIndex } from './useEntityLinkIndex.js';
 
 function editorEditPath(typeKey: EditorTypeKey, id: string): string {
   if (typeKey === 'quest') return `/quests/${encodeURIComponent(id)}/edit`;
   if (typeKey === 'dm-table') return `/editor/dm-table/${encodeURIComponent(id)}/edit`;
+  if (typeKey === 'hall-of-fame')
+    return `/editor/hall-of-fame/${encodeURIComponent(id)}/edit`;
   if (typeKey === 'guide' || typeKey === 'ruling')
     return `/rules/${typeKey}s/${encodeURIComponent(id)}/edit`;
   return `/${typeKey === 'codex' ? 'codex' : 'summaries'}/${encodeURIComponent(id)}/edit`;
@@ -43,12 +58,35 @@ export function editorCancelPath(
       return '/codex';
     case 'dm-table':
       return '/dms';
+    case 'hall-of-fame':
+      return '/community?tab=hall-of-fame';
     default:
       return '/';
   }
 }
 
 const NO_SCHEMA_ACCESS: SchemaAccess = {};
+
+/** Messages from the save guards that a reload resolves (a revoked right or an old revision). */
+const RELOAD_MESSAGES = /reload/i;
+
+/**
+ * Only a conflict, a stale revision or a revoked permission is fixed by reloading;
+ * validation and other refusals are not, so they get no recovery-copy prompt.
+ */
+export function errorNeedsReload(error: AppError | null): boolean {
+  if (!error) return false;
+  if (error.kind === 'forbidden' || error.kind === 'unauthorized') return true;
+  const cause = error.cause;
+  if (
+    cause instanceof TransportError &&
+    (cause.code === 'CONFLICT' || cause.status === 409)
+  )
+    return true;
+  return error.kind === 'safe' && RELOAD_MESSAGES.test(error.userMessage);
+}
+
+export type EditorConfirm = 'discard' | 'reload';
 
 export function useEditorWorkspace({
   typeKey,
@@ -59,6 +97,8 @@ export function useEditorWorkspace({
   enabled,
   timeZone,
   actorId = 'demo',
+  viewerMemberId = null,
+  viewerIsAdmin = false,
   schemaAccess = NO_SCHEMA_ACCESS,
   sessionIsCurrent = () => true,
   onReload = async () => {},
@@ -71,6 +111,10 @@ export function useEditorWorkspace({
   enabled: boolean;
   timeZone: string;
   actorId?: string | null;
+  /** The signed-in member's id (`memberMe.id`), for options limited to their own records. */
+  viewerMemberId?: string | null;
+  /** The viewer's roles include admin; widens options such as the series a quest may join. */
+  viewerIsAdmin?: boolean;
   schemaAccess?: SchemaAccess;
   sessionIsCurrent?: () => boolean;
   onReload?: () => Promise<void>;
@@ -85,11 +129,25 @@ export function useEditorWorkspace({
       actorId,
       version: typeKey === 'quest' ? initial.updatedAt : initial.documentVersion,
       canEditBody: enabled && initial.canEditBody,
+      // A new quest opened from a series link keeps that series over a recovered draft's.
+      pinned:
+        typeKey === 'quest' &&
+        mode === 'new' &&
+        typeof initial.meta.arcId === 'string' &&
+        initial.meta.arcId !== ''
+          ? { arcId: initial.meta.arcId }
+          : undefined,
     },
   );
-  const { meta, body, setMeta, setBody, isDirty, clearDraft } = draft;
+  const { meta, body, setMeta, setBody, isDirty, isTouched, clearDraft } = draft;
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [showPropertyErrors, setShowPropertyErrors] = useState(false);
+  /** Bumped on each blocked submit so the error summary takes focus again. */
+  const [errorFocusRequest, setErrorFocusRequest] = useState(0);
+  const showErrorsAndFocus = () => {
+    setShowPropertyErrors(true);
+    setErrorFocusRequest((n) => n + 1);
+  };
   const recordScope = JSON.stringify([actorId, typeKey, initial.recordId]);
   const summaryLinks = useEditorSummaryLinks({
     initial,
@@ -128,8 +186,58 @@ export function useEditorWorkspace({
     enabled: enabled && initial.canEditMetadata && typeKey !== 'quest',
     scopeKey: recordScope,
   });
-  const options = useEditorOptions(schemaForType(typeKey, meta, schemaAccess), enabled);
-  const { preview, onPreview } = useEditorPreview(body);
+  const options = useEditorOptions(
+    schemaForType(typeKey, meta, schemaAccess, mode),
+    enabled,
+    viewerMemberId,
+    viewerIsAdmin,
+  );
+  // A new quest saves only a series the picker shows. While the viewer's series are
+  // loading or failed to load, a chosen series cannot be checked, so saving waits
+  // instead of dropping it. Once loaded, a series that is not among the options
+  // (another DM's, from a link or a recovered draft) is not sent, and the Series
+  // field says so.
+  const seriesOptions = options.series;
+  // A saved quest keeps its current series without checking it: only a change is checked.
+  const arcUnchanged = mode === 'edit' && meta.arcId === initial.meta.arcId;
+  const arcChosen =
+    typeKey === 'quest' &&
+    typeof meta.arcId === 'string' &&
+    meta.arcId !== '' &&
+    !arcUnchanged;
+  const seriesWait: 'loading' | 'error' | null = !arcChosen
+    ? null
+    : seriesOptions.status === 'error'
+      ? 'error'
+      : seriesOptions.status === 'loading'
+        ? 'loading'
+        : null;
+  const arcShown =
+    typeof meta.arcId !== 'string' ||
+    meta.arcId === '' ||
+    arcUnchanged ||
+    (seriesOptions.status === 'ready' &&
+      seriesOptions.items.some((series) => series.id === meta.arcId));
+  const publishMeta = arcShown ? meta : { ...meta, arcId: '' };
+  const {
+    preview,
+    onPreview,
+    viewer: previewViewer,
+    setViewer: setPreviewViewer,
+  } = useEditorPreview(body);
+  const bodyAudit = useBodyAudit(body, enabled && initial.canEditBody);
+  /** Marker typos found when the author asked to publish; they choose to fix or go on. */
+  const [typoCheck, setTypoCheck] = useState<{
+    spans: BodySpanAudit[];
+    body: string;
+    proceed: () => void;
+  } | null>(null);
+  const checkingTypos = useRef(false);
+  /** A publish check is waiting for the audit: saving and publishing wait with it. */
+  const [checkingMarkers, setCheckingMarkers] = useState(false);
+  /** The body as last rendered, to tell whether the checked text is still the text. */
+  const liveBody = useRef(body);
+  liveBody.current = body;
   const history = useEditorHistory(
     initial.documentId,
     enabled && initial.canEditMetadata && typeKey !== 'quest',
@@ -152,12 +260,12 @@ export function useEditorWorkspace({
     typeKey,
     mode,
     initial,
-    meta,
+    meta: publishMeta,
     body,
     category,
     admit,
     scopeKey: `${actorId ?? 'anonymous'}:${typeKey}:${initial.recordId}`,
-    onInvalidTitle: () => setShowPropertyErrors(true),
+    onInvalidTitle: showErrorsAndFocus,
     onSuccess: (result, published) => {
       if (!sessionIsCurrent()) return;
       clearDraft();
@@ -227,9 +335,10 @@ export function useEditorWorkspace({
   });
   const busy = publish.isPending || lifecycle.isPending;
   const invalidSession = typeKey === 'quest' && !isEditorInstant(meta.scheduledAt);
-  const blocker = useBlocker(() => isDirty && !leavingAfterSave.current);
+  // Warn on leave only for edits made in this form; a recovered draft stays saved on the device.
+  const blocker = useBlocker(() => isTouched && !leavingAfterSave.current);
   useEffect(() => {
-    if (!isDirty) {
+    if (!isTouched) {
       leavingAfterSave.current = false;
       return;
     }
@@ -241,16 +350,63 @@ export function useEditorWorkspace({
     };
     window.addEventListener('beforeunload', beforeUnload);
     return () => window.removeEventListener('beforeunload', beforeUnload);
-  }, [isDirty]);
-  const reloadLatest = useCallback(async () => {
-    if (
-      isDirty &&
-      !window.confirm('Discard these local edits and load the latest server revision?')
-    )
-      return;
+  }, [isTouched]);
+  const [confirming, setConfirming] = useState<EditorConfirm | null>(null);
+  const reloadNow = useCallback(async () => {
     draft.resetDraft();
     await onReload();
-  }, [isDirty, draft.resetDraft, onReload]);
+  }, [draft.resetDraft, onReload]);
+  const reloadLatest = useCallback(async () => {
+    if (isDirty) {
+      setConfirming('reload');
+      return;
+    }
+    await reloadNow();
+  }, [isDirty, reloadNow]);
+  /**
+   * Publishing with a marker the server reads as a lookalike or a malformed
+   * marker asks first; it never blocks. The audit of the exact body decides,
+   * waiting for one in flight; without an audit (failed or timed out),
+   * publishing goes ahead. The editor is locked while the check runs, and a
+   * body that still changed is checked again, so the text checked is the text
+   * published.
+   */
+  const checkTyposThen = (submit: () => void) => {
+    if (checkingTypos.current) return;
+    checkingTypos.current = true;
+    setCheckingMarkers(true);
+    void (async () => {
+      let source = liveBody.current;
+      let spans = await bodyAudit.latest(source);
+      while (mounted.current && liveBody.current !== source) {
+        source = liveBody.current;
+        spans = await bodyAudit.latest(source);
+      }
+      checkingTypos.current = false;
+      if (!mounted.current) return;
+      setCheckingMarkers(false);
+      const typos = spans ? auditTypos(spans) : [];
+      if (typos.length === 0) submit();
+      else setTypoCheck({ spans: typos, body: source, proceed: submit });
+    })();
+  };
+  /** Saving and publishing wait while markers are checked or the typo dialog is open. */
+  const submitBusy = busy || checkingMarkers || typoCheck !== null;
+  /** Client-side checks: on failure show the field hints and never call the API. */
+  const formInvalid = () => {
+    if (
+      !editorFormInvalid(
+        typeKey,
+        mode,
+        publishMeta,
+        initial.canEditBody ? body : undefined,
+      )
+    )
+      return false;
+    showErrorsAndFocus();
+    publish.reset();
+    return true;
+  };
   return {
     typeKey,
     timeZone,
@@ -261,24 +417,103 @@ export function useEditorWorkspace({
     setMeta,
     setBody,
     isDirty,
+    /** A new record's draft can be thrown away, clearing its copy on this device. */
+    editorMode: mode,
+    onDiscardDraft: mode === 'new' ? () => setConfirming('discard') : undefined,
+    /** The in-page confirmation for discarding a draft or reloading over local edits. */
+    confirming,
+    cancelConfirm: () => setConfirming(null),
+    acceptConfirm: () => {
+      const action = confirming;
+      setConfirming(null);
+      if (action === 'discard') {
+        publish.reset();
+        publish.forgetCreatedQuest();
+        draft.resetDraft();
+      } else if (action === 'reload') void reloadNow();
+    },
+    /** The form opened from a draft saved on this device; "Start fresh" drops it. */
+    restoredDraft:
+      draft.restoredAt && !draft.stale
+        ? {
+            savedAt: draft.restoredAt,
+            title: draft.restoredTitle,
+            seriesFromLink: draft.restoredPinned,
+            startFresh: () => {
+              publish.reset();
+              publish.forgetCreatedQuest();
+              setShowPropertyErrors(false);
+              draft.resetDraft();
+            },
+          }
+        : null,
     onSaveDraft: () => {
-      if (busy || !admit() || trashed || invalidSession) return;
+      if (submitBusy || !admit() || trashed || invalidSession) return;
       if (initial.briefPublished && typeKey !== 'quest') {
         setStatusMessage(
           draft.saveDraft()
             ? 'Draft saved on this device. Publish to update the live page.'
             : 'Draft could not be saved on this device. Keep this page open to preserve your edits.',
         );
-      } else publish.mutate(false);
+      } else if (!formInvalid()) {
+        // Saving a quest posts it; a document's draft stays private until Publish.
+        if (typeKey === 'quest') checkTyposThen(() => publish.mutate(false));
+        else publish.mutate(false);
+      }
     },
     onPublish: () => {
-      if (!busy) publish.mutate(true);
+      if (submitBusy || formInvalid()) return;
+      checkTyposThen(() => publish.mutate(true));
     },
+    /** A publish check is waiting for the server's audit; the body is read-only meanwhile. */
+    checkingMarkers,
     onPreview,
     preview,
+    previewViewer,
+    onPreviewViewer: setPreviewViewer,
+    /** What the current viewer cannot read: counted in the server's preview, broken
+     *  down by the audit of this exact body where it applies. */
+    previewSummary:
+      preview.status === 'ready'
+        ? previewHiddenSummary(
+            preview.body,
+            previewViewer,
+            bodyAudit.audit && bodyAudit.audit.body === body ? bodyAudit.audit.spans : null,
+            body,
+          )
+        : null,
+    bodyAudit: bodyAudit.audit,
+    typoCheck: typoCheck
+      ? {
+          items: typoCheck.spans
+            .map((span) => ({
+              line: auditLine(span),
+              text: typoSummary(span, typoCheck.body),
+            }))
+            .sort((a, b) => a.line - b.line),
+        }
+      : null,
+    onTypoClose: () => setTypoCheck(null),
+    onTypoPublish: () => {
+      if (!typoCheck) return;
+      const { proceed, body: checked } = typoCheck;
+      setTypoCheck(null);
+      // Text that changed since the dialog opened is checked again first.
+      if (liveBody.current === checked) proceed();
+      else checkTyposThen(proceed);
+    },
     options,
-    publishDisabled: busy || !admit() || trashed || invalidSession,
-    saveDisabled: busy || !admit() || trashed || invalidSession,
+    publishDisabled:
+      submitBusy || !admit() || trashed || invalidSession || seriesWait !== null,
+    saveDisabled:
+      submitBusy || !admit() || trashed || invalidSession || seriesWait !== null,
+    /** Why saving waits on the Series field, shown next to the save button. */
+    seriesNotice:
+      seriesWait === 'loading'
+        ? 'Loading series…'
+        : seriesWait === 'error'
+          ? 'Your series could not be loaded. Retry the Series field before creating the quest.'
+          : null,
     saveLabel:
       typeKey === 'quest'
         ? mode === 'new'
@@ -307,10 +542,16 @@ export function useEditorWorkspace({
     ),
     statusMessage,
     showPropertyErrors,
+    errorFocusRequest,
+    /** The quest description is empty; shown with the field errors. */
+    bodyError: enabled && initial.canEditBody ? editorBodyError(typeKey, body) : null,
     slugLocked: mode === 'edit',
     stale: draft.stale,
     draftRecovery:
-      enabled && initial.canEditMetadata && !draft.stale && draft.recoverableDrafts.length
+      enabled &&
+      initial.canEditMetadata &&
+      !draft.stale &&
+      draft.recoverableDrafts.length
         ? {
             items: draft.recoverableDrafts,
             recover: (key: string) => {
@@ -322,6 +563,7 @@ export function useEditorWorkspace({
                 )
               )
                 return;
+              publish.forgetCreatedQuest();
               draft.recoverDraft(key);
               setStatusMessage(
                 'Recovered an older draft. Copy its title and body before discarding local edits and reloading the live page. Publishing this draft is blocked.',
@@ -382,6 +624,14 @@ export function useEditorWorkspace({
     entityIndexError: entityQuery.isError
       ? toAppError(entityQuery.error, 'editor:entity-index')
       : null,
+    /** Only conflicts, stale revisions and revoked rights offer the recovery copy and reload. */
+    mutationNeedsReload: errorNeedsReload(
+      publish.isError
+        ? toAppError(publish.error, 'editor:workspace')
+        : lifecycle.isError
+          ? toAppError(lifecycle.error, 'editor:lifecycle')
+          : null,
+    ),
     mutationError: publish.isError
       ? toAppError(publish.error, 'editor:workspace')
       : lifecycle.isError

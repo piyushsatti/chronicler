@@ -7,6 +7,7 @@ import { useCurrentAccess } from '../auth/useCurrentAccess.js';
 import { useAuth } from '../auth/AuthContext.js';
 import { useOwnsCharacter } from '../features/member/hooks/useOwnsCharacter.js';
 import { useSearchDialog } from '../features/search/components/SearchCommandRoot.js';
+import { isDm } from '../auth/roles.js';
 import { useMe } from '../hooks/useMe.js';
 import { personName } from '../utils/format.js';
 import {
@@ -136,17 +137,22 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
   }, [isAuthenticated, confirmedNoMember, logout]);
 
   const adminAccess = useCurrentAccess('admin');
-  const reviewAccess = useCurrentAccess('review');
   const destinations = destinationsForAuth({
     isAuthenticated,
     isAdmin: adminAccess.allowed,
-    canVerify: reviewAccess.allowed,
+    isDm: isSignedIn && isDm(me.data?.roles),
   });
   const ownCharacter = useOwnsCharacter(
     /^\/characters\/([^/]+)/.exec(location.pathname)?.[1] ?? null,
   );
+  // The DM dashboard has its own bar item when shown, so the avatar yields.
+  const onDmItem = destinations.some(
+    (destination) => destination.id === 'dm' && destination.matches(location.pathname),
+  );
   const personal =
-    isSignedIn && (ownCharacter || isPersonalPath(location.pathname, me.data?.handle));
+    isSignedIn &&
+    !onDmItem &&
+    (ownCharacter || isPersonalPath(location.pathname, me.data?.handle));
   const showDrawer = pattern === 'drawer';
   const topLinks = (
     <DestinationLinks
@@ -171,7 +177,8 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
     >
       <header ref={headerRef} className="site-chrome__top">
         <Link className="site-chrome__brand" to="/" aria-label="Chronicler home">
-          <img src={new URL('../assets/chronicler-logo.svg', import.meta.url).href} alt="Chronicler" />
+          {/* 816x856 source: the intrinsic size keeps the aspect ratio; CSS sets the height. */}
+          <img src="/brand/chronicler-logo.webp" width={816} height={856} alt="Chronicler" />
         </Link>
         {showDrawer ? (
           <NavDrawer destinations={destinations} personal={personal} />
@@ -190,13 +197,12 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
           <span className="site-chrome__search-label">Search the chronicle</span>
           <kbd className="site-chrome__search-kbd">⌘K</kbd>
         </button>
-        {adminAccess.status === 'error' || reviewAccess.status === 'error' ? (
+        {adminAccess.status === 'error' ? (
           <button
             type="button"
             className="type-link"
             onClick={() => {
               adminAccess.reload();
-              reviewAccess.reload();
             }}
           >
             Retry staff access

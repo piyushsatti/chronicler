@@ -11,7 +11,7 @@ import { queryKeys } from '../../../src/features/map/feature.js';
 import { MapPage } from '../../../src/features/map/pages/MapPage.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
-import good from '../../fixtures/wire/map/good.json';
+import good from '../../fixtures/wire/map/goodMap.js';
 import member from '../../fixtures/wire/me/good.json';
 
 const region = {

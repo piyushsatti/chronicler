@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -244,14 +244,8 @@ describe('useMe validated authority lifecycle', () => {
       null,
       'upstream',
     ],
-    [
-      'forbidden',
-      () => HttpResponse.json({ title: 'private detail' }, { status: 403 }),
-      null,
-      'forbidden',
-    ],
   ] as const)(
-    'masks prior authority and private caches after a %s me response',
+    'masks prior authority and preserves private caches after a %s me response',
     async (_label, restResponse, graphqlData, kind) => {
       signIn();
       const admin = { ...goodMe, roles: ['admin'] };
@@ -270,18 +264,38 @@ describe('useMe validated authority lifecycle', () => {
       expect(result.current.me.error).toMatchObject({ kind });
       expect(result.current.me.data).toBeUndefined();
       expect(result.current.authority.allowed).toBe(false);
-      expect(queryClient.getQueryData(['private-directory'])).toBeUndefined();
+      expect(queryClient.getQueryData(['private-directory'])).toBe('secret');
       expect(result.current.auth.isAuthenticated).toBe(true);
     },
   );
+
+  it('masks prior authority and clears private caches after a forbidden me response', async () => {
+    signIn();
+    const admin = { ...goodMe, roles: ['admin'] };
+    mockMemberMe(
+      () => HttpResponse.json(admin),
+      () => admin,
+    );
+    const { result, queryClient } = setup();
+    await waitFor(() => expect(result.current.authority.allowed).toBe(true));
+    queryClient.setQueryData(['private-directory'], 'secret');
+    // A banned or inactive member gets 403: access was revoked, so drop what it loaded.
+    mockMemberMe(() => HttpResponse.json({ title: 'private detail' }, { status: 403 }));
+    await act(async () => {
+      await result.current.me.refetch();
+    });
+    await waitFor(() => expect(result.current.me.isError).toBe(true));
+    expect(result.current.me.error).toMatchObject({ kind: 'forbidden' });
+    expect(result.current.authority.allowed).toBe(false);
+    expect(queryClient.getQueryData(['private-directory'])).toBeUndefined();
+    expect(result.current.auth.isAuthenticated).toBe(true);
+  });
 
   it('ends a 401 me session without retrying or exposing private data', async () => {
     signIn();
     const tracker = trackMemberMeRequests();
     try {
-      mockMemberMe(() =>
-        HttpResponse.json({ code: 'UNAUTHORIZED' }, { status: 401 }),
-      );
+      mockMemberMe(() => HttpResponse.json({ code: 'UNAUTHORIZED' }, { status: 401 }));
       const { result, queryClient } = setup();
       queryClient.setQueryData(['private-directory'], 'secret');
       await waitFor(() => expect(result.current.auth.isAuthenticated).toBe(false));
@@ -289,6 +303,40 @@ describe('useMe validated authority lifecycle', () => {
       expect(result.current.authority.allowed).toBe(false);
       expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
       expect(queryClient.getQueryData(['private-directory'])).toBeUndefined();
+      expect(tracker.count).toBe(1);
+    } finally {
+      tracker.stop();
+    }
+  });
+
+  it('does not refetch a failed me query when another page mounts', async () => {
+    signIn();
+    const tracker = trackMemberMeRequests();
+    try {
+      mockMemberMe(
+        () => HttpResponse.json({ title: 'private detail' }, { status: 403 }),
+        undefined,
+      );
+      const queryClient = createTestQueryClient();
+      function Page() {
+        const me = useMe();
+        return <p>{me.isError ? 'failed' : 'waiting'}</p>;
+      }
+      function App({ page }: { page: number }) {
+        return (
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <Page key={page} />
+            </AuthProvider>
+          </QueryClientProvider>
+        );
+      }
+      const view = render(<App page={1} />);
+      await screen.findByText('failed');
+      expect(tracker.count).toBe(1);
+      view.rerender(<App page={2} />);
+      await screen.findByText('failed');
+      await new Promise((resolve) => setTimeout(resolve, 50));
       expect(tracker.count).toBe(1);
     } finally {
       tracker.stop();

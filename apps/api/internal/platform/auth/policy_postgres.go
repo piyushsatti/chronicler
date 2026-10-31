@@ -7,6 +7,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 // PoolPolicyProviders binds read-only policy fact lookups to the shared pool.
@@ -31,6 +32,31 @@ func (p PoolPolicyProviders) HasArchon(ctx context.Context, memberID, regionID s
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (p PoolPolicyProviders) ArchonRegions(ctx context.Context, memberID string, regionIDs []string) (map[string]bool, error) {
+	member, err := db.ParseUUID(memberID)
+	if err != nil {
+		return nil, err
+	}
+	regions := make([]pgtype.UUID, len(regionIDs))
+	for i, regionID := range regionIDs {
+		regions[i], err = db.ParseUUID(regionID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	rows, err := dbgen.New(p.DB).ListProductArchonAssignmentRegions(ctx, dbgen.ListProductArchonAssignmentRegionsParams{
+		MemberID: member, RegionIds: regions,
+	})
+	if err != nil {
+		return nil, err
+	}
+	facts := make(map[string]bool, len(rows))
+	for _, region := range rows {
+		facts[db.UUIDString(region)] = true
+	}
+	return facts, nil
 }
 
 func (p PoolPolicyProviders) HasLieutenant(ctx context.Context, memberID, documentID string) (bool, error) {
@@ -115,7 +141,7 @@ func (p PoolPolicyProviders) SummaryRelations(ctx context.Context, questIDs []st
 }
 
 func NewPoolPolicy(db dbgen.DBTX) (*Policy, error) {
-	if missingPolicyDependency(db) {
+	if product.MissingDependency(db) {
 		return nil, apierr.New(apierr.Internal, "policy database required")
 	}
 	providers := PoolPolicyProviders{DB: db}

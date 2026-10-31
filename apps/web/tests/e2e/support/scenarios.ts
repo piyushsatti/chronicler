@@ -353,6 +353,10 @@ async function installRoutes(
         });
         return;
       }
+      if (operation === 'HomeRecentChronicles') {
+        await route.fulfill({ json: { data: { documents: { items: [] } } } });
+        return;
+      }
       if (operation === 'HomeWarRoom') {
         await route.fulfill({
           json: { data: qa ? { ...goodLanes, questBoard: board } : goodLanes },

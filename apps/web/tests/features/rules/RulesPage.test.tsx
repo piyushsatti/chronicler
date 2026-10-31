@@ -151,6 +151,44 @@ describe('RulesPage', () => {
     expect(screen.queryByRole('link', { name: 'New ruling' })).toBeNull();
   });
 
+  it('groups guides under category headings like the Codex board (owner item 15)', async () => {
+    const base = good.items[0];
+    const guide = (n: number, title: string, category: string | null) => ({
+      ...base,
+      id: `6c000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+      slug: `guide-${n}`,
+      title,
+      category,
+    });
+    server.use(
+      graphql.query('RulesList', () =>
+        response([
+          guide(1, 'Stamina System', 'server_mechanics'),
+          guide(2, 'Loose notes', null),
+          guide(3, 'Downtime', 'Character Creation'),
+          guide(4, 'Resting', 'server_mechanics'),
+        ]),
+      ),
+    );
+    renderRules();
+    const guides = await screen.findByRole('region', { name: 'Guides' });
+    await within(guides).findByRole('link', { name: /Stamina System/ });
+    const headings = within(guides)
+      .getAllByRole('heading', { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual(['Character Creation', 'Server mechanics', 'General']);
+    const mechanics = within(guides).getByRole('region', { name: 'Server mechanics' });
+    expect(within(mechanics).getAllByRole('link').map((link) => link.querySelector('.type-title')?.textContent)).toEqual([
+      'Stamina System',
+      'Resting',
+    ]);
+    expect(
+      within(within(guides).getByRole('region', { name: 'General' })).getByRole('link', {
+        name: /Loose notes/,
+      }),
+    ).toBeVisible();
+  });
+
   it.each([
     ['verifier', 'guide'],
     ['admin', 'ruling'],

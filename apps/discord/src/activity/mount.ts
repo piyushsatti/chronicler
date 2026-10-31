@@ -10,10 +10,11 @@
  */
 
 import { Events } from 'discord.js';
-import type { Client, Message, VoiceState } from 'discord.js';
+import type { Client, Guild, Message, VoiceState } from 'discord.js';
 import { config } from '../config.js';
 import { logger } from '../log.js';
 import {
+  isPublicActivityChannel,
   normalizeMessageCreate,
   normalizeReactionDispatch,
   VoiceSessionTracker,
@@ -38,10 +39,37 @@ export function mountActivity(
     return;
   }
 
-  const tracker = voiceTracker ?? new VoiceSessionTracker();
+  const tracker =
+    voiceTracker ??
+    new VoiceSessionTracker({
+      getChannel: (channelId) => client.channels.cache.get(channelId),
+    });
+
+  const reconcileVoiceSessions = (guild: Guild) => {
+    const events = tracker.reconcile(guild.voiceStates.cache.values());
+    for (const event of events) {
+      deliverActivity(event);
+    }
+    return events;
+  };
+
+  client.on(Events.ChannelUpdate, (_oldChannel, newChannel) => {
+    if ('guild' in newChannel && newChannel.guild.id === config.guildId) {
+      reconcileVoiceSessions(newChannel.guild);
+    }
+  });
+
+  client.on(Events.GuildRoleUpdate, (_oldRole, newRole) => {
+    if (newRole.guild.id === config.guildId && newRole.id === newRole.guild.id) {
+      reconcileVoiceSessions(newRole.guild);
+    }
+  });
 
   client.on('messageCreate', (message: Message) => {
-    if (message.guildId !== config.guildId) {
+    if (
+      message.guildId !== config.guildId ||
+      !isPublicActivityChannel(client.channels.cache.get(message.channelId))
+    ) {
       return;
     }
     const event = normalizeMessageCreate(message);
@@ -93,6 +121,13 @@ export function mountActivity(
     ) {
       return;
     }
+    const channelId = (data as Record<string, unknown>)['channel_id'];
+    if (
+      typeof channelId !== 'string' ||
+      !isPublicActivityChannel(client.channels.cache.get(channelId))
+    ) {
+      return;
+    }
     const event = normalizeReactionDispatch(
       packet as unknown as Parameters<typeof normalizeReactionDispatch>[0],
       gatewaySessionId,
@@ -123,10 +158,7 @@ export function mountActivity(
       }
       let recoveryEvents: ReturnType<VoiceSessionTracker['reconcile']> = [];
       try {
-        recoveryEvents = tracker.reconcile(guild.voiceStates.cache.values());
-        for (const event of recoveryEvents) {
-          deliverActivity(event);
-        }
+        recoveryEvents = reconcileVoiceSessions(guild);
       } catch (error: unknown) {
         logger.error('Sniffer voice reconciliation failed', {
           guildId: guild.id,

@@ -22,6 +22,7 @@ export const graphql: FeatureGraphql = {
   CommunityEntryRelated: () => HttpResponse.json({ data: { documents: { items: [goodCommunityEntry] } } }),
   CommunityDirectory: () =>
     HttpResponse.json({ data: { communityDirectory: goodCommunity } }),
+  CommunityHallOfFame: () => HttpResponse.json({ data: { document: null } }),
   CommunityCharacters: () =>
     HttpResponse.json({ data: { characters: goodCharacters } }),
 };

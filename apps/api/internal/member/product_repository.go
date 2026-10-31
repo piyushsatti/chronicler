@@ -85,27 +85,9 @@ type ReferenceWriteRepository interface {
 	StoreUpsertUnlockable(ctx context.Context, write UpsertUnlockableWrite) (UnlockableView, error)
 }
 
-type SocialReadRepository interface {
-	ReadDmRequests(ctx context.Context, actor auth.Authority, spec DmRequestsSpec) (RequestPage, error)
-	ReadIsFollowing(ctx context.Context, actor auth.Authority, spec IsFollowingSpec) (bool, error)
-	ReadMyRequests(ctx context.Context, actor auth.Authority, spec MyRequestsSpec) (RequestPage, error)
-}
-
-type SocialWriteRepository interface {
-	LockCreateRequest(ctx context.Context, actorID string, spec CreateRequestSpec) (CreateRequestState, error)
-	StoreCreateRequest(ctx context.Context, write CreateRequestWrite) (RequestView, error)
-	LockDecideRequest(ctx context.Context, spec DecideRequestSpec) (DecideRequestState, error)
-	StoreDecideRequest(ctx context.Context, write DecideRequestWrite) (RequestView, error)
-	LockFollowPerson(ctx context.Context, actorID string, spec FollowPersonSpec) (FollowPersonState, error)
-	StoreFollowPerson(ctx context.Context, write FollowPersonWrite) (product.CommandReceipt, error)
-	LockUnfollowPerson(ctx context.Context, actorID string, spec UnfollowPersonSpec) (UnfollowPersonState, error)
-	StoreUnfollowPerson(ctx context.Context, write UnfollowPersonWrite) (product.CommandReceipt, error)
-}
-
 type ProductCommandRepos struct {
 	Member    MemberWriteRepository
 	Reference ReferenceWriteRepository
-	Social    SocialWriteRepository
 	Policy    *auth.Policy
 	Authority auth.AuthorityResolver
 	Replay    idempotency.Repository
@@ -117,6 +99,5 @@ type ProductCommandRepos struct {
 type ProductReadRepos struct {
 	Member    MemberReadRepository
 	Reference ReferenceReadRepository
-	Social    SocialReadRepository
 	Batch     ProductBatchRepository
 }

@@ -7,7 +7,6 @@ import pytest
 
 from pi.chronicler.agent.budget import ContextBudget
 from pi.chronicler.agent.harness import (
-    _SHOVE_PRONE_OPPORTUNITY_CANONICAL_ANSWER,
     RESEARCH_TOOLS,
     AnswerSource,
     ReadEvidence,
@@ -20,7 +19,6 @@ from pi.chronicler.agent.harness import (
     _needs_class_spell_progression,
     _setting_overview_search,
     _setting_overview_supported,
-    _shove_prone_opportunity_supported,
     _system_prompt,
     _warlock_slot_answer_supported,
     _warlock_slot_fact,
@@ -35,41 +33,6 @@ AgentHarness = partial(ResearchHarness, research_rounds=None)
 A = "00000000-0000-4000-8000-000000000001"
 B = "00000000-0000-4000-8000-000000000002"
 C = "00000000-0000-4000-8000-000000000003"
-
-SHOVE_PRONE_OPPORTUNITY_QUESTION = (
-    "If I use the Shove action to knock a creature prone and then move away from it, "
-    "how do Shove, the prone condition, and opportunity attacks interact? Cite every "
-    "rule source you use."
-)
-SHOVE_PRONE_OPPORTUNITY_FALSE_ANSWER = (
-    "Knocking the creature Prone moves it out of your reach, so moving away cannot "
-    "provoke an Opportunity Attack."
-)
-SHOVE_PRONE_OPPORTUNITY_CORRECT_ANSWER = (
-    "Shove lets you either push the target 5 feet away or cause it to have the Prone "
-    "condition. Choosing Prone does not itself move the target, so its reach remains "
-    "unchanged. If you move away and leave the target's reach, it can use its Reaction "
-    "to make an Opportunity Attack, unless you Disengage; the target must be able to "
-    "see you. Because the target is Prone, its Opportunity Attack attack roll has "
-    "Disadvantage."
-)
-SHOVE_PRONE_OPPORTUNITY_REVIEW_PROBES = (
-    SHOVE_PRONE_OPPORTUNITY_FALSE_ANSWER,
-    "Because the target is Prone, it cannot make an Opportunity Attack.",
-    "While Prone, Opportunity Attacks are not possible.",
-    "A prone target has no available Reaction for an Opportunity Attack.",
-    (
-        "Prone prevents Opportunity Attacks is not true, but Prone prevents "
-        "Opportunity Attacks."
-    ),
-    "Disengage still provokes an Opportunity Attack.",
-    "You do not need to be able to see the target.",
-    "Opportunity Attacks do not require a Reaction.",
-    "A Prone creature does not have Disadvantage on its attack rolls.",
-    "The Opportunity Attack does not have Disadvantage.",
-    "Prone removes the target from your reach.",
-    "Leaving reach does not provoke an Opportunity Attack.",
-)
 
 
 def shove_prone_opportunity_evidence() -> list[ReadEvidence]:
@@ -300,251 +263,67 @@ def test_named_subject_guard_remains_fail_closed_with_citation_instruction() -> 
     )
 
 
-def test_shove_prone_opportunity_guard_requires_evidence_not_model_prose() -> None:
-    assert _shove_prone_opportunity_supported(
-        SHOVE_PRONE_OPPORTUNITY_QUESTION,
-        SHOVE_PRONE_OPPORTUNITY_FALSE_ANSWER,
-        shove_prone_opportunity_evidence(),
-    )
-
-
-def test_shove_prone_opportunity_guard_accepts_scoped_correct_conclusion() -> None:
-    assert _shove_prone_opportunity_supported(
-        SHOVE_PRONE_OPPORTUNITY_QUESTION,
-        SHOVE_PRONE_OPPORTUNITY_CORRECT_ANSWER,
-        shove_prone_opportunity_evidence(),
-    )
-
-
-@pytest.mark.parametrize("missing", ["shove", "prone", "opportunity"])
-def test_shove_prone_opportunity_guard_requires_all_evidence(
-    missing: str,
-) -> None:
-    evidence = {
-        "shove": shove_prone_opportunity_evidence()[0],
-        "prone": shove_prone_opportunity_evidence()[1],
-        "opportunity": shove_prone_opportunity_evidence()[2],
-    }
-    selected = [item for name, item in evidence.items() if name != missing]
-
-    assert not _shove_prone_opportunity_supported(
-        SHOVE_PRONE_OPPORTUNITY_QUESTION,
-        SHOVE_PRONE_OPPORTUNITY_CORRECT_ANSWER,
-        selected,
-    )
-
-
-@pytest.mark.parametrize("missing", ["visibility", "disengage"])
-def test_shove_prone_opportunity_guard_requires_scoped_oa_evidence(
-    missing: str,
-) -> None:
-    evidence = shove_prone_opportunity_evidence()
-    opportunity = evidence[2]
-    omission = {
-        "visibility": "that you can see ",
-        "disengage": "Taking the Disengage action avoids provoking Opportunity "
-        "Attacks for the rest of the turn.",
-    }[missing]
-    evidence[2] = ReadEvidence(
-        opportunity.source,
-        opportunity.arguments,
-        opportunity.public_text.replace(omission, ""),
-    )
-
-    assert not _shove_prone_opportunity_supported(
-        SHOVE_PRONE_OPPORTUNITY_QUESTION,
-        SHOVE_PRONE_OPPORTUNITY_CORRECT_ANSWER,
-        evidence,
-    )
-
-
-def test_shove_prone_opportunity_guard_ignores_unrelated_questions() -> None:
-    assert _shove_prone_opportunity_supported(
-        "What is the Shove action?",
-        "The unrelated answer has no rule support.",
-        (),
-    )
-
-
 @pytest.mark.asyncio
-async def test_shove_prone_opportunity_failure_uses_bounded_fail_closed_repair() -> (
-    None
-):
-    class CombatArchive(Archive):
-        async def call(self, name, arguments):
-            if name == "read_document":
-                self.body = shove_prone_opportunity_evidence()[0].public_text
-            return await super().call(name, arguments)
-
+async def test_compound_question_preserves_model_tool_arguments() -> None:
+    archive = Archive()
+    query = "Can the goblin's ally react when I shove a prone goblin?"
     model = Model(
         [
-            call("search_documents", {"query": "Shove Prone Opportunity Attack"}, 1),
-            call("read_document", {"document_id": A}, 2),
-            final((A,), SHOVE_PRONE_OPPORTUNITY_FALSE_ANSWER),
-            final((A,), SHOVE_PRONE_OPPORTUNITY_FALSE_ANSWER),
-            final((A,), SHOVE_PRONE_OPPORTUNITY_FALSE_ANSWER),
+            call("search_documents", {"query": query}, 1),
+            call("read_document", {"document_id": B}, 2),
+            final(),
         ]
     )
 
-    result = await ResearchHarness(
-        model,
-        CombatArchive(),
-        "Rules",
-        research_rounds=1,
-    ).answer(SHOVE_PRONE_OPPORTUNITY_QUESTION)
+    await ResearchHarness(model, archive, "Rules", research_rounds=1).answer(
+        "If I shove a prone goblin, can its ally take an opportunity attack?"
+    )
 
-    assert result.status == "unsupported"
-    assert result.sources == ()
-    assert result.diagnostics["outcome"] == "validation_exhausted"
+    assert archive.calls[:2] == [
+        ("search_documents", {"query": query}),
+        ("read_document", {"document_id": B}),
+    ]
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("model_prose", SHOVE_PRONE_OPPORTUNITY_REVIEW_PROBES)
-async def test_shove_prone_opportunity_returns_canonical_answer(
-    model_prose: str,
-) -> None:
-    evidence = shove_prone_opportunity_evidence()
-    by_id = {item.source.document_id: item for item in evidence}
+async def test_compound_question_preserves_valid_model_answer() -> None:
+    by_id = {
+        item.source.document_id: item for item in shove_prone_opportunity_evidence()
+    }
 
     class CompoundArchive(Archive):
         async def call(self, name, arguments):
             self.calls.append((name, arguments))
-            if name == "search_documents":
-                query = arguments["query"]
-                if query.startswith("Shove"):
-                    item = by_id[A]
-                elif query.startswith("Prone"):
-                    item = by_id[C]
-                else:
-                    item = by_id[B]
-                return {
-                    "hits": [
-                        {
-                            "document_id": item.source.document_id,
-                            "passage_id": item.arguments.get("passage_id", "p1"),
-                            "excerpt": item.public_text,
-                        }
-                    ]
-                }
-            document_id = arguments["document_id"]
-            item = by_id[document_id]
+            item = by_id[arguments["document_id"]]
             return {
-                "document_id": document_id,
+                "document_id": item.source.document_id,
                 "title": item.source.title,
                 "url": item.source.url,
                 "content_version": item.source.content_version,
                 "public_text": item.public_text,
-                **(
-                    {"passage_id": arguments["passage_id"]}
-                    if "passage_id" in arguments
-                    else {}
-                ),
             }
 
+    prose = (
+        "Its ally can take an opportunity attack if you leave the ally's reach, "
+        "the ally can see you, and it has a Reaction, unless you Disengage. "
+        "The goblin's Prone condition does not give its ally Disadvantage."
+    )
     model = Model(
         [
-            call("search_documents", {"query": "wrong first query"}, 1),
-            call("read_document", {"document_id": A}, 2),
-            call("search_documents", {"query": "wrong second query"}, 3),
-            call("read_document", {"document_id": A}, 4),
-            call("search_documents", {"query": "wrong third query"}, 5),
-            call("read_document", {"document_id": A}, 6),
-            final((A, C, B), model_prose),
+            call("read_document", {"document_id": A}, 1),
+            call("read_document", {"document_id": C}, 2),
+            call("read_document", {"document_id": B}, 3),
+            final((A, C, B), prose),
         ]
     )
 
-    archive = CompoundArchive()
-    result = await ResearchHarness(model, archive, "Rules").answer(
-        SHOVE_PRONE_OPPORTUNITY_QUESTION
+    result = await AgentHarness(model, CompoundArchive(), "Rules").answer(
+        "If I shove a prone goblin, can its ally take an opportunity attack?"
     )
 
     assert result.status == "answered"
-    assert result.text == _SHOVE_PRONE_OPPORTUNITY_CANONICAL_ANSWER
-    assert result.text != model_prose
-    assert {source.document_id for source in result.sources} == {A, B, C}
+    assert result.text == prose
     assert tuple(source.document_id for source in result.sources) == (A, C, B)
-    for required_phrase in (
-        "push the target 5 feet away or cause it to be Prone",
-        "does not move the target or change its reach",
-        "move out of the target's reach while it can see you",
-        "use its Reaction",
-        "Disengage avoids that Opportunity Attack",
-        "does not remove the Reaction",
-        "attack roll is made with Disadvantage",
-    ):
-        assert required_phrase.casefold() in result.text.casefold()
-    assert [
-        arguments["query"]
-        for name, arguments in archive.calls
-        if name == "search_documents"
-    ] == [
-        "Shove push 5 feet Prone condition",
-        "Prone condition restricted movement crawl half Speed Disadvantage",
-        "Opportunity Attack leaves reach Reaction Disengage can see",
-    ]
-    assert [
-        arguments["document_id"]
-        for name, arguments in archive.calls
-        if name == "read_document"
-    ][:6] == [A, C, B, A, C, B]
-
-
-@pytest.mark.asyncio
-async def test_shove_prone_opportunity_missing_search_uuid_fails_closed() -> None:
-    class InvalidHitArchive(Archive):
-        async def call(self, name, arguments):
-            self.calls.append((name, arguments))
-            if name == "search_documents":
-                return {
-                    "hits": [
-                        {
-                            "document_id": "not-a-uuid",
-                            "passage_id": "p1",
-                            "excerpt": "A seemingly relevant rule hit.",
-                        }
-                    ]
-                }
-            return await super().call(name, arguments)
-
-    model = Model(
-        [
-            call("search_documents", {"query": "anything"}, 1),
-            call("read_document", {"document_id": A}, 2),
-        ]
-    )
-    archive = InvalidHitArchive()
-
-    result = await ResearchHarness(model, archive, "Rules").answer(
-        SHOVE_PRONE_OPPORTUNITY_QUESTION
-    )
-
-    assert result.status == "unsupported"
-    assert result.sources == ()
-    assert [name for name, _ in archive.calls] == ["search_documents"]
-
-
-@pytest.mark.asyncio
-async def test_shove_prone_opportunity_extra_rounds_do_not_index_missing_topic() -> (
-    None
-):
-    turns = []
-    for number in range(1, 9):
-        tool_name = "search_documents" if number % 2 else "read_document"
-        arguments = (
-            {"query": f"round {number}"}
-            if tool_name == "search_documents"
-            else {"document_id": A}
-        )
-        turns.append(call(tool_name, arguments, number))
-    turns.append(final())
-
-    model = Model(turns)
-    result = await ResearchHarness(model, Archive(), "Rules", research_rounds=4).answer(
-        SHOVE_PRONE_OPPORTUNITY_QUESTION
-    )
-
-    assert result.status == "unsupported"
-    assert len(model.requests) == 9
 
 
 @pytest.mark.asyncio

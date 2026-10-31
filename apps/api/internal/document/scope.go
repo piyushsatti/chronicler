@@ -40,6 +40,10 @@ func ScopeFromAuthority(a auth.Authority) ViewerScope {
 	c := a.Claims()
 	scope := ScopeFromClaims(c)
 	scope.Roles = c.Roles
+	// D47: a guest reads what a player reads; only quest signup waits for approval.
+	if c.Has(auth.Guest) && !c.Has(auth.Player) {
+		scope.Roles = append(slices.Clone(c.Roles), auth.Player)
+	}
 	scope.Handle = a.Handle()
 	scope.IsAdmin = c.Has(auth.Admin)
 	scope.IsDM = a.LiveDM()
@@ -56,10 +60,4 @@ func (s ViewerScope) LegacyDMTier() bool {
 }
 func (s ViewerScope) IsAuthor(id string) bool {
 	return s.Authenticated() && id != "" && id == s.MemberID
-}
-
-// Allows is the compatibility entry point for the legacy visibility compiler.
-// New reads always specify the full Document, including its nullable policy.
-func (s ViewerScope) Allows(visibility Visibility, documentID, authorID string, _ []string) bool {
-	return Specify(Document{ID: documentID, AuthorID: authorID, Status: StatusPublished, Visibility: visibility}).Allows(s)
 }

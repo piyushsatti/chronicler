@@ -15,6 +15,7 @@ import (
 type Role string
 
 const (
+	Guest      Role = "guest"
 	Player     Role = "player"
 	DM         Role = "dm"
 	Admin      Role = "admin"

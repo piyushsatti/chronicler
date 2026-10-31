@@ -50,8 +50,8 @@ Chronicler is the record-keeping platform for a West Marches D&D community. Memb
 
 ## Deployment
 
-The release pattern is a deployment pipeline with one production control plane: GitHub Actions. Staging uses a manually dispatched workflow on the owner's self-hosted machine. Production uses a CalVer tag that points to `main`, then deploys the backend and frontend through one Actions release.
+The release pattern is a deployment pipeline with one production control plane: GitHub Actions. Staging uses a `staging-YYYY.MM.DD.N` tag and the owner's self-hosted machine. Production uses a CalVer tag that points to `main`, then deploys the backend and frontend through one Actions release. Both run the same reusable workflow.
 
-Staging targets `chronicler.piyushsatti.com` and `chronicler-api.piyushsatti.com`. Production targets `chronicler.smokebombstudios.com` and `api.chronicler.smokebombstudios.com`. The production backend and PostgreSQL target one DigitalOcean droplet.
+Staging targets `chronicler.piyushsatti.com` and `chronicler-api.piyushsatti.com`, with its own PostgreSQL and a Cloudflare Tunnel on the host. Production targets `chronicler.smokebombstudios.com` and `chronicler-prod-api.piyushsatti.com`: one VM runs the API, worker and bot with a `cloudflared` container, the database is Supabase PostgreSQL, and Vercel rewrites API paths to the tunnel hostname ([D51](/docs/decisions/D51-Production-On-One-VM-Behind-Cloudflare-Tunnel.md)).
 
-The staging and production release workflows are not implemented. Production Compose does not define PostgreSQL, ingress, or migrations. See [operations](/docs/systems/operations.md), [release requirements](/docs/requirements/by-system/operations.md), and the [deployment guides](/deploy/docs/README.md) for the current gaps.
+Both release workflows exist but are unverified: no provider, tunnel, runner, or production release was checked. See [operations](/docs/systems/operations.md), [release requirements](/docs/requirements/by-system/operations.md), and the [deployment guides](/deploy/docs/README.md) for the current gaps.

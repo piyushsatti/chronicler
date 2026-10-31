@@ -166,8 +166,8 @@ func TestPhase3TaskS06Acceptance(t *testing.T) {
 					t.Error("removed theme_mode column remains")
 				}
 			case "documents":
-				if row.Row["version"] != 0 {
-					t.Errorf("legacy document version=%v", row.Row["version"])
+				if row.Row["version"] != 1 {
+					t.Errorf("seeded document version=%v, want first revision 1", row.Row["version"])
 				}
 				qaAssertUnknown(t, row, "published_by", "deleted_by")
 			case "document_revisions":

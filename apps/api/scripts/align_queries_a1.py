@@ -287,7 +287,6 @@ RETURNING public_id;
         "CountProductArchonAssignments",
         "ReadProductCalendar",
         "ReadProductGameDate",
-        "ReadProductGameDates",
         "ListProductRealDates",
         "CountProductRealDates",
         "ListProductCalendarCells",

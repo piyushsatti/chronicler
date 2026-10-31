@@ -1,6 +1,6 @@
 import { hasRole } from '../../utils/permissions.js';
 
-export type BaseTier = 'Spectator' | 'Player';
+export type BaseTier = 'Spectator' | 'Guest' | 'Player' | 'Guest + Player';
 
 export type MemberRoleForm = {
   baseTier: BaseTier;
@@ -13,7 +13,9 @@ export type MemberRoleForm = {
 
 export function roleFormFromRoles(roles: string[]): MemberRoleForm {
   return {
-    baseTier: hasRole(roles, 'player') ? 'Player' : 'Spectator',
+    baseTier: hasRole(roles, 'guest')
+      ? hasRole(roles, 'player') ? 'Guest + Player' : 'Guest'
+      : hasRole(roles, 'player') ? 'Player' : 'Spectator',
     grantDm: hasRole(roles, 'dm'),
     grantArchon: hasRole(roles, 'archon'),
     grantLieutenant: hasRole(roles, 'lieutenant'),
@@ -35,7 +37,8 @@ export function roleFormsEqual(a: MemberRoleForm, b: MemberRoleForm): boolean {
 
 export function rolesFromForm(form: MemberRoleForm): string[] {
   const roles: string[] = [];
-  if (form.baseTier === 'Player') roles.push('player');
+  if (form.baseTier === 'Guest' || form.baseTier === 'Guest + Player') roles.push('guest');
+  if (form.baseTier === 'Player' || form.baseTier === 'Guest + Player') roles.push('player');
   if (form.grantDm) roles.push('dm');
   if (form.grantArchon) roles.push('archon');
   if (form.grantLieutenant) roles.push('lieutenant');

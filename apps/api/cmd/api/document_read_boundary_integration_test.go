@@ -29,7 +29,7 @@ func TestProductionDocumentReadBoundarySeparatesDeniedMissingAndNested(t *testin
 	admin := f.member(t, auth.Admin)
 	d := f.doc(t, "", &author, document.StatusPublished, document.VisibilityPublic)
 	raw := "Boundary public\n> [!DM]\n> BOUNDARY-RAW-SECRET\n\nBoundary end"
-	projected := "Boundary public\n> [!redacted]\n\nBoundary end"
+	projected := "Boundary public\n> [!redacted]\n> ████████████████████\n\nBoundary end"
 	f.exec(t, `UPDATE documents SET kind='codex_entry',title=$2,body=$3 WHERE id=$1`, d.rowID, "boundary-"+d.publicID, raw)
 	questID := uuid.NewString()
 	f.exec(t, `INSERT INTO quests(public_id,short_code,kinds,dm_id,scheduled_at,document_id,created_by) VALUES($1,$2,ARRAY['standard'],$3,now()+interval '1 day',$4,$3)`, questID, "boundary-"+questID, author.rowID, d.rowID)

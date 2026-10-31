@@ -27,6 +27,7 @@ const calendarSchema = z.object({
       z.object({
         realDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         gameDay: z.number().int().nullable(),
+        gameDate: namedDate.nullable(),
       }),
     ),
   }),
@@ -74,9 +75,10 @@ export async function loadCalendar(state: CalendarState): Promise<CalendarView> 
 }
 export async function loadCalendarQuests(
   state: CalendarState,
+  timeZone: string | null = null,
 ): Promise<CalendarQuestsView> {
   try {
-    const window = calendarWindow(state);
+    const window = calendarWindow(state, timeZone);
     const filters = {
       scheduledFrom: window.scheduledFrom,
       scheduledTo: window.scheduledTo,

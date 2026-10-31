@@ -1085,7 +1085,7 @@ textarea.field-input {
   gap: var(--sp-2);
   height: var(--segment-highlight-size);
   min-height: var(--segment-highlight-size);
-  padding: 0 var(--sp-4);
+  padding: 0 var(--segment-option-pad-x);
   padding-block-end: 1px;
   border: 0;
   border-radius: var(--rad-pill);
@@ -1105,9 +1105,13 @@ textarea.field-input {
 .segmented-more { gap: var(--sp-1); }
 .site-chrome__links .segmented-pill { background: var(--color-text); }
 .site-chrome__links .site-chrome__link[aria-current='page'] { color: var(--color-bg-deep); }
+/* The label inverts on the light pill; fade it with the slide so it never sits dark on the dark track. */
+.site-chrome__links .site-chrome__link { transition: color 260ms cubic-bezier(.65, 0, .35, 1); }
 .segmented-chevron { display: block; width: 12px; height: 12px; overflow: visible; }
 .segmented-menu-item[aria-checked='true'] { background: var(--color-bg-surface); color: var(--color-accent); }
+.segmented-track[data-pill-instant] .segmented-pill { transition: none; }
 @media (prefers-reduced-motion: reduce) { .segmented-pill { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .site-chrome__links .site-chrome__link { transition: none; } }
 
 @container (max-width: 700px) {
   .segmented-track {
@@ -1128,7 +1132,8 @@ textarea.field-input {
   align-items: center;
   flex-wrap: nowrap;
   gap: var(--sp-3);
-  padding: 11px var(--sp-4);
+  /* Even inset on all sides: 11px + 1px border centres the 40px track in 64px. */
+  padding: 11px;
   border: 1px solid var(--color-border);
   border-radius: var(--rad);
   background: var(--color-bg-panel);
@@ -1159,7 +1164,7 @@ textarea.field-input {
 .page-toolbar__search .filter-bar__search { flex: 1 1 auto; width: auto; min-width: 0; }
 .page-toolbar__search .filter-bar__input { min-width: 0; }
 
-[data-width-class='compact'] .page-toolbar { min-height: 112px; flex-wrap: wrap; gap: var(--sp-2); padding: 11px var(--sp-3); }
+[data-width-class='compact'] .page-toolbar { min-height: 112px; flex-wrap: wrap; gap: var(--sp-2); padding: 11px; }
 [data-width-class='compact'] .page-toolbar:not(:has(.page-toolbar__count, .page-toolbar__quick-filters, .page-toolbar__actions:not(:empty))) { min-height: 64px; }
 [data-width-class='compact'] .page-toolbar:not(:has(.page-toolbar__count, .page-toolbar__quick-filters, .page-toolbar__actions:not(:empty))) .page-toolbar__actions:empty { display: none; }
 [data-width-class='compact'] .page-toolbar__segments { flex: 1 0 100%; }
@@ -1169,7 +1174,10 @@ textarea.field-input {
 
 .tabs[data-component='Tabs'] { display: block; min-width: 0; container-type: inline-size; }
 .tabs[data-component='TabNav'] { display: block; min-width: 0; }
-.tabs[data-component='Tabs'] > .tabs__track { margin-bottom: var(--sp-4); }
+/* The track may arrive wrapped (PageToolbar, page edge), so space whatever sits first. */
+.tabs[data-component='Tabs'] > .tabs__track,
+.tabs[data-component='Tabs'] > :first-child:not(.tabs__panel) { margin-bottom: var(--sp-4); }
+.tabs[data-component='Tabs'] > .page-toolbar:first-child { margin-bottom: var(--sp-5); }
 .tabs[data-component='Tabs'] .tabs__panel { min-width: 0; }
 
 /* Popover / Menu: Base UI portals the positioner to <body> and anchors it to
@@ -1369,13 +1377,22 @@ button[data-el='week-grid.cell']:focus-visible {
   min-width: 56px;
 }
 
-/* PageHeader: eyebrow / title row with actions on the title's baseline /
-   lede / meta. Index pages use it so every title sits on the same line. */
+/* PageHeader: eyebrow / title row with actions beside the title / lede /
+   meta. Index pages use it so every title sits on the same line.
+   The header is a grid; the title row's wrapper is `display: contents`, so
+   the heading and the actions are grid items. Actions take no block size of
+   their own and sit centred on the heading, so a header with an action
+   button has the same title-to-lede spacing as one without (owner feedback
+   items 5 and 7). On compact widths the actions move under the meta. */
 .page-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--sp-2) var(--sp-4);
   min-width: 0;
+}
+
+.page-header > * {
+  grid-column: 1 / -1;
 }
 
 .page-header :where(h1, h2, p) {
@@ -1383,14 +1400,11 @@ button[data-el='week-grid.cell']:focus-visible {
 }
 
 .page-header__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: last baseline;
-  justify-content: space-between;
-  gap: var(--sp-3) var(--sp-4);
+  display: contents;
 }
 
 .page-header__heading {
+  grid-column: 1;
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
@@ -1408,10 +1422,30 @@ button[data-el='week-grid.cell']:focus-visible {
 
 
 .page-header__actions {
+  grid-column: 2;
+  align-self: center;
+  block-size: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--sp-2);
+}
+
+[data-width-class='compact'] .page-header {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+[data-width-class='compact'] .page-header__heading {
+  grid-column: 1 / -1;
+}
+
+[data-width-class='compact'] .page-header__actions {
+  order: 1;
+  grid-column: 1 / -1;
+  block-size: auto;
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .page-header__lede {
@@ -1433,6 +1467,7 @@ button[data-el='week-grid.cell']:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-1);
+  justify-self: start;
   align-self: flex-start;
   color: var(--color-text-2);
   text-decoration: none;

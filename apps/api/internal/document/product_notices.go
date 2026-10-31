@@ -8,6 +8,7 @@ import (
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 // Named recipients come from the same closed block classifier as body admission.
@@ -41,7 +42,7 @@ func resolveNewDocumentMentions(ctx context.Context, reader MentionMemberReader,
 	if !added {
 		return []string{}, nil
 	}
-	if commandDependencyMissing(reader) {
+	if product.MissingDependency(reader) {
 		return nil, apierr.New(apierr.Internal, "mention reader required")
 	}
 	all := make([]string, 0, len(old)+len(next))
@@ -100,7 +101,7 @@ func documentRevisionEvents(kind notification.EventKind, documentID, revisionID,
 }
 
 func recordDocumentEvents(ctx context.Context, repos ProductCommandRepos, events []notification.Event) error {
-	if commandDependencyMissing(repos.Producer) {
+	if product.MissingDependency(repos.Producer) {
 		return apierr.New(apierr.Internal, "document notification producer required")
 	}
 	for _, event := range events {

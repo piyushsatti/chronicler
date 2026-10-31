@@ -54,6 +54,10 @@ export function useDmDashboard(questScope: 'page' | 'all' = 'page') {
         roles: me.data.roles,
         liveDm: liveDm.status === 'ready' && liveDm.liveDm,
       }),
+    /** The DM profile editor; `/me` only until the account handle is known. */
+    profileHref: me.isSuccess
+      ? `/dms/@${encodeURIComponent(me.data.handle)}?edit=profile`
+      : '/me',
     retry: () => {
       void query.refetch();
     },

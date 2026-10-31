@@ -22,7 +22,6 @@ export type MapNodeDetailsProps = {
   region: string;
   onClose: () => void;
   onShowOnMap: () => void;
-  onSelect: (id: string) => void;
 };
 export function useMapNodeDetails({ map, node, maps, onReload }: MapNodeDetailsProps) {
   const { token, sessionReady, isCurrentSession } = useAuth();

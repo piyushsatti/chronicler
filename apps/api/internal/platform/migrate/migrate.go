@@ -10,7 +10,8 @@ import (
 	"io"
 	"io/fs"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
 	"github.com/piyushsatti/chronicler/apps/api/db/migrations"
@@ -24,10 +25,12 @@ func open(ctx context.Context, databaseURL string) (*sql.DB, error) {
 	if databaseURL == "" {
 		return nil, errors.New("DATABASE_URL is required")
 	}
-	db, err := sql.Open("pgx", databaseURL)
+	// The API's DATABASE_URL carries pool_* settings; pgxpool strips them so Postgres never sees them.
+	cfg, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, err
 	}
+	db := stdlib.OpenDB(*cfg.ConnConfig)
 	if err := db.PingContext(ctx); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("ping postgres: %w", err)

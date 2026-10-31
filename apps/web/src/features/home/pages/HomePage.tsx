@@ -27,7 +27,9 @@ import { QuestCard, type QuestCardProps } from '../../../components/domain/Quest
 import { NewHereShelf } from '../components/NewHereShelf.js';
 import { Sched } from '../components/Sched.js';
 import { isTitleEcho } from '../bannerText.js';
-import { WeekStrip } from '../components/WeekStrip.js';
+import { RecentChronicleCard } from '../components/RecentChronicleCard.js';
+import { useRecentChronicles } from '../hooks/useRecentChronicles.js';
+import { questsHappeningToday } from '../todayQuests.js';
 import {
   BannerMediaEmbed,
   classifyBannerMedia,
@@ -37,7 +39,7 @@ import { useMemberHref } from '../../../hooks/useMemberHref.js';
 import { useHomeBanner } from '../hooks/useHomeBanner.js';
 import { useHomePage, type HomePageView } from '../hooks/useHomePage.js';
 import styles from './home.module.css';
-import { handleLabel, personLabels, statusLabel } from '../../../utils/format.js';
+import { handleLabel, personLabels } from '../../../utils/format.js';
 
 const HOME_DECLARATION: PageDeclaration = {
   page: 'home',
@@ -46,9 +48,10 @@ const HOME_DECLARATION: PageDeclaration = {
     { role: 'banner', priority: 1 },
     { role: 'new-here', priority: 2 },
     { role: 'lane-recruiting', priority: 3 },
-    { role: 'lane-upcoming', priority: 4 },
-    { role: 'lane-recent', priority: 5 },
-    { role: 'lane-dms', priority: 6 },
+    { role: 'lane-today', priority: 4 },
+    { role: 'lane-upcoming', priority: 5 },
+    { role: 'lane-recent', priority: 6 },
+    { role: 'lane-dms', priority: 7 },
   ],
 };
 
@@ -241,19 +244,89 @@ function RecruitingLane({
   );
 }
 
+function SchedGrid({
+  quests,
+  dmLabels,
+  label,
+}: {
+  quests: HomeQuestView[];
+  dmLabels: ReadonlyMap<string, string>;
+  label: string;
+}): React.JSX.Element {
+  const { formatScheduled } = useDateFormatter();
+  const navigate = useNavigate();
+  const { widthClass } = useSizeClasses();
+  return (
+    <div
+      className={`cols ${styles.schedGrid}`}
+      data-n={widthClass === 'expanded' ? 3 : 1}
+      data-el="home.schedGrid"
+      role="list"
+      aria-label={label}
+    >
+      {quests.map((quest) => {
+        const handle = handleLabel(quest.dmHandle)?.toLowerCase();
+        return (
+          <div key={quest.id} role="listitem" className={styles.cardItem}>
+            <Sched
+              title={quest.title}
+              status={quest.cardStatus}
+              region={quest.regionName}
+              dmUsername={handle ? dmLabels.get(handle) ?? null : null}
+              party={quest.participants.map((p) => ({
+                characterName: p.characterName,
+                characterId: p.characterId,
+              }))}
+              totalSlots={quest.slotsMax}
+              filledCount={quest.filledCount}
+              when={formatScheduled(quest.scheduledAt)}
+              onOpen={() => navigate(`/quests/${quest.shortCode}`)}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Today's sessions at most this many on wide screens; phones show two. */
+const TODAY_CAP = 6;
+
+function TodayLane({
+  quests,
+  dmLabels,
+}: {
+  quests: HomeQuestView[];
+  dmLabels: ReadonlyMap<string, string>;
+}): React.JSX.Element {
+  const { widthClass } = useSizeClasses();
+  if (quests.length === 0) return emptyRegion();
+  const cap = widthClass === 'compact' ? PHONE_LANE_CAP : TODAY_CAP;
+  const shown = quests.slice(0, cap);
+  return (
+    <section className="lane" aria-label="Happening today" data-el="home.laneToday">
+      <div className="lane__head">
+        <h2 className="type-heading">Happening today</h2>
+        {quests.length > shown.length ? (
+          <Link className="btn ghost btn--sm" to="/calendar">
+            {`See all ${quests.length} today`}
+          </Link>
+        ) : null}
+      </div>
+      <SchedGrid quests={shown} dmLabels={dmLabels} label="Quests happening today" />
+    </section>
+  );
+}
+
 function UpcomingLane({
   quests,
-  schedule,
   dmLabels,
   total,
 }: {
   quests: HomeQuestView[];
-  schedule: HomeLanesViewModel['upcomingSchedule'];
   dmLabels: ReadonlyMap<string, string>;
   total: number;
 }): React.JSX.Element {
-  const { formatScheduled } = useDateFormatter();
-  const navigate = useNavigate();
   const { widthClass } = useSizeClasses();
   const laneCap = widthClass === 'compact' ? PHONE_LANE_CAP : LANE_CAP;
   const shown = quests.slice(0, laneCap);
@@ -284,93 +357,51 @@ function UpcomingLane({
           }
         />
       ) : (
-        <Card data-el="home.weekStrip">
-          <WeekStrip quests={schedule} />
-          <div
-            className={`cols ${styles.weekStripCols}`}
-            data-n={widthClass === 'expanded' ? 3 : 1}
-          >
-            {shown.map((quest) => {
-              const handle = handleLabel(quest.dmHandle)?.toLowerCase();
-              return (
-              <Sched
-                key={quest.id}
-                title={quest.title}
-                status={quest.cardStatus}
-                region={quest.regionName}
-                dmUsername={handle ? dmLabels.get(handle) ?? null : null}
-                party={quest.participants.map((p) => ({
-                  characterName: p.characterName,
-                  characterId: p.characterId,
-                }))}
-                totalSlots={quest.slotsMax}
-                filledCount={quest.filledCount}
-                when={formatScheduled(quest.scheduledAt)}
-                onOpen={() => navigate(`/quests/${quest.shortCode}`)}
-              />
-              );
-            })}
-          </div>
-        </Card>
+        <SchedGrid quests={shown} dmLabels={dmLabels} label="Upcoming quests" />
       )}
     </section>
   );
 }
 
-function RecentLane({
-  quests,
-  total,
-}: {
-  quests: HomeQuestView[];
-  total: number;
-}): React.JSX.Element {
+function RecentLane({ limit }: { limit: number }): React.JSX.Element {
+  const recent = useRecentChronicles(limit);
+  const items = recent.status === 'ready' ? recent.items : [];
+  if (recent.status !== 'ready') return emptyRegion();
   return (
     <section
       className="lane"
-      aria-label="Just played"
+      aria-label="Recently happened"
       data-el="home.lane03"
     >
       <div className="lane__head">
-        <div className="lane__title">
-          <h2 className="type-heading">Just played in the last 7 days</h2>
-        </div>
-        {total > 0 ? <span className="type-caption">{total} closed</span> : null}
+        <h2 className="type-heading">Recently happened</h2>
+        <Link className="btn ghost btn--sm" to="/chronicles">
+          All chronicles
+        </Link>
       </div>
-      {quests.length === 0 ? (
+      {items.length === 0 ? (
         <EmptyState
           kind="no-quests"
-          message="No quests have closed in the last 7 days."
+          message="No chronicle entries yet."
           action={
-            <Link className="btn btn--sm" to="/quests">
-              Browse quests
+            <Link className="btn btn--sm" to="/chronicles">
+              Open chronicles
             </Link>
           }
         />
       ) : (
-        <Card data-el="home.lane03.recentlyPlayed">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Quest</th>
-                <th>Region</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {quests.map((quest) => (
-                <tr key={quest.id}>
-                  <td>
-                    <Link to={`/quests/${quest.shortCode}`}>{quest.title}</Link>
-                  </td>
-                  <td>{quest.regionName ?? ''}</td>
-                  <td>
-                    <Chip size="sm">{statusLabel(quest.status)}</Chip>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <CardGrid as="ul" gap={5} aria-label="Recent chronicle entries">
+          {items.map((entry) => (
+            <li key={entry.id} className={styles.cardItem}>
+              <RecentChronicleCard
+                slug={entry.slug}
+                title={entry.title}
+                author={handleLabel(entry.authorHandle)}
+                date={entry.date}
+              />
+            </li>
+          ))}
+        </CardGrid>
       )}
     </section>
   );
@@ -431,6 +462,9 @@ function DmLane({
 function readyRegions(
   view: HomePageView,
   dmLabels: ReadonlyMap<string, string>,
+  today: HomeQuestView[],
+  upcoming: HomeQuestView[],
+  recentLimit: number,
 ): PageRegionRenderers {
   const opts = view;
   const { lanes } = view;
@@ -448,17 +482,15 @@ function readyRegions(
     'lane-recruiting': () => (
       <RecruitingLane cards={opts.cards} dmLabels={dmLabels} total={lanes.totals.questBoard} />
     ),
+    'lane-today': () => <TodayLane quests={today} dmLabels={dmLabels} />,
     'lane-upcoming': () => (
       <UpcomingLane
-        quests={lanes.upcoming}
-        schedule={lanes.upcomingSchedule}
+        quests={upcoming}
         dmLabels={dmLabels}
-        total={lanes.totals.upcoming}
+        total={Math.max(0, lanes.totals.upcoming - today.length)}
       />
     ),
-    'lane-recent': () => (
-      <RecentLane quests={lanes.recentlyClosed} total={lanes.totals.recentlyClosed} />
-    ),
+    'lane-recent': () => <RecentLane limit={recentLimit} />,
     'lane-dms': () => <DmLane dms={lanes.dmsAccepting} dmLabels={dmLabels} />,
   };
 }
@@ -488,6 +520,7 @@ function statusRegions(
     banner: () => <HomeBannerRegion />,
     'new-here': emptyRegion,
     'lane-recruiting': emptyRegion,
+    'lane-today': emptyRegion,
     'lane-upcoming': emptyRegion,
     'lane-recent': emptyRegion,
     'lane-dms': emptyRegion,
@@ -497,7 +530,19 @@ function statusRegions(
 export function HomePage(): React.JSX.Element {
   const page = useHomePage();
   const { widthClass } = useSizeClasses();
+  const { timeZone } = useDateFormatter();
   const visibleLaneCap = widthClass === 'compact' ? PHONE_LANE_CAP : LANE_CAP;
+  const todayCap = widthClass === 'compact' ? PHONE_LANE_CAP : TODAY_CAP;
+  const todayQuests =
+    page.status === 'ready'
+      ? questsHappeningToday(page.view.lanes.upcoming, timeZone)
+      : [];
+  // Sessions already shown under "Happening today" are not repeated in "Coming up".
+  const todayIds = new Set(todayQuests.map((quest) => quest.id));
+  const upcomingQuests =
+    page.status === 'ready'
+      ? page.view.lanes.upcoming.filter((quest) => !todayIds.has(quest.id))
+      : [];
   const visiblePeople =
     page.status === 'ready'
       ? [
@@ -505,7 +550,11 @@ export function HomePage(): React.JSX.Element {
             displayName: card.dmName,
             handle: card.dmUsername,
           })),
-          ...page.view.lanes.upcoming.slice(0, visibleLaneCap).map((quest) => ({
+          ...upcomingQuests.slice(0, visibleLaneCap).map((quest) => ({
+            displayName: quest.dmName,
+            handle: quest.dmHandle,
+          })),
+          ...todayQuests.slice(0, todayCap).map((quest) => ({
             displayName: quest.dmName,
             handle: quest.dmHandle,
           })),
@@ -532,7 +581,7 @@ export function HomePage(): React.JSX.Element {
         ? statusRegions('loading')
         : page.status === 'empty'
           ? statusRegions('empty')
-          : readyRegions(page.view, dmLabels);
+          : readyRegions(page.view, dmLabels, todayQuests, upcomingQuests, visibleLaneCap);
 
   return (
     <PageShell context="war-room" className="hf2">

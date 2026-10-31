@@ -4,6 +4,7 @@ import type {
   AdminBackstoriesQuery,
   AdminCharactersQuery,
   AdminCreationCatalogQuery,
+  AdminDiscordSettingsQuery,
   AdminGameCalendarQuery,
   AdminHomeBannerQuery,
   AdminMembersQuery,
@@ -19,11 +20,13 @@ import type {
   DecideVerificationMutation,
   PendingCharacterVerificationsQuery,
   PendingDmProfilesQuery,
+  RedriveDiscordDeliveryMutation,
   RevokeArchonMutation,
   SetMemberRolesBatchMutation,
   SetMemberRolesMutation,
   TransitionRegionMutation,
   UpdateBackstoryMutation,
+  UpdateDiscordSettingsMutation,
   UpdateGameCalendarMutation,
   UpdateHomeBannerMutation,
   UpdateRegionMutation,
@@ -38,6 +41,7 @@ import {
 } from './adminRequest.js';
 import { adminPage, type AdminPage, type AdminPageRequest } from './adminPage.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import { discordSafeErrorReason } from '../../../utils/discordDelivery.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import PENDING_DM_PROFILES from './pendingDmProfiles.graphql?raw';
 import ADMIN_OPS from './adminOperations.graphql?raw';
@@ -46,6 +50,8 @@ import PENDING_CHAR_VERIFICATIONS from './pendingCharacterVerifications.graphql?
 import ADMIN_MEMBERS from './adminMembers.graphql?raw';
 import ADMIN_HOME_BANNER from './adminHomeBanner.graphql?raw';
 import UPDATE_HOME_BANNER from './updateHomeBanner.graphql?raw';
+import ADMIN_DISCORD_SETTINGS from './adminDiscordSettings.graphql?raw';
+import UPDATE_DISCORD_SETTINGS from './updateDiscordSettings.graphql?raw';
 import SET_MEMBER_ROLES from './setMemberRoles.graphql?raw';
 import SET_MEMBER_ROLES_BATCH from './setMemberRolesBatch.graphql?raw';
 import DECIDE_VERIFICATION from './decideVerification.graphql?raw';
@@ -67,6 +73,7 @@ import CREATE_TIME_ANCHOR from './createTimeAnchor.graphql?raw';
 import UPDATE_TIME_ANCHOR from './updateTimeAnchor.graphql?raw';
 import ADMIN_GAME_CALENDAR from './adminGameCalendar.graphql?raw';
 import UPDATE_GAME_CALENDAR from './updateGameCalendar.graphql?raw';
+import REDRIVE_DISCORD_DELIVERY from './redriveDiscordDelivery.graphql?raw';
 
 function requireAcknowledgement(schema: z.ZodTypeAny, value: unknown): void {
   if (!schema.safeParse(value).success)
@@ -167,7 +174,11 @@ const adminOpsSchema = z.object({
       failureStreak: z.number().int(),
       maxAttempts: z.number().int(),
       nextAttemptAt: z.string().nullable(),
-      safeError: z.string().nullable(),
+      // The API sends the job's safe error code; known codes become a sentence.
+      safeError: z
+        .string()
+        .nullable()
+        .transform((code) => discordSafeErrorReason(code) ?? code),
       redriveCount: z.number().int(),
       createdAt: z.string(),
       updatedAt: z.string(),
@@ -207,15 +218,6 @@ export type CharVerifyRow = {
   ownerDisplayName: string;
   ddbUrl: string | null;
   verificationSubmittedAt: string | null;
-};
-
-export type AdminHealthAlert = {
-  key: string;
-  label: string;
-  severity: string;
-  remediationHref: string;
-  firstSeenAt: string | null;
-  lastSeenAt: string | null;
 };
 
 export type AdminOpsView = z.infer<typeof adminOpsSchema>;
@@ -328,6 +330,39 @@ export async function loadAdminOperations(
   const result = parseAdminOps(data.adminOperations);
   if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:ops');
   return result.data;
+}
+
+/** Recorded on the redrive as its audit reason (1–2000 characters). */
+export const REDRIVE_DELIVERY_REASON = 'Admin retry from delivery panel';
+
+const deliveryReceiptSchema = z.object({
+  jobId: z.string().min(1),
+  deliveryStatus: z.string().min(1),
+});
+
+export type DeliveryReceiptView = z.infer<typeof deliveryReceiptSchema>;
+
+/**
+ * field-routing: redriveDiscordDelivery (admin only). Requeues a `dead` or
+ * `repair_required` quest Discord delivery; the API rejects other states.
+ */
+export async function redriveDiscordDelivery(
+  input: { jobId: string },
+  command: AdminCommand,
+): Promise<DeliveryReceiptView> {
+  try {
+    const data = await adminCommand<RedriveDiscordDeliveryMutation>(
+      REDRIVE_DISCORD_DELIVERY,
+      { jobId: input.jobId, reason: REDRIVE_DELIVERY_REASON },
+      command,
+    );
+    const parsed = deliveryReceiptSchema.safeParse(data.redriveDiscordDelivery);
+    if (!parsed.success)
+      throw toAppError({ failure: 'InvalidWire' }, 'admin:delivery:redrive');
+    return parsed.data;
+  } catch (err) {
+    throw toAppError(err, 'admin:delivery:redrive');
+  }
 }
 
 export async function loadAdminCharacters(
@@ -512,6 +547,71 @@ export async function upsertHomeBanner(
     requireAcknowledgement(homeBannerSchema, data.updateHomeBanner);
   } catch (err) {
     throw toAppError(err, 'admin:home-banner:save');
+  }
+}
+
+const discordSettingsSchema = z.object({
+  announceChannelId: z.string().nullable().optional(),
+  roleId: z.string().nullable().optional(),
+  voiceChannels: z.array(z.object({ name: z.string(), channelId: z.string() })),
+});
+
+export type DiscordSettingsView = {
+  announceChannelId: string | null;
+  roleId: string | null;
+  voiceChannels: { name: string; channelId: string }[];
+};
+
+function toDiscordSettings(
+  wire: z.infer<typeof discordSettingsSchema>,
+): DiscordSettingsView {
+  return {
+    announceChannelId: wire.announceChannelId ?? null,
+    roleId: wire.roleId ?? null,
+    voiceChannels: wire.voiceChannels.map(({ name, channelId }) => ({ name, channelId })),
+  };
+}
+
+/** field-routing: discordSettings (admin only) */
+export async function loadDiscordSettings(
+  request: AdminReadRequest,
+): Promise<DiscordSettingsView> {
+  try {
+    const data = await adminRead<AdminDiscordSettingsQuery>(
+      ADMIN_DISCORD_SETTINGS,
+      undefined,
+      request,
+    );
+    const parsed = discordSettingsSchema.safeParse(data.discordSettings);
+    if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'admin:discord');
+    return toDiscordSettings(parsed.data);
+  } catch (err) {
+    throw toAppError(err, 'admin:discord');
+  }
+}
+
+/** field-routing: updateDiscordSettings (admin only) */
+export async function saveDiscordSettings(
+  settings: DiscordSettingsView,
+  command: AdminCommand,
+): Promise<DiscordSettingsView> {
+  try {
+    const data = await adminCommand<UpdateDiscordSettingsMutation>(
+      UPDATE_DISCORD_SETTINGS,
+      {
+        input: {
+          announceChannelId: settings.announceChannelId,
+          roleId: settings.roleId,
+          voiceChannels: settings.voiceChannels,
+        },
+      },
+      command,
+    );
+    const parsed = discordSettingsSchema.safeParse(data.updateDiscordSettings);
+    if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'admin:discord:save');
+    return toDiscordSettings(parsed.data);
+  } catch (err) {
+    throw toAppError(err, 'admin:discord:save');
   }
 }
 
@@ -719,6 +819,24 @@ export async function transitionRegion(
   }
 }
 
+/** A bare array or an `{ items }` envelope; a malformed envelope reads "expected array". */
+function parseArrayOrItems<S extends z.ZodTypeAny>(
+  schema: S,
+  wire: unknown,
+): AdapterResult<z.infer<S>[]> {
+  const list = Array.isArray(wire)
+    ? wire
+    : z.object({ items: z.array(schema) }).safeParse(wire).success
+      ? (wire as { items: unknown[] }).items
+      : null;
+  if (!list) return { ok: false, failure: 'InvalidWire', detail: 'expected array' };
+  const parsed = z.array(schema).safeParse(list);
+  if (!parsed.success) {
+    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
+  }
+  return { ok: true, data: parsed.data };
+}
+
 const backstorySchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -740,16 +858,8 @@ export type AdminBackstoryRow = {
 export function parseAdminBackstories(
   wire: unknown,
 ): AdapterResult<AdminBackstoryRow[]> {
-  const list = Array.isArray(wire)
-    ? wire
-    : z.object({ items: z.array(backstorySchema) }).safeParse(wire).success
-      ? (wire as { items: unknown[] }).items
-      : null;
-  if (!list) return { ok: false, failure: 'InvalidWire', detail: 'expected array' };
-  const parsed = z.array(backstorySchema).safeParse(list);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
+  const parsed = parseArrayOrItems(backstorySchema, wire);
+  if (!parsed.ok) return parsed;
   return {
     ok: true,
     data: parsed.data.map((b) => ({
@@ -882,16 +992,8 @@ export type AdminCatalogEntry = {
 export function parseCreationCatalog(
   wire: unknown,
 ): AdapterResult<AdminCatalogEntry[]> {
-  const list = Array.isArray(wire)
-    ? wire
-    : z.object({ items: z.array(catalogEntrySchema) }).safeParse(wire).success
-      ? (wire as { items: unknown[] }).items
-      : null;
-  if (!list) return { ok: false, failure: 'InvalidWire', detail: 'expected array' };
-  const parsed = z.array(catalogEntrySchema).safeParse(list);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
+  const parsed = parseArrayOrItems(catalogEntrySchema, wire);
+  if (!parsed.ok) return parsed;
   return {
     ok: true,
     data: parsed.data.map((e) => ({
@@ -1092,16 +1194,8 @@ export type AdminTimeAnchorView = {
 };
 
 export function parseTimeAnchors(wire: unknown): AdapterResult<AdminTimeAnchorView[]> {
-  const list = Array.isArray(wire)
-    ? wire
-    : z.object({ items: z.array(timeAnchorSchema) }).safeParse(wire).success
-      ? (wire as { items: unknown[] }).items
-      : null;
-  if (!list) return { ok: false, failure: 'InvalidWire', detail: 'expected array' };
-  const parsed = z.array(timeAnchorSchema).safeParse(list);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
+  const parsed = parseArrayOrItems(timeAnchorSchema, wire);
+  if (!parsed.ok) return parsed;
   return {
     ok: true,
     data: parsed.data.map((a) => ({
@@ -1197,6 +1291,13 @@ export async function updateTimeAnchor(
 }
 
 const calendarSchema = z.object({ definition: z.record(z.string(), z.unknown()) });
+// The contract's definition is nullable: a world with no saved calendar yet reads as empty.
+const calendarReadSchema = z.object({
+  definition: z
+    .record(z.string(), z.unknown())
+    .nullable()
+    .transform((definition) => definition ?? {}),
+});
 export type GameCalendarView = z.infer<typeof calendarSchema> & { form: CalendarForm };
 export async function loadGameCalendar(
   request: AdminReadRequest,
@@ -1206,7 +1307,7 @@ export async function loadGameCalendar(
     calendarWindow(),
     request,
   );
-  const parsed = calendarSchema.safeParse(data.gameCalendar);
+  const parsed = calendarReadSchema.safeParse(data.gameCalendar);
   if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'admin:calendar');
   return { ...parsed.data, form: parseCalendarForm(parsed.data.definition) };
 }

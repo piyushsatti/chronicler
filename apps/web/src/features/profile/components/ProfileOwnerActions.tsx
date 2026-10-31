@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import type { MemberProfileView } from '../adapters/memberProfileAdapter.js';
@@ -28,11 +28,23 @@ export function ProfileOwnerActions({
   profile,
   canAvailability,
   canDm,
+  focusAvailability = false,
 }: {
   profile: MemberProfileView;
   canAvailability: boolean;
   canDm: boolean;
+  /** Scroll the availability form into view and focus its first control on mount. */
+  focusAvailability?: boolean;
 }) {
+  const availabilityForm = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const form = availabilityForm.current;
+    if (!focusAvailability || !form) return;
+    form.scrollIntoView?.({ block: 'start' });
+    form
+      .querySelector<HTMLElement>('button:not([disabled]), input:not([disabled])')
+      ?.focus({ preventScroll: true });
+  }, [focusAvailability]);
   const dayLabelId = useId();
   const actions = useProfileActions(profile.member.handle);
   const [name, setName] = useState(profile.member.displayName);
@@ -110,6 +122,8 @@ export function ProfileOwnerActions({
       </form>
       {canAvailability ? (
         <form
+          id="availability"
+          ref={availabilityForm}
           className="stack"
           onSubmit={(event) => {
             event.preventDefault();

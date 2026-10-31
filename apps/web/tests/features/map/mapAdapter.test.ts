@@ -1,23 +1,53 @@
 import { describe, expect, it } from 'vitest';
 import { graphql, HttpResponse } from 'msw';
 import { server } from '../../../src/mocks/server.js';
-import {
-  loadMap,
-  loadMapDirectory,
-  parseMap,
-} from '../../../src/features/map/adapters/mapAdapter.js';
+import { loadMap, loadMapContainment, loadMapDirectory } from '../../../src/features/map/adapters/mapAdapter.js';
 import { graphBounds } from '../../../src/features/map/components/PointcrawlViewport.js';
 import bad from '../../fixtures/wire/map/bad-missing-field.json';
-import good from '../../fixtures/wire/map/good.json';
+import good from '../../fixtures/wire/map/goodMap.js';
 
 describe('pointcrawl reads', () => {
-  it('validates current atlas metadata and server capability', () => {
-    expect(parseMap(good)).toMatchObject({
-      ok: true,
-      data: { atlasCode: 'LFC', canEdit: false },
+  it('loads parent containment without loading other full maps', async () => {
+    const requested: unknown[] = [];
+    const nodes = Array.from({ length: 201 }, (_, index) => ({
+      submapId: index === 200 ? good.id : null,
+    }));
+    server.use(
+      graphql.query('MapContainment', ({ variables }) => {
+        requested.push(variables);
+        const offset = Number(variables.offset);
+        return HttpResponse.json({
+          data: {
+            map: {
+              id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+              pointcrawlNodes: nodes.slice(offset, offset + Number(variables.limit)),
+            },
+          },
+        });
+      }),
+    );
+    const containment = await loadMapContainment('PARENT');
+    expect(containment.nodes).toHaveLength(201);
+    expect(containment.nodes[200]?.submapId).toBe(good.id);
+    expect(requested).toEqual([
+      { atlasCode: 'PARENT', limit: 200, offset: 0 },
+      { atlasCode: 'PARENT', limit: 200, offset: 200 },
+    ]);
+  });
+
+  it('validates current atlas metadata and server capability', async () => {
+    let map: unknown = good;
+    server.use(
+      graphql.query('MapAtlas', () => HttpResponse.json({ data: { map } })),
+    );
+    await expect(loadMap('LFC')).resolves.toMatchObject({
+      atlasCode: 'LFC',
+      canEdit: false,
     });
-    expect(parseMap(bad).ok).toBe(false);
-    expect(parseMap({ ...good, canEdit: 'yes' }).ok).toBe(false);
+    map = bad;
+    await expect(loadMap('LFC')).rejects.toMatchObject({ kind: 'invalid' });
+    map = { ...good, canEdit: 'yes' };
+    await expect(loadMap('LFC')).rejects.toMatchObject({ kind: 'invalid' });
   });
   it('reads later node, edge and linked-entry pages without imposing a feature limit', async () => {
     const node = good.pointcrawlNodes[0]!;

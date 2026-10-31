@@ -183,7 +183,7 @@ func (p *ProductPostgres) ReadGameCalendar(ctx context.Context, _ auth.Authority
 		Definition:     rawJSON(cal.Definition),
 	}
 	for _, cell := range cells {
-		realDate, err := productDateFromAny(cell.RealDate)
+		realDate, err := productDateFromPGDate(cell.RealDate)
 		if err != nil {
 			return TimeCalendarSnapshot{}, err
 		}
@@ -252,48 +252,6 @@ func (p *ProductPostgres) ReadTimeAnchors(ctx context.Context, _ auth.Authority,
 	return TimeAnchorPage{Items: items, Total: total}, nil
 }
 
-func (p *ProductPostgres) ReadGameDates(ctx context.Context, dates []product.Date) ([]product.BatchResult[TimeDateSnapshot], error) {
-	out := make([]product.BatchResult[TimeDateSnapshot], len(dates))
-	if len(dates) == 0 {
-		return out, nil
-	}
-	pgDates := make([]pgtype.Date, len(dates))
-	for i, d := range dates {
-		parsed, err := pgDateFromProduct(d)
-		if err != nil {
-			out[i].Err = err
-			continue
-		}
-		pgDates[i] = parsed
-	}
-	rows, err := p.queries().ReadProductGameDates(ctx, pgDates)
-	if err != nil {
-		return nil, err
-	}
-	for _, row := range rows {
-		var idx int
-		switch v := row.Ordinality.(type) {
-		case int64:
-			idx = int(v) - 1
-		case int32:
-			idx = int(v) - 1
-		case int:
-			idx = v - 1
-		default:
-			continue
-		}
-		if idx < 0 || idx >= len(out) {
-			continue
-		}
-		snapshot := TimeDateSnapshot{
-			GameDay:    int32Ptr(row.GameDay),
-			Definition: rawJSON(row.Definition),
-		}
-		out[idx].Value = &snapshot
-	}
-	return out, nil
-}
-
 func (p *ProductPostgres) ReadMap(ctx context.Context, _ auth.Authority, spec MapSpec) (*MapView, error) {
 	row, err := p.queries().GetProductMap(ctx, spec.AtlasCode)
 	if isNotFound(err) {
@@ -302,7 +260,7 @@ func (p *ProductPostgres) ReadMap(ctx context.Context, _ auth.Authority, spec Ma
 	if err != nil {
 		return nil, err
 	}
-	view := mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy)
+	view := mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.Grid, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy)
 	return &view, nil
 }
 
@@ -320,25 +278,9 @@ func (p *ProductPostgres) ReadMaps(ctx context.Context, _ auth.Authority, spec M
 	}
 	out := make([]MapView, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy))
+		out = append(out, mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.Grid, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy))
 	}
 	return out, nil
-}
-
-func (p *ProductPostgres) ReadMapView(ctx context.Context, actor auth.Authority, spec MapViewSpec) (*MapViewView, error) {
-	m, err := p.ReadMap(ctx, actor, MapSpec{AtlasCode: spec.AtlasCode})
-	if err != nil {
-		return nil, err
-	}
-	return &MapViewView{
-		MapId:       m.Id,
-		AtlasCode:   m.AtlasCode,
-		Name:        m.Name,
-		Cols:        m.Cols,
-		Rows:        m.Rows,
-		Places:      nil,
-		TotalPlaces: 0,
-	}, nil
 }
 
 func (p *ProductPostgres) ReadBatchMapNodes(ctx context.Context, actor auth.Authority, keys []MapNodesKey) ([]product.BatchResult[NodeList], error) {
@@ -498,7 +440,7 @@ func (p *ProductPostgres) readBatchPointcrawlNodes(ctx context.Context, actor au
 			continue
 		}
 		overridden = overridden || row.AdminOverride
-		lists[idx] = append(lists[idx], mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt))
+		lists[idx] = append(lists[idx], mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt, row.State))
 	}
 	for i := range out {
 		if !parentExists[i] {

@@ -7,6 +7,7 @@ import { StatePanel } from '../../components/foundation/StatePanel.js';
 import { PageShell } from '../../components/foundation/PageShell.js';
 import { Button } from '../../components/primitives/Button.js';
 import { PageHeader } from '../../components/primitives/PageHeader.js';
+import { PageToolbar } from '../../components/primitives/PageToolbar.js';
 import { TabNav } from '../../components/primitives/Tabs.js';
 import './AdminWorkspaceShell.css';
 import {
@@ -79,13 +80,18 @@ function AdminNavRegion({
   );
   if (sections.length === 0) return <div hidden />;
   return (
-    <TabNav
-      aria-label="Admin sections"
-      items={sections.map((section) => ({
-        to: section.href,
-        label: section.label,
-        current: section.match(location.pathname),
-      }))}
+    <PageToolbar
+      label="Admin workspace"
+      segments={(
+        <TabNav
+          aria-label="Admin sections"
+          items={sections.map((section) => ({
+            to: section.href,
+            label: section.label,
+            current: section.match(location.pathname),
+          }))}
+        />
+      )}
     />
   );
 }

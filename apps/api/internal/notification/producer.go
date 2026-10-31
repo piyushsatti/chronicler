@@ -246,7 +246,12 @@ func validateSignupFacts(f Facts, validID func(*string) bool) error {
 }
 
 func validatePromotionFacts(f Facts, validID func(*string) bool) error {
-	if !validID(f.CharacterID) || f.FromStatus == nil || *f.FromStatus != "waitlisted" || f.ToStatus == nil || *f.ToStatus != "signed_up" {
+	if !validID(f.CharacterID) || f.FromStatus == nil || f.ToStatus == nil {
+		return errors.New("invalid promotion notification facts")
+	}
+	promoted := *f.FromStatus == "waitlisted" && *f.ToStatus == "signed_up"
+	bumped := *f.FromStatus == "signed_up" && *f.ToStatus == "waitlisted"
+	if !promoted && !bumped {
 		return errors.New("invalid promotion notification facts")
 	}
 	return nil

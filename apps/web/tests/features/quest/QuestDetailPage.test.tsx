@@ -1,6 +1,6 @@
 import { graphql, http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
@@ -8,6 +8,7 @@ import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { QuestDetailPage } from '../../../src/features/quest/pages/QuestDetailPage.js';
 import { server } from '../../../src/mocks/server.js';
 import detailGood from '../../fixtures/wire/quest/detail-good.json';
+import goodMe from '../../fixtures/wire/me/good.json';
 import { renderWithProviders } from '../../test-utils.js';
 
 function seedToken(): void {
@@ -26,6 +27,19 @@ describe('QuestDetailPage', () => {
     localStorage.clear();
   });
 
+  it('uses the guest role from MemberMe to explain the signup requirement', async () => {
+    seedToken();
+    server.use(graphql.query('MemberMe', () => HttpResponse.json({
+      data: { memberMe: { ...goodMe, roles: ['guest'] } },
+    })));
+    renderWithProviders(
+      <Routes><Route path="/quests/:code" element={<QuestDetailPage />} /></Routes>,
+      { route: '/quests/Q-101' },
+    );
+    expect(await screen.findByText(/first character approved to unlock quest signup/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument();
+  });
+
   it('renders summary and roster for a guest without operator delivery status', async () => {
     renderWithProviders(
       <Routes>
@@ -36,14 +50,33 @@ describe('QuestDetailPage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Siege of Kraghold' }),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Q-101')).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Q-101'),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('The Marches')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Edit quest' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Cancel quest' }),
+    ).not.toBeInTheDocument();
     // Discord delivery sync is an operator signal, hidden from guests and players.
     expect(screen.queryByText(/Discord/)).not.toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'Sign in to join this quest' }),
     ).toBeInTheDocument();
     expect(document.querySelector('[data-page-region="summary"]')).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Roster' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Quest Details' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('region', { name: 'Quest description' })).toHaveTextContent(
+      'A real projected quest brief.',
+    );
+    expect(screen.getByRole('region', { name: 'Dungeon Master' })).toHaveTextContent(
+      'Mira',
+    );
+    await userEvent.click(screen.getByRole('tab', { name: 'Cast' }));
     expect(screen.getByText('Lyra Storm')).toBeInTheDocument();
     expect(screen.getByText(/Played by/)).toHaveTextContent(
       'Played by Member (@player1)',
@@ -89,6 +122,7 @@ describe('QuestDetailPage', () => {
     );
 
     expect(await screen.findByText('Mira (@gm)')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Cast' }));
     expect(screen.getByText('Played by Mira (@player1)')).toBeInTheDocument();
     expect(screen.getByText('Played by Mira (@player2)')).toBeInTheDocument();
   });
@@ -118,7 +152,7 @@ describe('QuestDetailPage', () => {
       </Routes>,
       { route: '/quests/Q-101' },
     );
-    expect(await screen.findByText(/Discord post pending/)).toBeInTheDocument();
+    expect(await screen.findByText('Updating the Discord post…')).toBeInTheDocument();
     const delivery = document.querySelector('[data-el="quest.discordDelivery"]');
     expect(delivery).toHaveAttribute('data-terminal', '0');
     expect(delivery).toHaveAttribute('role', 'status');
@@ -126,6 +160,59 @@ describe('QuestDetailPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /^Your character/ }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Lyra Storm' }));
     expect(screen.getByRole('button', { name: 'Sign up' })).toBeEnabled();
+  });
+
+  it('shows the quest kinds and signup type in the details', async () => {
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: {
+            quest: { ...detailGood, kinds: ['one_shot', 'event'], signupType: 'dm_pick' },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    const details = await screen.findByRole('region', { name: 'Quest details' });
+    const kinds = within(details).getByText('Kinds');
+    expect(kinds.nextElementSibling).toHaveTextContent('One-shot, Event');
+    const signup = within(details).getByText('Signup type');
+    expect(signup.nextElementSibling).toHaveTextContent('DM pick');
+  });
+
+  it('shows the quest tags under Additional information', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    const extra = await screen.findByRole('region', { name: 'Additional information' });
+    expect(within(extra).getByText('lightfall')).toBeInTheDocument();
+  });
+
+  it('omits Additional information for an untagged quest', async () => {
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({ data: { quest: { ...detailGood, tags: [] } } }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    expect(await screen.findByRole('region', { name: 'Quest details' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'Additional information' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('lightfall')).not.toBeInTheDocument();
   });
 
   it('shows signup empty-state when authenticated with no characters', async () => {
@@ -232,9 +319,175 @@ describe('QuestDetailPage', () => {
       { route: '/quests/Q-101' },
     );
     await screen.findByRole('heading', { level: 1, name: 'Siege of Kraghold' });
+    await userEvent.click(screen.getByRole('tab', { name: 'Cast' }));
     expect(
       within(screen.getByRole('tabpanel')).getByText('No one has signed up yet.'),
     ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('tabpanel')).getByText('No one is waiting.'),
+    ).toBeInTheDocument();
+  });
+
+  it('splits the cast into seated players and the waitlist', async () => {
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: {
+            quest: {
+              ...detailGood,
+              participants: [
+                detailGood.participants[0],
+                {
+                  ...detailGood.participants[0],
+                  characterId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+                  characterName: 'Rook Vale',
+                  status: 'waitlisted',
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    await userEvent.click(await screen.findByRole('tab', { name: 'Cast' }));
+    expect(
+      within(screen.getByRole('region', { name: 'Roster' })).getByText('Lyra Storm'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Waitlist' })).getByText('Rook Vale'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Waitlist · 1 waiting')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['last_game_played', true],
+    ['dm_pick', false],
+  ])('explains the waitlist order for signup type %s', async (signupType, explained) => {
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: {
+            quest: {
+              ...detailGood,
+              signupType,
+              participants: [
+                {
+                  ...detailGood.participants[0],
+                  characterId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+                  characterName: 'Rook Vale',
+                  status: 'waitlisted',
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    await userEvent.click(await screen.findByRole('tab', { name: 'Cast' }));
+    const waitlist = screen.getByRole('region', { name: 'Waitlist' });
+    const note = within(waitlist).queryByText(/Ordered automatically/);
+    if (explained) expect(note).toBeInTheDocument();
+    else expect(note).not.toBeInTheDocument();
+  });
+
+  it('shows the DM house rules from their profile in the Table Rules tab', async () => {
+    server.use(
+      graphql.query('MemberProfile', ({ variables }) =>
+        HttpResponse.json({
+          data: {
+            memberProfile: {
+              member: {
+                id: detailGood.dmId,
+                handle: variables.handle,
+                displayName: 'Mira',
+                avatarUrl: null,
+                roles: ['dm'],
+                status: 'active',
+                joinedAt: '2026-01-01T00:00:00Z',
+              },
+              dmProfile: {
+                memberId: detailGood.dmId,
+                tagline: null,
+                philosophy: null,
+                houseRules: '1. No evil alignments.\n2. Phones away at the table.',
+                tableInfo: null,
+                acceptingPlayers: true,
+                status: 'approved',
+                reviewRevision: 1,
+              },
+              availability: [],
+              activitySummary: { voiceMinutes: 0, messages: 0, reactions: 0 },
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    await userEvent.click(await screen.findByRole('tab', { name: 'Table Rules' }));
+    const rules = await screen.findByRole('region', { name: 'Table rules' });
+    expect(await within(rules).findByText('No evil alignments.')).toBeInTheDocument();
+    expect(within(rules).getByText('Phones away at the table.')).toBeInTheDocument();
+    expect(within(rules).getByText('From @mira’s DM profile')).toBeInTheDocument();
+  });
+
+  it('shows an empty state when the DM has no house rules', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    await userEvent.click(await screen.findByRole('tab', { name: 'Table Rules' }));
+    const rules = await screen.findByRole('region', { name: 'Table rules' });
+    expect(
+      await within(rules).findByText(/hasn’t published any table rules/),
+    ).toBeInTheDocument();
+  });
+
+  it('offers Edit and Cancel quest to the owner and confirms cancellation', async () => {
+    seedToken();
+    const inputs: unknown[] = [];
+    server.use(
+      graphql.mutation('TransitionQuestStatus', ({ variables }) => {
+        inputs.push(variables);
+        return HttpResponse.json({
+          data: { transitionQuestStatus: { id: detailGood.id, status: 'cancelled' } },
+        });
+      }),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    expect(await screen.findByRole('link', { name: 'Edit quest' })).toHaveAttribute(
+      'href',
+      '/quests/Q-101/edit',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel quest' }));
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm' }),
+    );
+    await waitFor(() => expect(inputs).toHaveLength(1));
+    expect(inputs[0]).toMatchObject({ id: detailGood.id, to: 'cancelled' });
   });
 
   it('shows controlled error', async () => {

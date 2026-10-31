@@ -1,7 +1,27 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Button } from '../../components/primitives/Button.js';
 import { useScrollEdges } from '../../components/primitives/useScrollEdges.js';
 import type { EntityLinkIndex } from './types.js';
+import { HideMenu, type HidePlan } from './HideMenu.js';
+import { hideLines, type HideMarker } from './hideMarkers.js';
+import type { BodySpanAudit } from './adapters/bodyAudit.js';
+import {
+  auditBadgeIcon,
+  auditBadgeLabel,
+  auditLine,
+  LOOKALIKE_WARNING,
+  LIST_NESTED_WARNING,
+  type BodyAudit,
+} from './bodyAuditCopy.js';
 import styles from './editor.module.css';
 
 /** Shown in an empty document; says what the editor does with typed text. */
@@ -89,8 +109,14 @@ export type LiveEditorProps = {
   placeholder?: string;
   compact?: boolean;
   entityIndex?: EntityLinkIndex;
-  /** `blocks` = legacy per-line read/edit; `plain` = single textarea. */
-  variant?: 'blocks' | 'plain';
+  /**
+   * The server's audit of the body (`auditBody`). The blocks editor badges the
+   * blocks it reports and warns on marker lookalikes; it never reads markers
+   * itself (D46).
+   */
+  audit?: BodyAudit | null;
+  /** Open this 1-based line for editing; a new `request` number asks again. */
+  focusLine?: { line: number; request: number } | null;
 };
 
 /** Pure serialize/deserialize helpers (legacy LiveEditor contract). */
@@ -220,82 +246,9 @@ export function leRegions(lines: string[]): LeRegion[] {
   return regs;
 }
 
-function wrapSelection(
-  value: string,
-  start: number,
-  end: number,
-  before: string,
-  after: string,
-): { next: string; cursor: number } {
-  const selected = value.slice(start, end) || 'text';
-  const next = value.slice(0, start) + before + selected + after + value.slice(end);
-  return { next, cursor: start + before.length + selected.length + after.length };
-}
-
-function prefixLines(
-  value: string,
-  start: number,
-  end: number,
-  prefix: string,
-): { next: string; cursor: number } {
-  const lines = leDeserialize(value);
-  let offset = 0;
-  let startIdx = 0;
-  let endIdx = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const lineEnd = offset + lines[i].length;
-    if (start >= offset && start <= lineEnd + 1) startIdx = i;
-    if (end >= offset && end <= lineEnd + 1) endIdx = i;
-    offset = lineEnd + 1;
-  }
-  for (let i = startIdx; i <= endIdx; i++) {
-    lines[i] = lines[i].startsWith(prefix)
-      ? lines[i].slice(prefix.length)
-      : prefix + lines[i].replace(/^(#{1,6}\s+|[-*+]\s+|>\s+|\d+\.\s+)/, '');
-  }
-  return { next: leSerialize(lines), cursor: start + prefix.length };
-}
-
-function insertAt(
-  value: string,
-  start: number,
-  end: number,
-  text: string,
-): { next: string; cursor: number } {
-  const next = value.slice(0, start) + text + value.slice(end);
-  return { next, cursor: start + text.length };
-}
-
-function lineAtOffset(
-  value: string,
-  pos: number,
-): { idx: number; lineStart: number; line: string } {
-  const lines = leDeserialize(value);
-  let offset = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const lineEnd = offset + lines[i].length;
-    if (pos >= offset && pos <= lineEnd) {
-      return { idx: i, lineStart: offset, line: lines[i] };
-    }
-    offset = lineEnd + 1;
-  }
-  const last = Math.max(lines.length - 1, 0);
-  return { idx: last, lineStart: offset, line: lines[last] ?? '' };
-}
-
 function indentLine(line: string, outdent: boolean): string {
   if (outdent) return line.replace(/^ {1,2}/, '');
   return `  ${line}`;
-}
-
-function wikiQueryAt(
-  value: string,
-  caret: number,
-): { query: string; start: number } | null {
-  const before = value.slice(0, caret);
-  const m = before.match(/\[\[([^[\]]*)$/);
-  if (!m) return null;
-  return { query: m[1], start: caret - m[1].length - 2 };
 }
 
 const LEReadLine = memo(function LEReadLine({ text }: { text: string }) {
@@ -334,363 +287,17 @@ const LE_FOCUSABLE_SEL =
 const LE_TABLE_TEMPLATE =
   '| Column | Column |\n|---|---|\n| Cell | Cell |\n| Cell | Cell |';
 
-function PlainLiveEditor({
-  value,
-  onChange,
-  toolbar,
-  toolbarStart,
-  toolbarEnd,
-  placeholder,
-  compact,
-  entityIndex,
-}: Required<
-  Pick<LiveEditorProps, 'value' | 'onChange' | 'toolbar' | 'placeholder' | 'compact'>
-> &
-  Pick<LiveEditorProps, 'toolbarStart' | 'toolbarEnd'> & {
-    entityIndex: EntityLinkIndex;
-  }): React.JSX.Element {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  const toolbarRef = useScrollEdges<HTMLDivElement>();
-  const [caret, setCaret] = useState(0);
-  const [suggestIdx, setSuggestIdx] = useState(0);
-  const [showGutter, setShowGutter] = useState(false);
-
-  const apply = useCallback(
-    (result: { next: string; cursor: number }) => {
-      onChange(result.next);
-      requestAnimationFrame(() => {
-        const el = ref.current;
-        if (!el) return;
-        el.focus();
-        el.setSelectionRange(result.cursor, result.cursor);
-        setCaret(result.cursor);
-      });
-    },
-    [onChange],
-  );
-
-  const run = useCallback(
-    (command: LiveEditorCommand) => {
-      const el = ref.current;
-      const start = el?.selectionStart ?? value.length;
-      const end = el?.selectionEnd ?? value.length;
-      let result: { next: string; cursor: number };
-      switch (command) {
-        case 'bold':
-          result = wrapSelection(value, start, end, '**', '**');
-          break;
-        case 'italic':
-          result = wrapSelection(value, start, end, '_', '_');
-          break;
-        case 'strike':
-          result = wrapSelection(value, start, end, '~~', '~~');
-          break;
-        case 'code':
-          result = wrapSelection(value, start, end, '`', '`');
-          break;
-        case 'link':
-          result = wrapSelection(value, start, end, '[', '](url)');
-          break;
-        case 'wikilink':
-          result = wrapSelection(value, start, end, '[[', ']]');
-          break;
-        case 'h2':
-          result = prefixLines(value, start, end, '## ');
-          break;
-        case 'h3':
-          result = prefixLines(value, start, end, '### ');
-          break;
-        case 'bullet':
-          result = prefixLines(value, start, end, '- ');
-          break;
-        case 'ordered':
-          result = prefixLines(value, start, end, '1. ');
-          break;
-        case 'quote':
-          result = prefixLines(value, start, end, '> ');
-          break;
-        case 'table':
-          result = insertAt(value, start, end, `\n${LE_TABLE_TEMPLATE}\n`);
-          break;
-        case 'diagram':
-          result = insertAt(
-            value,
-            start,
-            end,
-            '\n```mermaid\nflowchart LR\n  A --> B\n```\n',
-          );
-          break;
-        case 'hr':
-          result = insertAt(value, start, end, '\n---\n');
-          break;
-        default:
-          return;
-      }
-      apply(result);
-    },
-    [apply, value],
-  );
-
-  const wiki = wikiQueryAt(value, caret);
-  const suggestions = useMemo(() => {
-    if (!wiki || !entityIndex.length) return [];
-    const q = wiki.query.toLowerCase();
-    return entityIndex
-      .filter(
-        (e) => e.label.toLowerCase().includes(q) || e.id.toLowerCase().includes(q),
-      )
-      .slice(0, 8);
-  }, [entityIndex, wiki]);
-
-  const pickWiki = (label: string): void => {
-    if (!wiki) return;
-    apply(insertAt(value, wiki.start, caret, `[[${label}]]`));
-    setSuggestIdx(0);
-  };
-
-  const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (suggestions.length > 0) {
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        setSuggestIdx((i) => (i + 1) % suggestions.length);
-        return;
-      }
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        setSuggestIdx((i) => (i - 1 + suggestions.length) % suggestions.length);
-        return;
-      }
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        const pick = suggestions[suggestIdx] ?? suggestions[0];
-        if (pick) pickWiki(pick.label);
-        return;
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setSuggestIdx(0);
-        return;
-      }
-    }
-    if (event.key === 'Tab') {
-      const el = event.currentTarget;
-      const start = el.selectionStart;
-      const end = el.selectionEnd;
-      const { idx, lineStart, line } = lineAtOffset(value, start);
-      const kind = leKind(line);
-      if (kind === 'li' || kind === 'ol' || kind === 'quote') {
-        event.preventDefault();
-        const nextLine = indentLine(line, event.shiftKey);
-        const lines = leDeserialize(value);
-        lines[idx] = nextLine;
-        const next = leSerialize(lines);
-        const delta = nextLine.length - line.length;
-        apply({ next, cursor: Math.max(lineStart, start + delta) });
-        return;
-      }
-      if (!event.shiftKey && start === end) {
-        event.preventDefault();
-        apply(insertAt(value, start, end, '  '));
-      }
-      return;
-    }
-    if (event.key !== 'Enter' || event.shiftKey) return;
-    const el = event.currentTarget;
-    const start = el.selectionStart;
-    const lines = leDeserialize(value);
-    let offset = 0;
-    let lineIdx = 0;
-    for (let i = 0; i < lines.length; i++) {
-      const lineEnd = offset + lines[i].length;
-      if (start >= offset && start <= lineEnd) {
-        lineIdx = i;
-        break;
-      }
-      offset = lineEnd + 1;
-    }
-    const line = lines[lineIdx] ?? '';
-    const bullet = line.match(/^(\s*)([-*+])\s+(.*)$/);
-    const ordered = line.match(/^(\s*)(\d+)(\.\s+)(.*)$/);
-    const quote = line.match(/^(\s*)>\s?(.*)$/);
-    if (bullet) {
-      event.preventDefault();
-      if (!bullet[3].trim()) {
-        lines[lineIdx] = '';
-        apply({ next: leSerialize(lines), cursor: offset });
-        return;
-      }
-      const insert = `${bullet[1]}${bullet[2]} `;
-      const next = `${value.slice(0, start)}\n${insert}${value.slice(start)}`;
-      apply({ next, cursor: start + 1 + insert.length });
-      return;
-    }
-    if (ordered) {
-      event.preventDefault();
-      if (!ordered[4].trim()) {
-        lines[lineIdx] = '';
-        apply({ next: leSerialize(lines), cursor: offset });
-        return;
-      }
-      const n = Number(ordered[2]) + 1;
-      const insert = `${ordered[1]}${n}${ordered[3]}`;
-      let next = `${value.slice(0, start)}\n${insert}${value.slice(start)}`;
-      next = leSerialize(leRenumberOrderedListRun(leDeserialize(next), lineIdx + 1, n));
-      apply({ next, cursor: start + 1 + insert.length });
-      return;
-    }
-    if (quote) {
-      event.preventDefault();
-      if (!quote[2].trim()) {
-        lines[lineIdx] = '';
-        apply({ next: leSerialize(lines), cursor: offset });
-        return;
-      }
-      const insert = `${quote[1]}> `;
-      const next = `${value.slice(0, start)}\n${insert}${value.slice(start)}`;
-      apply({ next, cursor: start + 1 + insert.length });
-    }
-  };
-
-  const gutterLines = useMemo(
-    () => leDeserialize(value).map((l) => leKind(l)),
-    [value],
-  );
-
-  return (
-    <div
-      className="live-editor stack"
-      data-component="LiveEditor"
-      data-variant="plain"
-      data-compact={compact ? '1' : undefined}
-    >
-      {toolbar ? (
-        <div className={`row ${styles.toolbar}`} data-wrap="1">
-          <div
-            ref={toolbarRef}
-            className={`row le-toolbar ${styles.formatting}`}
-            role="toolbar"
-            aria-label="Markdown formatting"
-            data-wrap="1"
-          >
-            {toolbarStart}
-            {COMMANDS.map((cmd) => (
-              <Button
-                key={cmd.id}
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => run(cmd.id)}
-                aria-label={cmd.title}
-                title={cmd.title}
-              >
-                <svg
-                  width={16}
-                  height={16}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  focusable="false"
-                >
-                  <path d={cmd.path} />
-                </svg>
-              </Button>
-            ))}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-pressed={showGutter}
-              onClick={() => setShowGutter((v) => !v)}
-              aria-label="Toggle structure gutter"
-            >
-              Structure
-            </Button>
-          </div>
-          {toolbarEnd}
-        </div>
-      ) : null}
-      <div className="live-editor__surface stack">
-        {showGutter ? (
-          <div className="live-editor__gutter row" data-el="editor.gutter" aria-hidden>
-            {gutterLines.map((kind, i) => (
-              <span
-                key={i}
-                className="type-caption live-editor__gutter-chip"
-                data-kind={kind}
-              >
-                {kind}
-              </span>
-            ))}
-          </div>
-        ) : null}
-        <textarea
-          ref={ref}
-          aria-label="Document body"
-          className="field live-editor__input"
-          rows={compact ? 6 : 16}
-          value={value}
-          placeholder={placeholder}
-          onChange={(event) => {
-            onChange(event.target.value);
-            setCaret(event.target.selectionStart);
-            setSuggestIdx(0);
-          }}
-          onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
-          onKeyDown={onKeyDown}
-          onPaste={(event) => {
-            const text = event.clipboardData.getData('text/plain');
-            if (!text || (!text.includes('\r') && !text.includes('\n'))) return;
-            event.preventDefault();
-            const el = event.currentTarget;
-            apply(
-              insertAt(
-                value,
-                el.selectionStart,
-                el.selectionEnd,
-                text.replace(/\r\n?/g, '\n'),
-              ),
-            );
-          }}
-          data-el="editor.body"
-          spellCheck
-        />
-        {suggestions.length > 0 ? (
-          <ul
-            className="live-editor__wiki-suggest card stack"
-            role="listbox"
-            aria-label="Wikilink suggestions"
-          >
-            {suggestions.map((entry, i) => (
-              <li key={entry.id}>
-                <button
-                  type="button"
-                  className="btn btn--ghost"
-                  role="option"
-                  aria-selected={i === suggestIdx}
-                  data-active={i === suggestIdx ? '1' : undefined}
-                  onClick={() => pickWiki(entry.label)}
-                >
-                  {entry.label}
-                  {entry.kind ? (
-                    <span className="type-caption"> · {entry.kind}</span>
-                  ) : null}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 function sizeBlockInput(input: HTMLTextAreaElement): void {
   input.style.height = 'auto';
   input.style.height = `${input.scrollHeight}px`;
+}
+
+/** Whether the audited marker token still sits exactly where the server saw it. */
+function tokenInPlace(lines: readonly string[], span: BodySpanAudit): boolean {
+  if (!span.token || span.tokenLine === null || span.tokenColumn === null) return false;
+  const line = lines[span.tokenLine - 1];
+  const at = span.tokenColumn - 1;
+  return line !== undefined && line.slice(at, at + span.token.length) === span.token;
 }
 
 function BlocksLiveEditor({
@@ -702,10 +309,12 @@ function BlocksLiveEditor({
   placeholder,
   compact,
   entityIndex,
+  audit,
+  focusLine,
 }: Required<
   Pick<LiveEditorProps, 'value' | 'onChange' | 'toolbar' | 'placeholder' | 'compact'>
 > &
-  Pick<LiveEditorProps, 'toolbarStart' | 'toolbarEnd'> & {
+  Pick<LiveEditorProps, 'toolbarStart' | 'toolbarEnd' | 'audit' | 'focusLine'> & {
     entityIndex: EntityLinkIndex;
   }): React.JSX.Element {
   const [lines, setLines] = useState(() => leDeserialize(value));
@@ -756,7 +365,9 @@ function BlocksLiveEditor({
     observer.observe(input);
   }, []);
   const lastSent = useRef(value);
+  const seenValue = useRef(value);
   const pendingCaret = useRef<number | null>(null);
+  const pendingSelection = useRef<{ start: number; end: number } | null>(null);
   const lastActive = useRef(0);
 
   useEffect(() => {
@@ -768,7 +379,13 @@ function BlocksLiveEditor({
   }, [lines, onChange]);
 
   useEffect(() => {
-    if (active != null) return;
+    // A new value from the parent that this editor did not send (undo, redo)
+    // replaces the lines even mid-edit; otherwise the next keystroke would
+    // send the stale lines back over it. An unchanged prop never does, so a
+    // parent still rendering the previous value cannot undo a local edit.
+    const external = value !== seenValue.current;
+    seenValue.current = value;
+    if (active != null && !external) return;
     if (value !== lastSent.current) {
       lastSent.current = value;
       setLines(leDeserialize(value));
@@ -801,6 +418,17 @@ function BlocksLiveEditor({
       inputRef.current.focus();
       try {
         inputRef.current.setSelectionRange(p, p);
+      } catch {
+        /* ignore */
+      }
+      sizeBlockInput(inputRef.current);
+    }
+    if (pendingSelection.current != null && inputRef.current) {
+      const { start, end } = pendingSelection.current;
+      pendingSelection.current = null;
+      inputRef.current.focus();
+      try {
+        inputRef.current.setSelectionRange(start, end);
       } catch {
         /* ignore */
       }
@@ -859,11 +487,19 @@ function BlocksLiveEditor({
       return;
     }
     sizeBlockInput(e.target);
-    setLines((ls) => {
-      const n = ls.slice();
-      n[i] = v;
-      return n;
-    });
+    // Report the keystroke to the parent in this same event, not from the
+    // [lines] effect. From the effect, the parent's draft update ran as a
+    // separate, interruptible render; on a slow device React then restored this
+    // textarea to that render's older value and dropped the last character
+    // (loop 3 L2, reproduced in Chromium with tests/e2e/editor-typing.spec.ts).
+    const next = lines.slice();
+    next[i] = v;
+    setLines(next);
+    const joined = leSerialize(next);
+    if (joined !== lastSent.current) {
+      lastSent.current = joined;
+      onChange(joined);
+    }
     const caret = e.target.selectionStart;
     const m = v.slice(0, caret).match(/\[\[([^[\]]*)$/);
     setWikiAC(m ? { query: m[1], at: caret, start: caret - m[1].length - 2 } : null);
@@ -992,6 +628,112 @@ function BlocksLiveEditor({
     }
   };
 
+  const focusRequest = focusLine?.request;
+  useEffect(() => {
+    if (focusRequest === undefined || !focusLine) return;
+    const idx = Math.min(Math.max(focusLine.line - 1, 0), lines.length - 1);
+    caretRef.current = { idx, pos: 0 };
+    if (active === idx && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.setSelectionRange(0, 0);
+    } else setActive(idx);
+    // Only a new request moves the caret; later edits keep it where the author put it.
+  }, [focusRequest]);
+
+  // Audit spans are the server's (D46). They are shown only while the body still
+  // has the audited line count, so a badge never lands on a shifted block.
+  const auditId = useId();
+  const spans = useMemo(
+    () =>
+      audit && leDeserialize(audit.body).length === lines.length ? audit.spans : [],
+    [audit, lines.length],
+  );
+  const blockSpans = spans.filter(
+    (span) => span.kind !== 'LOOKALIKE' && span.kind !== 'LIST_NESTED',
+  );
+  const diagnostics = spans.filter(
+    (span) => span.kind === 'LOOKALIKE' || span.kind === 'LIST_NESTED',
+  );
+  const badgeId = (span: BodySpanAudit): string => `${auditId}-span-${span.startLine}`;
+  const warningId = (span: BodySpanAudit): string =>
+    `${auditId}-lookalike-${auditLine(span)}-${span.tokenColumn ?? 0}`;
+  /** Lines a..b (0-based, inclusive): projection spans and marker diagnostics. */
+  const auditFor = (a: number, b: number) => {
+    const covering = blockSpans.filter(
+      (span) => span.startLine - 1 <= b && span.endLine - 1 >= a,
+    );
+    const warnings = diagnostics.filter((span) => {
+      const line = auditLine(span) - 1;
+      return line >= a && line <= b;
+    });
+    const ids = [...covering.map(badgeId), ...warnings.map(warningId)].join(' ');
+    return {
+      span: covering[0] as BodySpanAudit | undefined,
+      warnings,
+      // Only the line being typed takes focus, so only it carries the description.
+      describedBy: ids || undefined,
+    };
+  };
+  /** Replaces exactly the lookalike token with the server's suggestion: one edit, one undo step. */
+  const fixLookalike = (span: BodySpanAudit): void => {
+    if (!span.suggestion || !tokenInPlace(lines, span)) return;
+    const idx = (span.tokenLine as number) - 1;
+    const at = (span.tokenColumn as number) - 1;
+    const line = lines[idx];
+    const next = lines.slice();
+    next[idx] =
+      line.slice(0, at) + span.suggestion + line.slice(at + (span.token as string).length);
+    setLines(next);
+  };
+  const badge = (span: BodySpanAudit): React.ReactNode => {
+    const icon = auditBadgeIcon(span.kind);
+    return (
+      <p
+        key="badge"
+        id={badgeId(span)}
+        className={`type-caption ${styles.auditBadge}`}
+        data-kind={span.kind}
+        data-el="editor.audit.badge"
+      >
+        {icon ? <span aria-hidden="true">{icon}</span> : null}
+        <span>{auditBadgeLabel(span)}</span>
+      </p>
+    );
+  };
+  const warnings = (found: BodySpanAudit[]): React.ReactNode[] =>
+    found.map((span) => (
+      <div
+        key={`lookalike${auditLine(span)}-${span.tokenColumn ?? 0}`}
+        className={`row ${styles.auditWarning}`}
+        data-el="editor.audit.lookalike"
+        data-gap="2"
+        data-wrap="1"
+      >
+        <p id={warningId(span)} className="type-caption" role="status" aria-live="polite">
+          <span aria-hidden="true">⚠️ </span>
+          {span.kind === 'LIST_NESTED' ? LIST_NESTED_WARNING : LOOKALIKE_WARNING}
+          {span.kind === 'LOOKALIKE' && span.suggestion ? (
+            <>
+              {' '}
+              Did you mean <code>{span.suggestion}</code>?
+            </>
+          ) : null}
+        </p>
+        {span.kind === 'LOOKALIKE' && span.suggestion && tokenInPlace(lines, span) ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            aria-describedby={warningId(span)}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => fixLookalike(span)}
+          >
+            Fix
+          </Button>
+        ) : null}
+      </div>
+    ));
+
   const blankDoc = lines.length === 1 && lines[0].trim() === '';
   const regs = leRegions(lines);
   const regAt = (idx: number): LeRegion | undefined =>
@@ -1000,6 +742,9 @@ function BlocksLiveEditor({
   const handleContainerMouseDown = (e: React.MouseEvent<HTMLDivElement>): void => {
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
+    // Portaled menus and dialogs (the Hide menu's member picker) bubble here
+    // through React; they are not part of the document surface.
+    if (!e.currentTarget.contains(target)) return;
     if (target.closest(LE_FOCUSABLE_SEL)) return;
     e.preventDefault();
     ensureActive();
@@ -1040,6 +785,54 @@ function BlocksLiveEditor({
     const focusLine = at + 1 + sep + 1;
     caretRef.current = { idx: focusLine, pos: 0 };
     setActive(focusLine);
+  };
+
+  /** Selection kept when the Hide menu opens, as offsets into the whole body. */
+  const hideRange = useRef<{ start: number; end: number } | null>(null);
+  const captureHideRange = (): void => {
+    const idx = Math.min(active ?? lastActive.current, lines.length - 1);
+    const lineStart = lines
+      .slice(0, idx)
+      .reduce((sum, line) => sum + line.length + 1, 0);
+    const el = active != null ? inputRef.current : null;
+    const lineEnd = lines[idx].length;
+    hideRange.current = {
+      start: lineStart + (el ? el.selectionStart : lineEnd),
+      end: lineStart + (el ? el.selectionEnd : lineEnd),
+    };
+  };
+  /** Where the last Hide edit left the selection in its line. */
+  const hideSelection = useRef<{ start: number; end: number } | null>(null);
+  const restoreHideFocus = (): void => {
+    const el = inputRef.current;
+    const selection = hideSelection.current;
+    if (!el || !selection) return;
+    el.focus();
+    el.setSelectionRange(selection.start, selection.end);
+  };
+  const planHide = (marker: HideMarker): HidePlan | null => {
+    if (!hideRange.current) captureHideRange();
+    const range = hideRange.current;
+    if (!range) return null;
+    const result = hideLines(leSerialize(lines), range.start, range.end, marker);
+    if (!result) return null;
+    return {
+      replaces: result.replaces,
+      commit: () => {
+        hideRange.current = null;
+        const next = leDeserialize(result.next);
+        const { idx, col } = leLocateInParts(next, result.selectionStart);
+        const selection = {
+          start: col,
+          end: col + result.selectionEnd - result.selectionStart,
+        };
+        setLines(next);
+        caretRef.current = { idx, pos: col };
+        pendingSelection.current = selection;
+        hideSelection.current = selection;
+        setActive(idx);
+      },
+    };
   };
 
   const run = (command: LiveEditorCommand): void => {
@@ -1103,6 +896,7 @@ function BlocksLiveEditor({
     <textarea
       ref={setInputRef}
       aria-label="Document body"
+      aria-describedby={auditFor(i, i).describedBy}
       className={`le-input ${mono ? 'le-mono type-code' : leTypeClass(lines[i])}`}
       rows={1}
       spellCheck={!mono}
@@ -1114,12 +908,45 @@ function BlocksLiveEditor({
     />
   );
 
+  // A block the audit marks is one labelled group: its badge, then its lines,
+  // so the badge is part of the block's own content for assistive technology.
   const rows: React.ReactNode[] = [];
+  let group: { span: BodySpanAudit; nodes: React.ReactNode[] } | null = null;
+  const flushGroup = (): void => {
+    if (!group) return;
+    const { span, nodes } = group;
+    rows.push(
+      <div
+        key={`audit${span.startLine}`}
+        role="group"
+        aria-labelledby={badgeId(span)}
+        className={styles.auditBlock}
+        data-audit={span.kind}
+        data-el="editor.audit.block"
+      >
+        {badge(span)}
+        {nodes}
+      </div>,
+    );
+    group = null;
+  };
+  const place = (span: BodySpanAudit | undefined, nodes: React.ReactNode[]): void => {
+    if (group && group.span !== span) flushGroup();
+    if (!span) {
+      rows.push(...nodes);
+      return;
+    }
+    if (!group) group = { span, nodes: [] };
+    group.nodes.push(...nodes);
+  };
   let i = 0;
   while (i < lines.length) {
     const r = regAt(i);
+    const marks = r ? auditFor(r.start, r.end) : auditFor(i, i);
+    const kind = marks.span?.kind;
     if (r) {
       const inside = active != null && active >= r.start && active <= r.end;
+      let block: React.ReactNode;
       if (inside) {
         const inner: React.ReactNode[] = [];
         for (let k = r.start; k <= r.end; k++) {
@@ -1141,17 +968,18 @@ function BlocksLiveEditor({
             </div>,
           );
         }
-        rows.push(
-          <div key={`reg${r.start}`} className="le-rawbox">
+        block = (
+          <div key={`reg${r.start}`} className="le-rawbox" data-audit={kind}>
             {inner}
-          </div>,
+          </div>
         );
       } else {
         const md = lines.slice(r.start, r.end + 1).join('\n');
-        rows.push(
+        block = (
           <div
             key={`reg${r.start}`}
             className="le-widget"
+            data-audit={kind}
             onMouseDown={(e) => {
               e.preventDefault();
               enter(r.kind === 'callout' ? r.start : r.start + 1);
@@ -1163,14 +991,19 @@ function BlocksLiveEditor({
                 : `${r.kind} · click to edit`}
             </span>
             <pre className={`type-caption ${styles.widgetSource}`}>{md}</pre>
-          </div>,
+          </div>
         );
       }
+      place(marks.span, [block, ...warnings(marks.warnings)]);
       i = r.end + 1;
     } else {
       const idx = i;
-      rows.push(
-        <div key={idx} className={`le-row ${idx === active ? 'le-active' : ''}`}>
+      place(marks.span, [
+        <div
+          key={idx}
+          className={`le-row ${idx === active ? 'le-active' : ''}`}
+          data-audit={kind}
+        >
           {idx === active ? (
             inputFor(idx, false)
           ) : (
@@ -1185,10 +1018,12 @@ function BlocksLiveEditor({
             </div>
           )}
         </div>,
-      );
+        ...warnings(marks.warnings),
+      ]);
       i++;
     }
   }
+  flushGroup();
 
   const wikiList = useMemo(() => {
     if (!wikiAC) return [];
@@ -1220,31 +1055,39 @@ function BlocksLiveEditor({
           >
             {toolbarStart}
             {COMMANDS.map((cmd) => (
-              <Button
-                key={cmd.id}
-                type="button"
-                variant="ghost"
-                size="sm"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => run(cmd.id)}
-                aria-label={cmd.title}
-                title={cmd.title}
-              >
-                <svg
-                  width={16}
-                  height={16}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  focusable="false"
+              <Fragment key={cmd.id}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => run(cmd.id)}
+                  aria-label={cmd.title}
+                  title={cmd.title}
                 >
-                  <path d={cmd.path} />
-                </svg>
-              </Button>
+                  <svg
+                    width={16}
+                    height={16}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d={cmd.path} />
+                  </svg>
+                </Button>
+                {cmd.id === 'ordered' ? (
+                  <HideMenu
+                    onOpen={captureHideRange}
+                    plan={planHide}
+                    restoreFocus={restoreHideFocus}
+                  />
+                ) : null}
+              </Fragment>
             ))}
           </div>
           {toolbarEnd}
@@ -1312,22 +1155,9 @@ export function LiveEditor({
   placeholder = DEFAULT_PLACEHOLDER,
   compact = false,
   entityIndex = [],
-  variant = 'blocks',
+  audit = null,
+  focusLine = null,
 }: LiveEditorProps): React.JSX.Element {
-  if (variant === 'plain') {
-    return (
-      <PlainLiveEditor
-        value={value}
-        onChange={onChange}
-        toolbar={toolbar}
-        toolbarStart={toolbarStart}
-        toolbarEnd={toolbarEnd}
-        placeholder={placeholder}
-        compact={compact}
-        entityIndex={entityIndex}
-      />
-    );
-  }
   return (
     <BlocksLiveEditor
       value={value}
@@ -1338,6 +1168,8 @@ export function LiveEditor({
       placeholder={placeholder}
       compact={compact}
       entityIndex={entityIndex}
+      audit={audit}
+      focusLine={focusLine}
     />
   );
 }

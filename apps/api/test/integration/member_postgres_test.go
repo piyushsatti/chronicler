@@ -38,11 +38,11 @@ func TestMemberUpsertAndLoad(t *testing.T) {
 	if got.DisplayName != "Integration" {
 		t.Fatalf("display name = %q", got.DisplayName)
 	}
-	if !reflect.DeepEqual(roles, []auth.Role{auth.Player}) {
+	if !reflect.DeepEqual(roles, []auth.Role{auth.Guest}) {
 		t.Fatalf("new member roles=%v", roles)
 	}
 	var initialized bool
-	if err := pool.QueryRow(ctx, `SELECT display_name='Integration' AND avatar_url='https://fixture.invalid/initial.png' AND handle=$2 AND status='active' AND roles=ARRAY['player']::text[] FROM members WHERE public_id=$1`, id, discordID[:32]).Scan(&initialized); err != nil || !initialized {
+	if err := pool.QueryRow(ctx, `SELECT display_name='Integration' AND avatar_url='https://fixture.invalid/initial.png' AND handle=$2 AND status='active' AND roles=ARRAY['guest']::text[] FROM members WHERE public_id=$1`, id, discordID[:32]).Scan(&initialized); err != nil || !initialized {
 		t.Fatalf("first-login initialization=%v err=%v", initialized, err)
 	}
 }
@@ -127,7 +127,7 @@ func TestMemberConcurrentLoginsConvergeWithoutAuthorityReset(t *testing.T) {
 			discordID := "concurrent-" + uuid.NewString()
 			cleanupMember(t, pool, discordID)
 			id, custom := "", ""
-			wantRoles := []auth.Role{auth.Player}
+			wantRoles := []auth.Role{auth.Guest}
 			wantStatus := "active"
 			var before []byte
 			if existing {

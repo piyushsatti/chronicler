@@ -3,11 +3,13 @@ import {
   civilDateInZone,
   formatInstant,
   formatScheduled,
+  formatScheduledShort,
   humanizeKey,
   labelFor,
   nextCivilDay,
   pluralize,
   statusLabel,
+  roleLabel,
   weekdayLabel,
   weekdayList,
   clockLabel,
@@ -21,6 +23,13 @@ import {
   isMachineId,
 } from '../../src/utils/format.js';
 describe('timestamp presentation', () => {
+  it('drops the year for compact schedule chips and keeps TBA for absent dates', () => {
+    expect(formatScheduledShort('2026-10-20T19:00:00Z', 'UTC')).toBe('Tue 20 Oct \u00b7 19:00 UTC');
+    expect(formatScheduledShort('2026-10-20T19:00:00Z', 'Europe/Paris')).toBe('Tue 20 Oct \u00b7 21:00');
+    expect(formatScheduled('2026-10-20T19:00:00Z', 'Europe/Paris')).toBe('Tue 20 Oct 2026, 21:00');
+    expect(formatScheduledShort(null)).toBe('TBA');
+    expect(formatScheduledShort('2099-01-01T00:00:00Z')).toBe('TBA');
+  });
   it('uses selected zones across midnight and accepts equivalent explicit offsets', () => {
     expect(formatInstant('2026-03-08T04:30:00Z', 'America/New_York', 'date')).toBe(
       '7 Mar 2026',
@@ -103,11 +112,18 @@ describe('timestamp presentation', () => {
 });
 
 describe('reader-facing labels', () => {
+  it('labels the guest member role', () => {
+    expect(roleLabel('guest')).toBe('Guest');
+  });
+
   it('pluralizes counts', () => {
     expect(pluralize(1, 'result')).toBe('1 result');
     expect(pluralize(0, 'result')).toBe('0 results');
     expect(pluralize(2, 'available map')).toBe('2 available maps');
     expect(pluralize(3, 'entry', 'entries')).toBe('3 entries');
+    expect(pluralize(2, 'series')).toBe('2 series');
+    expect(pluralize(1, 'series')).toBe('1 series');
+    expect(pluralize(2, 'Series')).toBe('2 Series');
   });
   it('reads character verification states, with anything else as not submitted', () => {
     expect(verificationLabel('PENDING')).toBe('Awaiting verification');

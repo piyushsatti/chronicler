@@ -31,6 +31,9 @@ async function categoryOptions(roles: string[]) {
     expect(result.current.view.schemaAccess.canAuthorLocations).toBe(
       roles.includes('archon') || roles.includes('admin'),
     );
+    expect(result.current.view.schemaAccess.canAuthorFeatures).toBe(
+      roles.includes('dm') || roles.includes('admin'),
+    );
   });
   if (result.current.status !== 'ready') throw new Error('Expected ready');
   const { view } = result.current;
@@ -42,10 +45,25 @@ async function categoryOptions(roles: string[]) {
 describe('Codex editor categories', () => {
   beforeEach(seedEditorSession);
 
-  it('offers Entities and Feature to a player, without Locations', async () => {
+  it('offers Entities to a player, without Locations or Feature', async () => {
     const options = await categoryOptions(['player']);
-    expect(options).toEqual(expect.arrayContaining(['Entities', 'Feature']));
+    expect(options).toContain('Entities');
     expect(options).not.toContain('Locations');
+    expect(options).not.toContain('Feature');
+  });
+
+  it.each([['dm'], ['admin']])('offers Feature to a %s', async (role) => {
+    expect(await categoryOptions(['player', role])).toContain('Feature');
+  });
+
+  it('keeps a Feature draft read-only for a player who opens one', () => {
+    const category = schemaForType(
+      'codex',
+      { title: 'Old Mill', category: 'Feature' },
+      { canAuthorFeatures: false },
+      'new',
+    ).find((field) => field.key === 'category');
+    expect(category?.readOnly).toBe(true);
   });
 
   it.each([['archon'], ['admin']])('offers Locations to an %s', async (role) => {
@@ -54,7 +72,7 @@ describe('Codex editor categories', () => {
 
   it('creates a Feature entry with that category', async () => {
     const initial: EditorLoadResult = {
-      meta: { title: 'Old Mill', category: 'Feature' },
+      meta: { title: 'Old Mill', category: 'Feature', hex: 'LFR7008' },
       body: '',
       canEditBody: true,
       canEditMetadata: true,
@@ -105,6 +123,7 @@ describe('Codex editor categories', () => {
         kind: 'codex_entry',
         category: 'Feature',
         title: 'Old Mill',
+        frontmatter: { hex: 'LFR7008' },
       }),
     ]);
   });

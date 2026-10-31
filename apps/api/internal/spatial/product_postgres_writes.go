@@ -55,6 +55,7 @@ func (p *ProductPostgres) StoreCreateMap(ctx context.Context, write CreateMapWri
 		AtlasCode: spec.AtlasCode,
 		MapKind:   spec.MapKind,
 		Family:    spec.Family,
+		Grid:      spec.Grid,
 		RegionID:  regionID,
 		AssetPath: optionalText(spec.AssetPath),
 		ActorID:   actorID,
@@ -62,7 +63,37 @@ func (p *ProductPostgres) StoreCreateMap(ctx context.Context, write CreateMapWri
 	if err != nil {
 		return MapView{}, err
 	}
-	return mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy), nil
+	return mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.Grid, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy), nil
+}
+
+func (p *ProductPostgres) LockUpdateMap(ctx context.Context, spec UpdateMapSpec) (UpdateMapState, error) {
+	view, err := p.lockPointcrawlMap(ctx, spec.MapId)
+	if err != nil {
+		return UpdateMapState{}, err
+	}
+	return UpdateMapState{Exists: true, SubjectID: spec.MapId, MapKind: view.MapKind, RegionID: view.RegionId, Before: view}, nil
+}
+
+func (p *ProductPostgres) StoreUpdateMap(ctx context.Context, write UpdateMapWrite) (MapView, error) {
+	if !write.Locked.Exists {
+		return MapView{}, apierr.New(apierr.NotFound, "map not found")
+	}
+	spec := write.ValidatedInput
+	mapID, err := spatialPublicID(spec.MapId)
+	if err != nil {
+		return MapView{}, err
+	}
+	row, err := p.queries().UpdateProductMap(ctx, dbgen.UpdateProductMapParams{
+		Name:      spec.Input.Name,
+		Family:    spec.Input.Family,
+		Grid:      spec.Input.Grid,
+		AssetPath: optionalText(spec.Input.AssetPath),
+		MapID:     mapID,
+	})
+	if err != nil {
+		return MapView{}, err
+	}
+	return mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.Grid, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy), nil
 }
 
 func (p *ProductPostgres) LockCreateRegion(_ context.Context, _ CreateRegionSpec) (CreateRegionState, error) {
@@ -486,7 +517,7 @@ func (p *ProductPostgres) StoreUpdateGameCalendar(ctx context.Context, write Upd
 	}
 	cells := make([]GameDayCellView, 0, len(rows))
 	for _, cell := range rows {
-		realDate, err := productDateFromAny(cell.RealDate)
+		realDate, err := productDateFromPGDate(cell.RealDate)
 		if err != nil {
 			return GameCalendarView{}, err
 		}
@@ -543,7 +574,57 @@ func (p *ProductPostgres) StoreUpsertPointcrawlNode(ctx context.Context, write U
 	if err != nil {
 		return PointcrawlNodeView{}, spatialWriteError(err)
 	}
-	return mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt), nil
+	return mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt, row.State), nil
+}
+
+func (p *ProductPostgres) LockSetPointcrawlNodeState(ctx context.Context, spec SetPointcrawlNodeStateSpec) (SetPointcrawlNodeStateState, error) {
+	view, err := p.lockPointcrawlMap(ctx, spec.MapId)
+	if err != nil {
+		return SetPointcrawlNodeStateState{}, err
+	}
+	id, err := spatialPublicID(spec.NodeId)
+	if err != nil {
+		return SetPointcrawlNodeStateState{}, err
+	}
+	row, err := p.queries().LockProductPointcrawlNode(ctx, id)
+	if isNotFound(err) {
+		return SetPointcrawlNodeStateState{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+	}
+	if err != nil {
+		return SetPointcrawlNodeStateState{}, err
+	}
+	if db.UUIDString(row.MapPublicID) != spec.MapId {
+		return SetPointcrawlNodeStateState{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+	}
+	node := mapPointcrawlNodeRow(row.PublicID, row.MapPublicID, row.Name, row.X, row.Y, row.SubmapPublicID, row.CreatedAt, row.State)
+	return SetPointcrawlNodeStateState{Exists: true, MapKind: view.MapKind, RegionID: view.RegionId, Node: &node}, nil
+}
+
+func (p *ProductPostgres) StoreSetPointcrawlNodeState(ctx context.Context, write SetPointcrawlNodeStateWrite) (PointcrawlNodeView, error) {
+	if !write.Locked.Exists || write.Locked.Node == nil {
+		return PointcrawlNodeView{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+	}
+	spec := write.ValidatedInput
+	mapID, err := spatialPublicID(spec.MapId)
+	if err != nil {
+		return PointcrawlNodeView{}, spatialWriteError(err)
+	}
+	nodeID, err := spatialPublicID(spec.NodeId)
+	if err != nil {
+		return PointcrawlNodeView{}, spatialWriteError(err)
+	}
+	row, err := p.queries().SetProductPointcrawlNodeState(ctx, dbgen.SetProductPointcrawlNodeStateParams{
+		State:  spec.State,
+		NodeID: nodeID,
+		MapID:  mapID,
+	})
+	if isNotFound(err) {
+		return PointcrawlNodeView{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+	}
+	if err != nil {
+		return PointcrawlNodeView{}, spatialWriteError(err)
+	}
+	return mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt, row.State), nil
 }
 
 func (p *ProductPostgres) LockSetPointcrawlEdge(ctx context.Context, spec SetPointcrawlEdgeSpec) (SetPointcrawlEdgeState, error) {

@@ -13,10 +13,13 @@ query Quest($id: ID, $shortCode: String) {
     scheduledAt
     durationHours
     slotsMax
+    kinds
+    signupType
     filledCount
     displayStatus
     genres
     tags
+    regions
     dm {
       handle
       displayName

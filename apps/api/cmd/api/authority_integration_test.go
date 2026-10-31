@@ -75,6 +75,8 @@ func newAuthorityDBFixture(t *testing.T) *authorityDBFixture {
 			ids []string
 		}{
 			{"DELETE FROM documents WHERE public_id::text = ANY($1::text[])", f.documents},
+			{"DELETE FROM idempotency_keys WHERE actor_id IN (SELECT id FROM members WHERE public_id::text = ANY($1::text[]))", f.members},
+			{"DELETE FROM notifications WHERE member_id IN (SELECT id FROM members WHERE public_id::text = ANY($1::text[]))", f.members},
 			{"DELETE FROM members WHERE public_id::text = ANY($1::text[])", f.members},
 		} {
 			if len(statement.ids) > 0 {

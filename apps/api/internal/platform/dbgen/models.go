@@ -19,6 +19,10 @@ type AgentQuestion struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ArchiveDocumentsV1 struct {
+	DocumentID pgtype.UUID `json:"document_id"`
+}
+
 type ArchonAssignment struct {
 	MemberID  int64              `json:"member_id"`
 	RegionID  int64              `json:"region_id"`
@@ -268,6 +272,7 @@ type Map struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	CreatedBy pgtype.Int8        `json:"created_by"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 }
 
 type Member struct {
@@ -364,6 +369,7 @@ type PointcrawlNode struct {
 	SubmapID  pgtype.Int8        `json:"submap_id"`
 	X         float64            `json:"x"`
 	Y         float64            `json:"y"`
+	State     string             `json:"state"`
 }
 
 type Quest struct {
@@ -394,6 +400,8 @@ type Quest struct {
 	ClosedAt               pgtype.Timestamptz `json:"closed_at"`
 	DeletedAt              pgtype.Timestamptz `json:"deleted_at"`
 	DeletedBy              pgtype.Int8        `json:"deleted_by"`
+	DiscordVoiceChannelID  pgtype.Text        `json:"discord_voice_channel_id"`
+	DiscordThreadID        pgtype.Text        `json:"discord_thread_id"`
 }
 
 type QuestArc struct {
@@ -417,6 +425,7 @@ type QuestParticipant struct {
 	Manual      bool               `json:"manual"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DmPicked    bool               `json:"dm_picked"`
 }
 
 type QuestPointcrawlNode struct {

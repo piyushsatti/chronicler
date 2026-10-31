@@ -42,59 +42,6 @@ func questUUID(value string) (pgtype.UUID, error) {
 	return id, nil
 }
 
-func mapQuestBatchRow(row dbgen.ProductQuestBatchReadRow) *QuestView {
-	if !row.PublicID.Valid {
-		return nil
-	}
-	view := &QuestView{
-		Id:            db.UUIDString(row.PublicID),
-		Status:        row.Status.String,
-		DisplayStatus: strPtr(row.DisplayStatus),
-		ScheduledAt:   row.ScheduledAt.Time,
-		DurationHours: row.DurationHours.Float64,
-		SlotsMax:      row.SlotsMax.Int32,
-		FilledCount:   row.FilledCount.Int32,
-		Tags:          row.Tags,
-		Genres:        row.Genres,
-		Kinds:         row.Kinds,
-		CreatedAt:     row.CreatedAt.Time,
-		UpdatedAt:     row.UpdatedAt.Time,
-	}
-	if row.ShortCode.Valid {
-		view.ShortCode = row.ShortCode.String
-	}
-	if row.DmPublicID.Valid {
-		view.DmId = db.UUIDString(row.DmPublicID)
-	}
-	if row.CreatedByPublicID.Valid {
-		view.CreatedBy = db.UUIDString(row.CreatedByPublicID)
-	}
-	if row.DocumentPublicID.Valid {
-		id := db.UUIDString(row.DocumentPublicID)
-		view.DocumentId = &id
-	}
-	if row.ArcPublicID.Valid {
-		id := db.UUIDString(row.ArcPublicID)
-		view.ArcId = &id
-	}
-	if row.SignupType.Valid {
-		view.SignupType = &row.SignupType.String
-	}
-	if row.Apl.Valid {
-		view.Apl = &row.Apl.Int32
-	}
-	if row.DiscordMessageID.Valid {
-		view.DiscordMessageId = &row.DiscordMessageID.String
-	}
-	if row.DiscordEventID.Valid {
-		view.DiscordEventId = &row.DiscordEventID.String
-	}
-	if row.EventUrl.Valid {
-		view.EventUrl = &row.EventUrl.String
-	}
-	return view
-}
-
 func mapQuestListPageRow(row dbgen.ProductQuestListPageRow) *QuestView {
 	if !row.PublicID.Valid {
 		return nil
@@ -225,6 +172,9 @@ func mapQuestReadByIDRow(row dbgen.ProductQuestReadByIDRow) *QuestView {
 	}
 	if row.EventUrl.Valid {
 		view.EventUrl = &row.EventUrl.String
+	}
+	if row.DiscordVoiceChannelID.Valid {
+		view.VoiceChannelId = &row.DiscordVoiceChannelID.String
 	}
 	return view
 }
@@ -430,10 +380,6 @@ func mapQuestDmSummaryDocumentRow(row dbgen.ProductQuestDmSummariesPageRow) docu
 	if row.Category.Valid {
 		view.Category = &row.Category.String
 	}
-	if row.Body.Valid {
-		body := row.Body.String
-		view.EffectiveBody = &body
-	}
 	if row.PublishedAt.Valid {
 		t := row.PublishedAt.Time
 		view.PublishedAt = &t
@@ -443,26 +389,6 @@ func mapQuestDmSummaryDocumentRow(row dbgen.ProductQuestDmSummariesPageRow) docu
 		view.DeletedAt = &t
 	}
 	return view
-}
-
-func (p *ProductPostgres) documentSQLViewer(ctx context.Context, actor auth.Authority) (document.SQLViewer, error) {
-	scope := document.ScopeFromAuthority(actor)
-	if !scope.Authenticated() {
-		return document.SQLScope(scope), nil
-	}
-	memberID, err := db.ParseUUID(scope.MemberID)
-	if err != nil {
-		return document.SQLScope(scope), nil
-	}
-	readerIDs, err := p.queries().ListDocumentReaders(ctx, memberID)
-	if err != nil {
-		return document.SQLViewer{}, err
-	}
-	scope.ReaderOf = make(map[string]struct{}, len(readerIDs))
-	for _, id := range readerIDs {
-		scope.ReaderOf[db.UUIDString(id)] = struct{}{}
-	}
-	return document.SQLScope(scope), nil
 }
 
 func (p *ProductPostgres) dmSummariesTargetIDs(ctx context.Context, actor auth.Authority, spec DmSummariesSpec) (pgtype.UUID, pgtype.UUID, error) {
@@ -527,57 +453,9 @@ func questStateCountsParams(spec QuestStateCountsSpec) (dbgen.ProductQuestStateC
 	return params, nil
 }
 
-func (p *ProductPostgres) ReadBatchQuests(ctx context.Context, _ auth.Authority, keys []IDKey) ([]product.BatchResult[QuestView], error) {
-	out := make([]product.BatchResult[QuestView], len(keys))
-	if len(keys) == 0 {
-		return out, nil
-	}
-	ids := make([]pgtype.UUID, 0, len(keys))
-	positions := make([]int, 0, len(keys))
-	for i, key := range keys {
-		id, err := questUUID(key.ID)
-		if err != nil {
-			out[i] = product.BatchResult[QuestView]{Err: err}
-			continue
-		}
-		ids = append(ids, id)
-		positions = append(positions, i)
-	}
-	if len(ids) == 0 {
-		return out, nil
-	}
-	rows, err := p.queries().ProductQuestBatchRead(ctx, dbgen.ProductQuestBatchReadParams{
-		AsOf:     pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
-		QuestIds: ids,
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, row := range rows {
-		// unnest WITH ORDINALITY is 1-based and covers only the valid ids.
-		position := int(row.InputIndex) - 1
-		if position < 0 || position >= len(positions) {
-			continue
-		}
-		out[positions[position]] = product.BatchResult[QuestView]{Value: mapQuestBatchRow(row)}
-	}
-	views := make([]*QuestView, 0, len(out))
-	for _, slot := range out {
-		views = append(views, slot.Value)
-	}
-	if err := p.fillQuestRegionIDs(ctx, views...); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // ReadBatchQuestHexes serves N5 pointcrawl links through the retained HexList shape.
 func (p *ProductPostgres) ReadBatchQuestHexes(ctx context.Context, actor auth.Authority, keys []QuestHexesKey) ([]product.BatchResult[HexList], error) {
 	return p.readBatchPointcrawlLinks(ctx, actor, keys)
-}
-
-func (p *ProductPostgres) ReadBatchQuestRegions(ctx context.Context, actor auth.Authority, keys []QuestRegionsKey) ([]product.BatchResult[RegionIDList], error) {
-	return p.readBatchQuestRegions(ctx, actor, keys)
 }
 
 func (p *ProductPostgres) ReadBatchArcs(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[QuestArcView], error) {
@@ -625,7 +503,7 @@ func (p *ProductPostgres) ReadRewardDecisionCoverage(ctx context.Context, questI
 }
 
 func (p *ProductPostgres) ReadDmSummaries(ctx context.Context, actor auth.Authority, spec DmSummariesSpec) (document.DocumentListResult, error) {
-	viewer, err := p.documentSQLViewer(ctx, actor)
+	scope, err := document.ViewerScopeWithReaders(ctx, p.queries(), actor)
 	if err != nil {
 		return document.DocumentListResult{}, err
 	}
@@ -640,6 +518,7 @@ func (p *ProductPostgres) ReadDmSummaries(ctx context.Context, actor auth.Author
 	if spec.Filters != nil && spec.Filters.Search != nil {
 		search = *spec.Filters.Search
 	}
+	viewer := document.SQLScope(scope)
 	rows, err := p.queries().ProductQuestDmSummariesPage(ctx, dbgen.ProductQuestDmSummariesPageParams{
 		ViewerAdmin:  viewer.Admin,
 		ViewerID:     viewer.ID,
@@ -656,7 +535,6 @@ func (p *ProductPostgres) ReadDmSummaries(ctx context.Context, actor auth.Author
 	if err != nil {
 		return document.DocumentListResult{}, err
 	}
-	scope := document.ScopeFromAuthority(actor)
 	var total int32
 	items := make([]document.DocumentView, 0, len(rows))
 	for i, row := range rows {
@@ -669,7 +547,11 @@ func (p *ProductPostgres) ReadDmSummaries(ctx context.Context, actor auth.Author
 		if !row.PublicID.Valid {
 			continue
 		}
-		items = append(items, mapQuestDmSummaryDocumentRow(row))
+		view, err := document.ProjectDocumentView(ctx, scope, mapQuestDmSummaryDocumentRow(row), row.Body.String)
+		if err != nil {
+			return document.DocumentListResult{}, err
+		}
+		items = append(items, view)
 	}
 	return document.DocumentListResult{Items: items, Total: total}, nil
 }

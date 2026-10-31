@@ -146,3 +146,115 @@ describe('series reading page', () => {
     expect(screen.getByRole('button', { name: 'Create series' })).toBeVisible();
   });
 });
+
+describe('starting a quest from a series', () => {
+  const quest = {
+    id: '00000000-0000-4000-8000-000000000201',
+    shortCode: 'harbor-1',
+    status: 'open',
+    displayStatus: 'open',
+    scheduledAt: '2098-10-14T18:00:00Z',
+    slotsMax: 4,
+    dm: { handle: 'rowan', displayName: 'Rowan Vale' },
+    briefDocument: { title: 'Harbor run', effectiveBody: 'Sail out.' },
+    participants: [],
+  };
+
+  function signInAs(id: string, roles: string[], admin: boolean) {
+    localStorage.setItem(
+      TOKEN_KEY,
+      `${btoa('{}')}.${btoa(JSON.stringify({ sub: 'fixture-only', exp: Math.floor(Date.now() / 1000) + 3600 }))}.test`,
+    );
+    server.use(
+      graphql.query('MemberMe', () =>
+        HttpResponse.json({
+          data: { memberMe: { id, handle: 'fixture-dm', displayName: 'Fixture DM', roles } },
+        }),
+      ),
+      graphql.query('RetainedSeriesAuthority', () =>
+        HttpResponse.json({
+          data: {
+            memberProfile: {
+              member: { id, roles, status: 'active' },
+              dmProfile: roles.includes('dm') ? { status: 'approved' } : null,
+            },
+          },
+        }),
+      ),
+      graphql.query('CurrentAdminAccess', () =>
+        admin
+          ? HttpResponse.json({ data: { adminOperations: { activeAlertCount: 0 } } })
+          : HttpResponse.json({
+              errors: [{ message: 'Forbidden', extensions: { code: 'FORBIDDEN' } }],
+            }),
+      ),
+      graphql.query('RetainedSeriesArc', () =>
+        HttpResponse.json({
+          data: { questArc: { ...good.arc, questCount: 1, quests: [quest] } },
+        }),
+      ),
+    );
+  }
+
+  it('lists an attached quest and offers its creator a new quest in the series', async () => {
+    signInAs(good.arc.createdBy, ['dm'], false);
+    renderSeries();
+    const [card] = await screen.findAllByTestId('quest-card');
+    expect(within(card).getByRole('link', { name: 'Open Harbor run' })).toHaveAttribute(
+      'href',
+      '/quests/harbor-1',
+    );
+    expect(within(card).getByText('Open', { selector: '.state' })).toBeVisible();
+    expect(card).toHaveTextContent('2098');
+    expect(
+      await screen.findByRole('link', { name: 'New quest in this series' }),
+    ).toHaveAttribute('href', `/quests/new?series=${good.arc.id}`);
+  });
+
+  it('offers an admin who is an approved DM a new quest in someone else’s series', async () => {
+    signInAs('00000000-0000-4000-8000-000000000099', ['admin', 'dm'], true);
+    renderSeries();
+    expect(
+      await screen.findByRole('link', { name: 'New quest in this series' }),
+    ).toHaveAttribute('href', `/quests/new?series=${good.arc.id}`);
+  });
+
+  it('does not offer a new quest to an admin who cannot post quests', async () => {
+    signInAs('00000000-0000-4000-8000-000000000099', ['admin'], true);
+    renderSeries();
+    await screen.findByRole('link', { name: 'Open Harbor run' });
+    // Admin authority alone resolves the rename control; the quest offer still waits on an approved DM profile.
+    await screen.findByRole('button', { name: 'Rename series' });
+    expect(screen.queryByRole('link', { name: 'New quest in this series' })).toBeNull();
+  });
+
+  it('does not offer a new quest to the series creator whose DM profile is not approved', async () => {
+    signInAs(good.arc.createdBy, ['dm'], false);
+    server.use(
+      graphql.query('RetainedSeriesAuthority', () =>
+        HttpResponse.json({
+          data: {
+            memberProfile: {
+              member: { id: good.arc.createdBy, roles: ['dm'], status: 'active' },
+              dmProfile: { status: 'pending' },
+            },
+          },
+        }),
+      ),
+    );
+    renderSeries();
+    await screen.findByRole('link', { name: 'Open Harbor run' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('link', { name: 'New quest in this series' })).toBeNull();
+  });
+
+  it('does not offer another DM a quest in a series they did not start', async () => {
+    signInAs('00000000-0000-4000-8000-000000000099', ['dm'], false);
+    renderSeries();
+    await screen.findAllByTestId('quest-card');
+    // Wait for the authority proof so a late offer would show.
+    await screen.findByRole('link', { name: 'Open Harbor run' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('link', { name: 'New quest in this series' })).toBeNull();
+  });
+});

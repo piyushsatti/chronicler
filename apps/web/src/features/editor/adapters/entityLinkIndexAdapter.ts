@@ -31,6 +31,10 @@ const codexItemSchema = z.object({
   title: z.string(),
   category: z.string().nullable().optional(),
 });
+const codexPageSchema = z.object({
+  total: z.number().int().nonnegative(),
+  items: z.array(codexItemSchema),
+});
 
 const searchDocSchema = z.object({
   id: z.string(),
@@ -86,15 +90,37 @@ export function parseEntityLinkIndex(wire: {
 /** Aggregate quest codes + codex titles for LiveEditor wikilink autocomplete. */
 export async function loadEntityLinkIndex(): Promise<EntityLinkIndex> {
   try {
-    const [questData, codexData] = await Promise.all([
+    const [questData, firstCodexData] = await Promise.all([
       graphqlRequest<EntityLinkQuestBoardQuery>(BOARD_QUERY, {
         limit: 200,
       }),
-      graphqlRequest<EntityLinkCodexDirectoryQuery>(CODEX_QUERY),
+      graphqlRequest<EntityLinkCodexDirectoryQuery>(CODEX_QUERY, {
+        limit: 50,
+        offset: 0,
+      }),
     ]);
+    let page = codexPageSchema.safeParse(firstCodexData.codexDirectory);
+    if (!page.success)
+      throw toAppError({ failure: 'InvalidWire' }, 'editor:entity-index');
+    const total = page.data.total;
+    const codex = [...page.data.items];
+    while (codex.length < total) {
+      if (page.data.items.length === 0)
+        throw toAppError({ failure: 'InvalidWire' }, 'editor:entity-index');
+      const data = await graphqlRequest<EntityLinkCodexDirectoryQuery>(CODEX_QUERY, {
+        limit: 50,
+        offset: codex.length,
+      });
+      page = codexPageSchema.safeParse(data.codexDirectory);
+      if (!page.success)
+        throw toAppError({ failure: 'InvalidWire' }, 'editor:entity-index');
+      codex.push(...page.data.items);
+    }
+    if (codex.length !== total || new Set(codex.map((entry) => entry.id)).size !== total)
+      throw toAppError({ failure: 'InvalidWire' }, 'editor:entity-index');
     const result = parseEntityLinkIndex({
       quests: questData.questBoard?.items ?? [],
-      codex: codexData.codexDirectory?.items ?? [],
+      codex,
     });
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'editor:entity-index');

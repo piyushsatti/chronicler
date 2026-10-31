@@ -1,12 +1,16 @@
 # Quest display state specification
 
-**Status:** accepted design. Published schema/config and comment scaffolds do not implement these contracts. Runtime enforcement remains pending the owning implementation tasks and their tests.
+**Status:** accepted design. The region activity time filter below is implemented. Region activity's clock and batching contracts remain targets; schema/config and comment scaffolds alone do not establish their implementation.
 
 Pattern is Specification with one PostgreSQL implementation. Quest owns the public projection and filter. This converges all product consumers on one authority.
 
 Migration P04 replaces the body of the existing `quest_display_status` view with a compatibility wrapper over `quest_display_status_at(status, filled_count, scheduled_at, duration_hours, as_of)`. QUE03 owns that SQL function in migration0003. The function is IMMUTABLE and returns text. The legacy wrapper supplies `now()` only for retained internal clients. Product SQL never uses that wrapper.
 
 The function has the exact precedence from migration0002. For open or full, return live when scheduled_at <= as_of < scheduled_at + duration_hours hours. Otherwise open with filled_count > 0 returns filling. Otherwise full with scheduled_at > as_of returns scheduled. Otherwise return the stored machine status. A full quest after its duration returns full. An open quest with zero players before its date returns open. No stored display enum, persisted cache, Go switch, or separately maintained Site/Spatial interpretation exists.
+
+The implemented `ReadProductRegionActivity` adds a **temporal query Specification** before projecting status: `scheduled_at + duration_hours * interval '1 hour' > as_of`. Ended quests, including the exact end boundary, are absent from both region activity counts and items. Upcoming and live quests remain eligible. This filter leaves `quest_display_status_at` and its global post-end semantics unchanged. `TestRegionActivityExcludesEndedOpenQuests` covers the boundary with an explicit timestamp.
+
+The current `ProductPostgres.ReadRegionActivity` adapter supplies `time.Now().UTC()` as `as_of`. It does not yet use the injected business clock described by the target contract below. The temporal correction does not implement that clock contract.
 
 QUE05 samples the injected UTC business clock once per owning query task. Each owning repository method receives its typed spec.AsOf and passes that timestamp to SQL; there is no extra per-row status lookup. Each Quest root list/count, Arc relation, DM history, RegionActivity and open-seat projection uses the same SQL function with that same timestamp for projection and filtering. Internal specs carry `AsOf time.Time`. Product readers never call now(), and an actor's timezone cannot change the predicate. The GraphQL field is computed from already projected data.
 

@@ -58,7 +58,7 @@ function setup(input: Partial<Parameters<typeof useEditorPublish>[0]> = {}) {
           genres: [],
           tags: [],
           apl: '',
-          signupType: 'open',
+          signupType: 'dm_pick',
           additionalInfo: 'Notes',
         },
         body: ' New body ',
@@ -185,6 +185,44 @@ describe('editor command dispatch', () => {
     );
     expect(adapters.publishDocument).not.toHaveBeenCalled();
   });
+  it('saves the group a guide is moved to', async () => {
+    const hook = setup({
+      typeKey: 'guide',
+      body: initial.body ?? '',
+      meta: { title: 'New title', category: '  Combat ' },
+    });
+    await save(hook);
+    expect(adapters.editPublishedDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'Combat', kind: 'rule' }),
+      expect.any(String),
+    );
+  });
+  it('files a guide with a blank group back under plain guide', async () => {
+    const hook = setup({
+      typeKey: 'guide',
+      body: initial.body ?? '',
+      initial: { ...initial, meta: { ...initial.meta, category: 'Combat' } },
+      meta: { title: 'New title', category: '   ' },
+    });
+    await save(hook);
+    expect(adapters.editPublishedDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'guide' }),
+      expect.any(String),
+    );
+  });
+  it('creates a new guide in the group typed in the form', async () => {
+    const hook = setup({
+      typeKey: 'guide',
+      mode: 'new',
+      initial: { ...initial, documentId: null, documentVersion: null },
+      meta: { title: 'Fresh guide', category: 'Exploration' },
+    });
+    await save(hook, false);
+    expect(adapters.createDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'rule', category: 'Exploration' }),
+      expect.any(String),
+    );
+  });
   it('preserves body whitespace and omits an unchanged body', async () => {
     const hook = setup({ typeKey: 'guide', body: initial.body ?? '' });
     await save(hook);
@@ -241,7 +279,7 @@ describe('editor command dispatch', () => {
           scheduledAt: '2026-10-15T18:00:00Z',
           kinds: ['standard'],
           regions: ['region'],
-          signupType: 'open',
+          signupType: 'dm_pick',
         },
       });
       await act(async () => {
@@ -334,7 +372,7 @@ it('reuses the create replay key after a lost response', async () => {
   );
 });
 
-it.each(['open', 'application', 'invite'])(
+it.each(['last_game_played', 'dm_pick'])(
   'creates a Quest using retained signup type %s',
   async (signupType) => {
     const hook = setup({
@@ -358,7 +396,7 @@ it.each(['open', 'application', 'invite'])(
     );
   },
 );
-it.each(['dm_pick', 'last_played'])(
+it.each(['open', 'application', 'invite', 'last_played'])(
   'rejects retired signup type %s before sending a command',
   async (signupType) => {
     const hook = setup({
@@ -383,3 +421,65 @@ it.each(['dm_pick', 'last_played'])(
     expect(adapters.createQuest).not.toHaveBeenCalled();
   },
 );
+
+const VOICE = '444444444444444444';
+const voiceQuestMeta = {
+  title: 'Quest',
+  durationHours: '3',
+  slotsMax: '4',
+  scheduledAt: '2026-10-15T18:00:00Z',
+  kinds: ['standard'],
+  regions: ['region'],
+  genres: [],
+  tags: [],
+  signupType: 'dm_pick',
+};
+
+describe('quest voice channel', () => {
+  it('creates a Quest with the voice channel the DM picked', async () => {
+    const hook = setup({ mode: 'new', meta: { ...voiceQuestMeta, voiceChannelId: VOICE } });
+    await save(hook);
+    expect(adapters.createQuest).toHaveBeenCalledWith(
+      expect.objectContaining({ voiceChannelId: VOICE }),
+      expect.any(String),
+    );
+  });
+
+  it('sends no voice channel when none is picked', async () => {
+    const hook = setup({ mode: 'new', meta: { ...voiceQuestMeta, voiceChannelId: '' } });
+    await save(hook);
+    expect(adapters.createQuest).toHaveBeenCalledWith(
+      expect.objectContaining({ voiceChannelId: null }),
+      expect.any(String),
+    );
+  });
+
+  it('sends the voice channel when a Quest is saved, and null when it is cleared', async () => {
+    const edit = setup({ meta: { ...voiceQuestMeta, voiceChannelId: VOICE } });
+    await save(edit);
+    expect(adapters.updateQuest).toHaveBeenLastCalledWith(
+      'quest-id',
+      expect.objectContaining({ voiceChannelId: VOICE }),
+      expect.any(String),
+      expect.any(String),
+    );
+    const cleared = setup({ meta: { ...voiceQuestMeta, voiceChannelId: '' } });
+    await save(cleared);
+    expect(adapters.updateQuest).toHaveBeenLastCalledWith(
+      'quest-id',
+      expect.objectContaining({ voiceChannelId: null }),
+      expect.any(String),
+      expect.any(String),
+    );
+  });
+
+  it('rejects an id that is not a Discord id before sending a command', async () => {
+    const hook = setup({ mode: 'new', meta: { ...voiceQuestMeta, voiceChannelId: 'general' } });
+    await act(async () => {
+      await expect(hook.result.current.mutateAsync()).rejects.toMatchObject({
+        kind: 'safe',
+      });
+    });
+    expect(adapters.createQuest).not.toHaveBeenCalled();
+  });
+});

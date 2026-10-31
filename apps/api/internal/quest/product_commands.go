@@ -3,12 +3,10 @@ package quest
 import (
 	"context"
 	"encoding/json"
-	"reflect"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -24,21 +22,9 @@ type ProductCommands struct {
 	Queries *ProductQueries
 }
 
-func commandDependencyMissing(value any) bool {
-	if value == nil {
-		return true
-	}
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-		return v.IsNil()
-	}
-	return false
-}
-
 func NewProductCommands(runner uow.Runner[ProductCommandRepos], clock product.Clock, ids product.IDGenerator) (*ProductCommands, error) {
 	for _, dependency := range []any{runner, clock, ids} {
-		if commandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return nil, apierr.New(apierr.Internal, "quest command dependencies required")
 		}
 	}
@@ -49,11 +35,11 @@ func commandPublicID(value *string) error {
 	if value == nil {
 		return nil
 	}
-	parsed, err := uuid.Parse(*value)
-	if err != nil || parsed == uuid.Nil || !strings.EqualFold(parsed.String(), *value) {
+	canonical, ok := product.CanonicalPublicID(*value)
+	if !ok {
 		return apierr.New(apierr.Invalid, "invalid public id")
 	}
-	*value = parsed.String()
+	*value = canonical
 	return nil
 }
 
@@ -134,7 +120,7 @@ func runQuestCommandWithRequest[T any](
 func admitQuestCommand(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, requestFor func(ProductCommandRepos, auth.Authority) (auth.Request, error)) (auth.Authority, auth.Request, auth.Decision, error) {
 	var zero auth.Decision
 	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-		if commandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return auth.Authority{}, auth.Request{}, zero, apierr.New(apierr.Internal, "quest transaction dependencies required")
 		}
 	}
@@ -235,7 +221,7 @@ func admitLockedQuestReplay(ctx context.Context, repos ProductCommandRepos, curr
 
 func readQuestSummaryReplay[T any](ctx context.Context, repos ProductCommandRepos, actor auth.Authority, result T) (T, error) {
 	stored, ok := any(result).(document.DocumentView)
-	if !ok || commandDependencyMissing(repos.SummaryDocuments) {
+	if !ok || product.MissingDependency(repos.SummaryDocuments) {
 		return result, apierr.New(apierr.Internal, "summary replay reader required")
 	}
 	current, err := repos.SummaryDocuments.ReadDocumentById(ctx, actor, document.DocumentByIdSpec{Id: stored.Id})
@@ -258,7 +244,7 @@ func reauthorizeQuestPointcrawl(ctx context.Context, repos ProductCommandRepos, 
 
 func completeQuestCommand[T any](ctx context.Context, repos ProductCommandRepos, claim idempotency.Claim, result T, actor auth.Authority, request auth.Request, decision auth.Decision, operation, subjectID string, at time.Time) error {
 	if decision.UsedOverride {
-		if commandDependencyMissing(repos.Audit) {
+		if product.MissingDependency(repos.Audit) {
 			return apierr.New(apierr.Internal, "override recorder required")
 		}
 		id, err := questAuditSubject(operation, result, subjectID)

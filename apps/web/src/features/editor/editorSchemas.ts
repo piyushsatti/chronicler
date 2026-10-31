@@ -1,7 +1,9 @@
-import type { EditorMeta, FieldSchema } from './types.js';
+import type { EditorMeta, EditorMode, FieldSchema } from './types.js';
 import { GATED_CODEX_CATEGORY } from '../../utils/codexCategories.js';
 import { CODEX_AUTHORING_CATEGORIES, QUEST_KINDS } from './editorConstants.js';
 import { isEditorInstant } from './editorDateTime.js';
+import { FEATURE_CATEGORY, isHexCode, normalizeHexCode } from '../../utils/hexCode.js';
+import { QUEST_SIGNUP_TYPES } from '../../utils/questVocabulary.js';
 
 const QUEST_SCHEMA: FieldSchema[] = [
   {
@@ -18,6 +20,7 @@ const QUEST_SCHEMA: FieldSchema[] = [
     type: 'multiselect',
     required: true,
     options: QUEST_KINDS,
+    defaultOption: 'standard',
     validate: (v) =>
       !Array.isArray(v) || v.length === 0
         ? 'Pick at least one kind'
@@ -52,6 +55,8 @@ const QUEST_SCHEMA: FieldSchema[] = [
     required: true,
     placeholder: 'e.g. 3',
     validate: (v) => {
+      // A recovered draft may hold a number rather than the typed text.
+      if (typeof v === 'number') return v > 0 ? null : 'Must be a positive number';
       if (!v || typeof v !== 'string') return 'Required';
       const n = Number(v.trim());
       return Number.isFinite(n) && n > 0 ? null : 'Must be a positive number';
@@ -79,17 +84,23 @@ const QUEST_SCHEMA: FieldSchema[] = [
         : 'Choose a valid session time and resolve any timezone choice',
   },
   {
+    key: 'voiceChannelId',
+    label: 'Voice channel',
+    type: 'voicechannel',
+    hint: 'Optional. Picking one also creates a Discord event for the session.',
+    validate: (v) =>
+      v == null || v === '' || (typeof v === 'string' && /^[0-9]{17,20}$/.test(v))
+        ? null
+        : 'Choose a voice channel from the list',
+  },
+  {
     key: 'signupType',
     label: 'Signup type',
     type: 'select',
     required: true,
-    options: [
-      ['open', 'Open signup'],
-      ['application', 'Application'],
-      ['invite', 'Invitation'],
-    ],
+    options: QUEST_SIGNUP_TYPES,
     validate: (v) =>
-      v === 'open' || v === 'application' || v === 'invite'
+      v === 'last_game_played' || v === 'dm_pick'
         ? null
         : 'Choose a supported signup type',
   },
@@ -141,6 +152,19 @@ const CODEX_SCHEMA: FieldSchema[] = [
   },
 ];
 
+/** A Feature entry sits on one map hex, so its hex number is required. */
+const FEATURE_HEX_FIELD: FieldSchema = {
+  key: 'hex',
+  label: 'Hex number',
+  type: 'text',
+  required: true,
+  mono: true,
+  placeholder: 'e.g. LFR7008',
+  hint: 'The map hex this Feature sits on. A hex holds up to 4 Features.',
+  normalize: normalizeHexCode,
+  validate: (v) => (isHexCode(v) ? null : 'Enter a hex number like LFR7008'),
+};
+
 /** Guides, rulings, summaries and DM tables share the title and read-only slug fields. */
 const TITLED_DOCUMENT_SCHEMA: FieldSchema[] = [
   {
@@ -159,27 +183,96 @@ const TITLED_DOCUMENT_SCHEMA: FieldSchema[] = [
   },
 ];
 
+/** A guide also names its group: guides with the same group are listed together on Rules. */
+const GUIDE_SCHEMA: FieldSchema[] = [
+  ...TITLED_DOCUMENT_SCHEMA,
+  {
+    key: 'category',
+    label: 'Group',
+    type: 'text',
+    placeholder: 'Pick a group or type a new one',
+    suggestions: 'guideGroups',
+    hint: 'Guides with the same group are listed together on the Rules page. Leave it blank for General.',
+    validate: (v) =>
+      typeof v === 'string' && v.trim().length > 60
+        ? 'Use 60 characters or fewer'
+        : null,
+  },
+];
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const SERIES_FIELD: FieldSchema = {
+  key: 'arcId',
+  label: 'Series',
+  type: 'series',
+  hint: 'Optional',
+  validate: (v) =>
+    v == null || v === '' || (typeof v === 'string' && UUID.test(v))
+      ? null
+      : 'Choose one of your series',
+};
+
+/** A quest may start in one of the viewer's series and head to map places. */
+const NEW_QUEST_SCHEMA: FieldSchema[] = [
+  ...QUEST_SCHEMA.slice(0, 1),
+  SERIES_FIELD,
+  {
+    key: 'pointcrawlLinks',
+    label: 'Expected destinations',
+    type: 'pointcrawl',
+    hint: 'Optional. Mark places visited after play.',
+  },
+  ...QUEST_SCHEMA.slice(1),
+];
+
+/** A saved quest changes its series and destinations here too, and marks places visited. */
+const EDIT_QUEST_SCHEMA: FieldSchema[] = [
+  ...QUEST_SCHEMA.slice(0, 1),
+  SERIES_FIELD,
+  {
+    key: 'pointcrawlLinks',
+    label: 'Expected destinations',
+    type: 'pointcrawl',
+    hint: 'Optional. Mark places visited after play.',
+  },
+  ...QUEST_SCHEMA.slice(1),
+];
+
 export interface SchemaAccess {
   /** Archons and admins may author Locations entries (the API also checks region assignment). */
   canAuthorLocations?: boolean;
+  /** DMs and admins may author Features, which sit on a map hex (the API refuses placement for others). */
+  canAuthorFeatures?: boolean;
+}
+
+/** Codex categories this viewer may not pick in the category select. */
+function gatedCodexCategories(access: SchemaAccess): string[] {
+  return [
+    ...(access.canAuthorLocations ? [] : [GATED_CODEX_CATEGORY]),
+    ...(access.canAuthorFeatures ? [] : [FEATURE_CATEGORY]),
+  ];
 }
 
 export function schemaForType(
   typeKey: string,
   meta: EditorMeta,
   access: SchemaAccess = {},
+  mode: EditorMode = 'edit',
 ): FieldSchema[] {
   switch (typeKey) {
     case 'quest':
-      return QUEST_SCHEMA;
-    case 'codex':
-      return CODEX_SCHEMA.map((field) => {
+      // Chosen by mode, not by `arcId`: drafts saved by older builds have no `arcId`.
+      return mode === 'new' ? NEW_QUEST_SCHEMA : EDIT_QUEST_SCHEMA;
+    case 'codex': {
+      const gated = gatedCodexCategories(access);
+      const fields = CODEX_SCHEMA.map((field): FieldSchema => {
         if (field.key !== 'category') return field;
-        // Saved entries keep their category. A Locations draft opened from its scoped
-        // route stays Locations for viewers who are not offered it in the select.
+        // Saved entries keep their category. A gated draft opened from its scoped
+        // route keeps that category for viewers who are not offered it in the select.
         if (
           typeof meta.slug === 'string' ||
-          (meta.category === GATED_CODEX_CATEGORY && !access.canAuthorLocations)
+          (typeof meta.category === 'string' && gated.includes(meta.category))
         )
           return {
             ...field,
@@ -189,19 +282,25 @@ export function schemaForType(
             validate: undefined,
           };
         // Validation keeps the full allow-list; only the offered options are trimmed.
-        return access.canAuthorLocations
+        return gated.length === 0
           ? field
           : {
               ...field,
               options: CODEX_AUTHORING_CATEGORIES.filter(
-                (category) => category !== GATED_CODEX_CATEGORY,
+                (category) => !gated.includes(category),
               ),
             };
       });
+      return meta.category === FEATURE_CATEGORY
+        ? [...fields, FEATURE_HEX_FIELD]
+        : fields;
+    }
     case 'guide':
+      return GUIDE_SCHEMA;
     case 'ruling':
     case 'summary':
     case 'dm-table':
+    case 'hall-of-fame':
       return TITLED_DOCUMENT_SCHEMA;
     default:
       return [

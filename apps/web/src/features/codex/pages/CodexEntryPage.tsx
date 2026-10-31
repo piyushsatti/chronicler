@@ -81,7 +81,7 @@ function Backlinks({
   );
 }
 
-/** Other entries filed under the same category, so the rail is never empty. */
+/** Other entries filed under the same category, shown below the body. */
 function MoreInCategory({
   category,
   currentSlug,
@@ -210,26 +210,20 @@ export function CodexEntryPage(): React.JSX.Element {
               </>
             }
           />
-          <DetailLayout
-            rail={
-              <div className={styles.entryPage}>
-                <Backlinks links={entry.backlinks} count={entry.backlinkCount} />
-                {entry.category ? (
-                  <MoreInCategory category={entry.category} currentSlug={entry.slug} />
-                ) : null}
-              </div>
-            }
-            railLabel="Linked entries"
-          >
-            <DetailLayout.Reading>
-              <Card as="article" pad={5} className={styles.entryBody}>
-                {entry.body ? (
-                  <ContentRenderer body={entry.body} />
-                ) : (
-                  <p className="type-caption">No body available for this viewer.</p>
-                )}
-              </Card>
-            </DetailLayout.Reading>
+          {/* Full-width body; links to other entries sit below it, not in a
+              side rail (owner item 18). */}
+          <DetailLayout>
+            <Card as="article" pad={5} className={styles.entryBody}>
+              {entry.body ? (
+                <ContentRenderer body={entry.body} />
+              ) : (
+                <p className="type-caption">No body available for this viewer.</p>
+              )}
+            </Card>
+            <Backlinks links={entry.backlinks} count={entry.backlinkCount} />
+            {entry.category ? (
+              <MoreInCategory category={entry.category} currentSlug={entry.slug} />
+            ) : null}
           </DetailLayout>
         </div>
       ),

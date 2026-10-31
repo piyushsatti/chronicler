@@ -52,8 +52,15 @@ input MapCreateInput {
   name: String!
   atlasCode: String!
   family: String!
+  grid: String! = "point"
   mapKind: String!
   regionId: ID
+  assetPath: String
+}
+input MapUpdateInput {
+  name: String!
+  family: String!
+  grid: String!
   assetPath: String
 }
 input QuestPointcrawlLinkInput {
@@ -104,6 +111,7 @@ input QuestEditInput {
   apl: Int
   signupType: String
   additionalInfo: String
+  voiceChannelId: String
 }
 input QuestSummaryInput {
   documentId: ID
@@ -128,6 +136,15 @@ input HomeBannerInput {
   mediaKind: String
   mediaUrl: String
   mediaLabel: String
+}
+input DiscordVoiceChannelInput {
+  name: String!
+  channelId: String!
+}
+input DiscordSettingsInput {
+  announceChannelId: String
+  roleId: String
+  voiceChannels: [DiscordVoiceChannelInput!]!
 }
 input AnnouncementRoleInput {
   enabled: Boolean!

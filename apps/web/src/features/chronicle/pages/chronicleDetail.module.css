@@ -1,14 +1,22 @@
-.rail h2,
-.rail p {
+/* Owner item 17: author and related entries in one row under the title. */
+.aboutRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  align-items: start;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.aboutRow h2,
+.aboutRow p,
+.sessionDetails h2,
+.sessionDetails p {
   margin: 0;
 }
 
-.header :global(.page-header__heading) {
-  flex: 1 1 0;
-}
-
-.header :global(.page-header__actions) {
-  flex: 0 0 auto;
+/* Full-width body (owner item 17): no reading-column cap on the prose. */
+.body :global(.cr-prose) {
+  max-width: none;
 }
 
 .author {
@@ -27,4 +35,32 @@
 
 .related:hover {
   background: var(--color-bg-panel);
+}
+
+.kindRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+}
+
+.questBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-btn);
+  background: var(--color-bg-surface);
+}
+
+.questBarLabel {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.questBar a {
+  color: inherit;
 }

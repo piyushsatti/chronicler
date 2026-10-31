@@ -1,0 +1,8 @@
+mutation RedriveDiscordDelivery($jobId: ID!, $reason: String!, $meta: CommandMeta!) {
+  redriveDiscordDelivery(jobId: $jobId, reason: $reason, meta: $meta) {
+    jobId
+    desiredRevision
+    appliedRevision
+    deliveryStatus
+  }
+}

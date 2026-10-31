@@ -27,7 +27,7 @@ describe('backend auth proxy and SPA callback boundary', () => {
   });
 
   it('keeps both production backend rewrites before the SPA fallback without capturing its callback', () => {
-    const backend = 'https://api.chronicler.smokebombstudios.com';
+    const backend = 'https://chronicler-prod-api.piyushsatti.com';
     expect(
       vercel.rewrites.filter((rewrite) => rewrite.source.startsWith('/auth/')),
     ).toEqual([

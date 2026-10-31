@@ -1,13 +1,22 @@
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { errorNeedsReload } from '../../../src/features/editor/hooks/useEditorWorkspace.js';
+import { safeAppError, toAppError } from '../../../src/errors/toAppError.js';
+import { TransportError } from '../../../src/errors/types.js';
 import { schemaForType } from '../../../src/features/editor/editorSchemas.js';
 import {
   parseQuestMetadata,
   schemaErrors,
 } from '../../../src/features/editor/editorValidation.js';
-const categoryField = (meta: Record<string, unknown>, canAuthorLocations = false) =>
-  schemaForType('codex', { title: 'Story', ...meta }, { canAuthorLocations }).find(
-    (field) => field.key === 'category',
-  );
+const categoryField = (
+  meta: Record<string, unknown>,
+  canAuthorLocations = false,
+  canAuthorFeatures = false,
+) =>
+  schemaForType(
+    'codex',
+    { title: 'Story', ...meta },
+    { canAuthorLocations, canAuthorFeatures },
+  ).find((field) => field.key === 'category');
 
 it('requires one of the API-accepted Codex categories for creation', () => {
   for (const category of ['Lore', 'Entities', 'Feature']) {
@@ -26,8 +35,16 @@ it('requires one of the API-accepted Codex categories for creation', () => {
   ).toHaveProperty('category');
 });
 
-it('offers Entities and Feature to every author and Locations only to archons and admins', () => {
+it('offers Entities to every author, Locations to archons and admins, Feature to DMs and admins', () => {
   expect(categoryField({})?.options).toEqual([
+    'Artifact',
+    'Event',
+    'Lore',
+    'NPC',
+    'Faction',
+    'Entities',
+  ]);
+  expect(categoryField({}, false, true)?.options).toEqual([
     'Artifact',
     'Event',
     'Lore',
@@ -36,7 +53,7 @@ it('offers Entities and Feature to every author and Locations only to archons an
     'Entities',
     'Feature',
   ]);
-  expect(categoryField({}, true)?.options).toEqual([
+  expect(categoryField({}, true, true)?.options).toEqual([
     'Artifact',
     'Event',
     'Lore',
@@ -85,7 +102,7 @@ it.each(['2026-03-08T02:30', '2026-11-01T01:30', '', '2026-02-30T12:00:00Z'])(
       regions: ['region'],
       genres: [],
       tags: [],
-      signupType: 'open',
+      signupType: 'dm_pick',
     };
     expect(schemaErrors(schemaForType('quest', meta), meta)).toHaveProperty(
       'scheduledAt',
@@ -93,3 +110,46 @@ it.each(['2026-03-08T02:30', '2026-11-01T01:30', '', '2026-02-30T12:00:00Z'])(
     expect(parseQuestMetadata(meta).success).toBe(false);
   },
 );
+
+describe('the quest Series field', () => {
+  const keys = (meta: Record<string, unknown>, mode: 'new' | 'edit') =>
+    schemaForType('quest', { title: 'Quest', ...meta }, {}, mode).map(
+      (field) => field.key,
+    );
+  it('is always on the create form, even for a draft saved without `arcId`', () => {
+    expect(keys({}, 'new')).toContain('arcId');
+    expect(keys({ arcId: '' }, 'new')).toContain('arcId');
+  });
+  it('is on the edit form too, with the expected destinations', () => {
+    expect(keys({}, 'edit')).toEqual(expect.arrayContaining(['arcId', 'pointcrawlLinks']));
+  });
+});
+
+describe('which save errors offer the recovery copy and reload', () => {
+  it('offers it for conflicts, revoked rights and stale guards only', () => {
+    expect(
+      errorNeedsReload(toAppError(new TransportError('CONFLICT'), 'editor:save')),
+    ).toBe(true);
+    expect(
+      errorNeedsReload(toAppError(new TransportError('FORBIDDEN'), 'editor:save')),
+    ).toBe(true);
+    expect(
+      errorNeedsReload(
+        safeAppError(
+          'Reload to check your current permissions and revision.',
+          'editor:save',
+        ),
+      ),
+    ).toBe(true);
+    expect(errorNeedsReload(safeAppError('Title is required', 'editor:save'))).toBe(
+      false,
+    );
+    expect(
+      errorNeedsReload(
+        safeAppError('The quest was not saved: Title too long.', 'editor:save'),
+      ),
+    ).toBe(false);
+    expect(errorNeedsReload(toAppError(new Error('boom'), 'editor:save'))).toBe(false);
+    expect(errorNeedsReload(null)).toBe(false);
+  });
+});

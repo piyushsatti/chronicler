@@ -20,13 +20,14 @@
 
 ### 1. LiveEditor → legacy block editor (not contenteditable)
 
-Legacy never used `contentEditable`; it is a per-line read/edit hybrid. Ported that model as default `variant="blocks"`:
+Legacy never used `contentEditable`; it is a per-line read/edit hybrid. Ported that model as the block editor:
 
 - Per-line `.le-read` / active `.le-input`, regions (`leRegions`: code/mermaid/table/callout) as `.le-widget` / `.le-rawbox`
 - Enter list/quote continuation, Tab indent, Backspace merge, ArrowUp/Down between lines
 - Wikilink AC against flat `entityIndex`; structure toolbar retained
-- `variant="plain"` keeps the prior single-textarea path
 - Exported `leRegions`, `leTypeClass` (+ tests)
+
+The unused single-textarea variant was removed in the 2026-10-29 audit cleanup.
 
 Still missing vs full legacy: ContentRenderer-backed read lines, mermaid modal, LEEntityPicker/media menus.
 

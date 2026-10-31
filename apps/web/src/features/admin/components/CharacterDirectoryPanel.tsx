@@ -104,7 +104,7 @@ export function CharacterDirectoryPanel({
         <CardGrid as="ul" aria-label="Characters">
           {query.data.map((row, index) => (
             <li key={row.id}>
-              <Card className="stack" pad={3}>
+              <Card className={`stack ${styles.card}`} pad={3}>
                 <Link
                   className="type-title"
                   to={`/characters/${row.shortCode}`}

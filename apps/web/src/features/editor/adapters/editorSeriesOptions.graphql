@@ -1,0 +1,10 @@
+query EditorSeriesOptions($offset: Int! = 0) {
+  questArcs(limit: 50, offset: $offset) {
+    items {
+      id
+      name
+      createdBy
+    }
+    total
+  }
+}

@@ -24,14 +24,98 @@
   color: var(--color-text-2);
 }
 
+/* Loremaster + chips, pinned to the bottom of the body so they line up across
+   sibling cards in a row. Stacked by default; two columns (Loremaster left,
+   status/region and date rows right) once the body is wide enough. The body
+   is the query container, so same-width siblings always pick the same layout.
+   The columns align on their bottom edge, so a chip row that wraps grows
+   upward and the Loremaster row stays level with its neighbours. */
+.boardCard .boardCardBody {
+  container-type: inline-size;
+}
+
+.boardCard .boardCardMeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-block-start: auto;
+}
+
+/* Two columns only where the year-less date and a normal DM name fit beside
+   status + region without truncating (about 21rem of content: avatar and a
+   ~100px name, a real column gap, "Scheduled" + region). The 3-up rows on Home
+   and the board (~18rem) stay stacked: Loremaster row, then the chips. The
+   name still ellipsizes as a last resort, never overlapping the chips. */
+/* Stacked: the chips flow as one wrapping row (status, region, date, level),
+   as before Phase 7, so a lone status chip never sits above the date. */
+.boardCard .boardCardChips {
+  flex-flow: row wrap;
+}
+
+.boardCard .boardCardChips > * {
+  display: contents;
+}
+
+@container (inline-size >= 22rem) {
+  .boardCard .boardCardChips {
+    flex-flow: column nowrap;
+  }
+
+  .boardCard .boardCardChips > * {
+    display: flex;
+  }
+
+  .boardCard .boardCardMeta {
+    flex-direction: row;
+    align-items: flex-end;
+    column-gap: var(--sp-5);
+  }
+
+  .boardCard .boardCardMeta > .boardCardDm {
+    flex: 1 1 auto;
+  }
+}
+
+.boardCard .boardCardDm {
+  min-width: 0;
+}
+
+.boardCard .boardCardDmText {
+  min-width: 0;
+}
+
+.boardCard .boardCardDmText > :global(.type-label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boardCard .srOnly {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .boardCard .boardCardDmLink {
   position: relative;
   z-index: 2;
+  display: inline-block;
+  max-inline-size: 100%;
+  overflow: hidden;
+  vertical-align: top;
   cursor: pointer;
   border-bottom: 1.5px solid var(--color-border-2);
   padding-bottom: 1px;
   color: var(--color-text);
   text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .boardCard .boardCardWhen {
@@ -41,12 +125,33 @@
 .boardCard .boardCardFooter {
   position: relative;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  /* Fits the party avatars plus one line of names, so an empty party keeps the
+     same divider line as its neighbours in a row. */
+  min-height: 5.25rem;
   border-top: 1px solid var(--color-border);
   padding: var(--sp-4) var(--sp-6);
 }
 
+.boardCard .boardCardFooter > :global(.row) {
+  flex: 1;
+  min-width: 0;
+}
+
 .boardCard .boardCardParty {
   min-width: 0;
+}
+
+.boardCard .boardCardNames {
+  min-width: 0;
+}
+
+.boardCard .boardCardNamesList {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .boardCard .boardCardMuted {
@@ -69,12 +174,12 @@
 }
 
 /* Seat meter: one pip per seat, filled = seated. Replaces the empty avatar
-   rings, which read as decoration at phone width. */
+   rings, which read as decoration at phone width. One line (at most
+   SEAT_PIPS_CAP pips) so a big table does not push the title down. */
 .boardCard .seatPips {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 3px;
-  max-inline-size: calc(6 * 14px);
 }
 
 .boardCard .seatPip {

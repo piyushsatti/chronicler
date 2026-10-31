@@ -3,8 +3,6 @@ package notification
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 )
@@ -28,24 +26,4 @@ func (p *PostgresRepository) UnreadCount(ctx context.Context, memberID string) (
 		return 0, err
 	}
 	return p.q.CountUnreadNotificationsByMember(ctx, id)
-}
-
-func (p *PostgresRepository) MarkRead(ctx context.Context, memberID string, ids []string) error {
-	if p == nil || p.q == nil {
-		return errCommandUnavailable
-	}
-	member, err := db.ParseUUID(memberID)
-	if err != nil {
-		return err
-	}
-	publicIDs := make([]pgtype.UUID, len(ids))
-	for i, id := range ids {
-		publicIDs[i], err = db.ParseUUID(id)
-		if err != nil {
-			return err
-		}
-	}
-	return p.q.MarkNotificationsReadByMember(ctx, dbgen.MarkNotificationsReadByMemberParams{
-		MemberID: member, PublicIds: publicIDs,
-	})
 }

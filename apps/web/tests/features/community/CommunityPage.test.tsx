@@ -23,6 +23,7 @@ describe('CommunityPage', () => {
       'Free this week',
       'Members',
       'Characters',
+      'Hall of Fame',
     ]);
     const count = within(toolbar).getByText('1 member');
     expect(count).toBeVisible();

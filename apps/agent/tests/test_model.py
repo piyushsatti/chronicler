@@ -4,7 +4,33 @@ import httpx
 import pytest
 
 from pi.chronicler.agent.budget import ContextBudget, ContextLimitError
-from pi.chronicler.agent.model import GROUNDED_RESPONSE_FORMAT, LiteLlmChat
+from pi.chronicler.agent.harness import FINISH_TOOL
+from pi.chronicler.agent.model import (
+    GROUNDED_ANSWER_SCHEMA,
+    GROUNDED_RESPONSE_FORMAT,
+    LiteLlmChat,
+)
+
+
+def test_final_format_and_finish_tool_share_grounded_answer_schema():
+    response_schema = GROUNDED_RESPONSE_FORMAT["json_schema"]["schema"]
+    finish_schema = FINISH_TOOL["function"]["parameters"]
+    assert response_schema is GROUNDED_ANSWER_SCHEMA
+    assert finish_schema is GROUNDED_ANSWER_SCHEMA
+    assert GROUNDED_ANSWER_SCHEMA == {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "enum": ["answered", "unsupported"]},
+            "answer": {"type": "string", "maxLength": 1_200},
+            "source_ids": {
+                "type": "array",
+                "items": {"type": "string"},
+                "maxItems": 3,
+            },
+        },
+        "required": ["status", "answer", "source_ids"],
+        "additionalProperties": False,
+    }
 
 
 class Counter:

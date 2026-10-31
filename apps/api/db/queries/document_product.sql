@@ -418,12 +418,6 @@ JOIN locked_quests q ON TRUE
 WHERE d.public_id=sqlc.arg(document_id)::uuid
 ON CONFLICT DO NOTHING;
 
--- name: InsertProductSummaryCharacterLink :exec
-INSERT INTO document_links(source_id,character_target_id,relation)
-SELECT d.id,c.id,'subject' FROM documents d JOIN characters c ON c.public_id=sqlc.arg(character_id)::uuid
-WHERE d.public_id=sqlc.arg(document_id)::uuid AND sqlc.narg(character_id)::uuid IS NOT NULL
-ON CONFLICT DO NOTHING;
-
 -- name: InsertProductDocumentLink :exec
 INSERT INTO document_links(source_id,document_target_id,relation)
 VALUES((SELECT id FROM documents WHERE public_id=sqlc.arg(document_id)::uuid),
@@ -441,25 +435,6 @@ WHERE member.public_id=sqlc.arg(member_id)::uuid ON CONFLICT(member_id,npc_docum
 DELETE FROM lieutenant_assignments la USING members member,documents d
 WHERE la.member_id=member.id AND la.npc_document_id=d.id
 AND member.public_id=sqlc.arg(member_id)::uuid AND d.public_id=sqlc.arg(npc_document_id)::uuid;
-
--- name: ListProductDmTablesForMembers :many
-SELECT input.ordinality::integer AS input_index,
-       input.public_id AS member_public_id,
-       d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility,
-       d.policy, d.body, d.frontmatter_yaml, author.public_id AS author_id,
-       d.published_at, d.deleted_at, deleter.public_id AS deleted_by, d.updated_at, d.version,
-       document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
-         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])) AS readable,
-       COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
-         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override
-FROM unnest(sqlc.arg(member_ids)::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
-LEFT JOIN members m ON m.public_id = input.public_id
-LEFT JOIN documents d ON d.author_id = m.id AND d.kind = 'community' AND d.category = 'dm_table' AND d.deleted_at IS NULL
-LEFT JOIN members author ON author.id = d.author_id
-LEFT JOIN members deleter ON deleter.id = d.deleted_by
-ORDER BY input.ordinality;
 
 -- name: ProductBatchDocumentReaderIds :many
 SELECT input.ordinality::integer AS input_index,
@@ -671,3 +646,42 @@ WHERE handle=ANY(sqlc.arg(handles)::text[]) ORDER BY public_id;
 SELECT author.public_id AS id FROM documents d
 JOIN members author ON author.id=d.author_id
 WHERE d.public_id=sqlc.arg(document_id)::uuid;
+
+-- name: LockFeatureHexNode :many
+SELECT n.id, n.map_id FROM pointcrawl_nodes n
+JOIN maps m ON m.id=n.map_id
+WHERE m.atlas_code=sqlc.arg(atlas_code)::text AND n.name=sqlc.arg(hex)::text
+ORDER BY n.id
+FOR UPDATE OF n;
+
+-- name: FeatureLinkedToHexNode :one
+SELECT EXISTS(
+  SELECT 1 FROM pointcrawl_entry_links pel JOIN documents d ON d.id=pel.document_id
+  WHERE d.public_id=sqlc.arg(document_id)::uuid AND pel.node_id=sqlc.arg(node_id) AND pel.relation='subject');
+
+-- name: MemberMayPlaceFeatures :one
+SELECT EXISTS(
+  SELECT 1 FROM members
+  WHERE public_id=sqlc.arg(member_id)::uuid AND status='active' AND roles && ARRAY['dm','admin']::text[]);
+
+-- name: CountOtherFeaturesOnHex :one
+SELECT count(*) FROM pointcrawl_entry_links pel
+JOIN documents d ON d.id=pel.document_id
+WHERE pel.node_id=sqlc.arg(node_id) AND pel.relation='subject'
+  AND d.kind='codex_entry' AND d.category='Feature' AND d.status='published' AND d.deleted_at IS NULL
+  AND d.public_id<>sqlc.arg(document_id)::uuid;
+
+-- name: DeleteFeatureLinksOffHex :exec
+-- keep_node_id 0 removes every subject link of the document on that map.
+DELETE FROM pointcrawl_entry_links pel
+USING documents d
+WHERE d.id=pel.document_id AND d.public_id=sqlc.arg(document_id)::uuid
+  AND pel.relation='subject' AND pel.map_id=(SELECT id FROM maps WHERE atlas_code=sqlc.arg(atlas_code)::text)
+  AND pel.node_id<>sqlc.arg(keep_node_id)::bigint;
+
+-- name: InsertFeatureHexLink :exec
+INSERT INTO pointcrawl_entry_links(map_id,node_id,document_id,relation,created_at,created_by)
+SELECT sqlc.arg(map_id),sqlc.arg(node_id),d.id,'subject',sqlc.arg(recorded_at),actor.id
+FROM documents d JOIN members actor ON actor.public_id=sqlc.arg(actor_id)::uuid
+WHERE d.public_id=sqlc.arg(document_id)::uuid
+ON CONFLICT DO NOTHING;

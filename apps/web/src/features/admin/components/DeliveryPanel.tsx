@@ -28,6 +28,9 @@ function HealthChip({
   );
 }
 
+/** States that no longer retry on their own; an admin may redrive them. */
+const REDRIVABLE_STATES = new Set(['dead', 'repair_required']);
+
 const DELIVERY_STATES: Record<string, string> = {
   queued: 'Queued',
   succeeded: 'Delivered',
@@ -159,6 +162,14 @@ export function DeliveryPanel({
             {pluralize(ops.activeAlertCount, 'active alert')}
           </Link>
         </FilterBar>
+        {view.redriveFeedback ? (
+          <p
+            className="type-caption"
+            role={view.redriveFeedback.isError ? 'alert' : 'status'}
+          >
+            {view.redriveFeedback.message}
+          </p>
+        ) : null}
         <AdminPagination page={view.deliveryPage} />
         {deliveries.length === 0 ? (
           <EmptyState
@@ -173,7 +184,9 @@ export function DeliveryPanel({
               {deliveries.map((delivery) => {
                 const retryAt =
                   delivery.nextAttemptAt &&
-                  !['succeeded', 'cancelled', 'dead'].includes(delivery.state)
+                  !['succeeded', 'cancelled', 'dead', 'repair_required'].includes(
+                    delivery.state,
+                  )
                     ? delivery.nextAttemptAt
                     : null;
                 const title = deliveryTitle(
@@ -229,6 +242,19 @@ export function DeliveryPanel({
                         >
                           Open Discord event
                         </a>
+                      ) : null}
+                      {REDRIVABLE_STATES.has(delivery.state) ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={view.redrive.isPending}
+                          onClick={() => view.redrive.mutate(delivery.id)}
+                        >
+                          {view.redrive.isPending &&
+                          view.redrive.variables === delivery.id
+                            ? 'Retrying…'
+                            : 'Retry delivery'}
+                        </Button>
                       ) : null}
                     </div>
                   </li>

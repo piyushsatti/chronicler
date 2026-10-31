@@ -94,17 +94,6 @@ func (s *PostgresStore) ResolveAuthority(ctx context.Context, id string) (auth.A
 	return auth.NewAuthorityWithOwner(db.UUIDString(row.ID), roles, row.Status, row.DmStatus, row.Handle, s.configuredOwnerID)
 }
 
-func (s *PostgresStore) GetByHandle(ctx context.Context, handle string) (Member, error) {
-	row, err := s.q.GetMemberByHandle(ctx, handle)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return Member{}, ErrNotFound
-		}
-		return Member{}, err
-	}
-	return mapMember(row.ID, row.DiscordID, row.Handle, row.DisplayName, row.Roles, row.Status), nil
-}
-
 func (s *PostgresStore) GetByDiscordID(ctx context.Context, discordID string) (Member, error) {
 	row, err := s.q.GetMemberByDiscordID(ctx, discordID)
 	if err != nil {
@@ -182,7 +171,7 @@ func (s *PostgresStore) EnsureFromDiscord(ctx context.Context, discordID, displa
 		Handle:      handle,
 		DisplayName: displayName,
 		AvatarUrl:   avatar,
-		Roles:       []string{"player"},
+		Roles:       []string{"guest"},
 	})
 	if err != nil {
 		return "", nil, nil, nil, err

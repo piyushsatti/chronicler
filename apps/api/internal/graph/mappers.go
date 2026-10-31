@@ -77,6 +77,7 @@ func toQuestView(v quest.QuestView) *QuestType {
 		Genres:           v.Genres,
 		Apl:              apl,
 		SignupType:       v.SignupType,
+		VoiceChannelID:   v.VoiceChannelId,
 		CreatedBy:        v.CreatedBy,
 		CreatedAt:        v.CreatedAt,
 		UpdatedAt:        v.UpdatedAt,
@@ -1356,6 +1357,23 @@ func toPreviewAudience(v PreviewAudience) document.PreviewAudience {
 	return document.PreviewAudience(v)
 }
 
+func toBodySpanAudits(records []document.BodySpanAudit) []*BodySpanAudit {
+	out := make([]*BodySpanAudit, len(records))
+	for i, v := range records {
+		out[i] = &BodySpanAudit{
+			StartLine:   v.StartLine,
+			EndLine:     v.EndLine,
+			Kind:        BodySpanKind(v.Kind),
+			Handle:      v.Handle,
+			Suggestion:  v.Suggestion,
+			Token:       v.Token,
+			TokenLine:   v.TokenLine,
+			TokenColumn: v.TokenColumn,
+		}
+	}
+	return out
+}
+
 func toMapViewType(v spatial.MapView) *MapType {
 	return &MapType{
 		ID:        v.Id,
@@ -1363,6 +1381,7 @@ func toMapViewType(v spatial.MapView) *MapType {
 		Name:      v.Name,
 		AtlasCode: v.AtlasCode,
 		Family:    v.Family,
+		Grid:      v.Grid,
 		MapKind:   v.MapKind,
 		AssetPath: v.AssetPath,
 		RegionID:  v.RegionId,
@@ -1508,8 +1527,37 @@ func toPointcrawlNodeType(v spatial.PointcrawlNodeView) *PointcrawlNodeType {
 		X:         v.X,
 		Y:         v.Y,
 		Name:      v.Name,
+		State:     toPointcrawlNodeState(v.State),
 		SubmapID:  v.SubmapId,
 		CreatedAt: v.CreatedAt,
+	}
+}
+
+// toPointcrawlNodeState maps the stored lower-case state onto the wire enum. An unrecognized
+// stored value cannot pass the column check, so it falls back to the column default.
+func toPointcrawlNodeState(v string) PointcrawlNodeState {
+	switch v {
+	case spatial.PointcrawlNodeUnlocked:
+		return PointcrawlNodeStateUnlocked
+	case spatial.PointcrawlNodeMapped:
+		return PointcrawlNodeStateMapped
+	default:
+		return PointcrawlNodeStateLocked
+	}
+}
+
+// toSpatialPointcrawlNodeState maps the wire enum onto the stored value. gqlgen has already
+// rejected values outside the enum; anything else maps to "" and the command rejects it.
+func toSpatialPointcrawlNodeState(v PointcrawlNodeState) string {
+	switch v {
+	case PointcrawlNodeStateLocked:
+		return spatial.PointcrawlNodeLocked
+	case PointcrawlNodeStateUnlocked:
+		return spatial.PointcrawlNodeUnlocked
+	case PointcrawlNodeStateMapped:
+		return spatial.PointcrawlNodeMapped
+	default:
+		return ""
 	}
 }
 
@@ -1542,8 +1590,18 @@ func toMapCreateFields(in MapCreateInput) spatial.MapCreateFields {
 		Name:      in.Name,
 		AtlasCode: in.AtlasCode,
 		Family:    in.Family,
+		Grid:      in.Grid,
 		MapKind:   in.MapKind,
 		RegionId:  in.RegionID,
+		AssetPath: in.AssetPath,
+	}
+}
+
+func toMapUpdateFields(in MapUpdateInput) spatial.MapUpdateFields {
+	return spatial.MapUpdateFields{
+		Name:      in.Name,
+		Family:    in.Family,
+		Grid:      in.Grid,
 		AssetPath: in.AssetPath,
 	}
 }
@@ -1741,6 +1799,7 @@ func toCreateQuestFields(in CreateQuestInput) quest.CreateQuestFields {
 		Apl:            apl,
 		SignupType:     in.SignupType,
 		AdditionalInfo: in.AdditionalInfo,
+		VoiceChannelId: in.VoiceChannelID,
 	}
 }
 
@@ -1761,6 +1820,7 @@ func toQuestEditFields(in QuestEditInput) quest.QuestEditFields {
 		Apl:               optionalInt32(in.Apl),
 		SignupType:        optionalString(in.SignupType),
 		AdditionalInfo:    optionalString(in.AdditionalInfo),
+		VoiceChannelId:    optionalString(in.VoiceChannelID),
 	}
 }
 
@@ -1972,4 +2032,31 @@ func toSummaryDerivedType(v document.SummaryDerivedView) *SummaryDerivedType {
 		GameDay:         gameDay,
 		GameDate:        toGameDateType(v.GameDate),
 	}
+}
+
+func toDiscordSettingsType(v site.DiscordSettingsView) *DiscordSettingsType {
+	return &DiscordSettingsType{
+		AnnounceChannelID: v.AnnounceChannelId,
+		RoleID:            v.RoleId,
+		VoiceChannels:     toDiscordVoiceChannelTypes(v.VoiceChannels),
+	}
+}
+
+func toDiscordVoiceChannelTypes(in []site.DiscordVoiceChannelView) []*DiscordVoiceChannelType {
+	out := make([]*DiscordVoiceChannelType, len(in))
+	for i, channel := range in {
+		out[i] = &DiscordVoiceChannelType{Name: channel.Name, ChannelID: channel.ChannelId}
+	}
+	return out
+}
+
+func toDiscordSettingsFields(in DiscordSettingsInput) site.DiscordSettingsFields {
+	channels := make([]site.DiscordVoiceChannelFields, 0, len(in.VoiceChannels))
+	for _, channel := range in.VoiceChannels {
+		if channel == nil {
+			continue
+		}
+		channels = append(channels, site.DiscordVoiceChannelFields{Name: channel.Name, ChannelId: channel.ChannelID})
+	}
+	return site.DiscordSettingsFields{AnnounceChannelId: in.AnnounceChannelID, RoleId: in.RoleID, VoiceChannels: channels}
 }

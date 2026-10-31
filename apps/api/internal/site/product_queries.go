@@ -2,7 +2,6 @@ package site
 
 import (
 	"context"
-	"reflect"
 	"slices"
 	"unicode/utf8"
 
@@ -23,15 +22,8 @@ type ProductQueries struct {
 
 func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver, discovery document.DiscoveryReader) (*ProductQueries, error) {
 	for _, dep := range []any{reads.Site, policy, clock, overrideReads, discovery} {
-		if dep == nil {
+		if product.MissingDependency(dep) {
 			return nil, apierr.New(apierr.Internal, "site query dependencies required")
-		}
-		v := reflect.ValueOf(dep)
-		switch v.Kind() {
-		case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-			if v.IsNil() {
-				return nil, apierr.New(apierr.Internal, "site query dependencies required")
-			}
 		}
 	}
 	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads, Discovery: discovery}, nil

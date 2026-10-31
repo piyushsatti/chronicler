@@ -8,11 +8,25 @@
 
 The Discord bot is a read-only sensor and activity forwarder. It never announces quests, never creates scheduled events, and never authors campaign facts. The API owns Discord announcement and scheduled-event creation. Authoritative records are authored on the website.
 
+Gateway activity uses **authorization at the observation boundary**. Messages, raw reactions, voice transitions, and readiness reconciliation require cached `@everyone` `ViewChannel` permission. Unknown channels or permissions and private threads are excluded, with no new setting or Discord fetch. Bot-authored activity and Discord system messages are excluded. A move from public to private closes only the public voice interval. A move from private to public starts a new interval. Channel updates and `@everyone` role updates immediately reconcile cached voice states. Tracked intervals are discarded when their channel becomes private or its permissions become unknown. Newly public channels start fresh intervals.
+
+Quest cancellation and deletion use **transactional outbox** and **desired-state reconciliation** in the API. Deletion commits its desired revision, tombstone, and delivery job together. The worker sets existing announcements' Game Information status row to `Cancelled` or `Deleted`, creates no missing objects for these quests, and terminates existing events even after their start or removal of a voice channel. Scheduled events become canceled, active events become completed, and terminal events remain unchanged. Unknown or missing remote state requires repair without automatic replacement.
+
+Announcements use the member-projected brief and preserve the complete Game Information block within the message limit. Every future quest that is neither cancelled nor deleted uses a VOICE scheduled event when a voice channel is configured, or an EXTERNAL event at its Chronicler URL otherwise. The API reconciles type, channel, and location changes on the stored event. Ordinary updates leave past-start events alone. [D49](/docs/decisions/D49-Quest-Discord-Terminal-Synchronization.md) records the field requirements and the [repair runbook](/deploy/docs/discord-repair.md#announcement-format) shows the message layout.
+
+Message creation sends a stable quest-derived nonce with `enforce_nonce: true`. Discord's deduplication covers only the past few minutes, not durable exactly-once delivery ([Create Message](https://docs.discord.com/developers/resources/message#create-message)). Returned IDs use bounded five-second persistence after work cancellation; this does not authorize further remote work. The API and its GraphQL product commands remain the single authority. [Implementation](/apps/api/docs/background-work.md), [repair runbook](/deploy/docs/discord-repair.md).
+
 ## Enforcement
 
-| Mechanism                                                                    | Location                                                            | Status       |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------ |
-| No announce, scheduled-event, GraphQL, or database client in the Discord app | [sensor.test.ts](/apps/discord/tests/unit/interface/sensor.test.ts) | **enforced** |
+| Mechanism                                                                    | Location                                                                                                                                                                                                                                            | Status       |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| No announce, scheduled-event, GraphQL, or database client in the Discord app | [sensor.test.ts](/apps/discord/tests/unit/interface/sensor.test.ts)                                                                                                                                                                                 | **enforced** |
+| Public-channel activity observation                                          | [mount.test.ts](/apps/discord/tests/unit/activity/mount.test.ts), [normalize.test.ts](/apps/discord/tests/unit/activity/normalize.test.ts)                                                                                                          | **enforced** |
+| Terminal Discord synchronization and repair                                  | `TestCancelledQuestUpdatesAnnouncementAndTerminatesExistingEvent`, `TestCancelledOrDeletedQuestDoesNotCreateMissingDiscordObjects`, `TestUnknownRemoteEventStatusRequiresRepairWithoutReplacement`, `TestDiscordEventStateFailureParksJobForRepair` | **enforced** |
+| Atomic deletion outbox                                                       | `TestDeleteQuestEnqueuesTerminalDiscordRevisionAtomically`                                                                                                                                                                                          | **enforced** |
+| Stable nonce and bounded ID persistence                                      | `TestCreateMessageSendsStableEnforcedNonceAcrossRetry`, `TestRemoteIDsPersistAfterWorkContextCancellation`                                                                                                                                          | **enforced** |
+| Quest announcement format and mention scope                                  | `TestQuestAnnouncementGameInformationLayout`, `TestQuestAnnouncementStatusesAndPendingEvent`, `TestQuestAnnouncementUsesStoredAPLAndRestrictsMentions`, `TestQuestAnnouncementUnbrokenBriefKeepsEllipsisAndGameInformation`                         | **enforced** |
+| EXTERNAL event creation and type changes                                     | `TestExternalQuestEventCreationAndVoiceTransitions`, `TestExternalQuestEventLocationIsAtMost100Characters`                                                                                                                                          | **enforced** |
 
 ## Provider
 
@@ -25,6 +39,7 @@ Gateway observation: [activity](/apps/discord/docs/activity.md).
 ## Related decisions
 
 - [D1](/docs/decisions/D1-Discord-Announce-Ownership.md)
+- [D49](/docs/decisions/D49-Quest-Discord-Terminal-Synchronization.md)
 
 ## Reopen
 

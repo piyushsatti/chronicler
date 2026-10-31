@@ -78,6 +78,19 @@ func TestDesiredRevisionRollsBackWithRejectedCommand(t *testing.T) {
 	}
 }
 
+func TestSignUpNeverTouchesDiscord(t *testing.T) {
+	c, runner := newCommands(Quest{ID: "q1", DMID: "dm-1", Status: Open, ScheduledAt: scheduledAt})
+	if err := c.SignUp(context.Background(), auth.Claims{MemberID: "player-1"}, "q1", "char-1"); err != nil {
+		t.Fatal(err)
+	}
+	if runner.commits != 1 {
+		t.Fatalf("commits=%d", runner.commits)
+	}
+	if len(runner.repo.revisions) != 0 {
+		t.Fatalf("a signup must not re-edit the post, got revisions %v", runner.repo.revisions)
+	}
+}
+
 func TestAdminMayTransitionAnotherDMsQuest(t *testing.T) {
 	c, _ := newCommands(Quest{ID: "q1", DMID: "dm-1", Status: Open, ScheduledAt: scheduledAt})
 	admin := auth.Claims{MemberID: "admin-1", Roles: []auth.Role{auth.Admin}}

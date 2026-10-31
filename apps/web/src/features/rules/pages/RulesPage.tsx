@@ -12,10 +12,42 @@ import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
 import { useRulesPage } from '../hooks/useRulesPage.js';
 import styles from './rules.module.css';
-import { pluralize } from '../../../utils/format.js';
+import { humanizeKey, pluralize } from '../../../utils/format.js';
 import { documentHref } from '../../../utils/documentHref.js';
 
 const PAGE_SIZE = 12;
+const GENERAL_GROUP = 'General';
+
+/** Heading for a guide's category: the stored value made readable; no
+ * category (or the generic "guide") files under "General". */
+export function guideGroupName(category: string | null): string {
+  const raw = category?.trim() ?? '';
+  if (!raw || raw.toLowerCase() === 'guide' || raw.toLowerCase() === 'guides') {
+    return GENERAL_GROUP;
+  }
+  return humanizeKey(raw);
+}
+
+/** Guides under category headings, like the Codex board (owner item 15).
+ * Named groups come alphabetically; "General" comes last. */
+export function groupGuides<T extends { category: string | null }>(
+  guides: T[],
+): { name: string; entries: T[] }[] {
+  const groups = new Map<string, T[]>();
+  for (const guide of guides) {
+    const name = guideGroupName(guide.category);
+    groups.set(name, [...(groups.get(name) ?? []), guide]);
+  }
+  return [...groups]
+    .map(([name, entries]) => ({ name, entries }))
+    .sort((a, b) =>
+      a.name === GENERAL_GROUP
+        ? 1
+        : b.name === GENERAL_GROUP
+          ? -1
+          : a.name.localeCompare(b.name),
+    );
+}
 
 function RulesPagination({
   family,
@@ -76,7 +108,10 @@ export function RulesPage(): React.JSX.Element {
   const matches = (entry: { title: string; excerpt: string | null }) =>
     !needle ||
     `${entry.title} ${entry.excerpt ?? ''}`.toLocaleLowerCase().includes(needle);
-  const guides = hub.guides.filter(matches);
+  // Grouped order first, so each page holds whole runs of a category.
+  const guides = groupGuides(hub.guides.filter(matches)).flatMap(
+    (group) => group.entries,
+  );
   const rulings = hub.rulings.filter(matches);
   const currentGuidePage = Math.min(
     guidePage,
@@ -164,30 +199,43 @@ export function RulesPage(): React.JSX.Element {
                       {pluralize(guides.length, 'guide')}
                     </span>
                   </div>
-                  <CardGrid gap={3}>
-                    {guides
-                      .slice(
-                        (currentGuidePage - 1) * PAGE_SIZE,
-                        currentGuidePage * PAGE_SIZE,
-                      )
-                      .map((entry) => (
-                        <Card
-                          key={entry.id}
-                          variant="clickable"
-                          to={documentHref({ kind: 'rule', ...entry }) ?? '/rules'}
-                          className={`${styles.guide} stack`}
-                          data-gap="2"
-                          pad={4}
-                        >
-                          <span className="type-title">{entry.title}</span>
-                          {entry.excerpt ? (
-                            <span className={`type-caption ${styles.excerpt}`}>
-                              {entry.excerpt}
-                            </span>
-                          ) : null}
-                        </Card>
-                      ))}
-                  </CardGrid>
+                  {groupGuides(
+                    guides.slice(
+                      (currentGuidePage - 1) * PAGE_SIZE,
+                      currentGuidePage * PAGE_SIZE,
+                    ),
+                  ).map((group) => (
+                    <section
+                      key={group.name}
+                      className="stack"
+                      data-gap="2"
+                      aria-label={group.name}
+                    >
+                      <div className="row" data-gap="2">
+                        <h3 className="type-heading">{group.name}</h3>
+                        <div className={styles.divider} />
+                      </div>
+                      <CardGrid gap={3}>
+                        {group.entries.map((entry) => (
+                          <Card
+                            key={entry.id}
+                            variant="clickable"
+                            to={documentHref({ kind: 'rule', ...entry }) ?? '/rules'}
+                            className={`${styles.guide} stack`}
+                            data-gap="2"
+                            pad={4}
+                          >
+                            <span className="type-title">{entry.title}</span>
+                            {entry.excerpt ? (
+                              <span className={`type-caption ${styles.excerpt}`}>
+                                {entry.excerpt}
+                              </span>
+                            ) : null}
+                          </Card>
+                        ))}
+                      </CardGrid>
+                    </section>
+                  ))}
                   {guides.length === 0 ? (
                     <p className="type-caption">No guides match.</p>
                   ) : null}

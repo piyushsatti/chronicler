@@ -12,9 +12,28 @@ import { DMProfilePage, PlayerProfilePage } from '../../../src/features/profile/
 import { loadMemberProfile } from '../../../src/features/profile/adapters/memberProfileAdapter.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
-import { signInProfile } from './profileAuth.js';
+import { profileActor, signInProfile } from './profileAuth.js';
+import { seriesAuthority } from '../../seriesAuthority.js';
 
 describe('DMProfilePage', () => {
+  it('guest can edit availability on their public profile', async () => {
+    signInProfile();
+    const guest = { ...profile.member, roles: ['guest'] };
+    server.use(
+      graphql.query('MemberMe', () => HttpResponse.json({ data: { memberMe: guest } })),
+      graphql.query('MemberProfile', () => HttpResponse.json({ data: {
+        memberProfile: { ...profile, member: guest, dmProfile: null },
+      } })),
+    );
+    renderWithProviders(
+      <Routes><Route path="/players/:shortCode" element={<PlayerProfilePage />} /></Routes>,
+      { route: '/players/@mira' },
+    );
+    expect(await screen.findByText('Guest', { exact: true })).toBeVisible();
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit profile' }));
+    expect(screen.getByRole('button', { name: 'Save availability' })).toBeVisible();
+  });
+
   it('renders the DM name and accepting status without a handle line', async () => {
     renderWithProviders(
       <Routes>
@@ -29,9 +48,10 @@ describe('DMProfilePage', () => {
     expect(screen.getByText('Horror & heists')).toBeInTheDocument();
     expect(screen.getByText('Accepting players')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to DMs' })).toHaveAttribute('href', '/dms');
+    expect(screen.queryByRole('complementary', { name: 'Availability' })).not.toBeInTheDocument();
   });
 
-  it('offers visitors a quest link when public availability is empty', async () => {
+  it('shows no availability rail when public availability is empty', async () => {
     server.use(
       graphql.query('MemberProfile', () =>
         HttpResponse.json({ data: { memberProfile: { ...profile, availability: [] } } }),
@@ -44,10 +64,10 @@ describe('DMProfilePage', () => {
       { route: '/dms/@mira' },
     );
 
-    const availability = await screen.findByRole('complementary', { name: 'Availability' });
-    expect(within(availability).getByText(/hasn't set their availability\./)).toBeVisible();
-    expect(within(availability).getByRole('link', { name: 'Find a quest' })).toHaveAttribute('href', '/quests');
-    expect(within(availability).queryByRole('button', { name: 'Set availability' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mira' })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Availability' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/hasn't set their availability\./)).not.toBeInTheDocument();
+    expect(screen.getByText('Not shared')).toBeVisible();
   });
 
   it('lists the DM’s series and separates played future quests from upcoming quests', async () => {
@@ -72,6 +92,7 @@ describe('DMProfilePage', () => {
 
   it('keeps loaded tables, series and owner actions when the schedule fails', async () => {
     signInProfile();
+    server.use(seriesAuthority(profileActor.id));
     server.use(
       graphql.query('ProfileDmDetails', () => HttpResponse.json({ data: {
         dmStats: { sessionCount: 4 },
@@ -93,7 +114,7 @@ describe('DMProfilePage', () => {
     expect(await screen.findByRole('link', { name: 'Table of Mists' })).toHaveAttribute('href', '/community/dm-table/table-of-mists');
     expect(screen.getByRole('link', { name: /The Glass Road/ })).toHaveAttribute('href', '/series/66666666-6666-4666-8666-666666666666');
     expect(screen.getByRole('link', { name: 'New DM table' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Create a series' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Create a series' })).toBeVisible();
     const quests = screen.getByRole('heading', { name: 'Quests' }).closest('[data-component="Card"]');
     expect(quests).toContainElement(screen.getByRole('alert'));
     expect(screen.queryByText('Nothing here yet.')).not.toBeInTheDocument();
@@ -181,6 +202,7 @@ describe('DMProfilePage', () => {
 
   it('collapses successfully empty owner work while retaining creation actions', async () => {
     signInProfile();
+    server.use(seriesAuthority(profileActor.id));
     server.use(
       graphql.query('QuestAuthoringAuthority', () => HttpResponse.json({ data: { memberProfile: {
         member: { id: profile.member.id, roles: profile.member.roles, status: 'active' },
@@ -197,7 +219,7 @@ describe('DMProfilePage', () => {
     expect(await screen.findByRole('heading', { name: 'Tables, series and quests' })).toBeVisible();
     expect(screen.getAllByText('Nothing here yet.')).toHaveLength(1);
     expect(screen.getByRole('link', { name: 'New DM table' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Create a series' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Create a series' })).toBeVisible();
     expect(await screen.findByRole('link', { name: 'Post a quest' })).toBeVisible();
     expect(screen.queryByRole('heading', { name: 'DM tables' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Series' })).not.toBeInTheDocument();

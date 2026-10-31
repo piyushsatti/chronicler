@@ -26,6 +26,7 @@ func TestProductionChainPrivilegedSQLSurfaceBypassIsAudited(t *testing.T) {
 	author := f.member(t, auth.Player)
 	private := f.doc(t, "", &author, document.StatusPublished, document.VisibilityPublic)
 	target := f.doc(t, "", nil, document.StatusPublished, document.VisibilityPublic)
+	f.exec(t, `UPDATE documents SET kind='codex_entry' WHERE id=$1`, target.rowID)
 	prefix := "audit-filter-" + uuid.NewString()
 	f.exec(t, `UPDATE documents SET kind='codex_entry',category='location/fixture',title=$2,body='AUDIT-BODY-SECRET',policy='[]'::jsonb WHERE id=$1`, private.rowID, prefix+" AUDIT-TITLE-SECRET")
 	f.exec(t, `INSERT INTO document_links(source_id,document_target_id,relation) VALUES($1,$2,'fixture')`, private.rowID, target.rowID)
@@ -60,9 +61,9 @@ func TestProductionChainPrivilegedSQLSurfaceBypassIsAudited(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	count, err := f.runtime.Documents.CountBacklinks(auth.WithAuthority(context.Background(), a), target.slug)
-	if err != nil || count != 1 {
-		t.Fatalf("admin backlink count=%d err=%v", count, err)
+	entry, err := f.runtime.Resolver.Services.DocumentQueries.CodexEntry(context.Background(), a, document.CodexEntrySpec{Slug: target.slug})
+	if err != nil || entry == nil || entry.BacklinkCount != 1 {
+		t.Fatalf("admin codex backlink count=%+v err=%v", entry, err)
 	}
 	found := map[string]bool{}
 	for _, line := range strings.Split(strings.TrimSpace(audit.String()), "\n") {
@@ -128,11 +129,15 @@ func TestProductionChainPointcrawlAuditUsesOnlySelectedActualBypass(t *testing.T
 	}
 	f.exec(t, `INSERT INTO pointcrawl_entry_links(map_id,node_id,document_id,relation,created_at,created_by) VALUES($1,$2,$3,'location',now(),$4)`, mapID, a, location.rowID, author.rowID)
 	f.exec(t, `INSERT INTO pointcrawl_edges(map_id,node_a,node_b,directed,kind) VALUES($1,$2,$3,false,'path')`, mapID, a, b)
+	// A hex may hold many Locations (migration 0006); linking a second one succeeds.
+	f.exec(t, `INSERT INTO pointcrawl_entry_links(map_id,node_id,document_id,relation,created_at,created_by) VALUES($1,$2,$3,'location',now(),$4)`, mapID, a, alternative.rowID, author.rowID)
+	// The same Location cannot be linked to the same hex twice.
 	_, duplicateErr := f.pool.Exec(context.Background(), `INSERT INTO pointcrawl_entry_links(map_id,node_id,document_id,relation,created_at,created_by) VALUES($1,$2,$3,'location',now(),$4)`, mapID, a, alternative.rowID, author.rowID)
 	var constraint *pgconn.PgError
-	if !errors.As(duplicateErr, &constraint) || constraint.Code != "23505" || constraint.ConstraintName != "pointcrawl_entry_links_location_idx" {
-		t.Fatalf("one-location invariant err=%v", duplicateErr)
+	if !errors.As(duplicateErr, &constraint) || constraint.Code != "23505" || constraint.ConstraintName != "pointcrawl_entry_links_pkey" {
+		t.Fatalf("duplicate location link err=%v", duplicateErr)
 	}
+	f.exec(t, `DELETE FROM pointcrawl_entry_links WHERE node_id=$1 AND document_id=$2 AND relation='location'`, a, alternative.rowID)
 	f.exec(t, `INSERT INTO pointcrawl_entry_links(map_id,node_id,document_id,relation,created_at,created_by) VALUES($1,$2,$3,'subject',now(),$4)`, mapID, a, alternative.rowID, author.rowID)
 
 	var audit bytes.Buffer

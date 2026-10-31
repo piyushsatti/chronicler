@@ -310,7 +310,7 @@ describe('Series session-bound command admission', () => {
     unmount();
     client.clear();
   });
-  it('admits configured-owner capabilities from actual server proof without an admin role', async () => {
+  it('lets a configured owner rename but not start a series without the DM role', async () => {
     server.use(
       graphql.query('MemberMe', () =>
         HttpResponse.json({
@@ -332,8 +332,8 @@ describe('Series session-bound command admission', () => {
       ),
     );
     const { result, unmount, client } = setup();
-    await ready(result);
     await waitFor(() => expect(result.current.series.canRename).toBe(true));
+    expect(result.current.series.canCreate).toBe(false);
     unmount();
     client.clear();
   });

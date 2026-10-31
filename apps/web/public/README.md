@@ -1,5 +1,5 @@
 # Public assets
 
-| File           | Use                  |
-| -------------- | -------------------- |
-| `lc-logo.webp` | Favicon and nav logo |
+| File                         | Use                  |
+| ---------------------------- | -------------------- |
+| `brand/chronicler-logo.webp` | Favicon and nav logo |

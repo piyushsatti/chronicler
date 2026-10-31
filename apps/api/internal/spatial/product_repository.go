@@ -12,47 +12,32 @@ import (
 )
 
 type MapReadRepository interface {
-	ReadHex(ctx context.Context, actor auth.Authority, spec HexSpec) (*HexView, error)
-	ReadHexHistory(ctx context.Context, actor auth.Authority, spec HexHistorySpec) (HexChangePage, error)
 	ReadMap(ctx context.Context, actor auth.Authority, spec MapSpec) (*MapView, error)
-	ReadMapView(ctx context.Context, actor auth.Authority, spec MapViewSpec) (*MapViewView, error)
 	ReadMaps(ctx context.Context, actor auth.Authority, spec MapsSpec) ([]MapView, error)
-	ReadPoisForHex(ctx context.Context, actor auth.Authority, spec PoisForHexSpec) (PoiPage, error)
-	ReadRecentHexChanges(ctx context.Context, actor auth.Authority, spec RecentHexChangesSpec) (HexChangePage, error)
 }
 
 type MapWriteRepository interface {
 	LockCreateMap(ctx context.Context, spec CreateMapSpec) (CreateMapState, error)
 	StoreCreateMap(ctx context.Context, write CreateMapWrite) (MapView, error)
-	LockLinkHexEntry(ctx context.Context, spec LinkHexEntrySpec) (LinkHexEntryState, error)
-	StoreLinkHexEntry(ctx context.Context, write LinkHexEntryWrite) (HexEntryLinkView, error)
+	LockUpdateMap(ctx context.Context, spec UpdateMapSpec) (UpdateMapState, error)
+	StoreUpdateMap(ctx context.Context, write UpdateMapWrite) (MapView, error)
 	LockLinkPointcrawlEntry(ctx context.Context, spec LinkPointcrawlEntrySpec) (LinkPointcrawlEntryState, error)
 	StoreLinkPointcrawlEntry(ctx context.Context, write LinkPointcrawlEntryWrite) (PointcrawlEntryLinkView, error)
-	LockSetHexEdge(ctx context.Context, spec SetHexEdgeSpec) (SetHexEdgeState, error)
-	StoreSetHexEdge(ctx context.Context, write SetHexEdgeWrite) (HexEdgeView, error)
 	LockSetPointcrawlEdge(ctx context.Context, spec SetPointcrawlEdgeSpec) (SetPointcrawlEdgeState, error)
 	StoreSetPointcrawlEdge(ctx context.Context, write SetPointcrawlEdgeWrite) (PointcrawlEdgeView, error)
-	LockUnlinkHexEntry(ctx context.Context, spec UnlinkHexEntrySpec) (UnlinkHexEntryState, error)
-	StoreUnlinkHexEntry(ctx context.Context, write UnlinkHexEntryWrite) (product.CommandReceipt, error)
 	LockUnlinkPointcrawlEntry(ctx context.Context, spec UnlinkPointcrawlEntrySpec) (UnlinkPointcrawlEntryState, error)
 	StoreUnlinkPointcrawlEntry(ctx context.Context, write UnlinkPointcrawlEntryWrite) (product.CommandReceipt, error)
-	LockUpdateHex(ctx context.Context, spec UpdateHexSpec) (UpdateHexState, error)
-	StoreUpdateHex(ctx context.Context, write UpdateHexWrite) (HexView, error)
-	LockUpsertPoi(ctx context.Context, spec UpsertPoiSpec) (UpsertPoiState, error)
-	StoreUpsertPoi(ctx context.Context, write UpsertPoiWrite) (PoiView, error)
 	LockUpsertPointcrawlNode(ctx context.Context, spec UpsertPointcrawlNodeSpec) (UpsertPointcrawlNodeState, error)
 	StoreUpsertPointcrawlNode(ctx context.Context, write UpsertPointcrawlNodeWrite) (PointcrawlNodeView, error)
+	LockSetPointcrawlNodeState(ctx context.Context, spec SetPointcrawlNodeStateSpec) (SetPointcrawlNodeStateState, error)
+	StoreSetPointcrawlNodeState(ctx context.Context, write SetPointcrawlNodeStateWrite) (PointcrawlNodeView, error)
 	ReadMapReference(ctx context.Context, mapID string) (auth.MapRef, error)
 }
 
 type ProductBatchRepository interface {
-	ReadBatchMapHexes(ctx context.Context, actor auth.Authority, keys []MapHexesKey) ([]product.BatchResult[HexList], error)
-	ReadBatchMapEdges(ctx context.Context, actor auth.Authority, keys []MapEdgesKey) ([]product.BatchResult[EdgeList], error)
 	ReadBatchMapNodes(ctx context.Context, actor auth.Authority, keys []MapNodesKey) ([]product.BatchResult[NodeList], error)
 	ReadBatchMapNodeEdges(ctx context.Context, actor auth.Authority, keys []MapNodeEdgesKey) ([]product.BatchResult[NodeEdgeList], error)
-	ReadBatchHexLinks(ctx context.Context, actor auth.Authority, keys []HexLinksKey) ([]product.BatchResult[HexLinkList], error)
 	ReadBatchNodeLinks(ctx context.Context, actor auth.Authority, keys []NodeLinksKey) ([]product.BatchResult[NodeLinkList], error)
-	ReadBatchPOIs(ctx context.Context, actor auth.Authority, keys []POIsKey) ([]product.BatchResult[PoiList], error)
 }
 
 type RegionReadRepository interface {
@@ -105,10 +90,6 @@ type TimeWriteRepository interface {
 	StoreUpdateTimeAnchor(ctx context.Context, write UpdateTimeAnchorWrite) (TimeAnchorView, error)
 }
 
-type TimeBatchReadRepository interface {
-	ReadGameDates(ctx context.Context, dates []product.Date) ([]product.BatchResult[TimeDateSnapshot], error)
-}
-
 type QuestPointcrawlCandidate struct {
 	ID   string
 	Role string
@@ -117,18 +98,6 @@ type QuestPointcrawlCandidate struct {
 type ContainmentWriter interface {
 	LockContainment(ctx context.Context) error
 	ReadContainmentEdges(ctx context.Context) ([]ContainmentEdge, error)
-}
-
-type MapHexesKey struct {
-	ParentID string
-	Limit    int32
-	Offset   int32
-}
-
-type MapEdgesKey struct {
-	ParentID string
-	Limit    int32
-	Offset   int32
 }
 
 type MapNodesKey struct {
@@ -143,30 +112,10 @@ type MapNodeEdgesKey struct {
 	Offset   int32
 }
 
-type HexLinksKey struct {
-	ParentID string
-	Limit    int32
-	Offset   int32
-}
-
 type NodeLinksKey struct {
 	ParentID string
 	Limit    int32
 	Offset   int32
-}
-
-type POIsKey struct {
-	ParentID string
-	Limit    int32
-	Offset   int32
-}
-
-type HexList struct {
-	Items []HexView
-}
-
-type EdgeList struct {
-	Items []HexEdgeView
 }
 
 type NodeList struct {
@@ -177,16 +126,8 @@ type NodeEdgeList struct {
 	Items []PointcrawlEdgeView
 }
 
-type HexLinkList struct {
-	Items []HexEntryLinkView
-}
-
 type NodeLinkList struct {
 	Items []PointcrawlEntryLinkView
-}
-
-type PoiList struct {
-	Items []PoiView
 }
 
 type TimeDateSnapshot struct {
@@ -211,7 +152,6 @@ type ProductReadRepos struct {
 	Time             TimeReadRepository
 	Batch            ProductBatchRepository
 	DocumentAudience document.ReferenceAudienceReader
-	TimeBatch        TimeBatchReadRepository
 }
 
 type ProductCommandRepos struct {

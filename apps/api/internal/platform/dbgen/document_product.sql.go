@@ -35,6 +35,26 @@ func (q *Queries) AssignProductLieutenant(ctx context.Context, arg AssignProduct
 	return err
 }
 
+const countOtherFeaturesOnHex = `-- name: CountOtherFeaturesOnHex :one
+SELECT count(*) FROM pointcrawl_entry_links pel
+JOIN documents d ON d.id=pel.document_id
+WHERE pel.node_id=$1 AND pel.relation='subject'
+  AND d.kind='codex_entry' AND d.category='Feature' AND d.status='published' AND d.deleted_at IS NULL
+  AND d.public_id<>$2::uuid
+`
+
+type CountOtherFeaturesOnHexParams struct {
+	NodeID     int64       `json:"node_id"`
+	DocumentID pgtype.UUID `json:"document_id"`
+}
+
+func (q *Queries) CountOtherFeaturesOnHex(ctx context.Context, arg CountOtherFeaturesOnHexParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countOtherFeaturesOnHex, arg.NodeID, arg.DocumentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countProductCodexDirectory = `-- name: CountProductCodexDirectory :one
 SELECT count(*)::bigint AS total FROM documents d LEFT JOIN members author ON author.id=d.author_id
 WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
@@ -221,6 +241,44 @@ func (q *Queries) CountProductLieutenantAssignments(ctx context.Context, arg Cou
 	var total int64
 	err := row.Scan(&total)
 	return total, err
+}
+
+const deleteFeatureLinksOffHex = `-- name: DeleteFeatureLinksOffHex :exec
+DELETE FROM pointcrawl_entry_links pel
+USING documents d
+WHERE d.id=pel.document_id AND d.public_id=$1::uuid
+  AND pel.relation='subject' AND pel.map_id=(SELECT id FROM maps WHERE atlas_code=$2::text)
+  AND pel.node_id<>$3::bigint
+`
+
+type DeleteFeatureLinksOffHexParams struct {
+	DocumentID pgtype.UUID `json:"document_id"`
+	AtlasCode  string      `json:"atlas_code"`
+	KeepNodeID int64       `json:"keep_node_id"`
+}
+
+// keep_node_id 0 removes every subject link of the document on that map.
+func (q *Queries) DeleteFeatureLinksOffHex(ctx context.Context, arg DeleteFeatureLinksOffHexParams) error {
+	_, err := q.db.Exec(ctx, deleteFeatureLinksOffHex, arg.DocumentID, arg.AtlasCode, arg.KeepNodeID)
+	return err
+}
+
+const featureLinkedToHexNode = `-- name: FeatureLinkedToHexNode :one
+SELECT EXISTS(
+  SELECT 1 FROM pointcrawl_entry_links pel JOIN documents d ON d.id=pel.document_id
+  WHERE d.public_id=$1::uuid AND pel.node_id=$2 AND pel.relation='subject')
+`
+
+type FeatureLinkedToHexNodeParams struct {
+	DocumentID pgtype.UUID `json:"document_id"`
+	NodeID     int64       `json:"node_id"`
+}
+
+func (q *Queries) FeatureLinkedToHexNode(ctx context.Context, arg FeatureLinkedToHexNodeParams) (bool, error) {
+	row := q.db.QueryRow(ctx, featureLinkedToHexNode, arg.DocumentID, arg.NodeID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const findProductDocumentSlug = `-- name: FindProductDocumentSlug :one
@@ -618,6 +676,33 @@ func (q *Queries) GetProductDocumentRevisionParent(ctx context.Context, arg GetP
 	return i, err
 }
 
+const insertFeatureHexLink = `-- name: InsertFeatureHexLink :exec
+INSERT INTO pointcrawl_entry_links(map_id,node_id,document_id,relation,created_at,created_by)
+SELECT $1,$2,d.id,'subject',$3,actor.id
+FROM documents d JOIN members actor ON actor.public_id=$4::uuid
+WHERE d.public_id=$5::uuid
+ON CONFLICT DO NOTHING
+`
+
+type InsertFeatureHexLinkParams struct {
+	MapID      int64              `json:"map_id"`
+	NodeID     int64              `json:"node_id"`
+	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
+	ActorID    pgtype.UUID        `json:"actor_id"`
+	DocumentID pgtype.UUID        `json:"document_id"`
+}
+
+func (q *Queries) InsertFeatureHexLink(ctx context.Context, arg InsertFeatureHexLinkParams) error {
+	_, err := q.db.Exec(ctx, insertFeatureHexLink,
+		arg.MapID,
+		arg.NodeID,
+		arg.RecordedAt,
+		arg.ActorID,
+		arg.DocumentID,
+	)
+	return err
+}
+
 const insertProductDocument = `-- name: InsertProductDocument :one
 INSERT INTO documents(public_id,kind,slug,title,category,status,visibility,policy,body,frontmatter_yaml,author_id,version,created_at,updated_at)
 VALUES($1::uuid,$2::text,$3::text,$4::text,$5::text,'draft',$6::text,$7::jsonb,$8::text,$9::text,(SELECT id FROM members WHERE public_id=$10::uuid),1,$11::timestamptz,$11::timestamptz)
@@ -759,23 +844,6 @@ func (q *Queries) InsertProductDocumentRevision(ctx context.Context, arg InsertP
 	var i InsertProductDocumentRevisionRow
 	err := row.Scan(&i.ID, &i.Rev, &i.CreatedAt)
 	return i, err
-}
-
-const insertProductSummaryCharacterLink = `-- name: InsertProductSummaryCharacterLink :exec
-INSERT INTO document_links(source_id,character_target_id,relation)
-SELECT d.id,c.id,'subject' FROM documents d JOIN characters c ON c.public_id=$1::uuid
-WHERE d.public_id=$2::uuid AND $1::uuid IS NOT NULL
-ON CONFLICT DO NOTHING
-`
-
-type InsertProductSummaryCharacterLinkParams struct {
-	CharacterID pgtype.UUID `json:"character_id"`
-	DocumentID  pgtype.UUID `json:"document_id"`
-}
-
-func (q *Queries) InsertProductSummaryCharacterLink(ctx context.Context, arg InsertProductSummaryCharacterLinkParams) error {
-	_, err := q.db.Exec(ctx, insertProductSummaryCharacterLink, arg.CharacterID, arg.DocumentID)
-	return err
 }
 
 const insertProductSummaryQuestLinks = `-- name: InsertProductSummaryQuestLinks :exec
@@ -927,106 +995,6 @@ func (q *Queries) ListProductCodexDirectory(ctx context.Context, arg ListProduct
 			&i.AuthorID,
 			&i.UpdatedAt,
 			&i.Version,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProductDmTablesForMembers = `-- name: ListProductDmTablesForMembers :many
-SELECT input.ordinality::integer AS input_index,
-       input.public_id AS member_public_id,
-       d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility,
-       d.policy, d.body, d.frontmatter_yaml, author.public_id AS author_id,
-       d.published_at, d.deleted_at, deleter.public_id AS deleted_by, d.updated_at, d.version,
-       document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
-         $2::text[],$3::text,$4::boolean,
-         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])) AS readable,
-       COALESCE($4::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
-         $2::text[],$3::text,FALSE,
-         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override
-FROM unnest($6::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
-LEFT JOIN members m ON m.public_id = input.public_id
-LEFT JOIN documents d ON d.author_id = m.id AND d.kind = 'community' AND d.category = 'dm_table' AND d.deleted_at IS NULL
-LEFT JOIN members author ON author.id = d.author_id
-LEFT JOIN members deleter ON deleter.id = d.deleted_by
-ORDER BY input.ordinality
-`
-
-type ListProductDmTablesForMembersParams struct {
-	ViewerID     pgtype.UUID   `json:"viewer_id"`
-	ViewerRoles  []string      `json:"viewer_roles"`
-	ViewerHandle string        `json:"viewer_handle"`
-	ViewerAdmin  bool          `json:"viewer_admin"`
-	ViewerLiveDm bool          `json:"viewer_live_dm"`
-	MemberIds    []pgtype.UUID `json:"member_ids"`
-}
-
-type ListProductDmTablesForMembersRow struct {
-	InputIndex      int32              `json:"input_index"`
-	MemberPublicID  interface{}        `json:"member_public_id"`
-	ID              pgtype.UUID        `json:"id"`
-	Kind            pgtype.Text        `json:"kind"`
-	Slug            pgtype.Text        `json:"slug"`
-	Title           pgtype.Text        `json:"title"`
-	Category        pgtype.Text        `json:"category"`
-	Status          pgtype.Text        `json:"status"`
-	Visibility      pgtype.Text        `json:"visibility"`
-	Policy          []byte             `json:"policy"`
-	Body            pgtype.Text        `json:"body"`
-	FrontmatterYaml pgtype.Text        `json:"frontmatter_yaml"`
-	AuthorID        pgtype.UUID        `json:"author_id"`
-	PublishedAt     pgtype.Timestamptz `json:"published_at"`
-	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
-	DeletedBy       pgtype.UUID        `json:"deleted_by"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	Version         pgtype.Int4        `json:"version"`
-	Readable        bool               `json:"readable"`
-	AdminOverride   interface{}        `json:"admin_override"`
-}
-
-func (q *Queries) ListProductDmTablesForMembers(ctx context.Context, arg ListProductDmTablesForMembersParams) ([]ListProductDmTablesForMembersRow, error) {
-	rows, err := q.db.Query(ctx, listProductDmTablesForMembers,
-		arg.ViewerID,
-		arg.ViewerRoles,
-		arg.ViewerHandle,
-		arg.ViewerAdmin,
-		arg.ViewerLiveDm,
-		arg.MemberIds,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListProductDmTablesForMembersRow{}
-	for rows.Next() {
-		var i ListProductDmTablesForMembersRow
-		if err := rows.Scan(
-			&i.InputIndex,
-			&i.MemberPublicID,
-			&i.ID,
-			&i.Kind,
-			&i.Slug,
-			&i.Title,
-			&i.Category,
-			&i.Status,
-			&i.Visibility,
-			&i.Policy,
-			&i.Body,
-			&i.FrontmatterYaml,
-			&i.AuthorID,
-			&i.PublishedAt,
-			&i.DeletedAt,
-			&i.DeletedBy,
-			&i.UpdatedAt,
-			&i.Version,
-			&i.Readable,
-			&i.AdminOverride,
 		); err != nil {
 			return nil, err
 		}
@@ -1558,6 +1526,44 @@ func (q *Queries) LoadProductDocumentWriteFacts(ctx context.Context, arg LoadPro
 	return items, nil
 }
 
+const lockFeatureHexNode = `-- name: LockFeatureHexNode :many
+SELECT n.id, n.map_id FROM pointcrawl_nodes n
+JOIN maps m ON m.id=n.map_id
+WHERE m.atlas_code=$1::text AND n.name=$2::text
+ORDER BY n.id
+FOR UPDATE OF n
+`
+
+type LockFeatureHexNodeParams struct {
+	AtlasCode string `json:"atlas_code"`
+	Hex       string `json:"hex"`
+}
+
+type LockFeatureHexNodeRow struct {
+	ID    int64 `json:"id"`
+	MapID int64 `json:"map_id"`
+}
+
+func (q *Queries) LockFeatureHexNode(ctx context.Context, arg LockFeatureHexNodeParams) ([]LockFeatureHexNodeRow, error) {
+	rows, err := q.db.Query(ctx, lockFeatureHexNode, arg.AtlasCode, arg.Hex)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LockFeatureHexNodeRow{}
+	for rows.Next() {
+		var i LockFeatureHexNodeRow
+		if err := rows.Scan(&i.ID, &i.MapID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockProductDocumentByID = `-- name: LockProductDocumentByID :one
 SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.category,
        d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id AS author_internal_id,
@@ -1667,6 +1673,19 @@ func (q *Queries) LockProductSummaryQuests(ctx context.Context, arg LockProductS
 		return nil, err
 	}
 	return items, nil
+}
+
+const memberMayPlaceFeatures = `-- name: MemberMayPlaceFeatures :one
+SELECT EXISTS(
+  SELECT 1 FROM members
+  WHERE public_id=$1::uuid AND status='active' AND roles && ARRAY['dm','admin']::text[])
+`
+
+func (q *Queries) MemberMayPlaceFeatures(ctx context.Context, memberID pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, memberMayPlaceFeatures, memberID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const nextProductDocumentRevision = `-- name: NextProductDocumentRevision :one

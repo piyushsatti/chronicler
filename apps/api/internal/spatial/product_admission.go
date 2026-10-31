@@ -14,6 +14,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 type spatialAdmission struct {
@@ -51,7 +52,7 @@ func pointcrawlDocument(ctx context.Context, repos ProductCommandRepos, actor au
 	if documentID == nil {
 		return nil, nil
 	}
-	if commandDependencyMissing(repos.Documents) {
+	if product.MissingDependency(repos.Documents) {
 		return nil, apierr.New(apierr.Internal, "document reference reader required")
 	}
 	view, err := repos.Documents.ReadCommandDocument(ctx, actor, *documentID)
@@ -73,13 +74,16 @@ func pointcrawlLinkAdmission(ctx context.Context, repos ProductCommandRepos, act
 	if err != nil {
 		return spatialAdmission{}, err
 	}
+	if relation == "subject" && document.IsFeature(view) {
+		return spatialAdmission{}, apierr.New(apierr.Invalid, "a Feature is placed on the map by its hex number")
+	}
 	facts := auth.MapFacts{ID: &ref.ID, RegionID: ref.RegionID}
 	var override bool
 	if relation == "location" {
 		if ref.RegionID == nil {
 			return spatialAdmission{}, apierr.New(apierr.Invalid, "location links require a region")
 		}
-		if commandDependencyMissing(repos.Locations) {
+		if product.MissingDependency(repos.Locations) {
 			return spatialAdmission{}, apierr.New(apierr.Internal, "location admission required")
 		}
 		location, err := repos.Locations.AdmitLocationLink(ctx, actor, documentID, *ref.RegionID)
@@ -139,7 +143,32 @@ func (p *ProductPostgres) lockPointcrawlNode(ctx context.Context, nodeID, mapID 
 	if db.UUIDString(row.MapPublicID) != mapID {
 		return PointcrawlNodeView{}, apierr.New(apierr.Invalid, "node belongs to another map")
 	}
-	return mapPointcrawlNodeRow(row.PublicID, row.MapPublicID, row.Name, row.X, row.Y, row.SubmapPublicID, row.CreatedAt), nil
+	return mapPointcrawlNodeRow(row.PublicID, row.MapPublicID, row.Name, row.X, row.Y, row.SubmapPublicID, row.CreatedAt, row.State), nil
+}
+
+// Pointcrawl node states are admin-set exploration labels on a hex. They are display only: a state
+// never changes who can read or reach the node. The column check in migration 0011 holds the same set.
+const (
+	PointcrawlNodeLocked   = "locked"
+	PointcrawlNodeUnlocked = "unlocked"
+	PointcrawlNodeMapped   = "mapped"
+)
+
+func validPointcrawlNodeState(state string) bool {
+	return state == PointcrawlNodeLocked || state == PointcrawlNodeUnlocked || state == PointcrawlNodeMapped
+}
+
+func validMapGrid(grid string) bool {
+	return grid == "point" || grid == "hex"
+}
+
+func validateMapUpdate(input MapUpdateFields) error {
+	if strings.TrimSpace(input.Name) == "" || utf8.RuneCountInString(input.Name) > 200 ||
+		strings.TrimSpace(input.Family) == "" || utf8.RuneCountInString(input.Family) > 200 ||
+		!validMapGrid(input.Grid) {
+		return apierr.New(apierr.Invalid, "invalid map input")
+	}
+	return validateMapAssetPath(input.AssetPath)
 }
 
 func validateMapCreate(input MapCreateFields) error {
@@ -155,7 +184,7 @@ func validateMapCreate(input MapCreateFields) error {
 func validMapIdentity(input MapCreateFields) bool {
 	return strings.TrimSpace(input.Name) != "" && utf8.RuneCountInString(input.Name) <= 200 &&
 		strings.TrimSpace(input.AtlasCode) != "" && utf8.RuneCountInString(input.AtlasCode) <= 64 &&
-		input.MapKind == "pointcrawl" && strings.TrimSpace(input.Family) != ""
+		input.MapKind == "pointcrawl" && validMapGrid(input.Grid) && strings.TrimSpace(input.Family) != ""
 }
 
 func validMapDimensions(input MapCreateFields) bool {

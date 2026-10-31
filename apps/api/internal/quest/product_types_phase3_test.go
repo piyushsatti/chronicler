@@ -130,7 +130,6 @@ func TestPhase3TaskQUE01Acceptance(t *testing.T) {
 	ownedResultTypes := map[string]bool{
 		"quest.ParticipantList": true,
 		"quest.HexList":         true,
-		"quest.RegionIDList":    true,
 		"quest.QuestList":       true,
 		"quest.RewardList":      true,
 	}

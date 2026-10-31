@@ -6,6 +6,7 @@ export const EDITOR_BACK_LABELS = {
   guide: 'Back to rules',
   ruling: 'Back to rules',
   'dm-table': 'Back to DMs',
+  'hall-of-fame': 'Back to Community',
   demo: 'Back to home',
 } as const;
 
@@ -34,12 +35,11 @@ export const TAG_SUGGESTIONS = [
   'merchant',
 ];
 
-export const QUEST_KINDS: [string, string][] = [
-  ['standard', 'Standard'],
-  ['oneshot', 'One-shot'],
-  ['series', 'Series'],
-  ['social', 'Social'],
-  ['beginner', 'Beginner'],
-];
+/** Quest kind vocabulary, shared with the quest page. */
+export { QUEST_KINDS } from '../../utils/questVocabulary.js';
 
 export { CODEX_CATEGORY_VALUES as CODEX_AUTHORING_CATEGORIES } from '../../utils/codexCategories.js';
+
+/** `debugId` of the error shown when the API refuses a quest because its DM
+ * profile is not approved; the editor pairs it with a link to the profile. */
+export const QUEST_DM_APPROVAL_ERROR = 'editor:quest:dm-approval';

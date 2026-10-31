@@ -25,10 +25,6 @@ type FormState = {
 
 const BLANK: FormState = { realUtc: '', epochDay: '', rate: '1', note: '' };
 
-function toLocalInputValue(iso: string): string {
-  return iso;
-}
-
 export function useTimeAnchorPanel() {
   const authority = useAdminAuthority();
   const queryClient = useQueryClient();
@@ -36,7 +32,7 @@ export function useTimeAnchorPanel() {
     KEY,
     authority,
     {},
-    (page, request) => loadTimeAnchors({ ...page, ...{} }, request),
+    (page, request) => loadTimeAnchors(page, request),
   );
   const [editingId, setEditingId] = useState<string | 'new' | null>(null);
   const [form, setForm] = useState<FormState>(BLANK);
@@ -65,7 +61,6 @@ export function useTimeAnchorPanel() {
   return {
     pagination,
     BLANK,
-    toLocalInputValue,
     anchors: panelState(anchors, 'admin:TimeAnchorPanel'),
     editingId,
     setEditingId,

@@ -7,6 +7,7 @@ import { CharacterDirectoryPanel } from '../components/CharacterDirectoryPanel.j
 import { CreationCatalogPanel } from '../components/CreationCatalogPanel.js';
 import { DataHealthPanel } from '../components/DataHealthPanel.js';
 import { DeliveryPanel } from '../components/DeliveryPanel.js';
+import { DiscordSettingsPanel } from '../components/DiscordSettingsPanel.js';
 import { GameCalendarPanel } from '../components/GameCalendarPanel.js';
 import { HomeBannerPanel } from '../components/HomeBannerPanel.js';
 import { MembersPanel } from '../components/MembersPanel.js';
@@ -17,6 +18,7 @@ import {
   useAdminContentPage,
   useAdminDataHealthPage,
   useAdminDeliveryPage,
+  useDiscordSettingsPage,
   useAdminPeoplePage,
   useAdminWorldPage,
   useDmDashboardPage,
@@ -158,9 +160,25 @@ export function AdminContentPage(): React.JSX.Element {
 }
 
 function DeliveryBody(): React.JSX.Element {
+  const delivery = useAdminDeliveryPage();
+  const discord = useDiscordSettingsPage();
   return (
     <div className="stack">
-      <DeliveryPanel view={useAdminDeliveryPage()} />
+      <SectionSwitch
+        label="Delivery sections"
+        items={[
+          {
+            id: 'status',
+            label: 'Delivery status',
+            panel: <DeliveryPanel view={delivery} />,
+          },
+          {
+            id: 'discord',
+            label: 'Discord settings',
+            panel: <DiscordSettingsPanel view={discord} />,
+          },
+        ]}
+      />
     </div>
   );
 }
@@ -169,7 +187,7 @@ export function AdminDeliveryPage(): React.JSX.Element {
     <AdminWorkspaceShell
       page="admin-delivery"
       title="Delivery"
-      lede="Check that quests reach Discord, and see what needs attention."
+      lede="Check that quests reach Discord, see what needs attention, and set where announcements go."
     >
       <DeliveryBody />
     </AdminWorkspaceShell>

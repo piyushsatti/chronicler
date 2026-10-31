@@ -12,7 +12,7 @@ from dataclasses import dataclass, field, replace
 from typing import Literal, NamedTuple, Protocol, cast
 
 from pi.chronicler.agent.budget import ContextBudget
-from pi.chronicler.agent.model import ModelTurn, ToolCall
+from pi.chronicler.agent.model import GROUNDED_ANSWER_SCHEMA, ModelTurn, ToolCall
 from pi.chronicler.agent.trace import Outcome, TraceRecorder, is_timeout_error
 
 logger = logging.getLogger(__name__)
@@ -131,20 +131,7 @@ FINISH_TOOL: dict[str, object] = {
             "or report unsupported after investigating. For numerical questions "
             "include the number and conditions."
         ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "status": {"type": "string", "enum": ["answered", "unsupported"]},
-                "answer": {"type": "string", "maxLength": 1_200},
-                "source_ids": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "maxItems": 3,
-                },
-            },
-            "required": ["status", "answer", "source_ids"],
-            "additionalProperties": False,
-        },
+        "parameters": GROUNDED_ANSWER_SCHEMA,
     },
 }
 RESEARCH_TOOLS = [*TOOLS, FINISH_TOOL]
@@ -603,49 +590,6 @@ _NAMED_SUBJECT_INSTRUCTION_RE = re.compile(
     r")",
     re.IGNORECASE,
 )
-_SHOVE_TERM_RE = re.compile(r"\bshove\b", re.IGNORECASE)
-_PRONE_TERM_RE = re.compile(r"\bprone\b", re.IGNORECASE)
-_OPPORTUNITY_ATTACK_TERM_RE = re.compile(r"\bopportunity\s+attacks?\b", re.IGNORECASE)
-_SHOVE_PUSH_RE = re.compile(
-    r"\b(?:push|pushes|pushed)\s+(?:it|the target)\s+5\s+feet\b",
-    re.IGNORECASE,
-)
-_SHOVE_PRONE_ALTERNATIVE_RE = re.compile(
-    r"\b(?:cause|causes|caused|make|makes|made)\s+"
-    r"(?:it|the target)\s+(?:to\s+have\s+the\s+)?prone(?:\s+condition)?\b",
-    re.IGNORECASE,
-)
-_PRONE_EFFECT_RE = (
-    re.compile(r"\brestricted movement\b", re.IGNORECASE),
-    re.compile(r"\bcrawl\b", re.IGNORECASE),
-    re.compile(r"\bhalf (?:your|its|the creature's) speed\b", re.IGNORECASE),
-    re.compile(r"\bdisadvantage on attack rolls\b", re.IGNORECASE),
-    re.compile(r"\battack roll against you has advantage\b", re.IGNORECASE),
-    re.compile(r"\bwithin 5 feet\b", re.IGNORECASE),
-    re.compile(r"\botherwise,? that attack roll has disadvantage\b", re.IGNORECASE),
-)
-_OPPORTUNITY_ATTACK_EVIDENCE_RE = (
-    re.compile(r"\bopportunity attacks?\b", re.IGNORECASE),
-    re.compile(r"\bleaves your reach\b", re.IGNORECASE),
-    re.compile(r"\breaction\b", re.IGNORECASE),
-    re.compile(r"\bcan\s+see\b", re.IGNORECASE),
-    re.compile(r"\bdisengage(?:\s+action)?\b", re.IGNORECASE),
-)
-_SHOVE_PRONE_OPPORTUNITY_SEARCHES = (
-    "Shove push 5 feet Prone condition",
-    "Prone condition restricted movement crawl half Speed Disadvantage",
-    "Opportunity Attack leaves reach Reaction Disengage can see",
-)
-_SHOVE_PRONE_OPPORTUNITY_CANONICAL_ANSWER = (
-    "Shove lets you choose either to push the target 5 feet away or cause it to be "
-    "Prone. Choosing Prone does not move the target or change its reach. A Prone "
-    "creature's movement is restricted to crawling or spending half its Speed to "
-    "stand, and its attack rolls have Disadvantage. If you move out of the target's "
-    "reach while it can see you, it can use its Reaction to make an Opportunity "
-    "Attack; Disengage avoids that Opportunity Attack. Prone does not remove the "
-    "Reaction, but the target's Opportunity Attack attack roll is made with "
-    "Disadvantage."
-)
 
 
 def _typed_subjects(question: str) -> tuple[tuple[str, ...], ...]:
@@ -718,126 +662,6 @@ def _named_subject_supported(question: str, evidence: Sequence[ReadEvidence]) ->
         return True
     required = max(2, (len(anchors) + 1) // 2)
     return sum(anchor in corpus for anchor in anchors) >= required
-
-
-def _shove_prone_opportunity_question(question: str) -> bool:
-    normalized = question.casefold()
-    return all(
-        term.search(normalized) is not None
-        for term in (
-            _SHOVE_TERM_RE,
-            _PRONE_TERM_RE,
-            _OPPORTUNITY_ATTACK_TERM_RE,
-        )
-    )
-
-
-def _shove_prone_opportunity_search(question: str, phase: int) -> str | None:
-    """Return the bounded search for one compound interaction rule."""
-
-    if not _shove_prone_opportunity_question(question) or phase % 2:
-        return None
-    search_index = phase // 2
-    if search_index >= len(_SHOVE_PRONE_OPPORTUNITY_SEARCHES):
-        return None
-    return _SHOVE_PRONE_OPPORTUNITY_SEARCHES[search_index]
-
-
-def _shove_prone_opportunity_read_target(
-    output: dict[str, object], phase: int
-) -> dict[str, object] | None:
-    """Select the relevant hit from the current bounded compound search."""
-
-    if phase % 2:
-        return None
-    raw_hits = output.get("hits")
-    if not isinstance(raw_hits, list):
-        return None
-    search_index = phase // 2
-    if search_index >= len(_SHOVE_PRONE_OPPORTUNITY_SEARCHES):
-        return None
-    candidates: list[dict[str, object]] = []
-    for raw_hit in raw_hits:
-        if not isinstance(raw_hit, dict):
-            continue
-        document_id = raw_hit.get("document_id")
-        if not isinstance(document_id, str):
-            continue
-        try:
-            uuid.UUID(document_id)
-        except ValueError:
-            continue
-        target: dict[str, object] = {"document_id": document_id}
-        passage_id = raw_hit.get("passage_id")
-        if isinstance(passage_id, str) and passage_id.strip():
-            target["passage_id"] = passage_id
-        candidates.append(target)
-    if not candidates:
-        return None
-
-    def relevant(target: dict[str, object]) -> bool:
-        for raw_hit in raw_hits:
-            if (
-                not isinstance(raw_hit, dict)
-                or raw_hit.get("document_id") != target["document_id"]
-            ):
-                continue
-            excerpt = raw_hit.get("excerpt")
-            if not isinstance(excerpt, str):
-                return False
-            text = " ".join(excerpt.split()).casefold()
-            if search_index == 0:
-                return _SHOVE_PUSH_RE.search(text) is not None or (
-                    _SHOVE_PRONE_ALTERNATIVE_RE.search(text) is not None
-                )
-            if search_index == 1:
-                return all(
-                    pattern.search(text) is not None for pattern in _PRONE_EFFECT_RE
-                )
-            return all(
-                pattern.search(text) is not None
-                for pattern in _OPPORTUNITY_ATTACK_EVIDENCE_RE
-            )
-        return False
-
-    return next((target for target in candidates if relevant(target)), candidates[0])
-
-
-def _normalized_public_text(item: ReadEvidence) -> str:
-    dehyphenated = re.sub(r"(?<=\w)-\s*\n\s*(?=\w)", "", item.public_text)
-    return " ".join(dehyphenated.split()).casefold()
-
-
-def _shove_prone_opportunity_supported(
-    question: str, _answer: str, evidence: Sequence[ReadEvidence]
-) -> bool:
-    """Validate the evidence needed for the canonical interaction answer.
-
-    The answer text is intentionally ignored: matching questions are rendered from
-    the fixed synthesis below after the cited reads pass this evidence check.
-    Non-matching questions remain model-directed.
-    """
-
-    if not _shove_prone_opportunity_question(question):
-        return True
-    evidence_texts = tuple(_normalized_public_text(item) for item in evidence)
-    has_shove_outcomes = any(
-        _SHOVE_PUSH_RE.search(text) is not None
-        and _SHOVE_PRONE_ALTERNATIVE_RE.search(text) is not None
-        for text in evidence_texts
-    )
-    has_prone_effects = any(
-        all(pattern.search(text) is not None for pattern in _PRONE_EFFECT_RE)
-        for text in evidence_texts
-    )
-    has_opportunity_attack_rules = any(
-        all(
-            pattern.search(text) is not None
-            for pattern in _OPPORTUNITY_ATTACK_EVIDENCE_RE
-        )
-        for text in evidence_texts
-    )
-    return has_shove_outcomes and has_prone_effects and has_opportunity_attack_rules
 
 
 def _setting_overview_supported(
@@ -1083,11 +907,7 @@ class AgentHarness:
         seen_call_ids: set[str] = set()
         repeated_search = False
         searches: set[str] = set()
-        compound_question = _shove_prone_opportunity_question(question)
         research_rounds = self._research_rounds
-        if compound_question and research_rounds == 2:
-            research_rounds = 3
-        bounded_search_targets: dict[int, dict[str, object]] = {}
         phase = 0
         final_attempts = 0
         while True:
@@ -1115,14 +935,7 @@ class AgentHarness:
                         if setting_overview
                         else None
                     )
-                    compound_search = _shove_prone_opportunity_search(question, phase)
-                    if compound_search is not None:
-                        step = (
-                            "Search only for the next required rule source using "
-                            f"exactly this query: {compound_search!r}. This is focused "
-                            "compound research; do not combine it with another rule."
-                        )
-                    elif setting_search is not None:
+                    if setting_search is not None:
                         step = (
                             "Search for the public setting overview using exactly this "
                             f"query: {setting_search!r}. Do not substitute a faction, "
@@ -1153,28 +966,6 @@ class AgentHarness:
                         step = (
                             "Search for evidence that answers the current question. "
                             "Preserve the subject and requested quantity."
-                        )
-                elif compound_question:
-                    compound_index = (phase - 1) // 2
-                    compound_topics = (
-                        "the Shove push-or-Prone alternatives",
-                        "the complete Prone condition, including movement and attack "
-                        "roll effects",
-                        "Opportunity Attacks when leaving reach, including the "
-                        "Reaction, visibility, and Disengage exception",
-                    )
-                    if compound_index < len(compound_topics):
-                        step = (
-                            "Read the search hit whose excerpt contains "
-                            f"{compound_topics[compound_index]}. Do not read a "
-                            "title-only or adjacent rule hit; this read must supply "
-                            "evidence for the current focused interaction."
-                        )
-                    else:
-                        step = (
-                            "Use this additional verification round to read the most "
-                            "relevant current compound-rule hit, or finish if the "
-                            "three required rule sources are already sufficient."
                         )
                 elif setting_overview:
                     step = (
@@ -1285,16 +1076,6 @@ class AgentHarness:
                     raise model_contract_error(
                         "model violated the research round sequence"
                     )
-                if (
-                    bounded
-                    and compound_question
-                    and phase % 2 == 1
-                    and phase < 2 * len(_SHOVE_PRONE_OPPORTUNITY_SEARCHES)
-                    and (phase - 1) not in bounded_search_targets
-                ):
-                    return traced_answer(
-                        "unsupported", _UNSUPPORTED_ANSWER, (), "unsupported"
-                    )
                 try:
                     arguments = [_tool_arguments(call) for call in turn.tool_calls]
                 except ValueError as error:
@@ -1309,31 +1090,12 @@ class AgentHarness:
                         if setting_overview
                         else None
                     )
-                    compound_search = _shove_prone_opportunity_search(question, phase)
-                    if compound_search is not None:
-                        arguments[0] = {"query": compound_search}
-                        serialized_arguments[0] = json.dumps(
-                            arguments[0], separators=(",", ":"), sort_keys=True
-                        )
-                        assistant_content = ""
-                    elif setting_search is not None:
+                    if setting_search is not None:
                         arguments[0] = {"query": setting_search}
                         serialized_arguments[0] = json.dumps(
                             arguments[0], separators=(",", ":"), sort_keys=True
                         )
                         assistant_content = ""
-                    elif (
-                        compound_question
-                        and phase % 2 == 1
-                        and phase < 2 * len(_SHOVE_PRONE_OPPORTUNITY_SEARCHES)
-                    ):
-                        target = bounded_search_targets.get(phase - 1)
-                        if target is not None:
-                            arguments[0] = target
-                            serialized_arguments[0] = json.dumps(
-                                target, separators=(",", ":"), sort_keys=True
-                            )
-                            assistant_content = ""
                 call_ids = [call.call_id for call in turn.tool_calls]
                 if (
                     not all(call_ids)
@@ -1410,14 +1172,6 @@ class AgentHarness:
                                 output = {**output, "supersedes_previous_read": True}
                                 evidence.pop(read_id, None)
                             pending[read_id] = read
-                    elif (
-                        bounded
-                        and compound_question
-                        and call.name == "search_documents"
-                    ):
-                        target = _shove_prone_opportunity_read_target(output, phase)
-                        if target is not None:
-                            bounded_search_targets[phase] = target
                     logger.info(
                         "qa_archive_tool job_id=%s tool=%s document_id=%s "
                         "passage_id=%s content_version=%s unavailable=%s",
@@ -1502,18 +1256,6 @@ class AgentHarness:
                     raise ValueError(
                         "answer must cite read evidence for both the named spell and "
                         "the class spell-slot progression"
-                    )
-                if (
-                    answer.status == "answered"
-                    and not _shove_prone_opportunity_supported(
-                        question, answer.text, cited_evidence
-                    )
-                ):
-                    raise ValueError(
-                        "Shove/Prone/Opportunity Attack answers must cite read "
-                        "evidence for the Shove alternatives, full Prone condition, "
-                        "and Opportunity Attack reach, visibility, Reaction, and "
-                        "Disengage rules"
                     )
                 derived_level = _derived_class_spell_level(
                     question,
@@ -1635,8 +1377,6 @@ class AgentHarness:
                     ]
                 )
                 continue
-            if answer.status == "answered" and compound_question:
-                answer = replace(answer, text=_SHOVE_PRONE_OPPORTUNITY_CANONICAL_ANSWER)
             trace.select_evidence(answer.sources)
             logger.info(
                 "qa_answer_complete job_id=%s status=%s source_count=%d "

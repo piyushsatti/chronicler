@@ -9,6 +9,20 @@ const admin = { roles: ['admin'], liveDm: false };
 const member = { roles: [], liveDm: false };
 
 describe('canCreateRecord', () => {
+  it('guest can start a summary', () => {
+    expect(canCreateRecord('summary', { roles: ['guest'], liveDm: false })).toBe(true);
+    expect(createNeedsLiveDm('summary', ['guest', 'dm'])).toBe(false);
+  });
+
+  it.each([
+    ['guest', guest, false],
+    ['player', player, false],
+    ['live DM', liveDm, false],
+    ['admin', admin, true],
+  ])('hall-of-fame is for admins only: %s → %s', (_name, actor, allowed) => {
+    expect(canCreateRecord('hall-of-fame', actor)).toBe(allowed);
+  });
+
   it.each([
     ['guest', guest, false],
     ['member without a role', member, false],

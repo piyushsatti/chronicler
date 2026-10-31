@@ -18,6 +18,7 @@ import {
   codexDirectoryWireSchema,
   codexReferenceWireSchema,
 } from './codex.wire.schema.js';
+import { cardExcerpt } from '../../../utils/markdownText.js';
 
 export type CodexEntryView = {
   id: string;
@@ -108,7 +109,9 @@ export function parseCodexDirectory(
         slug: item.slug,
         title: item.title,
         category: item.category ?? null,
-        excerpt: item.effectiveBody?.replace(/\s+/g, ' ').trim().slice(0, 160) || null,
+        // Short enough for the three-line card clamp; first prose, no tables.
+        // The shared card rule: an authored summary first, else the body's prose.
+        excerpt: cardExcerpt(item.effectiveBody, 120),
       })),
       total: parsed.data.total,
       categories: categories.data,

@@ -1,0 +1,397 @@
+name: deploy-release
+
+# Reusable release pipeline behind deploy-staging.yml and deploy-production.yml
+# (D33: releases run only through GitHub Actions; D51: one pipeline, two
+# environments). Callers own what differs: trigger, tag rule, runner, constants
+# and which optional Compose pieces run. This file owns the steps, so staging
+# and production cannot drift apart.
+#
+# Jobs: admit (tag rule; production also needs the tag on main), backend
+# (Docker Compose on the environment's self-hosted runner), frontend (Vercel).
+#
+# GitHub behaviour this relies on (reuse-workflows docs):
+#   https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows
+#   https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations
+# - A job that calls a reusable workflow cannot set `environment`; the jobs
+#   below do. Environment secrets reach them only if the caller passes secrets,
+#   so callers use `secrets: inherit`. A secret the caller did not pass
+#   resolves to an empty string without an error: the missing-value checks
+#   below are the gate.
+# - The caller's workflow-level `env` is not propagated, so constants arrive as
+#   inputs. `runs-on` and `environment` may read `inputs`.
+# - Concurrency is set by the callers (one group per environment). A group
+#   shared by caller and called workflow cancels the run, so none is set here.
+#
+# Required in the GitHub environment named by `environment`:
+#   Secrets, both environments: JWT_SECRET, INGEST_SECRET, DISCORD_CLIENT_ID,
+#            DISCORD_CLIENT_SECRET, DISCORD_BOT_TOKEN (API worker REST),
+#            BOT_DISCORD_TOKEN (gateway bot), BOT_CLIENT_ID, GUILD_ID,
+#            DISCORD_ANNOUNCE_CHANNEL_ID (secret or variable),
+#            VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+#   local_database: POSTGRES_PASSWORD (URL-safe); optional variables
+#            POSTGRES_USER, POSTGRES_DB (default `chronicler`)
+#   hosted database (local_database false): DATABASE_URL, the Supabase session
+#            pooler URI with sslmode=require (pool_max_conns optional)
+#   tunnel: CLOUDFLARE_TUNNEL_TOKEN
+#   Optional secret: PLATFORM_OWNER_DISCORD_ID (set only after the owner has
+#            signed in once; see deploy/docs/deploy-runbook.md)
+# Missing required values fail the job before anything is deployed.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub environment holding the secrets (staging or production)
+        type: string
+        required: true
+      runner_labels:
+        description: JSON array of runner labels for the backend job
+        type: string
+        required: true
+      tag_pattern:
+        description: Extended regular expression the release tag must match
+        type: string
+        required: true
+      tag_format:
+        description: Human-readable tag format for the rejection message
+        type: string
+        required: true
+      require_main:
+        description: Fail unless the tagged commit is reachable from origin/main
+        type: boolean
+        default: false
+      project:
+        description: Compose project name; also names the env-file and backup directories
+        type: string
+        required: true
+      api_port:
+        description: Host loopback port the API publishes
+        type: string
+        required: true
+      api_domain:
+        description: Public API hostname the health check and the Vercel build must use
+        type: string
+        required: true
+      other_api_domain:
+        description: The other environment's API hostname; the Vercel build must not contain it
+        type: string
+        required: true
+      cors_origins:
+        type: string
+        required: true
+      discord_redirect_uri:
+        type: string
+        required: true
+      local_database:
+        description: Run the Compose-managed PostgreSQL (profile local-db); otherwise DATABASE_URL is used
+        type: boolean
+        required: true
+      tunnel:
+        description: Run the Cloudflare Tunnel connector container (profile tunnel)
+        type: boolean
+        required: true
+      vercel_config:
+        description: Vercel config file selected with --local-config
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_CLI_VERSION: '65.2.0'
+
+jobs:
+  admit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate tag
+        env:
+          TAG: ${{ github.ref_name }}
+          TAG_PATTERN: ${{ inputs.tag_pattern }}
+          TAG_FORMAT: ${{ inputs.tag_format }}
+        run: |
+          if [[ ! "$TAG" =~ $TAG_PATTERN ]]; then
+            echo "Tag does not match $TAG_FORMAT" >&2
+            exit 1
+          fi
+      # Runs before any job that names the environment, so a tag that is not on
+      # main is rejected before a required reviewer is asked to approve it.
+      - if: ${{ inputs.require_main }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require tagged commit on main
+        if: ${{ inputs.require_main }}
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if ! git rev-parse --verify --quiet refs/remotes/origin/main >/dev/null; then
+            echo "origin/main was not fetched" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$SHA" refs/remotes/origin/main; then
+            echo "Tagged commit $SHA is not reachable from origin/main" >&2
+            exit 1
+          fi
+
+  backend:
+    needs: admit
+    runs-on: ${{ fromJSON(inputs.runner_labels) }}
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    env:
+      PROJECT: ${{ inputs.project }}
+      API_PORT: ${{ inputs.api_port }}
+      API_DOMAIN: ${{ inputs.api_domain }}
+      CORS_ORIGINS: ${{ inputs.cors_origins }}
+      # Discord returns the browser to the web callback page, which POSTs the code
+      # to the API's /auth/discord/callback.
+      DISCORD_REDIRECT_URI: ${{ inputs.discord_redirect_uri }}
+      LOCAL_DATABASE: ${{ inputs.local_database }}
+      TUNNEL: ${{ inputs.tunnel }}
+      # Compose prefers the shell over the env file, so a DATABASE_URL in the
+      # runner's environment would win. Pin it: empty selects the local-db URL.
+      DATABASE_URL: ${{ !inputs.local_database && secrets.DATABASE_URL || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Write environment file
+        env:
+          TAG: ${{ github.ref_name }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          POSTGRES_USER: ${{ vars.POSTGRES_USER || 'chronicler' }}
+          POSTGRES_DB: ${{ vars.POSTGRES_DB || 'chronicler' }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          DISCORD_CLIENT_SECRET: ${{ secrets.DISCORD_CLIENT_SECRET }}
+          PLATFORM_OWNER_DISCORD_ID: ${{ secrets.PLATFORM_OWNER_DISCORD_ID }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          BOT_DISCORD_TOKEN: ${{ secrets.BOT_DISCORD_TOKEN }}
+          BOT_CLIENT_ID: ${{ secrets.BOT_CLIENT_ID }}
+          GUILD_ID: ${{ secrets.GUILD_ID }}
+          DISCORD_ANNOUNCE_CHANNEL_ID: ${{ secrets.DISCORD_ANNOUNCE_CHANNEL_ID || vars.DISCORD_ANNOUNCE_CHANNEL_ID }}
+        run: |
+          set -euo pipefail
+          umask 077
+          dir="$HOME/.config/$PROJECT"
+          mkdir -p "$dir"
+          file="$dir/$ENVIRONMENT.env"
+          tmp="$(mktemp "$dir/.$ENVIRONMENT.env.XXXXXX")"
+          trap 'rm -f "$tmp"' EXIT
+          missing=()
+          # Values are written single-quoted so Compose does not interpolate them.
+          write() {
+            local name="$1" value="${!1-}"
+            if [[ -z "$value" ]]; then missing+=("$name"); return; fi
+            if [[ "$value" == *"'"* || "$value" == *$'\n'* ]]; then
+              echo "$name contains an unsupported character (quote or newline)" >&2
+              exit 1
+            fi
+            printf "%s='%s'\n" "$name" "$value" >> "$tmp"
+          }
+          # Compose cannot guard mode-specific variables itself (it interpolates
+          # services in inactive profiles too), so each mode's list is checked here.
+          names=()
+          profiles=()
+          services=()
+          if [[ "$LOCAL_DATABASE" == true ]]; then
+            names+=(POSTGRES_USER POSTGRES_DB POSTGRES_PASSWORD)
+            profiles+=(local-db)
+            services+=(chronicler-postgres)
+          else
+            names+=(DATABASE_URL)
+          fi
+          names+=(JWT_SECRET INGEST_SECRET \
+            DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET DISCORD_BOT_TOKEN \
+            BOT_DISCORD_TOKEN BOT_CLIENT_ID GUILD_ID DISCORD_ANNOUNCE_CHANNEL_ID \
+            CORS_ORIGINS DISCORD_REDIRECT_URI API_PORT)
+          services+=(chronicler-api chronicler-discord-bot)
+          if [[ "$TUNNEL" == true ]]; then
+            names+=(CLOUDFLARE_TUNNEL_TOKEN)
+            profiles+=(tunnel)
+            services+=(chronicler-cloudflared)
+          fi
+          for name in "${names[@]}"; do
+            write "$name"
+          done
+          # Optional: the API refuses to start when the configured owner has no
+          # member record, so leave it unset until the owner has signed in once.
+          if [[ -n "${PLATFORM_OWNER_DISCORD_ID:-}" ]]; then
+            write PLATFORM_OWNER_DISCORD_ID
+          fi
+          if (( ${#missing[@]} )); then
+            rm -f "$tmp"
+            echo "Missing required $ENVIRONMENT values: ${missing[*]}" >&2
+            exit 1
+          fi
+          if [[ "$LOCAL_DATABASE" != true && ! "$DATABASE_URL" =~ ^postgres(ql)?:// ]]; then
+            echo "DATABASE_URL must be a postgres:// or postgresql:// URL" >&2
+            exit 1
+          fi
+          mv "$tmp" "$file"
+          trap - EXIT
+          profiles_csv="$(IFS=,; echo "${profiles[*]}")"
+          {
+            echo "ENVFILE=$file"
+            echo "COMPOSE_ENV_FILES=$file"
+            echo "COMPOSE_PROJECT_NAME=$PROJECT"
+            echo "COMPOSE_PROFILES=$profiles_csv"
+            echo "SERVICES=${services[*]}"
+            echo "API_IMAGE=chronicler-api:$TAG"
+            echo "DISCORD_IMAGE=chronicler-discord:$TAG"
+          } >> "$GITHUB_ENV"
+      - name: Build images
+        run: |
+          set -euo pipefail
+          docker compose -f deploy/compose.production.yaml build chronicler-api chronicler-discord-bot
+      - name: Record rollback target
+        run: |
+          set -euo pipefail
+          compose=(docker compose -f deploy/compose.production.yaml)
+          # Image IDs, not tags: they stay valid even if a tag is later moved.
+          image_of() {
+            local id
+            id="$("${compose[@]}" ps -q "$1" 2>/dev/null | head -n1)"
+            if [[ -n "$id" ]]; then docker inspect --format '{{.Image}}' "$id"; fi
+          }
+          prev_api="$(image_of chronicler-api)"
+          prev_bot="$(image_of chronicler-discord-bot)"
+          echo "PREV_API_IMAGE=$prev_api" >> "$GITHUB_ENV"
+          echo "PREV_DISCORD_IMAGE=$prev_bot" >> "$GITHUB_ENV"
+          echo "Rollback target: api=${prev_api:-none} discord=${prev_bot:-none}"
+      - name: Back up database
+        if: ${{ inputs.local_database }}
+        run: |
+          set -euo pipefail
+          # Skip only on a true first deploy: no data volume exists yet.
+          if ! docker volume inspect "${PROJECT}_chronicler_pg_data" >/dev/null 2>&1; then
+            echo "No ${PROJECT}_chronicler_pg_data volume (first deploy); skipping backup."
+            exit 0
+          fi
+          docker compose -f deploy/compose.production.yaml up -d --wait --wait-timeout 180 chronicler-postgres
+          scripts/backup-db -p "$PROJECT" "$HOME/backups/$PROJECT"
+      # D10/D33: a restore point before migrate. No first-deploy skip: dumping an
+      # empty database is valid, and a missing restore point must stop the release.
+      - name: Back up hosted database
+        if: ${{ !inputs.local_database }}
+        run: |
+          set -euo pipefail
+          scripts/backup-db -u "$HOME/backups/$PROJECT"
+      - name: Migrate
+        run: |
+          set -euo pipefail
+          docker compose -f deploy/compose.production.yaml run --rm chronicler-api migrate
+      - name: Start services
+        run: |
+          set -euo pipefail
+          echo "DEPLOY_STARTED=1" >> "$GITHUB_ENV"
+          read -r -a services <<<"$SERVICES"
+          docker compose -f deploy/compose.production.yaml up -d --wait --wait-timeout 180 --no-build \
+            "${services[@]}"
+      - name: Check public health
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 "https://$API_DOMAIN/health" || true)"
+            if [[ "$code" == "204" ]]; then
+              echo "health ok (attempt $attempt)"
+              exit 0
+            fi
+            echo "attempt $attempt: status ${code:-none}"
+            sleep 5
+          done
+          echo "health check failed" >&2
+          exit 1
+      # Only the API and bot roll back: the tunnel connector is pinned in the
+      # Compose file, and the database is never restored here.
+      - name: Roll back to previous images
+        if: ${{ (failure() || cancelled()) && env.DEPLOY_STARTED == '1' }}
+        run: |
+          set -euo pipefail
+          services=()
+          overrides=()
+          if [[ -n "${PREV_API_IMAGE:-}" ]]; then
+            services+=(chronicler-api)
+            overrides+=("API_IMAGE=$PREV_API_IMAGE")
+          fi
+          if [[ -n "${PREV_DISCORD_IMAGE:-}" ]]; then
+            services+=(chronicler-discord-bot)
+            overrides+=("DISCORD_IMAGE=$PREV_DISCORD_IMAGE")
+          fi
+          if (( ${#services[@]} == 0 )); then
+            echo "No previous images recorded (first deploy); nothing to roll back to." >&2
+            exit 1
+          fi
+          echo "Rolling back: ${services[*]} (database is not restored)"
+          env "${overrides[@]}" docker compose -f deploy/compose.production.yaml \
+            up -d --wait --wait-timeout 180 --no-build "${services[@]}"
+
+  frontend:
+    needs: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ inputs.environment }}
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+      API_DOMAIN: ${{ inputs.api_domain }}
+      OTHER_API_DOMAIN: ${{ inputs.other_api_domain }}
+      VERCEL_CONFIG: ${{ inputs.vercel_config }}
+    steps:
+      - name: Validate credentials
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [[ -z "${!name}" ]]; then echo "Missing $name" >&2; exit 1; fi
+          done
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Install Vercel CLI
+        run: npm install --global "vercel@$VERCEL_CLI_VERSION"
+      # The Vercel project's Root Directory must be apps/web. The CLI runs from
+      # the repository root; --local-config selects the environment's routing file.
+      - name: Pull project settings
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel pull --yes --environment=production
+      - name: Build
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel build --prod --local-config "$VERCEL_CONFIG"
+      - name: Verify API routing in build output
+        run: |
+          set -euo pipefail
+          if ! grep -rqF "$API_DOMAIN" .vercel/output/config.json; then
+            echo "$ENVIRONMENT API origin missing from build output" >&2
+            exit 1
+          fi
+          if grep -rqF "$OTHER_API_DOMAIN" .vercel/output/config.json; then
+            echo "Other environment's API origin found in $ENVIRONMENT build output" >&2
+            exit 1
+          fi
+      - name: Deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel deploy --prebuilt --prod --local-config "$VERCEL_CONFIG"

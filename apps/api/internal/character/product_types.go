@@ -482,7 +482,6 @@ type AdjustPcxpState struct {
 	LiveBindings []LiveParticipationBinding
 	Assessment   *member.VerificationView
 	CatalogIDs   []string
-	LedgerSum    int32
 }
 
 type ClaimQuestRewardsState struct {
@@ -496,7 +495,6 @@ type ClaimQuestRewardsState struct {
 	Assessment   *member.VerificationView
 	CatalogIDs   []string
 	Entitlements []QuestRewardEntitlementView
-	LedgerSum    int32
 }
 
 type CreateBackstoryState struct {

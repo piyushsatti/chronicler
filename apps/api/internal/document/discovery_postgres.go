@@ -124,7 +124,7 @@ func (p *ProductPostgres) SearchDiscovery(ctx context.Context, actor auth.Author
 		if err != nil {
 			return DiscoveryPage{}, err
 		}
-		view, err = projectDocumentView(ctx, scope, view, row.Body)
+		view, err = ProjectDocumentView(ctx, scope, view, row.Body)
 		if err != nil {
 			return DiscoveryPage{}, err
 		}
@@ -198,7 +198,7 @@ func mapRecentDiscovery(ctx context.Context, scope ViewerScope, rows []dbgen.Doc
 		if adminOverride, _ := row.AdminOverride.(bool); adminOverride {
 			AuditSQLOverride(ctx, scope, true, "discovery", "recent")
 		}
-		view, err = projectDocumentView(ctx, scope, view, row.Body)
+		view, err = ProjectDocumentView(ctx, scope, view, row.Body)
 		if err != nil {
 			return nil, err
 		}

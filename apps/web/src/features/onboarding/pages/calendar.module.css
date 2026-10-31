@@ -111,6 +111,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* In-world time reads apart from real dates: muted italics, never the real-date styling. */
+.gameTime {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.dayGame {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;

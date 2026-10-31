@@ -23,6 +23,19 @@ const error = {
 const emptyOptions = {
   regions: { status: 'empty' as const },
   genres: { status: 'empty' as const },
+  series: { status: 'empty' as const },
+  voiceChannels: { status: 'empty' as const },
+  guideGroups: [],
+  places: {
+    maps: [],
+    atlasCode: '',
+    setAtlasCode: () => {},
+    nodes: undefined,
+    canEdit: false,
+    loading: false,
+    error: null,
+    onRetry: () => {},
+  },
 };
 function props(): EditorShellProps {
   return {
@@ -123,6 +136,45 @@ describe('editor props-only views', () => {
     ).not.toBeInTheDocument();
     expect(screen.getByLabelText('Session')).toHaveAttribute('type', 'datetime-local');
   });
+
+  it.each([
+    ['edit', ['standard', 'one_shot']],
+    ['new', ['one_shot']],
+  ] as const)(
+    'in %s mode, picking another kind beside a lone Standard gives %j',
+    async (editorMode, expected) => {
+      const seen: unknown[] = [];
+      function Quest(): React.JSX.Element {
+        const [meta, setMeta] = useState<EditorShellProps['meta']>({
+          title: 'Saved quest',
+          kinds: ['standard'],
+        });
+        seen.push(meta.kinds);
+        return (
+          <EditorShell
+            {...props()}
+            typeKey="quest"
+            editorMode={editorMode}
+            saveLabel="Save quest"
+            meta={meta}
+            setMeta={setMeta}
+          />
+        );
+      }
+      render(
+        <MemoryRouter>
+          <Quest />
+        </MemoryRouter>,
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'One-shot' }));
+      // A saved quest's Standard was chosen, so only a new quest replaces it (review of L3).
+      expect(seen.at(-1)).toEqual(expected);
+      expect(screen.getByRole('button', { name: 'Standard' })).toHaveAttribute(
+        'aria-pressed',
+        editorMode === 'edit' ? 'true' : 'false',
+      );
+    },
+  );
 
   it('preserves known precision through display changes and requires explicit overlap resolution', () => {
     const changed = vi.fn();
@@ -311,26 +363,44 @@ describe('editor props-only views', () => {
       typeKey: 'guide',
       timeZone: 'UTC',
       mode: 'edit',
+      editorMode: 'edit',
       recordId: 'doc-id',
       meta: { title: 'Guide title' },
       body: 'Guide body',
       setMeta: vi.fn(),
       setBody: vi.fn(),
       isDirty: true,
+      onDiscardDraft: undefined,
       onSaveDraft: vi.fn(),
       onPublish: vi.fn(),
       onPreview: vi.fn(),
       preview: { status: 'idle' },
+      previewViewer: { kind: 'player' },
+      onPreviewViewer: vi.fn(),
+      previewSummary: null,
+      bodyAudit: null,
+      typoCheck: null,
+      onTypoClose: vi.fn(),
+      onTypoPublish: vi.fn(),
+      checkingMarkers: false,
       options: emptyOptions,
       publishDisabled: false,
       saveDisabled: false,
       cancelTo: '/rules',
       statusMessage: null,
       showPropertyErrors: false,
+      errorFocusRequest: 0,
+      bodyError: null,
       slugLocked: true,
       entityIndex: [],
       entityIndexError: null,
       mutationError: null,
+      mutationNeedsReload: false,
+      confirming: null,
+      cancelConfirm: vi.fn(),
+      acceptConfirm: vi.fn(),
+      restoredDraft: null,
+      seriesNotice: null,
       saveLabel: 'Save draft',
       publishLabel: 'Publish',
       canEditBody: true,

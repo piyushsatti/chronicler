@@ -11,34 +11,6 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 )
 
-const characterProductListSummaries = `-- name: CharacterProductListSummaries :many
-SELECT document.public_id AS id, document.kind, document.slug, document.title,
-       document.category, document.status, document.visibility, document.policy,
-       document.frontmatter_yaml, author.public_id AS author_id, document.published_at,
-       document.deleted_at, deleted_by.public_id AS deleted_by, document.updated_at,
-       document.version, document.body
-FROM document_links link
-JOIN documents document ON document.id = link.source_id
-JOIN characters character ON character.id = link.character_target_id
-JOIN members author ON author.id = document.author_id
-LEFT JOIN members deleted_by ON deleted_by.id = document.deleted_by
-WHERE character.public_id = $1
-  AND link.relation = 'summarizes'
-  AND document.kind = 'summary'
-  AND document.deleted_at IS NULL
-ORDER BY link.summary_append_order ASC, document.public_id ASC
-LIMIT $2 OFFSET $3`
-
-const characterProductCountSummaries = `-- name: CharacterProductCountSummaries :one
-SELECT count(*)::int AS total
-FROM document_links link
-JOIN documents document ON document.id = link.source_id
-JOIN characters character ON character.id = link.character_target_id
-WHERE character.public_id = $1
-  AND link.relation = 'summarizes'
-  AND document.kind = 'summary'
-  AND document.deleted_at IS NULL`
-
 func (p *ProductPostgres) ReadCharacterLogs(ctx context.Context, _ auth.Authority, spec CharacterLogsSpec) (CharacterLogListResult, error) {
 	characterID, err := characterProductID(spec.CharacterId)
 	if err != nil {
@@ -224,51 +196,47 @@ func (p *ProductPostgres) ReadParticipationsByCharacter(ctx context.Context, _ a
 	return out, nil
 }
 
-func (p *ProductPostgres) ReadCharacterSummaries(ctx context.Context, _ auth.Authority, spec CharacterSummariesSpec) (document.DocumentListResult, error) {
+func (p *ProductPostgres) ReadCharacterSummaries(ctx context.Context, actor auth.Authority, spec CharacterSummariesSpec) (document.DocumentListResult, error) {
 	characterID, err := characterProductID(spec.CharacterId)
 	if err != nil {
 		return document.DocumentListResult{}, err
 	}
-	rows, err := p.DB.Query(ctx, characterProductListSummaries, characterID, spec.Limit, spec.Offset)
+	scope, err := document.ViewerScopeWithReaders(ctx, p.queries(), actor)
 	if err != nil {
 		return document.DocumentListResult{}, err
 	}
-	defer rows.Close()
-	items := make([]document.DocumentView, 0)
-	for rows.Next() {
-		var id, authorID pgtype.UUID
-		var kind, slug, title, status, visibility, body string
-		var category pgtype.Text
-		var policy []byte
-		var frontmatter pgtype.Text
-		var publishedAt, deletedAt pgtype.Timestamptz
-		var deletedBy pgtype.UUID
-		var updatedAt pgtype.Timestamptz
-		var version int32
-		if err := rows.Scan(&id, &kind, &slug, &title, &category, &status, &visibility, &policy, &frontmatter, &authorID, &publishedAt, &deletedAt, &deletedBy, &updatedAt, &version, &body); err != nil {
-			return document.DocumentListResult{}, err
-		}
-		policyTokens := []string{}
-		if len(policy) > 0 {
-			_ = json.Unmarshal(policy, &policyTokens)
+	viewer := document.SQLScope(scope)
+	rows, err := p.queries().CharacterProductListSummaries(ctx, dbgen.CharacterProductListSummariesParams{
+		CharacterID: characterID, RowLimit: spec.Limit, RowOffset: spec.Offset,
+		ViewerID: viewer.ID, ViewerRoles: viewer.Roles, ViewerHandle: viewer.Handle,
+		ViewerAdmin: viewer.Admin, ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
+	})
+	if err != nil {
+		return document.DocumentListResult{}, err
+	}
+	total, err := p.queries().CharacterProductCountSummaries(ctx, dbgen.CharacterProductCountSummariesParams{
+		CharacterID: characterID, ViewerID: viewer.ID, ViewerRoles: viewer.Roles, ViewerHandle: viewer.Handle,
+		ViewerAdmin: viewer.Admin, ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
+	})
+	if err != nil {
+		return document.DocumentListResult{}, err
+	}
+	items := make([]document.DocumentView, 0, len(rows))
+	for _, row := range rows {
+		var policyTokens []string
+		if len(row.Policy) > 0 {
+			_ = json.Unmarshal(row.Policy, &policyTokens)
 		}
 		var fm json.RawMessage
-		if frontmatter.Valid {
-			fm = json.RawMessage(frontmatter.String)
+		if row.FrontmatterYaml.Valid {
+			fm = json.RawMessage(row.FrontmatterYaml.String)
 		}
 		items = append(items, document.DocumentView{
-			Id: db.UUIDString(id), Kind: kind, Slug: slug, Title: title, Category: characterTextPointer(category),
-			Status: status, Visibility: visibility, Policy: policyTokens, Frontmatter: fm, AuthorId: db.UUIDString(authorID),
-			PublishedAt: characterTimePointer(publishedAt), DeletedAt: characterTimePointer(deletedAt),
-			DeletedBy: characterUUIDPointer(deletedBy), UpdatedAt: updatedAt.Time, Version: version,
+			Id: db.UUIDString(row.ID), Kind: row.Kind, Slug: row.Slug, Title: row.Title, Category: characterTextPointer(row.Category),
+			Status: row.Status, Visibility: row.Visibility, Policy: policyTokens, Frontmatter: fm, AuthorId: db.UUIDString(row.AuthorID),
+			PublishedAt: characterTimePointer(row.PublishedAt), DeletedAt: characterTimePointer(row.DeletedAt),
+			DeletedBy: characterUUIDPointer(row.DeletedBy), UpdatedAt: row.UpdatedAt.Time, Version: row.Version,
 		})
-	}
-	if err := rows.Err(); err != nil {
-		return document.DocumentListResult{}, err
-	}
-	var total int32
-	if err := p.DB.QueryRow(ctx, characterProductCountSummaries, characterID).Scan(&total); err != nil {
-		return document.DocumentListResult{}, err
 	}
 	return document.DocumentListResult{Items: items, Total: total}, nil
 }

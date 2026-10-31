@@ -5,6 +5,7 @@ import { DMDashboardPage } from '../../../src/features/admin/pages/AdminSectionP
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
 import { signIn } from './authority-test-utils.js';
+import { seriesAuthority } from '../../seriesAuthority.js';
 import me from '../../fixtures/wire/me/good.json';
 
 const other = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -14,7 +15,10 @@ const empty = { dmStats: { sessionCount: 3 }, questArcs: { items: [], total: 0 }
 
 it('shows only real totals as stat tiles and an action in each empty subsection', async () => {
   signIn(['dm']);
-  server.use(graphql.query('DmDashboard', () => HttpResponse.json({ data: empty })));
+  server.use(
+    graphql.query('DmDashboard', () => HttpResponse.json({ data: empty })),
+    seriesAuthority(me.id),
+  );
   renderWithProviders(<DMDashboardPage />, { route: '/dm' });
   await screen.findByRole('heading', { name: 'Your quests' });
   const stats = screen.getByLabelText('Your DM stats');
@@ -23,11 +27,17 @@ it('shows only real totals as stat tiles and an action in each empty subsection'
   expect(stats).toHaveTextContent('DM tables0');
   expect(screen.getByRole('link', { name: 'Your page' })).toHaveAttribute('href', '/me');
   expect(screen.getByRole('complementary', { name: 'DM tools' })).toBeVisible();
-  for (const name of ['Upcoming quests', 'Past quests', 'Your series']) {
+  for (const name of ['Upcoming quests', 'Past quests']) {
     const section = screen.getByRole('region', { name });
     expect(section.querySelector('[data-component="EmptyState"]')).toBeTruthy();
     expect(within(section).getByRole('link')).toBeVisible();
   }
+  // An empty series list offers the create dialog, not a link to a page.
+  const series = screen.getByRole('region', { name: 'Your series' });
+  expect(series.querySelector('[data-component="EmptyState"]')).toBeTruthy();
+  expect(
+    await within(series).findByRole('button', { name: 'Create a series' }),
+  ).toBeVisible();
 });
 
 it('separates upcoming and past quests, omits missing stats and renders own series as cards', async () => {
@@ -56,4 +66,44 @@ it('gives players a direct apply link from the denied dashboard', async () => {
   await screen.findByRole('alert');
   expect(screen.getByRole('link', { name: 'Browse DMs and apply' })).toHaveAttribute('href', '/dms');
   expect(screen.getByRole('button', { name: 'Check access again' })).toBeVisible();
+});
+
+it('links Edit DM profile to the profile editor and explains a pending review', async () => {
+  signIn(['dm']);
+  server.use(
+    graphql.query('DmDashboard', () => HttpResponse.json({ data: empty })),
+    seriesAuthority(me.id, 'pending'),
+  );
+  renderWithProviders(<DMDashboardPage />, { route: '/dm' });
+  expect(await screen.findByRole('link', { name: 'Edit DM profile' })).toHaveAttribute(
+    'href',
+    '/dms/@ashwin?edit=profile',
+  );
+  const notice = await screen.findByRole('status', { name: 'DM profile approval' });
+  expect(notice).toHaveTextContent('Your DM profile is pending review.');
+  expect(notice).toHaveTextContent('you can’t post quests or start a series');
+  expect(within(notice).getByRole('link', { name: 'Open your DM profile' })).toHaveAttribute(
+    'href',
+    '/dms/@ashwin?edit=profile',
+  );
+  // An unapproved DM is not offered a series.
+  const series = screen.getByRole('region', { name: 'Your series' });
+  expect(within(series).queryByRole('button', { name: 'Create a series' })).toBeNull();
+});
+
+it('offers Create a series beside an existing list to an approved DM, with no approval notice', async () => {
+  signIn(['dm']);
+  server.use(
+    graphql.query('DmDashboard', () =>
+      HttpResponse.json({ data: { ...empty, questArcs: { total: 1, items: [ownArc] } } }),
+    ),
+    seriesAuthority(me.id, 'approved'),
+  );
+  renderWithProviders(<DMDashboardPage />, { route: '/dm' });
+  const series = await screen.findByRole('region', { name: 'Your series' });
+  expect(within(series).getByRole('link', { name: ownArc.name })).toBeVisible();
+  expect(
+    await within(series).findByRole('button', { name: 'Create a series' }),
+  ).toBeVisible();
+  expect(screen.queryByRole('status', { name: 'DM profile approval' })).toBeNull();
 });

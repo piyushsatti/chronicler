@@ -2,7 +2,6 @@ package quest
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
@@ -20,15 +19,8 @@ type ProductQueries struct {
 
 func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver) (*ProductQueries, error) {
 	for _, dep := range []any{reads.Quest, reads.Arc, reads.Batch, policy, clock, overrideReads} {
-		if dep == nil {
+		if product.MissingDependency(dep) {
 			return nil, apierr.New(apierr.Internal, "quest query dependencies required")
-		}
-		v := reflect.ValueOf(dep)
-		switch v.Kind() {
-		case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-			if v.IsNil() {
-				return nil, apierr.New(apierr.Internal, "quest query dependencies required")
-			}
 		}
 	}
 	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads}, nil
@@ -47,10 +39,6 @@ func admittedBatch[K any, V any](s ProductQueries, ctx context.Context, actor au
 	return out, nil
 }
 
-func (s ProductQueries) BatchQuests(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[QuestView], error) {
-	return admittedBatch(s, ctx, actor, "Query.quest", keys, s.Reads.Batch.ReadBatchQuests)
-}
-
 func (s ProductQueries) BatchParticipants(ctx context.Context, actor auth.Authority, keys []ParticipantsKey) ([]product.BatchResult[ParticipantList], error) {
 	return admittedBatch(s, ctx, actor, "Query.quest", keys, s.Reads.Batch.ReadBatchParticipants)
 }
@@ -62,10 +50,6 @@ func (s ProductQueries) BatchQuestHexes(ctx context.Context, actor auth.Authorit
 // BatchQuestPointcrawlLinks is the N5-aligned loader name for quest↔pointcrawl batch reads.
 func (s ProductQueries) BatchQuestPointcrawlLinks(ctx context.Context, actor auth.Authority, keys []QuestHexesKey) ([]product.BatchResult[HexList], error) {
 	return s.BatchQuestHexes(ctx, actor, keys)
-}
-
-func (s ProductQueries) BatchQuestRegions(ctx context.Context, actor auth.Authority, keys []QuestRegionsKey) ([]product.BatchResult[RegionIDList], error) {
-	return admittedBatch(s, ctx, actor, "Query.quest", keys, s.Reads.Batch.ReadBatchQuestRegions)
 }
 
 func (s ProductQueries) BatchArcs(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[QuestArcView], error) {

@@ -18,21 +18,30 @@
   margin-bottom: var(--sp-4);
 }
 
-.root [data-el='home.weekStrip'] > [data-el='week-grid.root'] {
-  overflow-x: auto;
-}
-
-.root [data-el='home.weekStrip'] > :global(.cols)[data-n='1'] {
+.schedGrid[data-n='1'] {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.root [data-el='home.weekStrip'] > :global(.cols)[data-n='3'] {
+.schedGrid[data-n='3'] {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* A lone trailing card keeps its column instead of centering (wireframe grid). */
+.root .schedGrid[data-n='3'] > :last-child:nth-child(3n + 1) {
+  grid-column: auto;
+}
+
+/* Column so the region/DM/seats row pins to the bottom and lines up across
+   the row of tiles. */
 .root [data-el='schedCard.root'] {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   max-width: 100%;
+}
+
+.root [data-el='schedCard.bottomRow'] {
+  margin-block-start: auto;
 }
 
 .root [data-el='schedCard.topRow']:global(.row),
@@ -165,12 +174,11 @@
   min-width: 0;
 }
 
-.cardItem > article {
+/* Stretch the card (article, link card, or button card) to the row height. */
+.cardItem > article,
+.cardItem > a,
+.cardItem > button {
   flex: 1;
-}
-
-.weekStripCols {
-  margin-top: var(--sp-4);
 }
 
 .dmRow {

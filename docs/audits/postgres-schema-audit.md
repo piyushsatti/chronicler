@@ -12,7 +12,7 @@ This audit answers:
 2. How the API reads and writes them today (legacy sqlc stack vs product `*_product.sql`).
 3. Where documentation, migrations, and runtime wiring disagree (multi-generation drift).
 
-**Evidence used:** squashed goose migration [0001_init.sql](../../apps/api/db/migrations/0001_init.sql) (**A1**; former 0002–0004 deltas folded in), [tables.md](../../apps/api/db/docs/tables.md), every file under `apps/api/db/queries/`, generated code in [dbgen/db.go](../../apps/api/internal/platform/dbgen/db.go), Go importers (`internal/*/postgres.go`, `product_postgres.go`, [wire.go](../../apps/api/internal/app/wire.go)), and [product_uow.go](../../apps/api/internal/app/product_uow.go).
+**Evidence used:** squashed goose migration [0001_init.sql](../../apps/api/db/migrations/0001_init.sql) (**A1**; former 0002–0004 deltas folded in), [tables.md](../../apps/api/db/docs/tables.md), every file under `apps/api/db/queries/`, generated code in [dbgen/db.go](../../apps/api/internal/platform/dbgen/db.go), Go importers (`internal/*/postgres.go`, `product_postgres.go`, [wire.go](../../apps/api/internal/app/wire.go)), and `apps/api/internal/app/product_uow.go`.
 
 **Not claimed:** That every sqlc query has integration coverage, or that QA seed load on a shared DB is safe without disposable Postgres.
 
@@ -89,7 +89,7 @@ Regions, maps, hex grid (`hexes`, `hex_edges`, `hex_entry_links`, `hex_changes`)
 | [spatial.sql](../../apps/api/db/queries/spatial.sql)             | `spatial.sql.go`       | [internal/spatial/postgres.go](../../apps/api/internal/spatial/postgres.go), worker calendar maintenance                                                                                                                                               |
 | [site.sql](../../apps/api/db/queries/site.sql)                   | `site.sql.go`          | [internal/site/postgres.go](../../apps/api/internal/site/postgres.go) (member count); `GetSiteSetting` unused                                                                                                                                          |
 
-**Central wiring:** [internal/app/wire.go](../../apps/api/internal/app/wire.go) binds **legacy** repositories for the mounted GraphQL/REST API. [product_uow.go](../../apps/api/internal/app/product_uow.go) is a **stub** — product GraphQL UoW is not production-bound yet.
+**Central wiring:** [internal/app/wire.go](../../apps/api/internal/app/wire.go) binds **legacy** repositories for the mounted GraphQL/REST API. `apps/api/internal/app/product_uow.go` is a **stub** — product GraphQL UoW is not production-bound yet.
 
 ### Product stack (`*_product.sql`)
 

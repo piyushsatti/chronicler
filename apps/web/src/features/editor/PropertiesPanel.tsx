@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fieldEmpty, schemaErrors } from './editorValidation.js';
 import {
   DateTimeField,
   GenreTagsField,
   MultiSelectField,
   PairsField,
+  PointcrawlField,
   RegionField,
   RegionMultiField,
   SelectField,
+  SeriesField,
   SlotsField,
   StatusField,
   StubField,
@@ -15,15 +17,21 @@ import {
   TextAreaField,
   TextField,
   ToggleField,
+  VoiceChannelField,
   WorldDateField,
 } from './fields/FieldControls.js';
 import type { EditorFieldOptions, EditorMeta, FieldSchema } from './types.js';
+import type { PointcrawlLinkValue } from '../../components/domain/PointcrawlLinkPicker.js';
 
 export function PropertiesPanel({
   schema,
   values,
   setValue,
   showErrors,
+  focusRequest = 0,
+  extraErrors = [],
+  revealFilled = false,
+  createMode = false,
   slugLocked = false,
   options,
   timeZone,
@@ -32,6 +40,14 @@ export function PropertiesPanel({
   values: EditorMeta;
   setValue: (key: string, val: unknown) => void;
   showErrors: boolean;
+  /** Changes on each blocked submit; the summary then takes focus and scrolls into view. */
+  focusRequest?: number;
+  /** Errors for inputs outside this panel (the quest description), listed in the summary. */
+  extraErrors?: { key: string; label: string; message: string }[];
+  /** Show errors on fields that already hold a value (a restored draft's bad numbers). */
+  revealFilled?: boolean;
+  /** A new record: a preselected default option gives way to the first other pick. */
+  createMode?: boolean;
   slugLocked?: boolean;
   options: EditorFieldOptions;
   timeZone: string;
@@ -40,6 +56,8 @@ export function PropertiesPanel({
   const touch = (k: string): void =>
     setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
   const errs = schemaErrors(schema, values);
+  const revealed = (f: FieldSchema): boolean =>
+    showErrors || !!touched[f.key] || (revealFilled && !fieldEmpty(f, values[f.key]));
 
   const commit = (f: FieldSchema): void => {
     touch(f.key);
@@ -60,7 +78,7 @@ export function PropertiesPanel({
       touch(field.key);
     };
     const setRaw = (v: unknown): void => setValue(field.key, v);
-    const bad = !!(showErrors || touched[field.key]) && !!errs[field.key];
+    const bad = revealed(field) && !!errs[field.key];
 
     switch (field.type) {
       case 'status':
@@ -70,6 +88,36 @@ export function PropertiesPanel({
           <RegionField
             options={options.regions}
             value={String(val ?? '')}
+            onChange={setT}
+          />
+        );
+      case 'series':
+        return (
+          <SeriesField
+            options={options.series}
+            current={
+              values.arc && typeof values.arc === 'object'
+                ? (values.arc as { id: string; name: string })
+                : undefined
+            }
+            value={String(val ?? '')}
+            onChange={setT}
+          />
+        );
+      case 'voicechannel':
+        return (
+          <VoiceChannelField
+            options={options.voiceChannels}
+            value={String(val ?? '')}
+            onChange={setT}
+          />
+        );
+      case 'pointcrawl':
+        return (
+          <PointcrawlField
+            places={options.places}
+            markVisited={true}
+            value={Array.isArray(val) ? (val as PointcrawlLinkValue[]) : []}
             onChange={setT}
           />
         );
@@ -113,6 +161,7 @@ export function PropertiesPanel({
           <MultiSelectField
             field={field}
             value={(val as string[]) ?? []}
+            replaceDefault={createMode}
             onChange={setT}
           />
         );
@@ -160,6 +209,7 @@ export function PropertiesPanel({
         return (
           <TextField
             field={field}
+            suggestions={field.suggestions ? options[field.suggestions] : undefined}
             value={String(val ?? '')}
             onChange={setRaw}
             onCommit={() => commit(field)}
@@ -169,26 +219,50 @@ export function PropertiesPanel({
     }
   };
 
-  const summary = showErrors ? schema.filter((f) => errs[f.key]) : [];
+  const summary = showErrors
+    ? [
+        ...schema
+          .filter((f) => errs[f.key])
+          .map((f) => ({ key: f.key, label: f.label, message: errs[f.key] })),
+        ...extraErrors,
+      ]
+    : [];
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const hasSummary = summary.length > 0;
+  useEffect(() => {
+    if (!focusRequest || !hasSummary) return;
+    const node = summaryRef.current;
+    node?.focus({ preventScroll: true });
+    node?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  }, [focusRequest, hasSummary]);
 
   return (
     <div className="pf" data-component="PropertiesPanel">
-      {summary.length > 0 ? (
-        <div className="pf-summary">
+      {hasSummary ? (
+        <div
+          ref={summaryRef}
+          className="pf-summary"
+          data-el="editor.errorSummary"
+          role="group"
+          aria-label="Fields that need attention"
+          tabIndex={-1}
+        >
           <strong>
-            {summary.length} field{summary.length > 1 ? 's' : ''} need attention
+            {summary.length === 1
+              ? '1 field needs attention'
+              : `${summary.length} fields need attention`}
           </strong>
           <ul>
             {summary.map((f) => (
               <li key={f.key}>
-                {f.label} — {errs[f.key]}
+                {f.label} — {f.message}
               </li>
             ))}
           </ul>
         </div>
       ) : null}
       {schema.map((f) => {
-        const show = (showErrors || touched[f.key]) && errs[f.key];
+        const show = revealed(f) && errs[f.key];
         const ok =
           touched[f.key] &&
           !errs[f.key] &&

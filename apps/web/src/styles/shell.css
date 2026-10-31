@@ -65,7 +65,6 @@
 .site-chrome__links.segmented-track .segmented-row { width: max-content; min-width: max-content; }
 .site-chrome__spacer { flex: 1 1 auto; }
 .site-chrome__brand img { display: block; width: auto; height: 28px; object-fit: contain; }
-[data-mode='dark'] .site-chrome__brand img { filter: brightness(0) invert(1); }
 
 [data-width-class='compact'] .site-chrome__top {
   flex-wrap: wrap;

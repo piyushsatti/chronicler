@@ -1,4 +1,6 @@
-export type InstantStyle = 'date' | 'dateTime';
+import { Temporal } from '@js-temporal/polyfill';
+
+export type InstantStyle = 'date' | 'dateTime' | 'shortDateTime';
 type Timestamp = string | null | undefined;
 const CIVIL_DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** Placeholder dates far in the future (year >= 2099) mean "no date"; never display them. */
@@ -35,7 +37,8 @@ function zonedParts(
 }
 /**
  * Display instants in the viewer's zone (`timeZone`, else the device zone).
- * `date` reads "7 Mar 2026"; `dateTime` reads "Sat 7 Mar 2026, 23:30". No zone
+ * `date` reads "7 Mar 2026"; `dateTime` reads "Sat 7 Mar 2026, 23:30";
+ * `shortDateTime` drops the year for compact chips: "Sat 7 Mar · 23:30". No zone
  * name is shown, except " UTC" when the viewer chose UTC and the short zone
  * name inside the repeated autumn DST hour. Civil dates
  * ("2026-03-08") keep their calendar day in every zone. Absent or invalid
@@ -71,6 +74,9 @@ export function formatInstant(
     : repeatedWallTime(date, timeZone)
       ? ` ${zonedParts(date, timeZone, { timeZoneName: 'short' }).timeZoneName ?? ''}`.trimEnd()
       : '';
+  if (style === 'shortDateTime') {
+    return `${p.weekday} ${p.day} ${p.month} \u00b7 ${p.hour}:${p.minute}${zone}`;
+  }
   return `${p.weekday} ${day}, ${p.hour}:${p.minute}${zone}`;
 }
 /** The autumn DST hour happens twice; only then does a time need its zone name. */
@@ -103,6 +109,15 @@ export function formatScheduled(
   const formatted = formatInstant(value, timeZone);
   return formatted === '—' ? 'TBA' : formatted;
 }
+/** Compact schedule chip label without the year ("Tue 20 Oct · 19:00"); pair it
+ * with `formatScheduled` as the full, accessible date. */
+export function formatScheduledShort(
+  value: Timestamp,
+  timeZone: string | null = null,
+): string {
+  const formatted = formatInstant(value, timeZone, 'shortDateTime');
+  return formatted === '—' ? 'TBA' : formatted;
+}
 export function civilDateInZone(
   value: Timestamp,
   timeZone: string | null = null,
@@ -119,6 +134,25 @@ export function civilDateInZone(
   const part = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((item) => item.type === type)?.value;
   return `${part('year')}-${part('month')}-${part('day')}`;
+}
+/** First instant through the last millisecond of a civil day; null for an invalid date or zone. */
+export function dayRangeInZone(
+  date: string,
+  timeZone: string | null,
+): { scheduledFrom: string; scheduledTo: string } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  try {
+    const zone = timeZone ?? Temporal.Now.timeZoneId();
+    const day = Temporal.PlainDate.from(date, { overflow: 'reject' });
+    const start = day.toZonedDateTime(zone);
+    const end = day.add({ days: 1 }).toZonedDateTime(zone).subtract({ milliseconds: 1 });
+    return {
+      scheduledFrom: start.toInstant().toString(),
+      scheduledTo: end.toInstant().toString(),
+    };
+  } catch {
+    return null;
+  }
 }
 /** Compact grid-cell label: "2026-10-22" reads "Thu 22"; anything else is returned as given. */
 export function dayLabel(value: string): string {
@@ -161,11 +195,14 @@ export function nextCivilDay(value: string): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** "1 result", "2 results". Pass `plural` for irregular nouns. */
+/** Nouns whose plural is the singular ("2 series"). */
+const INVARIANT_PLURALS = new Set(['series']);
+
+/** "1 result", "2 results", "2 series". Pass `plural` for other irregular nouns. */
 export function pluralize(
   count: number,
   singular: string,
-  plural = `${singular}s`,
+  plural = INVARIANT_PLURALS.has(singular.toLowerCase()) ? singular : `${singular}s`,
 ): string {
   return `${count.toLocaleString('en-GB')} ${count === 1 ? singular : plural}`;
 }
@@ -228,6 +265,7 @@ export function statusLabel(value: string | null | undefined): string {
 
 /** Member roles as people say them. */
 export const ROLE_LABELS: Readonly<Record<string, string>> = {
+  guest: 'Guest',
   dm: 'DM',
   admin: 'Admin',
   player: 'Player',
@@ -351,14 +389,6 @@ export function personName(
   return personLabels([person], fallback)[0];
 }
 
-/** A person known only by handle still gets a readable name before the handle. */
-export function handleOnlyName(
-  handle: string | null | undefined,
-  fallback = 'Unnamed member',
-): string {
-  return personName({ handle }, fallback);
-}
-
 const GENERIC_NAMES = new Set(['member', 'user', 'player', 'unknown', 'unnamed', 'unnamed member', 'anonymous', 'dev']);
 
 /**
@@ -399,4 +429,16 @@ export function personLabels(
     if (!handle || !needsHandle) return name;
     return `${name} (${handle})`;
   });
+}
+
+/** Labels for a visible list of members (D-names): display name, or "Name (@handle)"
+ * when the name is generic or shared. Look a member up by the same object. */
+export function memberLabeler<T extends PersonLike>(
+  members: readonly T[],
+): (member: T) => string {
+  const labels = personLabels(members);
+  const byMember = new Map<T, string>(
+    members.map((member, index) => [member, labels[index] ?? '']),
+  );
+  return (member) => byMember.get(member) ?? personName(member);
 }

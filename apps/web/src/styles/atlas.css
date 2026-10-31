@@ -551,7 +551,7 @@
   .seg span.on, .seg button.on { background: var(--color-bg-panel); color: var(--color-text); box-shadow: var(--shadow-2); }
 
   /* ── Prose (adventure summaries) ─────────────────────────── */
-  .prose { font-family: var(--font-display); font-weight: 400; font-size: 18px; line-height: 1.6; color: var(--color-text); max-width: 64ch; }
+  .prose { font-family: var(--font-body); font-weight: 400; font-size: 18px; line-height: 1.6; color: var(--color-text); max-width: 64ch; }
   .prose p { margin: 0 0 var(--sp-4); }
   .prose .drop::first-letter { font-size: 3.4em; float: left; line-height: 0.8; padding: 6px 10px 0 0; font-weight: 500; color: var(--color-accent); }
   .gameinfo { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3) var(--sp-5); }

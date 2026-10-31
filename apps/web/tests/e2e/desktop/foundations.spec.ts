@@ -37,7 +37,7 @@ async function seedFoundations(
 async function expectRenderedFont(
   page: Page,
   selector: string,
-  family: 'Lexend Variable' | 'Fraunces Variable' | 'Geist' | 'Geist Mono',
+  family: 'Lexend Variable' | 'Fraunces Variable' | 'Lato' | 'Geist Mono',
 ): Promise<void> {
   const result = await page
     .locator(selector)
@@ -127,14 +127,14 @@ for (const theme of THEMES) {
       };
     });
     expect(typography.displaySize).toBeGreaterThan(typography.cardTitleSize);
-    expect(typography.bodyFamily).toContain('Geist');
+    expect(typography.bodyFamily).toContain('Lato');
     expect(typography.theme).toBe(theme.theme);
     expect(typography.mode).toBe(theme.mode);
     expect(typography.bodyBackground).toMatch(/^rgb\(/);
     expect(typography.bodyBackground).not.toBe('rgba(0, 0, 0, 0)');
 
     await expectRenderedFont(page, 'h1.type-display', 'Lexend Variable');
-    await expectRenderedFont(page, '.type-caption', 'Geist');
+    await expectRenderedFont(page, '.type-caption', 'Lato');
     await expectRenderedFont(page, '.site-chrome__search-kbd', 'Geist Mono');
 
     await page.screenshot({

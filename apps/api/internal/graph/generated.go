@@ -180,6 +180,17 @@ type ComplexityRoot struct {
 		SourceRegionID func(childComplexity int) int
 	}
 
+	BodySpanAudit struct {
+		EndLine     func(childComplexity int) int
+		Handle      func(childComplexity int) int
+		Kind        func(childComplexity int) int
+		StartLine   func(childComplexity int) int
+		Suggestion  func(childComplexity int) int
+		Token       func(childComplexity int) int
+		TokenColumn func(childComplexity int) int
+		TokenLine   func(childComplexity int) int
+	}
+
 	CategoryCountType struct {
 		Category func(childComplexity int) int
 		Count    func(childComplexity int) int
@@ -341,6 +352,17 @@ type ComplexityRoot struct {
 		Tagline                 func(childComplexity int) int
 	}
 
+	DiscordSettingsType struct {
+		AnnounceChannelID func(childComplexity int) int
+		RoleID            func(childComplexity int) int
+		VoiceChannels     func(childComplexity int) int
+	}
+
+	DiscordVoiceChannelType struct {
+		ChannelID func(childComplexity int) int
+		Name      func(childComplexity int) int
+	}
+
 	DmLastSessionType struct {
 		Quest         func(childComplexity int) int
 		RecapDocument func(childComplexity int) int
@@ -477,6 +499,7 @@ type ComplexityRoot struct {
 	}
 
 	GameDayCellType struct {
+		GameDate func(childComplexity int) int
 		GameDay  func(childComplexity int) int
 		RealDate func(childComplexity int) int
 	}
@@ -521,6 +544,7 @@ type ComplexityRoot struct {
 		CreatedAt       func(childComplexity int) int
 		CreatedBy       func(childComplexity int) int
 		Family          func(childComplexity int) int
+		Grid            func(childComplexity int) int
 		ID              func(childComplexity int) int
 		MapKind         func(childComplexity int) int
 		Name            func(childComplexity int) int
@@ -656,6 +680,7 @@ type ComplexityRoot struct {
 		SetMyAvailability                  func(childComplexity int, slots []*AvailabilitySlotInput, meta CommandMeta) int
 		SetMyPrivateNotes                  func(childComplexity int, body string, meta CommandMeta) int
 		SetPointcrawlEdge                  func(childComplexity int, mapID string, input PointcrawlEdgeInput, meta CommandMeta) int
+		SetPointcrawlNodeState             func(childComplexity int, mapID string, nodeID string, state PointcrawlNodeState, meta CommandMeta) int
 		SetQuestPointcrawlLinks            func(childComplexity int, questID string, links []*QuestPointcrawlLinkInput, meta CommandMeta) int
 		SetUnlockableActive                func(childComplexity int, id string, active bool, meta CommandMeta) int
 		SignupForQuest                     func(childComplexity int, questID string, characterID string, meta CommandMeta) int
@@ -669,9 +694,11 @@ type ComplexityRoot struct {
 		UnpublishDocument                  func(childComplexity int, id string, expectedRevision int, meta CommandMeta) int
 		UpdateBackstory                    func(childComplexity int, id string, input BackstoryInput, meta CommandMeta) int
 		UpdateCharacterProfile             func(childComplexity int, characterID string, input UpdateCharacterProfileInput, meta CommandMeta) int
+		UpdateDiscordSettings              func(childComplexity int, input DiscordSettingsInput, meta CommandMeta) int
 		UpdateDocument                     func(childComplexity int, id string, input DocumentEditInput, meta CommandMeta) int
 		UpdateGameCalendar                 func(childComplexity int, definition json.RawMessage, meta CommandMeta) int
 		UpdateHomeBanner                   func(childComplexity int, input HomeBannerInput, meta CommandMeta) int
+		UpdateMap                          func(childComplexity int, id string, input MapUpdateInput, meta CommandMeta) int
 		UpdateMyDmProfile                  func(childComplexity int, input UpdateDmProfileInput, meta CommandMeta) int
 		UpdateMyProfile                    func(childComplexity int, input UpdateMyProfileInput, meta CommandMeta) int
 		UpdateMySettings                   func(childComplexity int, input MemberSettingsPatch, meta CommandMeta) int
@@ -769,6 +796,7 @@ type ComplexityRoot struct {
 		LinkedEntries func(childComplexity int, limit int, offset int) int
 		MapID         func(childComplexity int) int
 		Name          func(childComplexity int) int
+		State         func(childComplexity int) int
 		SubmapID      func(childComplexity int) int
 		X             func(childComplexity int) int
 		Y             func(childComplexity int) int
@@ -794,6 +822,7 @@ type ComplexityRoot struct {
 		AdminCharacterDirectory       func(childComplexity int, filters *AdminCharacterDirectoryFiltersInput, limit int, offset int) int
 		AdminOperations               func(childComplexity int, deliveryState *string, limit int, offset int) int
 		ArchonAssignments             func(childComplexity int, regionID *string, memberID *string, limit int, offset int) int
+		AuditBody                     func(childComplexity int, body string) int
 		Backstories                   func(childComplexity int, filters *BackstoryFiltersInput, limit int, offset int) int
 		Character                     func(childComplexity int, id *string, shortCode *string) int
 		CharacterLogs                 func(childComplexity int, characterID string, limit int, offset int) int
@@ -809,6 +838,7 @@ type ComplexityRoot struct {
 		ContractLayoutStub            func(childComplexity int) int
 		CreationCatalog               func(childComplexity int, filters *CreationCatalogFiltersInput, limit int, offset int) int
 		DiscordDeliveryMode           func(childComplexity int) int
+		DiscordSettings               func(childComplexity int) int
 		DmSessionHistory              func(childComplexity int, memberID string, limit int, offset int) int
 		DmStats                       func(childComplexity int, memberID string) int
 		DmSummaries                   func(childComplexity int, filters *DmSummaryFiltersInput, limit int, offset int) int
@@ -846,7 +876,7 @@ type ComplexityRoot struct {
 		ParticipationsByCharacter     func(childComplexity int, characterID string, limit int, offset int) int
 		PendingCharacterVerifications func(childComplexity int, limit int, offset int) int
 		PendingDmProfileVerifications func(childComplexity int, limit int, offset int) int
-		PreviewBody                   func(childComplexity int, body string, audience PreviewAudience, authorID *string) int
+		PreviewBody                   func(childComplexity int, body string, audience PreviewAudience, authorID *string, memberHandle *string) int
 		Quest                         func(childComplexity int, id *string, shortCode *string) int
 		QuestAnnouncementRoleSetting  func(childComplexity int) int
 		QuestArc                      func(childComplexity int, id string) int
@@ -855,6 +885,7 @@ type ComplexityRoot struct {
 		QuestGenreOptions             func(childComplexity int) int
 		QuestStateCounts              func(childComplexity int, filters *QuestStateCountsFiltersInput) int
 		QuestSummaries                func(childComplexity int, questID string, limit int, offset int) int
+		QuestVoiceChannels            func(childComplexity int) int
 		Quests                        func(childComplexity int, filters *QuestFiltersInput, limit int, offset int) int
 		RealDates                     func(childComplexity int, gameDay int, limit int, offset int) int
 		RecentlyClosedQuests          func(childComplexity int, regionID *string, closedSince *time.Time, limit int, offset int) int
@@ -978,6 +1009,7 @@ type ComplexityRoot struct {
 		Status           func(childComplexity int) int
 		Tags             func(childComplexity int) int
 		UpdatedAt        func(childComplexity int) int
+		VoiceChannelID   func(childComplexity int) int
 	}
 
 	RealDatePage struct {
@@ -1194,6 +1226,7 @@ type DocumentTypeResolver interface {
 }
 type GameCalendarTypeResolver interface {
 	CurrentGameDate(ctx context.Context, obj *GameCalendarType) (*GameDateType, error)
+	MonthGrid(ctx context.Context, obj *GameCalendarType) ([]*GameDayCellType, error)
 }
 type MapTypeResolver interface {
 	PointcrawlNodes(ctx context.Context, obj *MapType, limit int, offset int) ([]*PointcrawlNodeType, error)
@@ -1268,8 +1301,10 @@ type MutationResolver interface {
 	SetQuestPointcrawlLinks(ctx context.Context, questID string, links []*QuestPointcrawlLinkInput, meta CommandMeta) ([]*QuestPointcrawlLinkType, error)
 	UpdateHomeBanner(ctx context.Context, input HomeBannerInput, meta CommandMeta) (*HomeBannerType, error)
 	UpdateQuestAnnouncementRoleSetting(ctx context.Context, input AnnouncementRoleInput, meta CommandMeta) (*QuestAnnouncementRoleSettingType, error)
+	UpdateDiscordSettings(ctx context.Context, input DiscordSettingsInput, meta CommandMeta) (*DiscordSettingsType, error)
 	RedriveDiscordDelivery(ctx context.Context, jobID string, reason string, meta CommandMeta) (*DeliveryReceipt, error)
 	CreateMap(ctx context.Context, input MapCreateInput, meta CommandMeta) (*MapType, error)
+	UpdateMap(ctx context.Context, id string, input MapUpdateInput, meta CommandMeta) (*MapType, error)
 	CreateRegion(ctx context.Context, input RegionInput, meta CommandMeta) (*RegionType, error)
 	UpdateRegion(ctx context.Context, id string, input RegionInput, meta CommandMeta) (*RegionType, error)
 	TransitionRegion(ctx context.Context, id string, to string, note string, meta CommandMeta) (*RegionType, error)
@@ -1281,6 +1316,7 @@ type MutationResolver interface {
 	DeleteRegion(ctx context.Context, regionID string, meta CommandMeta) (*CommandReceipt, error)
 	RestoreRegion(ctx context.Context, regionID string, meta CommandMeta) (*RegionType, error)
 	UpsertPointcrawlNode(ctx context.Context, mapID string, input PointcrawlNodeInput, meta CommandMeta) (*PointcrawlNodeType, error)
+	SetPointcrawlNodeState(ctx context.Context, mapID string, nodeID string, state PointcrawlNodeState, meta CommandMeta) (*PointcrawlNodeType, error)
 	SetPointcrawlEdge(ctx context.Context, mapID string, input PointcrawlEdgeInput, meta CommandMeta) (*PointcrawlEdgeType, error)
 	LinkPointcrawlEntry(ctx context.Context, mapID string, nodeID string, documentID string, relation string, meta CommandMeta) (*PointcrawlEntryLinkType, error)
 	UnlinkPointcrawlEntry(ctx context.Context, mapID string, nodeID string, documentID string, relation string, meta CommandMeta) (*CommandReceipt, error)
@@ -1313,7 +1349,8 @@ type QueryResolver interface {
 	CodexCategories(ctx context.Context) ([]*CategoryCountType, error)
 	DocumentRevisions(ctx context.Context, documentID string, limit int, offset int) (*DocumentRevisionPage, error)
 	DocumentsTrash(ctx context.Context, limit int, offset int) (*DocumentListResult, error)
-	PreviewBody(ctx context.Context, body string, audience PreviewAudience, authorID *string) (string, error)
+	PreviewBody(ctx context.Context, body string, audience PreviewAudience, authorID *string, memberHandle *string) (string, error)
+	AuditBody(ctx context.Context, body string) ([]*BodySpanAudit, error)
 	LieutenantAssignments(ctx context.Context, memberID *string, npcDocumentID *string, limit int, offset int) (*LieutenantPage, error)
 	MyUnlocks(ctx context.Context, limit int, offset int) (*MemberUnlockPage, error)
 	Member(ctx context.Context, id *string, handle *string) (*MemberType, error)
@@ -1354,6 +1391,8 @@ type QueryResolver interface {
 	DiscordDeliveryMode(ctx context.Context) (string, error)
 	HomeBanner(ctx context.Context) (*HomeBannerType, error)
 	QuestAnnouncementRoleSetting(ctx context.Context) (*QuestAnnouncementRoleSettingType, error)
+	DiscordSettings(ctx context.Context) (*DiscordSettingsType, error)
+	QuestVoiceChannels(ctx context.Context) ([]*DiscordVoiceChannelType, error)
 	Map(ctx context.Context, atlasCode string) (*MapType, error)
 	Maps(ctx context.Context, family *string, mapKind *string, limit int, offset int) ([]*MapType, error)
 	Regions(ctx context.Context, kind *string, limit int, offset int) ([]*RegionType, error)
@@ -1960,6 +1999,62 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.BackstoryType.SourceRegionID(childComplexity), true
+
+	case "BodySpanAudit.endLine":
+		if e.complexity.BodySpanAudit.EndLine == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.EndLine(childComplexity), true
+
+	case "BodySpanAudit.handle":
+		if e.complexity.BodySpanAudit.Handle == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.Handle(childComplexity), true
+
+	case "BodySpanAudit.kind":
+		if e.complexity.BodySpanAudit.Kind == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.Kind(childComplexity), true
+
+	case "BodySpanAudit.startLine":
+		if e.complexity.BodySpanAudit.StartLine == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.StartLine(childComplexity), true
+
+	case "BodySpanAudit.suggestion":
+		if e.complexity.BodySpanAudit.Suggestion == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.Suggestion(childComplexity), true
+
+	case "BodySpanAudit.token":
+		if e.complexity.BodySpanAudit.Token == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.Token(childComplexity), true
+
+	case "BodySpanAudit.tokenColumn":
+		if e.complexity.BodySpanAudit.TokenColumn == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.TokenColumn(childComplexity), true
+
+	case "BodySpanAudit.tokenLine":
+		if e.complexity.BodySpanAudit.TokenLine == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.TokenLine(childComplexity), true
 
 	case "CategoryCountType.category":
 		if e.complexity.CategoryCountType.Category == nil {
@@ -2652,6 +2747,41 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.DirectoryEntryType.Tagline(childComplexity), true
 
+	case "DiscordSettingsType.announceChannelId":
+		if e.complexity.DiscordSettingsType.AnnounceChannelID == nil {
+			break
+		}
+
+		return e.complexity.DiscordSettingsType.AnnounceChannelID(childComplexity), true
+
+	case "DiscordSettingsType.roleId":
+		if e.complexity.DiscordSettingsType.RoleID == nil {
+			break
+		}
+
+		return e.complexity.DiscordSettingsType.RoleID(childComplexity), true
+
+	case "DiscordSettingsType.voiceChannels":
+		if e.complexity.DiscordSettingsType.VoiceChannels == nil {
+			break
+		}
+
+		return e.complexity.DiscordSettingsType.VoiceChannels(childComplexity), true
+
+	case "DiscordVoiceChannelType.channelId":
+		if e.complexity.DiscordVoiceChannelType.ChannelID == nil {
+			break
+		}
+
+		return e.complexity.DiscordVoiceChannelType.ChannelID(childComplexity), true
+
+	case "DiscordVoiceChannelType.name":
+		if e.complexity.DiscordVoiceChannelType.Name == nil {
+			break
+		}
+
+		return e.complexity.DiscordVoiceChannelType.Name(childComplexity), true
+
 	case "DmLastSessionType.quest":
 		if e.complexity.DmLastSessionType.Quest == nil {
 			break
@@ -3261,6 +3391,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.GameDateType.Year(childComplexity), true
 
+	case "GameDayCellType.gameDate":
+		if e.complexity.GameDayCellType.GameDate == nil {
+			break
+		}
+
+		return e.complexity.GameDayCellType.GameDate(childComplexity), true
+
 	case "GameDayCellType.gameDay":
 		if e.complexity.GameDayCellType.GameDay == nil {
 			break
@@ -3442,6 +3579,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.MapType.Family(childComplexity), true
+
+	case "MapType.grid":
+		if e.complexity.MapType.Grid == nil {
+			break
+		}
+
+		return e.complexity.MapType.Grid(childComplexity), true
 
 	case "MapType.id":
 		if e.complexity.MapType.ID == nil {
@@ -4418,6 +4562,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.SetPointcrawlEdge(childComplexity, args["mapId"].(string), args["input"].(PointcrawlEdgeInput), args["meta"].(CommandMeta)), true
 
+	case "Mutation.setPointcrawlNodeState":
+		if e.complexity.Mutation.SetPointcrawlNodeState == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setPointcrawlNodeState_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetPointcrawlNodeState(childComplexity, args["mapId"].(string), args["nodeId"].(string), args["state"].(PointcrawlNodeState), args["meta"].(CommandMeta)), true
+
 	case "Mutation.setQuestPointcrawlLinks":
 		if e.complexity.Mutation.SetQuestPointcrawlLinks == nil {
 			break
@@ -4574,6 +4730,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.UpdateCharacterProfile(childComplexity, args["characterId"].(string), args["input"].(UpdateCharacterProfileInput), args["meta"].(CommandMeta)), true
 
+	case "Mutation.updateDiscordSettings":
+		if e.complexity.Mutation.UpdateDiscordSettings == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateDiscordSettings_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateDiscordSettings(childComplexity, args["input"].(DiscordSettingsInput), args["meta"].(CommandMeta)), true
+
 	case "Mutation.updateDocument":
 		if e.complexity.Mutation.UpdateDocument == nil {
 			break
@@ -4609,6 +4777,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdateHomeBanner(childComplexity, args["input"].(HomeBannerInput), args["meta"].(CommandMeta)), true
+
+	case "Mutation.updateMap":
+		if e.complexity.Mutation.UpdateMap == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateMap_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateMap(childComplexity, args["id"].(string), args["input"].(MapUpdateInput), args["meta"].(CommandMeta)), true
 
 	case "Mutation.updateMyDmProfile":
 		if e.complexity.Mutation.UpdateMyDmProfile == nil {
@@ -5133,6 +5313,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.PointcrawlNodeType.Name(childComplexity), true
 
+	case "PointcrawlNodeType.state":
+		if e.complexity.PointcrawlNodeType.State == nil {
+			break
+		}
+
+		return e.complexity.PointcrawlNodeType.State(childComplexity), true
+
 	case "PointcrawlNodeType.submapId":
 		if e.complexity.PointcrawlNodeType.SubmapID == nil {
 			break
@@ -5259,6 +5446,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.ArchonAssignments(childComplexity, args["regionId"].(*string), args["memberId"].(*string), args["limit"].(int), args["offset"].(int)), true
+
+	case "Query.auditBody":
+		if e.complexity.Query.AuditBody == nil {
+			break
+		}
+
+		args, err := ec.field_Query_auditBody_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.AuditBody(childComplexity, args["body"].(string)), true
 
 	case "Query.backstories":
 		if e.complexity.Query.Backstories == nil {
@@ -5424,6 +5623,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.DiscordDeliveryMode(childComplexity), true
+
+	case "Query.discordSettings":
+		if e.complexity.Query.DiscordSettings == nil {
+			break
+		}
+
+		return e.complexity.Query.DiscordSettings(childComplexity), true
 
 	case "Query.dmSessionHistory":
 		if e.complexity.Query.DmSessionHistory == nil {
@@ -5844,7 +6050,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.PreviewBody(childComplexity, args["body"].(string), args["audience"].(PreviewAudience), args["authorId"].(*string)), true
+		return e.complexity.Query.PreviewBody(childComplexity, args["body"].(string), args["audience"].(PreviewAudience), args["authorId"].(*string), args["memberHandle"].(*string)), true
 
 	case "Query.quest":
 		if e.complexity.Query.Quest == nil {
@@ -5931,6 +6137,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.QuestSummaries(childComplexity, args["questId"].(string), args["limit"].(int), args["offset"].(int)), true
+
+	case "Query.questVoiceChannels":
+		if e.complexity.Query.QuestVoiceChannels == nil {
+			break
+		}
+
+		return e.complexity.Query.QuestVoiceChannels(childComplexity), true
 
 	case "Query.quests":
 		if e.complexity.Query.Quests == nil {
@@ -6600,6 +6813,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.QuestType.UpdatedAt(childComplexity), true
+
+	case "QuestType.voiceChannelId":
+		if e.complexity.QuestType.VoiceChannelID == nil {
+			break
+		}
+
+		return e.complexity.QuestType.VoiceChannelID(childComplexity), true
 
 	case "RealDatePage.items":
 		if e.complexity.RealDatePage.Items == nil {
@@ -7454,6 +7674,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateCharacterInput,
 		ec.unmarshalInputCreateQuestInput,
 		ec.unmarshalInputCreationCatalogFiltersInput,
+		ec.unmarshalInputDiscordSettingsInput,
+		ec.unmarshalInputDiscordVoiceChannelInput,
 		ec.unmarshalInputDmSummaryFiltersInput,
 		ec.unmarshalInputDocumentAudienceInput,
 		ec.unmarshalInputDocumentDraftInput,
@@ -7462,6 +7684,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputDowntimeInput,
 		ec.unmarshalInputHomeBannerInput,
 		ec.unmarshalInputMapCreateInput,
+		ec.unmarshalInputMapUpdateInput,
 		ec.unmarshalInputMemberFiltersInput,
 		ec.unmarshalInputMemberRoleBatchInput,
 		ec.unmarshalInputMemberSettingsPatch,
@@ -7994,8 +8217,15 @@ input MapCreateInput {
   name: String!
   atlasCode: String!
   family: String!
+  grid: String! = "point"
   mapKind: String!
   regionId: ID
+  assetPath: String
+}
+input MapUpdateInput {
+  name: String!
+  family: String!
+  grid: String!
   assetPath: String
 }
 input QuestPointcrawlLinkInput {
@@ -8046,6 +8276,7 @@ input QuestEditInput {
   apl: Int
   signupType: String
   additionalInfo: String
+  voiceChannelId: String
 }
 input QuestSummaryInput {
   documentId: ID
@@ -8070,6 +8301,15 @@ input HomeBannerInput {
   mediaKind: String
   mediaUrl: String
   mediaLabel: String
+}
+input DiscordVoiceChannelInput {
+  name: String!
+  channelId: String!
+}
+input DiscordSettingsInput {
+  announceChannelId: String
+  roleId: String
+  voiceChannels: [DiscordVoiceChannelInput!]!
 }
 input AnnouncementRoleInput {
   enabled: Boolean!
@@ -8126,7 +8366,13 @@ type DeliveryReceipt {
     offset: Int! = 0
   ): DocumentRevisionPage!
   documentsTrash(limit: Int! = 50, offset: Int! = 0): DocumentListResult!
-  previewBody(body: String!, audience: PreviewAudience!, authorId: ID): String!
+  previewBody(
+    body: String!
+    audience: PreviewAudience!
+    authorId: ID
+    memberHandle: String
+  ): String!
+  auditBody(body: String!): [BodySpanAudit!]!
   lieutenantAssignments(
     memberId: ID
     npcDocumentId: ID
@@ -8260,6 +8506,45 @@ type LieutenantAssignmentType {
 enum PreviewAudience {
   PLAYER
   DM
+}
+
+"""
+Why an audited body span matters: DM and MEMBER spans are hidden from other
+readers, MALFORMED spans from everyone; SPOILER spans are visible but blurred;
+LOOKALIKE spans are visible text whose callout looks like a marker but is not.
+LIST_NESTED is a diagnostic: a marker does not protect the whole list item.
+"""
+enum BodySpanKind {
+  DM
+  MEMBER
+  SPOILER
+  MALFORMED
+  LOOKALIKE
+  LIST_NESTED
+}
+
+"""
+One marked span of an unsaved body, from the server's own marker parser.
+Lines are 1-based and inclusive. handle is the member a MEMBER span addresses;
+suggestion is a best-effort corrected marker for MALFORMED and LOOKALIKE spans.
+LIST_NESTED records locate accepted markers inside lists, separately from
+projection spans; they have no token replacement suggestion.
+token is the exact source text of the marker defining the span (the offending
+token for MALFORMED and LOOKALIKE): ` + "`" + `[!` + "`" + ` through the first ` + "`" + `]` + "`" + `, or, when
+unclosed, ` + "`" + `[!` + "`" + ` and its first word only, so replacing it with suggestion keeps
+the prose after it. tokenLine is 1-based; tokenColumn is 1-based and
+counted in UTF-16 code units, so an editor can replace exactly that range with
+suggestion without parsing marker grammar.
+"""
+type BodySpanAudit {
+  startLine: Int!
+  endLine: Int!
+  kind: BodySpanKind!
+  handle: String
+  suggestion: String
+  token: String
+  tokenLine: Int
+  tokenColumn: Int
 }
 
 type SummaryDerivedType {
@@ -8819,6 +9104,7 @@ input QuestPcxpAwardInput {
   apl: Int = null
   signupType: String = null
   additionalInfo: String = null
+  voiceChannelId: String = null
 }
 
 type OpenQuestSeatType {
@@ -8836,6 +9122,17 @@ type OpenQuestSeatType {
 type OpenQuestSeatsResult {
   entries: [OpenQuestSeatType!]!
   total: Int!
+}
+
+type DiscordVoiceChannelType {
+  name: String!
+  channelId: String!
+}
+
+type DiscordSettingsType {
+  announceChannelId: String
+  roleId: String
+  voiceChannels: [DiscordVoiceChannelType!]!
 }
 
 type QuestAnnouncementRoleSettingType {
@@ -8959,6 +9256,7 @@ type QuestType {
   genres: [String!]!
   apl: Int
   signupType: String
+  voiceChannelId: String
   createdBy: ID!
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -9023,6 +9321,8 @@ scalar Time
   discordDeliveryMode: String!
   homeBanner: HomeBannerType!
   questAnnouncementRoleSetting: QuestAnnouncementRoleSettingType!
+  discordSettings: DiscordSettingsType!
+  questVoiceChannels: [DiscordVoiceChannelType!]!
 }
 extend type Mutation {
   updateHomeBanner(input: HomeBannerInput!, meta: CommandMeta!): HomeBannerType!
@@ -9030,6 +9330,10 @@ extend type Mutation {
     input: AnnouncementRoleInput!
     meta: CommandMeta!
   ): QuestAnnouncementRoleSettingType!
+  updateDiscordSettings(
+    input: DiscordSettingsInput!
+    meta: CommandMeta!
+  ): DiscordSettingsType!
   redriveDiscordDelivery(
     jobId: ID!
     reason: String!
@@ -9124,6 +9428,7 @@ input DmSummaryFiltersInput {
 type GameDayCellType {
   realDate: Date!
   gameDay: Int
+  gameDate: GameDateType
 }
 
 type HomeBannerType {
@@ -9211,6 +9516,7 @@ type ScheduledWorkStatusType {
 }
 extend type Mutation {
   createMap(input: MapCreateInput!, meta: CommandMeta!): MapType!
+  updateMap(id: ID!, input: MapUpdateInput!, meta: CommandMeta!): MapType!
   createRegion(input: RegionInput!, meta: CommandMeta!): RegionType!
   updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionType!
   transitionRegion(id: ID!, to: String!, note: String!, meta: CommandMeta!): RegionType!
@@ -9228,6 +9534,12 @@ extend type Mutation {
   upsertPointcrawlNode(
     mapId: ID!
     input: PointcrawlNodeInput!
+    meta: CommandMeta!
+  ): PointcrawlNodeType!
+  setPointcrawlNodeState(
+    mapId: ID!
+    nodeId: ID!
+    state: PointcrawlNodeState!
     meta: CommandMeta!
   ): PointcrawlNodeType!
   setPointcrawlEdge(
@@ -9297,6 +9609,7 @@ type MapType {
   name: String!
   atlasCode: String!
   family: String!
+  grid: String!
   mapKind: String!
   assetPath: String
   regionId: ID
@@ -9304,6 +9617,15 @@ type MapType {
   createdAt: DateTime!
   pointcrawlNodes(limit: Int! = 200, offset: Int! = 0): [PointcrawlNodeType!]!
   pointcrawlEdges(limit: Int! = 200, offset: Int! = 0): [PointcrawlEdgeType!]!
+}
+
+"""
+Admin-set exploration label on a hex. Display only: it does not change who can see or reach the hex.
+"""
+enum PointcrawlNodeState {
+  LOCKED
+  UNLOCKED
+  MAPPED
 }
 
 type PointcrawlEdgeType {
@@ -9323,6 +9645,7 @@ type PointcrawlNodeType {
   x: Float!
   y: Float!
   name: String!
+  state: PointcrawlNodeState!
   linkedEntries(limit: Int! = 50, offset: Int! = 0): [PointcrawlEntryLinkType!]!
   submapId: ID
   createdAt: DateTime!
@@ -10349,6 +10672,32 @@ func (ec *executionContext) field_Mutation_setPointcrawlEdge_args(ctx context.Co
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_setPointcrawlNodeState_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "mapId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["mapId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "nodeId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["nodeId"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "state", ec.unmarshalNPointcrawlNodeState2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeState)
+	if err != nil {
+		return nil, err
+	}
+	args["state"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
+	if err != nil {
+		return nil, err
+	}
+	args["meta"] = arg3
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_setQuestPointcrawlLinks_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -10627,6 +10976,22 @@ func (ec *executionContext) field_Mutation_updateCharacterProfile_args(ctx conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_updateDiscordSettings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNDiscordSettingsInput2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordSettingsInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
+	if err != nil {
+		return nil, err
+	}
+	args["meta"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_updateDocument_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -10677,6 +11042,27 @@ func (ec *executionContext) field_Mutation_updateHomeBanner_args(ctx context.Con
 		return nil, err
 	}
 	args["meta"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateMap_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNMapUpdateInput2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMapUpdateInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
+	if err != nil {
+		return nil, err
+	}
+	args["meta"] = arg2
 	return args, nil
 }
 
@@ -11036,6 +11422,17 @@ func (ec *executionContext) field_Query_archonAssignments_args(ctx context.Conte
 		return nil, err
 	}
 	args["offset"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_auditBody_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "body", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["body"] = arg0
 	return args, nil
 }
 
@@ -11819,6 +12216,11 @@ func (ec *executionContext) field_Query_previewBody_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["authorId"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "memberHandle", ec.unmarshalOString2ᚖstring)
+	if err != nil {
+		return nil, err
+	}
+	args["memberHandle"] = arg3
 	return args, nil
 }
 
@@ -15751,6 +16153,343 @@ func (ec *executionContext) fieldContext_BackstoryType_retired(_ context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_startLine(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_startLine(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartLine, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_startLine(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_endLine(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_endLine(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EndLine, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_endLine(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_kind(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_kind(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Kind, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(BodySpanKind)
+	fc.Result = res
+	return ec.marshalNBodySpanKind2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanKind(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_kind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type BodySpanKind does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_handle(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_handle(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Handle, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_handle(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_suggestion(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_suggestion(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Suggestion, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_suggestion(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_token(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_token(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Token, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_token(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_tokenLine(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_tokenLine(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TokenLine, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int)
+	fc.Result = res
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_tokenLine(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_tokenColumn(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_tokenColumn(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TokenColumn, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int)
+	fc.Result = res
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_tokenColumn(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -20282,6 +21021,226 @@ func (ec *executionContext) fieldContext_DirectoryEntryType_availableDays(_ cont
 	return fc, nil
 }
 
+func (ec *executionContext) _DiscordSettingsType_announceChannelId(ctx context.Context, field graphql.CollectedField, obj *DiscordSettingsType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DiscordSettingsType_announceChannelId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AnnounceChannelID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DiscordSettingsType_announceChannelId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DiscordSettingsType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DiscordSettingsType_roleId(ctx context.Context, field graphql.CollectedField, obj *DiscordSettingsType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DiscordSettingsType_roleId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RoleID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DiscordSettingsType_roleId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DiscordSettingsType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DiscordSettingsType_voiceChannels(ctx context.Context, field graphql.CollectedField, obj *DiscordSettingsType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DiscordSettingsType_voiceChannels(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VoiceChannels, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*DiscordVoiceChannelType)
+	fc.Result = res
+	return ec.marshalNDiscordVoiceChannelType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordVoiceChannelTypeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DiscordSettingsType_voiceChannels(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DiscordSettingsType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_DiscordVoiceChannelType_name(ctx, field)
+			case "channelId":
+				return ec.fieldContext_DiscordVoiceChannelType_channelId(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DiscordVoiceChannelType", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DiscordVoiceChannelType_name(ctx context.Context, field graphql.CollectedField, obj *DiscordVoiceChannelType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DiscordVoiceChannelType_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DiscordVoiceChannelType_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DiscordVoiceChannelType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DiscordVoiceChannelType_channelId(ctx context.Context, field graphql.CollectedField, obj *DiscordVoiceChannelType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DiscordVoiceChannelType_channelId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ChannelID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DiscordVoiceChannelType_channelId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DiscordVoiceChannelType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _DmLastSessionType_quest(ctx context.Context, field graphql.CollectedField, obj *DmLastSessionType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_DmLastSessionType_quest(ctx, field)
 	if err != nil {
@@ -20359,6 +21318,8 @@ func (ec *executionContext) fieldContext_DmLastSessionType_quest(_ context.Conte
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "voiceChannelId":
+				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
 				return ec.fieldContext_QuestType_createdBy(ctx, field)
 			case "createdAt":
@@ -23985,7 +24946,7 @@ func (ec *executionContext) _GameCalendarType_monthGrid(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.MonthGrid, nil
+		return ec.resolvers.GameCalendarType().MonthGrid(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -24006,14 +24967,16 @@ func (ec *executionContext) fieldContext_GameCalendarType_monthGrid(_ context.Co
 	fc = &graphql.FieldContext{
 		Object:     "GameCalendarType",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "realDate":
 				return ec.fieldContext_GameDayCellType_realDate(ctx, field)
 			case "gameDay":
 				return ec.fieldContext_GameDayCellType_gameDay(ctx, field)
+			case "gameDate":
+				return ec.fieldContext_GameDayCellType_gameDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type GameDayCellType", field.Name)
 		},
@@ -24365,6 +25328,61 @@ func (ec *executionContext) fieldContext_GameDayCellType_gameDay(_ context.Conte
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GameDayCellType_gameDate(ctx context.Context, field graphql.CollectedField, obj *GameDayCellType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GameDayCellType_gameDate(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GameDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*GameDateType)
+	fc.Result = res
+	return ec.marshalOGameDateType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐGameDateType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GameDayCellType_gameDate(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GameDayCellType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "eraAbbrev":
+				return ec.fieldContext_GameDateType_eraAbbrev(ctx, field)
+			case "year":
+				return ec.fieldContext_GameDateType_year(ctx, field)
+			case "periodName":
+				return ec.fieldContext_GameDateType_periodName(ctx, field)
+			case "periodIndex":
+				return ec.fieldContext_GameDateType_periodIndex(ctx, field)
+			case "periodType":
+				return ec.fieldContext_GameDateType_periodType(ctx, field)
+			case "day":
+				return ec.fieldContext_GameDateType_day(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GameDateType", field.Name)
 		},
 	}
 	return fc, nil
@@ -25437,6 +26455,50 @@ func (ec *executionContext) fieldContext_MapType_family(_ context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _MapType_grid(ctx context.Context, field graphql.CollectedField, obj *MapType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MapType_grid(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Grid, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MapType_grid(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MapType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _MapType_mapKind(ctx context.Context, field graphql.CollectedField, obj *MapType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_MapType_mapKind(ctx, field)
 	if err != nil {
@@ -25697,6 +26759,8 @@ func (ec *executionContext) fieldContext_MapType_pointcrawlNodes(ctx context.Con
 				return ec.fieldContext_PointcrawlNodeType_y(ctx, field)
 			case "name":
 				return ec.fieldContext_PointcrawlNodeType_name(ctx, field)
+			case "state":
+				return ec.fieldContext_PointcrawlNodeType_state(ctx, field)
 			case "linkedEntries":
 				return ec.fieldContext_PointcrawlNodeType_linkedEntries(ctx, field)
 			case "submapId":
@@ -31605,6 +32669,8 @@ func (ec *executionContext) fieldContext_Mutation_createQuest(ctx context.Contex
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "voiceChannelId":
+				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
 				return ec.fieldContext_QuestType_createdBy(ctx, field)
 			case "createdAt":
@@ -31724,6 +32790,8 @@ func (ec *executionContext) fieldContext_Mutation_updateQuest(ctx context.Contex
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "voiceChannelId":
+				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
 				return ec.fieldContext_QuestType_createdBy(ctx, field)
 			case "createdAt":
@@ -31843,6 +32911,8 @@ func (ec *executionContext) fieldContext_Mutation_transitionQuestStatus(ctx cont
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "voiceChannelId":
+				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
 				return ec.fieldContext_QuestType_createdBy(ctx, field)
 			case "createdAt":
@@ -31962,6 +33032,8 @@ func (ec *executionContext) fieldContext_Mutation_closeQuest(ctx context.Context
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "voiceChannelId":
+				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
 				return ec.fieldContext_QuestType_createdBy(ctx, field)
 			case "createdAt":
@@ -32249,6 +33321,8 @@ func (ec *executionContext) fieldContext_Mutation_removeQuestFromArc(ctx context
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "voiceChannelId":
+				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
 				return ec.fieldContext_QuestType_createdBy(ctx, field)
 			case "createdAt":
@@ -32808,6 +33882,8 @@ func (ec *executionContext) fieldContext_Mutation_restoreQuest(ctx context.Conte
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "voiceChannelId":
+				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
 				return ec.fieldContext_QuestType_createdBy(ctx, field)
 			case "createdAt":
@@ -33047,6 +34123,69 @@ func (ec *executionContext) fieldContext_Mutation_updateQuestAnnouncementRoleSet
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_updateDiscordSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateDiscordSettings(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateDiscordSettings(rctx, fc.Args["input"].(DiscordSettingsInput), fc.Args["meta"].(CommandMeta))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*DiscordSettingsType)
+	fc.Result = res
+	return ec.marshalNDiscordSettingsType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordSettingsType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateDiscordSettings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "announceChannelId":
+				return ec.fieldContext_DiscordSettingsType_announceChannelId(ctx, field)
+			case "roleId":
+				return ec.fieldContext_DiscordSettingsType_roleId(ctx, field)
+			case "voiceChannels":
+				return ec.fieldContext_DiscordSettingsType_voiceChannels(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DiscordSettingsType", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateDiscordSettings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_redriveDiscordDelivery(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_redriveDiscordDelivery(ctx, field)
 	if err != nil {
@@ -33161,6 +34300,8 @@ func (ec *executionContext) fieldContext_Mutation_createMap(ctx context.Context,
 				return ec.fieldContext_MapType_atlasCode(ctx, field)
 			case "family":
 				return ec.fieldContext_MapType_family(ctx, field)
+			case "grid":
+				return ec.fieldContext_MapType_grid(ctx, field)
 			case "mapKind":
 				return ec.fieldContext_MapType_mapKind(ctx, field)
 			case "assetPath":
@@ -33187,6 +34328,89 @@ func (ec *executionContext) fieldContext_Mutation_createMap(ctx context.Context,
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_createMap_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateMap(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateMap(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateMap(rctx, fc.Args["id"].(string), fc.Args["input"].(MapUpdateInput), fc.Args["meta"].(CommandMeta))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*MapType)
+	fc.Result = res
+	return ec.marshalNMapType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMapType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateMap(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_MapType_id(ctx, field)
+			case "canEdit":
+				return ec.fieldContext_MapType_canEdit(ctx, field)
+			case "name":
+				return ec.fieldContext_MapType_name(ctx, field)
+			case "atlasCode":
+				return ec.fieldContext_MapType_atlasCode(ctx, field)
+			case "family":
+				return ec.fieldContext_MapType_family(ctx, field)
+			case "grid":
+				return ec.fieldContext_MapType_grid(ctx, field)
+			case "mapKind":
+				return ec.fieldContext_MapType_mapKind(ctx, field)
+			case "assetPath":
+				return ec.fieldContext_MapType_assetPath(ctx, field)
+			case "regionId":
+				return ec.fieldContext_MapType_regionId(ctx, field)
+			case "createdBy":
+				return ec.fieldContext_MapType_createdBy(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_MapType_createdAt(ctx, field)
+			case "pointcrawlNodes":
+				return ec.fieldContext_MapType_pointcrawlNodes(ctx, field)
+			case "pointcrawlEdges":
+				return ec.fieldContext_MapType_pointcrawlEdges(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type MapType", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateMap_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -33908,6 +35132,8 @@ func (ec *executionContext) fieldContext_Mutation_upsertPointcrawlNode(ctx conte
 				return ec.fieldContext_PointcrawlNodeType_y(ctx, field)
 			case "name":
 				return ec.fieldContext_PointcrawlNodeType_name(ctx, field)
+			case "state":
+				return ec.fieldContext_PointcrawlNodeType_state(ctx, field)
 			case "linkedEntries":
 				return ec.fieldContext_PointcrawlNodeType_linkedEntries(ctx, field)
 			case "submapId":
@@ -33926,6 +35152,81 @@ func (ec *executionContext) fieldContext_Mutation_upsertPointcrawlNode(ctx conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_upsertPointcrawlNode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setPointcrawlNodeState(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setPointcrawlNodeState(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SetPointcrawlNodeState(rctx, fc.Args["mapId"].(string), fc.Args["nodeId"].(string), fc.Args["state"].(PointcrawlNodeState), fc.Args["meta"].(CommandMeta))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*PointcrawlNodeType)
+	fc.Result = res
+	return ec.marshalNPointcrawlNodeType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setPointcrawlNodeState(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_PointcrawlNodeType_id(ctx, field)
+			case "mapId":
+				return ec.fieldContext_PointcrawlNodeType_mapId(ctx, field)
+			case "x":
+				return ec.fieldContext_PointcrawlNodeType_x(ctx, field)
+			case "y":
+				return ec.fieldContext_PointcrawlNodeType_y(ctx, field)
+			case "name":
+				return ec.fieldContext_PointcrawlNodeType_name(ctx, field)
+			case "state":
+				return ec.fieldContext_PointcrawlNodeType_state(ctx, field)
+			case "linkedEntries":
+				return ec.fieldContext_PointcrawlNodeType_linkedEntries(ctx, field)
+			case "submapId":
+				return ec.fieldContext_PointcrawlNodeType_submapId(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_PointcrawlNodeType_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PointcrawlNodeType", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setPointcrawlNodeState_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -36402,6 +37703,50 @@ func (ec *executionContext) fieldContext_PointcrawlNodeType_name(_ context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _PointcrawlNodeType_state(ctx context.Context, field graphql.CollectedField, obj *PointcrawlNodeType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PointcrawlNodeType_state(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.State, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(PointcrawlNodeState)
+	fc.Result = res
+	return ec.marshalNPointcrawlNodeState2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeState(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PointcrawlNodeType_state(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PointcrawlNodeType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type PointcrawlNodeState does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _PointcrawlNodeType_linkedEntries(ctx context.Context, field graphql.CollectedField, obj *PointcrawlNodeType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_PointcrawlNodeType_linkedEntries(ctx, field)
 	if err != nil {
@@ -38562,7 +39907,7 @@ func (ec *executionContext) _Query_previewBody(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().PreviewBody(rctx, fc.Args["body"].(string), fc.Args["audience"].(PreviewAudience), fc.Args["authorId"].(*string))
+		return ec.resolvers.Query().PreviewBody(rctx, fc.Args["body"].(string), fc.Args["audience"].(PreviewAudience), fc.Args["authorId"].(*string), fc.Args["memberHandle"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -38597,6 +39942,79 @@ func (ec *executionContext) fieldContext_Query_previewBody(ctx context.Context, 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_previewBody_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_auditBody(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_auditBody(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().AuditBody(rctx, fc.Args["body"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*BodySpanAudit)
+	fc.Result = res
+	return ec.marshalNBodySpanAudit2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanAuditᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_auditBody(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "startLine":
+				return ec.fieldContext_BodySpanAudit_startLine(ctx, field)
+			case "endLine":
+				return ec.fieldContext_BodySpanAudit_endLine(ctx, field)
+			case "kind":
+				return ec.fieldContext_BodySpanAudit_kind(ctx, field)
+			case "handle":
+				return ec.fieldContext_BodySpanAudit_handle(ctx, field)
+			case "suggestion":
+				return ec.fieldContext_BodySpanAudit_suggestion(ctx, field)
+			case "token":
+				return ec.fieldContext_BodySpanAudit_token(ctx, field)
+			case "tokenLine":
+				return ec.fieldContext_BodySpanAudit_tokenLine(ctx, field)
+			case "tokenColumn":
+				return ec.fieldContext_BodySpanAudit_tokenColumn(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BodySpanAudit", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_auditBody_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -39828,6 +41246,8 @@ func (ec *executionContext) fieldContext_Query_quest(ctx context.Context, field 
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "voiceChannelId":
+				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
 				return ec.fieldContext_QuestType_createdBy(ctx, field)
 			case "createdAt":
@@ -41057,6 +42477,108 @@ func (ec *executionContext) fieldContext_Query_questAnnouncementRoleSetting(_ co
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_discordSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_discordSettings(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().DiscordSettings(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*DiscordSettingsType)
+	fc.Result = res
+	return ec.marshalNDiscordSettingsType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordSettingsType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_discordSettings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "announceChannelId":
+				return ec.fieldContext_DiscordSettingsType_announceChannelId(ctx, field)
+			case "roleId":
+				return ec.fieldContext_DiscordSettingsType_roleId(ctx, field)
+			case "voiceChannels":
+				return ec.fieldContext_DiscordSettingsType_voiceChannels(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DiscordSettingsType", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_questVoiceChannels(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_questVoiceChannels(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().QuestVoiceChannels(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*DiscordVoiceChannelType)
+	fc.Result = res
+	return ec.marshalNDiscordVoiceChannelType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordVoiceChannelTypeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_questVoiceChannels(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_DiscordVoiceChannelType_name(ctx, field)
+			case "channelId":
+				return ec.fieldContext_DiscordVoiceChannelType_channelId(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DiscordVoiceChannelType", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_map(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_map(ctx, field)
 	if err != nil {
@@ -41103,6 +42625,8 @@ func (ec *executionContext) fieldContext_Query_map(ctx context.Context, field gr
 				return ec.fieldContext_MapType_atlasCode(ctx, field)
 			case "family":
 				return ec.fieldContext_MapType_family(ctx, field)
+			case "grid":
+				return ec.fieldContext_MapType_grid(ctx, field)
 			case "mapKind":
 				return ec.fieldContext_MapType_mapKind(ctx, field)
 			case "assetPath":
@@ -41184,6 +42708,8 @@ func (ec *executionContext) fieldContext_Query_maps(ctx context.Context, field g
 				return ec.fieldContext_MapType_atlasCode(ctx, field)
 			case "family":
 				return ec.fieldContext_MapType_family(ctx, field)
+			case "grid":
+				return ec.fieldContext_MapType_grid(ctx, field)
 			case "mapKind":
 				return ec.fieldContext_MapType_mapKind(ctx, field)
 			case "assetPath":
@@ -42302,6 +43828,8 @@ func (ec *executionContext) fieldContext_QuestArcType_quests(ctx context.Context
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "voiceChannelId":
+				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
 				return ec.fieldContext_QuestType_createdBy(ctx, field)
 			case "createdAt":
@@ -43013,6 +44541,8 @@ func (ec *executionContext) fieldContext_QuestListResult_items(_ context.Context
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "voiceChannelId":
+				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
 				return ec.fieldContext_QuestType_createdBy(ctx, field)
 			case "createdAt":
@@ -44812,6 +46342,47 @@ func (ec *executionContext) _QuestType_signupType(ctx context.Context, field gra
 }
 
 func (ec *executionContext) fieldContext_QuestType_signupType(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QuestType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QuestType_voiceChannelId(ctx context.Context, field graphql.CollectedField, obj *QuestType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_QuestType_voiceChannelId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.VoiceChannelID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_QuestType_voiceChannelId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "QuestType",
 		Field:      field,
@@ -53352,7 +54923,7 @@ func (ec *executionContext) unmarshalInputCreateQuestInput(ctx context.Context, 
 		asMap["genres"] = []any{}
 	}
 
-	fieldsInOrder := [...]string{"title", "regionIds", "scheduledAt", "durationHours", "briefBody", "dmId", "kinds", "slotsMax", "arcId", "tags", "genres", "apl", "signupType", "additionalInfo"}
+	fieldsInOrder := [...]string{"title", "regionIds", "scheduledAt", "durationHours", "briefBody", "dmId", "kinds", "slotsMax", "arcId", "tags", "genres", "apl", "signupType", "additionalInfo", "voiceChannelId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -53457,6 +55028,13 @@ func (ec *executionContext) unmarshalInputCreateQuestInput(ctx context.Context, 
 				return it, err
 			}
 			it.AdditionalInfo = data
+		case "voiceChannelId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("voiceChannelId"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.VoiceChannelID = data
 		}
 	}
 
@@ -53502,6 +55080,81 @@ func (ec *executionContext) unmarshalInputCreationCatalogFiltersInput(ctx contex
 				return it, err
 			}
 			it.IncludeAll = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputDiscordSettingsInput(ctx context.Context, obj any) (DiscordSettingsInput, error) {
+	var it DiscordSettingsInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"announceChannelId", "roleId", "voiceChannels"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "announceChannelId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("announceChannelId"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AnnounceChannelID = data
+		case "roleId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("roleId"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RoleID = data
+		case "voiceChannels":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("voiceChannels"))
+			data, err := ec.unmarshalNDiscordVoiceChannelInput2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordVoiceChannelInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.VoiceChannels = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputDiscordVoiceChannelInput(ctx context.Context, obj any) (DiscordVoiceChannelInput, error) {
+	var it DiscordVoiceChannelInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "channelId"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "channelId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelId"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ChannelID = data
 		}
 	}
 
@@ -53932,7 +55585,11 @@ func (ec *executionContext) unmarshalInputMapCreateInput(ctx context.Context, ob
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "atlasCode", "family", "mapKind", "regionId", "assetPath"}
+	if _, present := asMap["grid"]; !present {
+		asMap["grid"] = "point"
+	}
+
+	fieldsInOrder := [...]string{"name", "atlasCode", "family", "grid", "mapKind", "regionId", "assetPath"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -53960,6 +55617,13 @@ func (ec *executionContext) unmarshalInputMapCreateInput(ctx context.Context, ob
 				return it, err
 			}
 			it.Family = data
+		case "grid":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("grid"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Grid = data
 		case "mapKind":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mapKind"))
 			data, err := ec.unmarshalNString2string(ctx, v)
@@ -53974,6 +55638,54 @@ func (ec *executionContext) unmarshalInputMapCreateInput(ctx context.Context, ob
 				return it, err
 			}
 			it.RegionID = data
+		case "assetPath":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("assetPath"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AssetPath = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputMapUpdateInput(ctx context.Context, obj any) (MapUpdateInput, error) {
+	var it MapUpdateInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "family", "grid", "assetPath"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "family":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("family"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Family = data
+		case "grid":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("grid"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Grid = data
 		case "assetPath":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("assetPath"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -54338,7 +56050,7 @@ func (ec *executionContext) unmarshalInputQuestEditInput(ctx context.Context, ob
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"expectedUpdatedAt", "title", "regionIds", "scheduledAt", "durationHours", "briefBody", "dmId", "kinds", "slotsMax", "arcId", "tags", "genres", "apl", "signupType", "additionalInfo"}
+	fieldsInOrder := [...]string{"expectedUpdatedAt", "title", "regionIds", "scheduledAt", "durationHours", "briefBody", "dmId", "kinds", "slotsMax", "arcId", "tags", "genres", "apl", "signupType", "additionalInfo", "voiceChannelId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -54450,6 +56162,13 @@ func (ec *executionContext) unmarshalInputQuestEditInput(ctx context.Context, ob
 				return it, err
 			}
 			it.AdditionalInfo = graphql.OmittableOf(data)
+		case "voiceChannelId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("voiceChannelId"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.VoiceChannelID = graphql.OmittableOf(data)
 		}
 	}
 
@@ -55941,6 +57660,65 @@ func (ec *executionContext) _BackstoryType(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var bodySpanAuditImplementors = []string{"BodySpanAudit"}
+
+func (ec *executionContext) _BodySpanAudit(ctx context.Context, sel ast.SelectionSet, obj *BodySpanAudit) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, bodySpanAuditImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("BodySpanAudit")
+		case "startLine":
+			out.Values[i] = ec._BodySpanAudit_startLine(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "endLine":
+			out.Values[i] = ec._BodySpanAudit_endLine(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "kind":
+			out.Values[i] = ec._BodySpanAudit_kind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "handle":
+			out.Values[i] = ec._BodySpanAudit_handle(ctx, field, obj)
+		case "suggestion":
+			out.Values[i] = ec._BodySpanAudit_suggestion(ctx, field, obj)
+		case "token":
+			out.Values[i] = ec._BodySpanAudit_token(ctx, field, obj)
+		case "tokenLine":
+			out.Values[i] = ec._BodySpanAudit_tokenLine(ctx, field, obj)
+		case "tokenColumn":
+			out.Values[i] = ec._BodySpanAudit_tokenColumn(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var categoryCountTypeImplementors = []string{"CategoryCountType"}
 
 func (ec *executionContext) _CategoryCountType(ctx context.Context, sel ast.SelectionSet, obj *CategoryCountType) graphql.Marshaler {
@@ -57114,6 +58892,93 @@ func (ec *executionContext) _DirectoryEntryType(ctx context.Context, sel ast.Sel
 	return out
 }
 
+var discordSettingsTypeImplementors = []string{"DiscordSettingsType"}
+
+func (ec *executionContext) _DiscordSettingsType(ctx context.Context, sel ast.SelectionSet, obj *DiscordSettingsType) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, discordSettingsTypeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DiscordSettingsType")
+		case "announceChannelId":
+			out.Values[i] = ec._DiscordSettingsType_announceChannelId(ctx, field, obj)
+		case "roleId":
+			out.Values[i] = ec._DiscordSettingsType_roleId(ctx, field, obj)
+		case "voiceChannels":
+			out.Values[i] = ec._DiscordSettingsType_voiceChannels(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var discordVoiceChannelTypeImplementors = []string{"DiscordVoiceChannelType"}
+
+func (ec *executionContext) _DiscordVoiceChannelType(ctx context.Context, sel ast.SelectionSet, obj *DiscordVoiceChannelType) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, discordVoiceChannelTypeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DiscordVoiceChannelType")
+		case "name":
+			out.Values[i] = ec._DiscordVoiceChannelType_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "channelId":
+			out.Values[i] = ec._DiscordVoiceChannelType_channelId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var dmLastSessionTypeImplementors = []string{"DmLastSessionType"}
 
 func (ec *executionContext) _DmLastSessionType(ctx context.Context, sel ast.SelectionSet, obj *DmLastSessionType) graphql.Marshaler {
@@ -58076,10 +59941,41 @@ func (ec *executionContext) _GameCalendarType(ctx context.Context, sel ast.Selec
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "monthGrid":
-			out.Values[i] = ec._GameCalendarType_monthGrid(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._GameCalendarType_monthGrid(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
 			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -58185,6 +60081,8 @@ func (ec *executionContext) _GameDayCellType(ctx context.Context, sel ast.Select
 			}
 		case "gameDay":
 			out.Values[i] = ec._GameDayCellType_gameDay(ctx, field, obj)
+		case "gameDate":
+			out.Values[i] = ec._GameDayCellType_gameDate(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -58474,6 +60372,11 @@ func (ec *executionContext) _MapType(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "family":
 			out.Values[i] = ec._MapType_family(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "grid":
+			out.Values[i] = ec._MapType_grid(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
@@ -59685,6 +61588,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "updateDiscordSettings":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateDiscordSettings(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "redriveDiscordDelivery":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_redriveDiscordDelivery(ctx, field)
@@ -59695,6 +61605,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "createMap":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createMap(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateMap":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateMap(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -59772,6 +61689,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "upsertPointcrawlNode":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_upsertPointcrawlNode(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "setPointcrawlNodeState":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setPointcrawlNodeState(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -60391,6 +62315,11 @@ func (ec *executionContext) _PointcrawlNodeType(ctx context.Context, sel ast.Sel
 			}
 		case "name":
 			out.Values[i] = ec._PointcrawlNodeType_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "state":
+			out.Values[i] = ec._PointcrawlNodeType_state(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
@@ -61111,6 +63040,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_previewBody(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "auditBody":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_auditBody(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -61967,6 +63918,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_questAnnouncementRoleSetting(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "discordSettings":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_discordSettings(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "questVoiceChannels":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_questVoiceChannels(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -62928,6 +64923,8 @@ func (ec *executionContext) _QuestType(ctx context.Context, sel ast.SelectionSet
 			out.Values[i] = ec._QuestType_apl(ctx, field, obj)
 		case "signupType":
 			out.Values[i] = ec._QuestType_signupType(ctx, field, obj)
+		case "voiceChannelId":
+			out.Values[i] = ec._QuestType_voiceChannelId(ctx, field, obj)
 		case "createdBy":
 			out.Values[i] = ec._QuestType_createdBy(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -65456,6 +67453,70 @@ func (ec *executionContext) marshalNBackstoryType2ᚖgithubᚗcomᚋpiyushsatti�
 	return ec._BackstoryType(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNBodySpanAudit2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanAuditᚄ(ctx context.Context, sel ast.SelectionSet, v []*BodySpanAudit) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNBodySpanAudit2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanAudit(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNBodySpanAudit2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanAudit(ctx context.Context, sel ast.SelectionSet, v *BodySpanAudit) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._BodySpanAudit(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNBodySpanKind2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanKind(ctx context.Context, v any) (BodySpanKind, error) {
+	var res BodySpanKind
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNBodySpanKind2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanKind(ctx context.Context, sel ast.SelectionSet, v BodySpanKind) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v any) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -66206,6 +68267,99 @@ func (ec *executionContext) marshalNDirectoryEntryType2ᚖgithubᚗcomᚋpiyushs
 		return graphql.Null
 	}
 	return ec._DirectoryEntryType(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNDiscordSettingsInput2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordSettingsInput(ctx context.Context, v any) (DiscordSettingsInput, error) {
+	res, err := ec.unmarshalInputDiscordSettingsInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDiscordSettingsType2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordSettingsType(ctx context.Context, sel ast.SelectionSet, v DiscordSettingsType) graphql.Marshaler {
+	return ec._DiscordSettingsType(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDiscordSettingsType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordSettingsType(ctx context.Context, sel ast.SelectionSet, v *DiscordSettingsType) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._DiscordSettingsType(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNDiscordVoiceChannelInput2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordVoiceChannelInputᚄ(ctx context.Context, v any) ([]*DiscordVoiceChannelInput, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*DiscordVoiceChannelInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNDiscordVoiceChannelInput2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordVoiceChannelInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNDiscordVoiceChannelInput2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordVoiceChannelInput(ctx context.Context, v any) (*DiscordVoiceChannelInput, error) {
+	res, err := ec.unmarshalInputDiscordVoiceChannelInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDiscordVoiceChannelType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordVoiceChannelTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []*DiscordVoiceChannelType) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNDiscordVoiceChannelType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordVoiceChannelType(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNDiscordVoiceChannelType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDiscordVoiceChannelType(ctx context.Context, sel ast.SelectionSet, v *DiscordVoiceChannelType) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._DiscordVoiceChannelType(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNDmLastSessionType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDmLastSessionTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []*DmLastSessionType) graphql.Marshaler {
@@ -67030,6 +69184,11 @@ func (ec *executionContext) marshalNMapType2ᚖgithubᚗcomᚋpiyushsattiᚋchro
 	return ec._MapType(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNMapUpdateInput2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMapUpdateInput(ctx context.Context, v any) (MapUpdateInput, error) {
+	res, err := ec.unmarshalInputMapUpdateInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNMemberListResult2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMemberListResult(ctx context.Context, sel ast.SelectionSet, v MemberListResult) graphql.Marshaler {
 	return ec._MemberListResult(ctx, sel, &v)
 }
@@ -67643,6 +69802,16 @@ func (ec *executionContext) marshalNPointcrawlEntryLinkType2ᚖgithubᚗcomᚋpi
 func (ec *executionContext) unmarshalNPointcrawlNodeInput2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeInput(ctx context.Context, v any) (PointcrawlNodeInput, error) {
 	res, err := ec.unmarshalInputPointcrawlNodeInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNPointcrawlNodeState2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeState(ctx context.Context, v any) (PointcrawlNodeState, error) {
+	var res PointcrawlNodeState
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPointcrawlNodeState2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeState(ctx context.Context, sel ast.SelectionSet, v PointcrawlNodeState) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNPointcrawlNodeType2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeType(ctx context.Context, sel ast.SelectionSet, v PointcrawlNodeType) graphql.Marshaler {

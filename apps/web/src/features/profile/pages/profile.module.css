@@ -62,22 +62,6 @@
   margin-inline-end: auto;
 }
 
-.slots {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.slots li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-2);
-}
-
 .sessions {
   display: flex;
   flex-direction: column;
@@ -128,4 +112,19 @@
 .body :global(.empty-state) {
   gap: var(--sp-2);
   padding: var(--sp-4);
+}
+
+/* Side-by-side profile cards (writings, DM tables, series): the last line
+   (date, status, quest count) pins to the bottom so it lines up across the
+   row when a title wraps. */
+.body .pinEnd {
+  margin-block-start: auto;
+}
+
+/* Clickable cards are `display:block` from the unlayered .card--clickable
+   rule, which beats the layered .stack utility; this restores the column so
+   .pinEnd can push the last line down. */
+.body .pinCard {
+  display: flex;
+  flex-direction: column;
 }

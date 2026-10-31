@@ -1,10 +1,12 @@
 # Product field routing
 
-Status: accepted breaking contract; runtime route removal and new GraphQL behavior remain pending. [D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) replaces the old fixed-read/command REST rule. All164 business roots are declared in split SDL.
+Status: accepted breaking contract. Quest commands and character/member legacy reads now use GraphQL only. Other product REST routes remain mounted during the transition. [D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) replaces the old fixed-read/command REST rule. All164 business roots are declared in split SDL.
 
 ## Original operation dispositions
 
 Every original identity remains accounted for. Retained HTTP protocol paths keep their existing authentication/error behavior. Product REST paths are removed only by their scheduled implementation owners.
+
+The original `mounted-http-013` through `mounted-http-017`, `mounted-http-025` through `mounted-http-027`, and `mounted-http-031` through `mounted-http-033` routes return 404. Their table identities remain historical; the GraphQL destinations are authoritative. `GET /v1/members/me` remains mounted.
 
 | Identity            | Original operation                                  | Accepted destination                                | Criterion |
 | ------------------- | --------------------------------------------------- | --------------------------------------------------- | --------- |
@@ -60,7 +62,7 @@ Every original identity remains accounted for. Retained HTTP protocol paths keep
 | mounted-http-016    | `POST /v1/quests/{id}/transition`                   | GraphQL Mutation.transitionQuestStatus              | OP-050    |
 | mounted-http-017    | `POST /v1/quests/{id}/close`                        | GraphQL Mutation.closeQuest                         | OP-051    |
 | mounted-http-018    | `GET /v1/me/notifications/unread-count`             | GraphQL Query.myUnreadNotificationCount             | OP-052    |
-| mounted-http-019    | `POST /v1/me/notifications/read`                    | GraphQL Mutation.markNotificationsRead              | OP-053    |
+| mounted-http-019    | `POST /v1/me/notifications/read` (retired)          | GraphQL Mutation.markNotificationsRead              | OP-053    |
 | mounted-http-020    | `POST /v1/me/notifications/acknowledge-suppressed`  | GraphQL Mutation.acknowledgeSuppressedNotifications | OP-054    |
 | mounted-http-021    | `POST /v1/me/personalization/reconcile`             | Retired                                             | OP-055    |
 | mounted-http-022    | `GET /v1/stats`                                     | GraphQL Query.siteStats                             | OP-056    |
@@ -225,6 +227,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Mutation.setMemberRolesBatch                | member-operations.graphql       |
 | Mutation.setMyAvailability                  | member-operations.graphql       |
 | Mutation.setPointcrawlEdge                  | spatial-operations.graphql      |
+| Mutation.setPointcrawlNodeState             | spatial-operations.graphql      |
 | Mutation.setQuestPointcrawlLinks            | quest/operations.graphql        |
 | Mutation.setUnlockableActive                | member-operations.graphql       |
 | Mutation.signupForQuest                     | quest-operations.graphql        |
@@ -240,10 +243,12 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Mutation.unpublishDocument                  | document-operations.graphql     |
 | Mutation.updateBackstory                    | character-operations.graphql    |
 | Mutation.updateCharacterProfile             | character-operations.graphql    |
+| Mutation.updateDiscordSettings              | site-operations.graphql         |
 | Mutation.updateDocument                     | document-operations.graphql     |
 | Mutation.updateGameCalendar                 | spatial-operations.graphql      |
 | Mutation.updateHex                          | spatial-operations.graphql      |
 | Mutation.updateHomeBanner                   | site-operations.graphql         |
+| Mutation.updateMap                          | spatial-operations.graphql      |
 | Mutation.updateMyDmProfile                  | member-operations.graphql       |
 | Mutation.updateMyProfile                    | member-operations.graphql       |
 | Mutation.updateMySettings                   | member-operations.graphql       |
@@ -262,6 +267,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Query.adminCharacterDirectory               | character-operations.graphql    |
 | Query.adminOperations                       | site-operations.graphql         |
 | Query.archonAssignments                     | spatial-operations.graphql      |
+| Query.auditBody                             | document-operations.graphql     |
 | Query.backstories                           | character-operations.graphql    |
 | Query.character                             | character-operations.graphql    |
 | Query.characterLogs                         | character-operations.graphql    |
@@ -277,6 +283,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Query.creationCatalog                       | character-operations.graphql    |
 | Query.discordDeliveryMode                   | site-operations.graphql         |
 | ~~Query.dmRequests~~                        | **DROP** (N3)                   |
+| Query.discordSettings                       | site-operations.graphql         |
 | Query.dmSessionHistory                      | quest-operations.graphql        |
 | Query.dmStats                               | quest-operations.graphql        |
 | Query.dmSummaries                           | quest-operations.graphql        |
@@ -329,6 +336,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Query.questGenreOptions                     | quest-operations.graphql        |
 | Query.questStateCounts                      | quest-operations.graphql        |
 | Query.questSummaries                        | quest-operations.graphql        |
+| Query.questVoiceChannels                    | site-operations.graphql         |
 | Query.quests                                | quest-operations.graphql        |
 | Query.realDates                             | spatial-operations.graphql      |
 | Query.recentHexChanges                      | spatial-operations.graphql      |

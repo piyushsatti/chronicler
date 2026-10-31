@@ -3,9 +3,10 @@ package graph
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
+	"time"
 
-	"github.com/piyushsatti/chronicler/apps/api/internal/character"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
@@ -28,11 +29,8 @@ type RequestLoaders struct {
 	Members              *Loader[member.IDKey, member.MemberView]
 	Documents            *Loader[document.DocumentKey, document.DocumentView]
 	DmTables             *Loader[document.IDKey, document.DocumentView]
-	Characters           *Loader[character.IDKey, character.CharacterView]
-	Quests               *Loader[quest.IDKey, quest.QuestView]
 	Participants         *Loader[quest.ParticipantsKey, quest.ParticipantList]
 	QuestPointcrawlLinks *Loader[quest.QuestHexesKey, quest.HexList]
-	QuestRegions         *Loader[quest.QuestRegionsKey, quest.RegionIDList]
 	Arcs                 *Loader[quest.IDKey, quest.QuestArcView]
 	ArcQuests            *Loader[quest.ArcQuestsKey, quest.QuestList]
 	Delivery             *Loader[quest.IDKey, quest.QuestDiscordDeliveryView]
@@ -57,11 +55,8 @@ func (l *RequestLoaders) clear() {
 		loaderClear(l.Members),
 		loaderClear(l.Documents),
 		loaderClear(l.DmTables),
-		loaderClear(l.Characters),
-		loaderClear(l.Quests),
 		loaderClear(l.Participants),
 		loaderClear(l.QuestPointcrawlLinks),
-		loaderClear(l.QuestRegions),
 		loaderClear(l.Arcs),
 		loaderClear(l.ArcQuests),
 		loaderClear(l.Delivery),
@@ -94,7 +89,6 @@ func loaderClear[K comparable, V any](loader *Loader[K, V]) func() {
 type BatchProviders struct {
 	Member       *member.ProductQueries
 	Document     *document.ProductQueries
-	Character    *character.ProductQueries
 	Quest        *quest.ProductQueries
 	Notification *notification.ProductQueries
 	Site         *site.ProductQueries
@@ -136,14 +130,9 @@ func NewRequestLoaders(providers BatchProviders, state *RequestState) (*RequestL
 		reg.DocumentReaders = newKeyedLoader(state, providers.Document.BatchReaderIds)
 		reg.DocumentSubjects = newKeyedLoader(state, providers.Document.BatchDocumentSubjects)
 	}
-	if providers.Character != nil {
-		reg.Characters = newKeyedLoader(state, providers.Character.BatchCharacters)
-	}
 	if providers.Quest != nil {
-		reg.Quests = newKeyedLoader(state, providers.Quest.BatchQuests)
 		reg.Participants = newKeyedLoader(state, providers.Quest.BatchParticipants)
 		reg.QuestPointcrawlLinks = newKeyedLoader(state, providers.Quest.BatchQuestPointcrawlLinks)
-		reg.QuestRegions = newKeyedLoader(state, providers.Quest.BatchQuestRegions)
 		reg.Arcs = newKeyedLoader(state, providers.Quest.BatchArcs)
 		reg.ArcQuests = newKeyedLoader(state, providers.Quest.BatchArcQuests)
 		reg.Delivery = newKeyedLoader(state, providers.Quest.BatchDelivery)
@@ -162,80 +151,140 @@ func NewRequestLoaders(providers BatchProviders, state *RequestState) (*RequestL
 	return reg, nil
 }
 
+type loaderEntry[K comparable, V any] struct {
+	key    K
+	done   chan struct{}
+	result product.BatchResult[V]
+	err    error
+}
+
+type loaderBatch[K comparable, V any] struct {
+	ctx     context.Context
+	entries []*loaderEntry[K, V]
+}
+
+type keyedLoader[K comparable, V any] struct {
+	state   *RequestState
+	read    func(context.Context, auth.Authority, []K) ([]product.BatchResult[V], error)
+	entries map[K]*loaderEntry[K, V]
+	pending *loaderBatch[K, V]
+	mu      sync.Mutex
+}
+
 func newKeyedLoader[K comparable, V any](state *RequestState, read func(context.Context, auth.Authority, []K) ([]product.BatchResult[V], error)) *Loader[K, V] {
-	cache := map[K]product.BatchResult[V]{}
-	var mu sync.Mutex
-	clearFn := func() {
-		mu.Lock()
-		cache = map[K]product.BatchResult[V]{}
-		mu.Unlock()
-	}
-	loadMany := func(ctx context.Context, keys []K) ([]product.BatchResult[V], error) {
-		if len(keys) == 0 {
-			return nil, nil
+	l := &keyedLoader[K, V]{state: state, read: read, entries: map[K]*loaderEntry[K, V]{}}
+	return &Loader[K, V]{Load: l.load, LoadMany: l.loadMany, Clear: l.clear}
+}
+
+func (l *keyedLoader[K, V]) complete(items []*loaderEntry[K, V], results []product.BatchResult[V], err error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for i, item := range items {
+		item.err = err
+		if err == nil {
+			item.result = results[i]
+		} else if l.entries[item.key] == item {
+			delete(l.entries, item.key)
 		}
-		actor, err := state.CurrentAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		out := make([]product.BatchResult[V], len(keys))
-		missing := make([]K, 0, len(keys))
-		missingIdx := make([]int, 0, len(keys))
-		mu.Lock()
-		for i, key := range keys {
-			if cached, ok := cache[key]; ok {
-				out[i] = cached
-				continue
-			}
-			missing = append(missing, key)
-			missingIdx = append(missingIdx, i)
-		}
-		mu.Unlock()
-		if len(missing) == 0 {
-			return out, nil
-		}
-		if err := loadMissingKeys(ctx, actor, missing, missingIdx, out, cache, &mu, read); err != nil {
-			return nil, err
-		}
-		return out, nil
-	}
-	return &Loader[K, V]{
-		Load: func(ctx context.Context, key K) (*V, error) {
-			results, err := loadMany(ctx, []K{key})
-			if err != nil {
-				return nil, err
-			}
-			if len(results) != 1 {
-				return nil, errors.New("batch loader single key mismatch")
-			}
-			if results[0].Err != nil {
-				return nil, results[0].Err
-			}
-			return results[0].Value, nil
-		},
-		LoadMany: loadMany,
-		Clear:    clearFn,
+		close(item.done)
 	}
 }
 
-func loadMissingKeys[K comparable, V any](ctx context.Context, actor auth.Authority, missing []K, indexes []int, out []product.BatchResult[V], cache map[K]product.BatchResult[V], mu *sync.Mutex, read func(context.Context, auth.Authority, []K) ([]product.BatchResult[V], error)) error {
-	for start := 0; start < len(missing); start += loaderChunkSize {
-		end := min(start+loaderChunkSize, len(missing))
-		chunk, chunkIndexes := missing[start:end], indexes[start:end]
-		fetched, err := read(ctx, actor, chunk)
-		if err != nil {
-			return err
-		}
-		if len(fetched) != len(chunk) {
-			return errors.New("batch loader result length mismatch")
-		}
-		mu.Lock()
-		for i, key := range chunk {
-			result := fetched[i]
-			cache[key] = result
-			out[chunkIndexes[i]] = result
-		}
-		mu.Unlock()
+func (l *keyedLoader[K, V]) dispatch(work *loaderBatch[K, V]) {
+	l.mu.Lock()
+	if l.pending == work {
+		l.pending = nil
 	}
-	return nil
+	l.mu.Unlock()
+	// The batch runs on a timer goroutine, outside gqlgen's resolver recovery:
+	// a panicking reader must fail its waiters, not the whole process.
+	next := 0
+	defer func() {
+		if r := recover(); r != nil {
+			slog.ErrorContext(work.ctx, "batch loader panic", "panic", r)
+			l.complete(work.entries[next:], nil, errors.New("batch loader failed"))
+		}
+	}()
+	actor, err := l.state.CurrentAuthority(work.ctx)
+	if err != nil {
+		l.complete(work.entries, nil, err)
+		return
+	}
+	for start := 0; start < len(work.entries); start += loaderChunkSize {
+		next = start
+		items := work.entries[start:min(start+loaderChunkSize, len(work.entries))]
+		keys := make([]K, len(items))
+		for i, item := range items {
+			keys[i] = item.key
+		}
+		results, err := l.read(work.ctx, actor, keys)
+		if err == nil && len(results) != len(items) {
+			err = errors.New("batch loader result length mismatch")
+		}
+		if err != nil {
+			l.complete(work.entries[start:], nil, err)
+			return
+		}
+		l.complete(items, results, nil)
+	}
+}
+
+func (l *keyedLoader[K, V]) loadMany(ctx context.Context, keys []K) ([]product.BatchResult[V], error) {
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	if _, err := l.state.CurrentAuthority(ctx); err != nil {
+		return nil, err
+	}
+	waiters := make([]*loaderEntry[K, V], len(keys))
+	l.mu.Lock()
+	for i, key := range keys {
+		item := l.entries[key]
+		if item == nil {
+			item = &loaderEntry[K, V]{key: key, done: make(chan struct{})}
+			l.entries[key] = item
+			if l.pending == nil {
+				l.pending = &loaderBatch[K, V]{ctx: ctx}
+				work := l.pending
+				time.AfterFunc(2*time.Millisecond, func() { l.dispatch(work) })
+			}
+			l.pending.entries = append(l.pending.entries, item)
+		}
+		waiters[i] = item
+	}
+	l.mu.Unlock()
+	out := make([]product.BatchResult[V], len(keys))
+	for i, item := range waiters {
+		select {
+		case <-item.done:
+			if item.err != nil {
+				return nil, item.err
+			}
+			out[i] = item.result
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	return out, nil
+}
+
+func (l *keyedLoader[K, V]) load(ctx context.Context, key K) (*V, error) {
+	results, err := l.loadMany(ctx, []K{key})
+	if err != nil {
+		return nil, err
+	}
+	if len(results) != 1 {
+		return nil, errors.New("batch loader single key mismatch")
+	}
+	if results[0].Err != nil {
+		return nil, results[0].Err
+	}
+	return results[0].Value, nil
+}
+
+func (l *keyedLoader[K, V]) clear() {
+	l.mu.Lock()
+	l.entries = map[K]*loaderEntry[K, V]{}
+	l.pending = nil
+	l.mu.Unlock()
 }

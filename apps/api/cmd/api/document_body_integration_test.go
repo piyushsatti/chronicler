@@ -110,7 +110,7 @@ func TestProductionChainBodyRedactionEveryDocumentProjection(t *testing.T) {
 					}
 				} else {
 					if !strings.Contains(body, "> [!redacted]") {
-						t.Fatalf("missing fixed redaction body=%q", body)
+						t.Fatalf("missing redaction placeholder body=%q", body)
 					}
 					if tc.name == "matching member" && !strings.Contains(body, "HANDLE-SECRET") {
 						t.Fatalf("matching handle lost entitled block: %q", body)
@@ -172,9 +172,9 @@ func TestProductionChainLegacyBodyScopesEveryProjection(t *testing.T) {
 	d := f.doc(t, "", &author, document.StatusPublished, document.VisibilityPublic)
 	prefix := "legacy-body-projection-" + uuid.NewString()
 	raw := "PUBLIC\n> [!DM]\n> DM-SECRET\n\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!dm:]\n> MALFORMED-SECRET\n\n> [!spoiler]\n> SPOILER-VISIBLE"
-	redacted := "PUBLIC\n> [!redacted]\n\n> [!redacted]\n\n> [!redacted]\n\n> [!spoiler]\n> SPOILER-VISIBLE"
-	dmBody := "PUBLIC\n> [!DM]\n> DM-SECRET\n\n> [!redacted]\n\n> [!redacted]\n\n> [!spoiler]\n> SPOILER-VISIBLE"
-	memberBody := "PUBLIC\n> [!redacted]\n\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!redacted]\n\n> [!spoiler]\n> SPOILER-VISIBLE"
+	redacted := "PUBLIC\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████\n\n> [!spoiler]\n> SPOILER-VISIBLE"
+	dmBody := "PUBLIC\n> [!DM]\n> DM-SECRET\n\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████\n\n> [!spoiler]\n> SPOILER-VISIBLE"
+	memberBody := "PUBLIC\n> [!redacted]\n> ████████████████████\n\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!redacted]\n> ████████████████████\n\n> [!spoiler]\n> SPOILER-VISIBLE"
 	f.exec(t, `UPDATE documents SET kind='codex_entry',title=$2,body=$3 WHERE id=$1`, d.rowID, prefix, raw)
 	d.body = raw
 	f.exec(t, `INSERT INTO document_readers(document_id,member_id) VALUES($1,$2),($1,$3)`, d.rowID, dm.rowID, archon.rowID)
@@ -226,6 +226,7 @@ func TestProductionChainLegacyBodyScopesEveryProjection(t *testing.T) {
 						}
 						token := ""
 						ctx := context.Background()
+						var actor auth.Authority
 						if tc.member.publicID != "" {
 							// Deliberately stale elevated JWT roles never grant a block.
 							token = f.token(t, tc.member.publicID, auth.Admin, auth.DM)
@@ -233,13 +234,12 @@ func TestProductionChainLegacyBodyScopesEveryProjection(t *testing.T) {
 							if err != nil {
 								t.Fatal(err)
 							}
-							ctx = auth.WithAuthority(ctx, a)
+							actor = a
 						}
-						ctx = document.WithScopeCache(ctx)
-						batch, err := (document.BatchLoader{Queries: f.runtime.Documents}).LoadMany(ctx, []string{d.publicID})
+						batch, err := f.runtime.Resolver.Services.DocumentQueries.BatchDocuments(ctx, actor, []document.DocumentKey{{ID: d.publicID}})
 						if visibility != document.VisibilityPublic && !tc.tier {
 							assertBodyProjectionDenied(t, f, token, query, vars, raw)
-							if err != nil || len(batch) != 0 {
+							if err != nil || len(batch) != 1 || batch[0].Err != nil || batch[0].Value != nil {
 								t.Fatalf("outer-denied native batch=%+v err=%v", batch, err)
 							}
 							return
@@ -254,7 +254,7 @@ func TestProductionChainLegacyBodyScopesEveryProjection(t *testing.T) {
 								t.Fatalf("body=%q want=%q response=%s", body, tc.want, response)
 							}
 						}
-						if err != nil || len(batch) != 1 || batch[0].Body != tc.want {
+						if err != nil || len(batch) != 1 || batch[0].Err != nil || batch[0].Value == nil || batch[0].Value.EffectiveBody == nil || *batch[0].Value.EffectiveBody != tc.want {
 							t.Fatalf("native batch=%+v want=%q err=%v", batch, tc.want, err)
 						}
 						for _, secret := range []string{"DM-SECRET", "HANDLE-SECRET", "MALFORMED-SECRET"} {
@@ -262,7 +262,7 @@ func TestProductionChainLegacyBodyScopesEveryProjection(t *testing.T) {
 								t.Fatalf("hidden raw bytes %q escaped response=%s", secret, response)
 							}
 						}
-						if !tc.raw && strings.Contains(batch[0].Body, "MALFORMED-SECRET") {
+						if !tc.raw && strings.Contains(*batch[0].Value.EffectiveBody, "MALFORMED-SECRET") {
 							t.Fatal("malformed raw bytes escaped native batch")
 						}
 						if tc.name == "admin" {
@@ -291,8 +291,8 @@ func TestProductionChainLegacyBodyScopesEveryProjection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	batch, err := (document.BatchLoader{Queries: f.runtime.Documents}).LoadMany(document.WithScopeCache(auth.WithAuthority(context.Background(), a)), []string{d.publicID})
-	if err != nil || len(batch) != 0 {
+	batch, err := f.runtime.Resolver.Services.DocumentQueries.BatchDocuments(context.Background(), a, []document.DocumentKey{{ID: d.publicID}})
+	if err != nil || len(batch) != 1 || batch[0].Err != nil || batch[0].Value != nil {
 		t.Fatalf("matching handle regranted missing reader in batch=%+v err=%v", batch, err)
 	}
 	// The same JWT must follow current member handles and literal role strings

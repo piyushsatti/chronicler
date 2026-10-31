@@ -151,7 +151,7 @@ func TestProductSQLNamedSourcesCoverSettledStorageGroups(t *testing.T) {
 		"ListProductArchonAssignments", "ReadProductGameDate",
 		"ReadProductCalendar", "ListProductCalendarCells", "ListProductTimeAnchors",
 		"LockProductMapByAtlasCode", "CreateProductMap", "UpsertProductPointcrawlNode", "LockProductPointcrawlNode",
-		"SetProductPointcrawlEdge",
+		"SetProductPointcrawlEdge", "SetProductPointcrawlNodeState",
 		"LinkProductPointcrawlEntry",
 		"UnlinkProductPointcrawlEntry", "AssignProductArchon",
 		"RevokeProductArchon", "RestoreProductRegion",
@@ -198,9 +198,9 @@ VALUES ('spa03-actor','spa03-actor','SPA03 actor',ARRAY['admin'],'active') RETUR
 		var assetPath *string
 		var createdAt time.Time
 		if err := productQueryRow(t, pool, ctx, createMap, pgx.StrictNamedArgs{
-			"name": "SPA03 " + code, "atlas_code": code, "map_kind": "pointcrawl", "family": "campaign",
+			"name": "SPA03 " + code, "atlas_code": code, "map_kind": "pointcrawl", "family": "campaign", "grid": "point",
 			"region_id": regionUUID.String(), "asset_path": nil, "actor_id": actorUUID.String(),
-		}).Scan(&got, &name, &atlasCode, &mapKind, &family, &returnedRegion, &assetPath, &createdAt, &createdBy); err != nil {
+		}).Scan(&got, &name, &atlasCode, &mapKind, &family, new(string), &returnedRegion, &assetPath, &createdAt, &createdBy); err != nil {
 			t.Fatalf("create map %s: %v", code, err)
 		}
 		if got == uuid.Nil || name != "SPA03 "+code || atlasCode != code || mapKind != "pointcrawl" || family != "campaign" || returnedRegion == nil || *returnedRegion != regionUUID || assetPath != nil || createdAt.IsZero() || createdBy == nil || *createdBy != actorUUID {
@@ -215,7 +215,7 @@ VALUES ('spa03-actor','spa03-actor','SPA03 actor',ARRAY['admin'],'active') RETUR
 		t.Fatal(err)
 	}
 	var lockedMapByCode uuid.UUID
-	if err := productQueryRow(t, mapByCodeTx, ctx, productSQL(t, "LockProductMapByAtlasCode", ":one"), pgx.StrictNamedArgs{"atlas_code": "spa03-a"}).Scan(new(int64), &lockedMapByCode, new(string), new(string), new(string), new(string), new(int64), new(*string), new(time.Time), new(*int64)); err != nil || lockedMapByCode != mapOneID {
+	if err := productQueryRow(t, mapByCodeTx, ctx, productSQL(t, "LockProductMapByAtlasCode", ":one"), pgx.StrictNamedArgs{"atlas_code": "spa03-a"}).Scan(new(int64), &lockedMapByCode, new(string), new(string), new(string), new(string), new(string), new(int64), new(*string), new(time.Time), new(*int64)); err != nil || lockedMapByCode != mapOneID {
 		_ = mapByCodeTx.Rollback(ctx)
 		t.Fatalf("lock map by code=%s err=%v", lockedMapByCode, err)
 	}
@@ -359,29 +359,6 @@ VALUES ('spa03-actor','spa03-actor','SPA03 actor',ARRAY['admin'],'active') RETUR
 		t.Fatalf("past game day=%d err=%v", historicalDay, err)
 	}
 
-	readDates := productSQL(t, "ReadProductGameDates", ":many")
-	dateRows, err := productQuery(t, pool, ctx, readDates, pgx.StrictNamedArgs{"real_dates": []time.Time{start, start.AddDate(0, 0, 1), start.AddDate(0, 0, 2)}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var gotDays []sql.NullInt32
-	for dateRows.Next() {
-		var ordinal int64
-		var realDate time.Time
-		var gameDay sql.NullInt32
-		var definition []byte
-		if err := dateRows.Scan(&ordinal, &realDate, &gameDay, &definition); err != nil {
-			t.Fatal(err)
-		}
-		gotDays = append(gotDays, gameDay)
-	}
-	if err := dateRows.Err(); err != nil {
-		t.Fatal(err)
-	}
-	dateRows.Close()
-	if len(gotDays) != 3 || !gotDays[0].Valid || gotDays[0].Int32 != 0 || gotDays[1].Valid || !gotDays[2].Valid || gotDays[2].Int32 != 5 {
-		t.Fatalf("date map values=%v, want [0 null 5]", gotDays)
-	}
 	var singleDay sql.NullInt32
 	var singleDefinition []byte
 	if err := productQueryRow(t, pool, ctx, productSQL(t, "ReadProductGameDate", ":one"), pgx.StrictNamedArgs{"real_date": start}).Scan(&singleDay, &singleDefinition); err != nil || !singleDay.Valid || singleDay.Int32 != 0 {
@@ -662,8 +639,8 @@ func TestProductSQLPointcrawlNodeAndContainmentStorageOnPostgres(t *testing.T) {
 	makeMap := func(code string) uuid.UUID {
 		t.Helper()
 		var id uuid.UUID
-		args := pgx.StrictNamedArgs{"name": code, "atlas_code": code, "map_kind": "pointcrawl", "family": "campaign", "region_id": nil, "asset_path": nil, "actor_id": actorID.String()}
-		if err := productQueryRow(t, pool, ctx, createMap, args).Scan(&id, new(string), new(string), new(string), new(string), new(*uuid.UUID), new(*string), new(time.Time), new(*uuid.UUID)); err != nil {
+		args := pgx.StrictNamedArgs{"name": code, "atlas_code": code, "map_kind": "pointcrawl", "family": "campaign", "grid": "point", "region_id": nil, "asset_path": nil, "actor_id": actorID.String()}
+		if err := productQueryRow(t, pool, ctx, createMap, args).Scan(&id, new(string), new(string), new(string), new(string), new(string), new(*uuid.UUID), new(*string), new(time.Time), new(*uuid.UUID)); err != nil {
 			t.Fatalf("create map %s: %v", code, err)
 		}
 		return id
@@ -680,10 +657,11 @@ func TestProductSQLPointcrawlNodeAndContainmentStorageOnPostgres(t *testing.T) {
 		var returnedName string
 		var x, y float64
 		var returnedSubmap *uuid.UUID
-		if err := productQueryRow(t, pool, ctx, productSQL(t, "UpsertProductPointcrawlNode", ":one"), args).Scan(&returnedID, &returnedMap, &returnedName, &x, &y, &returnedSubmap, new(time.Time)); err != nil {
+		var returnedState string
+		if err := productQueryRow(t, pool, ctx, productSQL(t, "UpsertProductPointcrawlNode", ":one"), args).Scan(&returnedID, &returnedMap, &returnedName, &x, &y, &returnedSubmap, new(time.Time), &returnedState); err != nil {
 			t.Fatalf("upsert pointcrawl node %q: %v", name, err)
 		}
-		if returnedMap != parentMap || returnedName != name || x != 1 || y != 2 || returnedSubmap == nil || *returnedSubmap != nodeSubmap {
+		if returnedMap != parentMap || returnedName != name || x != 1 || y != 2 || returnedSubmap == nil || *returnedSubmap != nodeSubmap || returnedState != "locked" {
 			t.Fatalf("pointcrawl node id=%s map=%s name=%q submap=%v", returnedID, returnedMap, returnedName, returnedSubmap)
 		}
 		return returnedID
@@ -698,7 +676,7 @@ func TestProductSQLPointcrawlNodeAndContainmentStorageOnPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	var lockedNodeID uuid.UUID
-	if err := productQueryRow(t, nodeLocker, ctx, productSQL(t, "LockProductPointcrawlNode", ":one"), pgx.StrictNamedArgs{"node_id": nodeID.String()}).Scan(new(int64), &lockedNodeID, new(int64), new(string), new(float64), new(float64), new(*int64), new(time.Time), new(uuid.UUID), new(*uuid.UUID)); err != nil || lockedNodeID != nodeID {
+	if err := productQueryRow(t, nodeLocker, ctx, productSQL(t, "LockProductPointcrawlNode", ":one"), pgx.StrictNamedArgs{"node_id": nodeID.String()}).Scan(new(int64), &lockedNodeID, new(int64), new(string), new(float64), new(float64), new(*int64), new(time.Time), new(string), new(uuid.UUID), new(*uuid.UUID)); err != nil || lockedNodeID != nodeID {
 		_ = nodeLocker.Rollback(ctx)
 		t.Fatalf("lock pointcrawl node id=%s err=%v", lockedNodeID, err)
 	}
@@ -709,7 +687,7 @@ func TestProductSQLPointcrawlNodeAndContainmentStorageOnPostgres(t *testing.T) {
 		t.Fatalf("pointcrawl node update changed identity %s to %s", nodeID, got)
 	}
 	noOpArgs := pgx.StrictNamedArgs{"node_id": nodeID.String(), "map_id": parentMap.String(), "name": "renamed", "x": float64(1), "y": float64(2), "submap_id": nodeSubmap.String(), "recorded_at": time.Now().UTC()}
-	if err := productQueryRow(t, pool, ctx, productSQL(t, "UpsertProductPointcrawlNode", ":one"), noOpArgs).Scan(new(uuid.UUID), new(uuid.UUID), new(string), new(float64), new(float64), new(*uuid.UUID), new(time.Time)); err != nil {
+	if err := productQueryRow(t, pool, ctx, productSQL(t, "UpsertProductPointcrawlNode", ":one"), noOpArgs).Scan(new(uuid.UUID), new(uuid.UUID), new(string), new(float64), new(float64), new(*uuid.UUID), new(time.Time), new(string)); err != nil {
 		t.Fatalf("unchanged pointcrawl node write: %v", err)
 	}
 	edges, err := productQuery(t, pool, ctx, productSQL(t, "ReadProductContainmentEdges", ":many"))
@@ -829,8 +807,16 @@ VALUES ('spa03-pc-actor','spa03-pc-actor','SPA03 pointcrawl actor',ARRAY['admin'
 		t.Fatal(err)
 	}
 	var mapID uuid.UUID
-	if err := productQueryRow(t, pool, ctx, productSQL(t, "CreateProductMap", ":one"), pgx.StrictNamedArgs{"name": "SPA03 pointcrawl", "atlas_code": "spa03-pointcrawl", "map_kind": "pointcrawl", "family": "campaign", "region_id": nil, "asset_path": nil, "actor_id": actorID.String()}).Scan(&mapID, new(string), new(string), new(string), new(string), new(*uuid.UUID), new(*string), new(time.Time), new(*uuid.UUID)); err != nil {
+	if err := productQueryRow(t, pool, ctx, productSQL(t, "CreateProductMap", ":one"), pgx.StrictNamedArgs{"name": "SPA03 pointcrawl", "atlas_code": "spa03-pointcrawl", "map_kind": "pointcrawl", "family": "campaign", "grid": "point", "region_id": nil, "asset_path": nil, "actor_id": actorID.String()}).Scan(&mapID, new(string), new(string), new(string), new(string), new(string), new(*uuid.UUID), new(*string), new(time.Time), new(*uuid.UUID)); err != nil {
 		t.Fatalf("create pointcrawl map: %v", err)
+	}
+	var updatedName, updatedGrid string
+	var updatedAsset *string
+	if err := productQueryRow(t, pool, ctx, productSQL(t, "UpdateProductMap", ":one"), pgx.StrictNamedArgs{"map_id": mapID.String(), "name": "SPA03 renamed", "family": "campaign", "grid": "hex", "asset_path": "/maps/spa03.png"}).Scan(new(uuid.UUID), &updatedName, new(string), new(string), new(string), &updatedGrid, new(*uuid.UUID), &updatedAsset, new(time.Time), new(*uuid.UUID)); err != nil || updatedName != "SPA03 renamed" || updatedGrid != "hex" || updatedAsset == nil || *updatedAsset != "/maps/spa03.png" {
+		t.Fatalf("update map name=%q grid=%q asset=%v err=%v", updatedName, updatedGrid, updatedAsset, err)
+	}
+	if _, err := productExec(t, pool, ctx, `UPDATE maps SET grid='square' WHERE public_id=$1`, mapID); err == nil {
+		t.Fatal("maps.grid accepted a value outside point and hex")
 	}
 	var mapInternal int64
 	if err := productQueryRow(t, pool, ctx, `SELECT id FROM maps WHERE public_id=$1`, mapID).Scan(&mapInternal); err != nil {
@@ -898,7 +884,7 @@ SELECT $1,n.id,$2,$3,$4,$5 FROM pointcrawl_nodes n WHERE n.public_id=$6`, mapInt
 		var x, y float64
 		var createdAt time.Time
 		var submap *uuid.UUID
-		if err := queryNodes.Scan(&ordinal, &parentID, &resultMapID, &parentExists, &nodeID, &name, &x, &y, &createdAt, &submap, new(bool)); err != nil {
+		if err := queryNodes.Scan(&ordinal, &parentID, &resultMapID, &parentExists, &nodeID, &name, &x, &y, &createdAt, &submap, new(string), new(bool)); err != nil {
 			t.Fatal(err)
 		}
 		if ordinal != 1 || !parentExists || parentID != mapID || resultMapID != mapID {
@@ -927,7 +913,7 @@ SELECT $1,n.id,$2,$3,$4,$5 FROM pointcrawl_nodes n WHERE n.public_id=$6`, mapInt
 		var resultMap *uuid.UUID
 		var parentExists bool
 		var nodeID *uuid.UUID
-		if err := nodePresenceRows.Scan(&ordinal, &parentID, &resultMap, &parentExists, &nodeID, new(*string), new(*float64), new(*float64), new(*time.Time), new(*uuid.UUID), new(bool)); err != nil {
+		if err := nodePresenceRows.Scan(&ordinal, &parentID, &resultMap, &parentExists, &nodeID, new(*string), new(*float64), new(*float64), new(*time.Time), new(*uuid.UUID), new(*string), new(bool)); err != nil {
 			t.Fatal(err)
 		}
 		nodeOrdinals = append(nodeOrdinals, ordinal)
@@ -1071,6 +1057,20 @@ SELECT $1,n.id,$2,$3,$4,$5 FROM pointcrawl_nodes n WHERE n.public_id=$6`, mapInt
 	var linkedAt time.Time
 	if err := productQueryRow(t, pool, ctx, productSQL(t, "LinkProductPointcrawlEntry", ":one"), pointLinkArgs).Scan(&linkedMap, &linkedNode, &linkedDoc, &linkedRelation, &linkedAt, &linkedActor); err != nil || linkedMap != mapID || linkedNode != nodes[1] || linkedDoc != locationVisible || linkedRelation != "location" || linkedActor != actorID {
 		t.Fatalf("pointcrawl link map=%s node=%s doc=%s relation=%q actor=%s err=%v", linkedMap, linkedNode, linkedDoc, linkedRelation, linkedActor, err)
+	}
+	// A hex may hold many Locations: a second, different Location links to the same node,
+	// while linking the same Location twice stays a conflict.
+	secondLocationArgs := pgx.StrictNamedArgs{"map_id": mapID.String(), "node_id": nodes[1].String(), "document_id": locationHidden.String(), "relation": "location", "recorded_at": time.Now().UTC(), "actor_id": actorID.String()}
+	if err := productQueryRow(t, pool, ctx, productSQL(t, "LinkProductPointcrawlEntry", ":one"), secondLocationArgs).Scan(new(uuid.UUID), new(uuid.UUID), new(uuid.UUID), new(string), new(time.Time), new(uuid.UUID)); err != nil {
+		t.Fatalf("second location on one node: %v", err)
+	}
+	if err := productQueryRow(t, pool, ctx, productSQL(t, "LinkProductPointcrawlEntry", ":one"), secondLocationArgs).Scan(new(uuid.UUID), new(uuid.UUID), new(uuid.UUID), new(string), new(time.Time), new(uuid.UUID)); err == nil {
+		t.Fatal("linking the same Location twice was accepted")
+	}
+	unlinkSecond := productSQL(t, "UnlinkProductPointcrawlEntry", ":one")
+	var removed int32
+	if err := productQueryRow(t, pool, ctx, unlinkSecond, pgx.StrictNamedArgs{"map_id": mapID.String(), "node_id": nodes[1].String(), "document_id": locationHidden.String(), "relation": "location"}).Scan(&removed); err != nil || removed != 1 {
+		t.Fatalf("unlink second location removed=%d err=%v", removed, err)
 	}
 	missingNodeID := uuid.New()
 	linkKeys := fmt.Sprintf(`[{"parent_id":%q,"limit":10,"offset":0},{"parent_id":%q,"limit":10,"offset":99},{"parent_id":%q,"limit":10,"offset":0}]`, nodes[1].String(), nodes[1].String(), missingNodeID.String())

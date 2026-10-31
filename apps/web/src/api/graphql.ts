@@ -39,7 +39,10 @@ export async function graphqlRequest<T>(
 
   if (body.errors && body.errors.length > 0) {
     const code = body.errors[0]?.extensions?.code ?? 'GRAPHQL';
-    throw new TransportError(code, { status: res.status || 200 });
+    throw new TransportError(code, {
+      status: res.status || 200,
+      serverMessage: body.errors[0]?.message,
+    });
   }
 
   if (!res.ok) {

@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -24,6 +25,22 @@ function markdown(body: string) {
 }
 
 describe('shared Markdown reader', () => {
+  it('links mentions without swallowing punctuation or truncating hyphens', () => {
+    const { container } = markdown('Thanks @mira. Ask @mary-jane, @mira.rose and @a!');
+    expect(screen.getByRole('link', { name: '@mira' })).toHaveAttribute(
+      'href',
+      '/dms/%40mira',
+    );
+    expect(screen.getByRole('link', { name: '@mira' }).nextSibling?.textContent).toBe('. Ask ');
+    expect(screen.getByRole('link', { name: '@mary-jane' })).toHaveAttribute(
+      'href',
+      '/dms/%40mary-jane',
+    );
+    expect(screen.getByRole('link', { name: '@mary-jane' }).nextSibling?.textContent).toBe(', ');
+    expect(screen.getByRole('link', { name: '@mira.rose' })).toHaveAttribute('href', '/dms/%40mira.rose');
+    expect(screen.getByRole('link', { name: '@a' })).toHaveAttribute('href', '/dms/%40a');
+    expect(container).toHaveTextContent('Thanks @mira. Ask @mary-jane, @mira.rose and @a!');
+  });
   it('renders the real GFM tree, nested formatting, tables, tasks, references and footnotes', () => {
     markdown(
       '## Arrival\n\nA **bold _arrival_** and ~~delay~~.\n\n- [x] Ready\n- [ ] Waiting\n\n| Route | Days |\n| --- | ---: |\n| North | 2 |\n\n[Guide][guide] and a note.[^1]\n\n[guide]: https://example.com/guide\n[^1]: Remember the lamp.',
@@ -83,6 +100,140 @@ describe('shared Markdown reader', () => {
     expect(callouts[0]).toHaveTextContent('Watch your step');
     expect(within(callouts[0]).getByText('steep').tagName).toBe('STRONG');
     expect(callouts[1]).toHaveTextContent('Server supplied prose.');
+  });
+
+  it('renders a member-scoped DM callout', () => {
+    const { container } = markdown(
+      '> [!dm:@Exact-Handle]\n> For the GM\n\n> [! DM:@Exact-Handle ] Authored title\n> Other prose\n\n> [! dm ]\n> DM prose\n\n> [!dm:@_foo_]\n> Underscore prose\n\n> [!\u00a0dm:@Foo\u00a0]\n> Unicode whitespace prose',
+    );
+    const callouts = container.querySelectorAll<HTMLElement>('aside.cr-callout');
+    expect(callouts).toHaveLength(5);
+    expect(callouts[0]).toHaveAttribute('data-variant', 'dm');
+    expect(callouts[0].querySelector('.cr-callout-title')).toHaveTextContent(
+      'For @Exact-Handle',
+    );
+    expect(callouts[0]).toHaveTextContent('For the GM');
+    expect(callouts[1]).toHaveAttribute('data-variant', 'dm');
+    expect(callouts[1].querySelector('.cr-callout-title')).toHaveTextContent(
+      'Authored title',
+    );
+    expect(callouts[2]).toHaveAttribute('data-variant', 'dm');
+    expect(callouts[2].querySelector('.cr-callout-title')).toHaveTextContent('DM only');
+    expect(callouts[3]).toHaveAttribute('data-variant', 'dm');
+    expect(callouts[3].querySelector('.cr-callout-title')).toHaveTextContent('For @_foo_');
+    expect(callouts[3]).toHaveTextContent('Underscore prose');
+    expect(callouts[4]).toHaveAttribute('data-variant', 'dm');
+    expect(callouts[4].querySelector('.cr-callout-title')).toHaveTextContent('For @Foo');
+    expect(callouts[4]).toHaveTextContent('Unicode whitespace prose');
+    expect(container).not.toHaveTextContent('[!');
+  });
+
+  it('draws a server redaction as labelled bars with a spoken size summary', () => {
+    const bar = (n: number) => '█'.repeat(n);
+    const { container } = markdown(
+      `Before\n\n> [!redacted]\n> ${bar(20)}\n>\n> ${bar(40)}\n\nAfter`,
+    );
+    const callout = container.querySelector<HTMLElement>(
+      'aside.cr-callout[data-variant="redacted"]',
+    );
+    expect(callout).not.toBeNull();
+    expect(within(callout!).getByText('Hidden')).toBeInTheDocument();
+    expect(within(callout!).getByText('🔒')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(callout!).getByText('Hidden content, about 3 lines')).toHaveClass(
+      'cr-visually-hidden',
+    );
+    const bars = callout!.querySelector('.cr-redacted-bars');
+    expect(bars).toHaveAttribute('aria-hidden', 'true');
+    const lines = [...bars!.querySelectorAll('.cr-redacted-line')];
+    expect(lines).toHaveLength(3);
+    expect(lines.map((line) => line.textContent?.length)).toEqual([20, 0, 40]);
+    expect(screen.getByText('After')).toBeVisible();
+  });
+
+  it('keeps an unquoted line after a redaction visible outside the bars', () => {
+    const { container } = markdown(
+      `> [!redacted]\n> ${'█'.repeat(20)}\nOrdinary following line`,
+    );
+    const callout = container.querySelector<HTMLElement>(
+      'aside[data-variant="redacted"]',
+    )!;
+    expect(within(callout).getByText('Hidden content, about 1 line')).toBeInTheDocument();
+    expect(callout).not.toHaveTextContent('Ordinary following line');
+    expect(screen.getByText('Ordinary following line')).toBeVisible();
+  });
+
+  it.each([
+    ['URL', 'See https://example.com/a now', 'https://example.com/a'],
+    ['www', 'See www.example.com now', 'www.example.com'],
+    ['email', 'Mail me@example.com now', 'me@example.com'],
+    // gfm's find-and-replace pass makes these links without source positions.
+    ['quoted www', 'Visit "www.example.com" now', 'www.example.com'],
+    ['quoted URL', 'Visit "https://example.com/q" now', 'https://example.com/q'],
+    ['quoted email', 'Mail "me@example.com" now', 'me@example.com'],
+  ])('keeps a %s autolink in the line after a redaction', (_kind, tail, link) => {
+    const { container } = markdown(`> [!redacted]\n> ${'█'.repeat(20)}\n${tail}`);
+    const callout = container.querySelector<HTMLElement>(
+      'aside[data-variant="redacted"]',
+    )!;
+    expect(callout).not.toHaveTextContent(link);
+    expect(screen.getByRole('link', { name: link })).toBeVisible();
+    expect(container.querySelector('.cr-prose')).toHaveTextContent(tail);
+  });
+
+  it('stops the bars at the first quoted line that is not a bar', () => {
+    const { container } = markdown(
+      `> [!redacted]\n> ${'█'.repeat(20)}\n>\n> [!note]\n> Public **note**`,
+    );
+    const callout = container.querySelector<HTMLElement>(
+      'aside[data-variant="redacted"]',
+    )!;
+    expect(within(callout).getByText('Hidden content, about 2 lines')).toBeInTheDocument();
+    expect(callout).not.toHaveTextContent('Public');
+    const note = container.querySelector<HTMLElement>('aside[data-variant="note"]')!;
+    expect(note).toHaveTextContent('Public note');
+    expect(within(note).getByText('note').tagName).toBe('STRONG');
+  });
+
+  it('shows a capped redaction count under the bars', () => {
+    const { container } = markdown(
+      `> [!redacted]\n> ${'█'.repeat(20)}\n> +5 more lines`,
+    );
+    const callout = container.querySelector<HTMLElement>(
+      'aside[data-variant="redacted"]',
+    )!;
+    expect(within(callout).getByText('Hidden content, about 6 lines')).toBeInTheDocument();
+    expect(within(callout).getByText('+5 more lines')).toBeVisible();
+    expect(callout.querySelectorAll('.cr-redacted-line')).toHaveLength(1);
+  });
+
+  it('blurs a spoiler until its button is clicked', async () => {
+    const user = userEvent.setup();
+    const { container } = markdown('> [!spoiler]\n> The **king** is dead.');
+    const callout = container.querySelector<HTMLElement>(
+      'aside.cr-callout[data-variant="spoiler"]',
+    )!;
+    const toggle = within(callout).getByRole('button', { name: 'Reveal spoiler' });
+    const body = document.getElementById(toggle.getAttribute('aria-controls') ?? '')!;
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(body).toHaveAttribute('aria-hidden', 'true');
+    expect(body).toHaveAttribute('inert');
+    expect(body).toHaveTextContent('The king is dead.');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveAccessibleName('Hide spoiler');
+    expect(body).not.toHaveAttribute('aria-hidden');
+    expect(body).not.toHaveAttribute('inert');
+    expect(within(body).getByText('king').tagName).toBe('STRONG');
+  });
+
+  it.each(['{Enter}', ' '])('reveals a spoiler from the keyboard with %j', async (key) => {
+    const user = userEvent.setup();
+    markdown('> [!spoiler]\n> Hidden twist.');
+    await user.tab();
+    const toggle = screen.getByRole('button', { name: 'Reveal spoiler' });
+    expect(toggle).toHaveFocus();
+    await user.keyboard(key);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('renders explicit media only for supported safe URLs and leaves prose links intact', () => {

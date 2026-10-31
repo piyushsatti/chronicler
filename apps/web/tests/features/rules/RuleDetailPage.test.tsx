@@ -121,7 +121,14 @@ describe('rule detail families', () => {
     );
     renderAt(`/rules/rulings/${ruling.slug}`);
     expect(await screen.findByText(ruling.effectiveBody!)).toBeVisible();
-    const rail = await screen.findByRole('complementary', { name: 'Related guides' });
+    // Owner item 16: no side rail; the list sits below the full-width body.
+    expect(document.querySelector('.detail-layout__rail')).toBeNull();
+    const rail = await screen.findByRole('region', { name: 'Related guides' });
+    expect(
+      screen.getByText(ruling.effectiveBody!).compareDocumentPosition(rail) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(document.querySelector('.reading-column')).toBeNull();
     expect(
       await within(rail).findByRole('link', { name: guide.title }),
     ).toHaveAttribute('href', `/rules/guides/${guide.slug}`);

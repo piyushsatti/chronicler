@@ -2,7 +2,6 @@ package ingest
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -41,14 +40,7 @@ func (h *Handler) Routes(mux httpserver.Router) {
 }
 
 func (h *Handler) authorize(r *http.Request) error {
-	if h.secret == "" {
-		return apierr.New(apierr.Forbidden, "ingest not configured")
-	}
-	got := r.Header.Get("X-Ingest-Secret")
-	if subtle.ConstantTimeCompare([]byte(got), []byte(h.secret)) != 1 {
-		return apierr.New(apierr.Unauthenticated, "invalid ingest secret")
-	}
-	return nil
+	return httpserver.AuthorizeIngestSecret(r, h.secret)
 }
 
 func (h *Handler) event(w http.ResponseWriter, r *http.Request) {

@@ -64,7 +64,7 @@ func TestProductPostgresReadsSiteSnapshotAndMemberSearch(t *testing.T) {
 		t.Fatalf("construct Site Postgres adapter: %v", err)
 	}
 
-	snapshot, err := adapter.ReadHomeCommunity(ctx, auth.Authority{}, HomeSpec{})
+	snapshot, err := adapter.ReadHomeCommunity(ctx, auth.Authority{}, HomeSpec{IncludeActivity: true})
 	if err != nil {
 		t.Fatalf("read community snapshot: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestProductPostgresReadsSiteSnapshotAndMemberSearch(t *testing.T) {
 	if snapshot.Activity.VoiceMinutes < 5.5 || snapshot.Activity.Messages < 3 || snapshot.Activity.Reactions < 2 {
 		t.Fatalf("activity=%+v, want stored event sums", snapshot.Activity)
 	}
-	stats, err := adapter.ReadSiteStats(ctx, auth.Authority{}, SiteStatsSpec{})
+	stats, err := adapter.ReadSiteStats(ctx, auth.Authority{}, SiteStatsSpec{IncludeActivity: true})
 	if err != nil || !reflect.DeepEqual(stats, snapshot) {
 		t.Fatalf("site stats=%+v err=%v, want same stored snapshot %+v", stats, err, snapshot)
 	}
@@ -325,6 +325,95 @@ func TestSiteDeliveryReadsUseTypedPayloadCurrentAudienceAndCausalAudit(t *testin
 		t.Fatalf("state-filtered jobs disappeared: %+v err=%v", filtered, err)
 	}
 	assertAudit(false, viewerPublicID)
+}
+
+func TestRedriveDiscordDeliveryReportsQuestRevisionsAndClearsSafeCode(t *testing.T) {
+	fixture := dbtest.NewProductFixture(t)
+	ctx := context.Background()
+	adapter, err := NewProductPostgres(fixture.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var authorID int64
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO members(discord_id,handle,display_name,roles) VALUES('redrive-dm','redrive-dm','Redrive DM',ARRAY['dm']) RETURNING id`).Scan(&authorID); err != nil {
+		t.Fatal(err)
+	}
+	var documentID, internalID int64
+	var questID string
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO documents(kind,slug,title,status,visibility,author_id,body) VALUES('quest_brief','redrive','Redrive quest','published','public',$1,'body') RETURNING id`, authorID).Scan(&documentID); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO quests(short_code,kinds,dm_id,scheduled_at,document_id,created_by,discord_desired_revision,discord_applied_revision) VALUES('REDRIVE',ARRAY['standard'],$1,$2,$3,$1,3,2) RETURNING id,public_id::text`, authorID, time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC), documentID).Scan(&internalID, &questID); err != nil {
+		t.Fatal(err)
+	}
+	insertJob := func(key string, payload []byte) string {
+		t.Helper()
+		var id string
+		if err := fixture.Pool.QueryRow(ctx, `INSERT INTO background_jobs(job_key,kind,lane,state,attempts,payload,error_message,safe_error_code) VALUES($1,'quest_discord_delivery','discord','repair_required',1,$2,'discord create message: discord api status 403','DISCORD_PERMISSION') RETURNING public_id::text`, key, payload).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	payload, err := json.Marshal(jobs.QuestDiscordPayload{ID: internalID, PublicID: questID, DesiredRevision: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	redrive := func(jobID string) (RedriveDiscordDeliveryState, error) {
+		t.Helper()
+		spec := RedriveDiscordDeliverySpec{JobId: jobID, Reason: "Admin retry from delivery panel"}
+		locked, err := adapter.LockRedriveDiscordDelivery(ctx, spec)
+		if err != nil {
+			t.Fatal(err)
+		}
+		receipt, err := adapter.StoreRedriveDiscordDelivery(ctx, RedriveDiscordDeliveryWrite{At: time.Now(), Input: spec, ValidatedInput: spec, Locked: locked})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if receipt.JobId != jobID || receipt.DeliveryStatus != "queued" {
+			t.Fatalf("receipt=%+v", receipt)
+		}
+		var state string
+		var safeCode *string
+		var errorMessage *string
+		if err := fixture.Pool.QueryRow(ctx, `SELECT state,safe_error_code,error_message FROM background_jobs WHERE public_id=$1::uuid`, jobID).Scan(&state, &safeCode, &errorMessage); err != nil {
+			t.Fatal(err)
+		}
+		if state != "queued" || safeCode != nil || errorMessage != nil {
+			t.Fatalf("redrive left state=%s safe_error_code=%v error_message=%v", state, safeCode, errorMessage)
+		}
+		return locked, nil
+	}
+
+	jobID := insertJob("redrive-quest", payload)
+	locked, _ := redrive(jobID)
+	if locked.Before == nil || locked.Before.QuestId == nil || *locked.Before.QuestId != questID {
+		t.Fatalf("locked job did not resolve its quest: %+v", locked.Before)
+	}
+	if locked.Before.SafeError == nil || *locked.Before.SafeError != "DISCORD_PERMISSION" {
+		t.Fatalf("locked job lost its safe code: %+v", locked.Before)
+	}
+	spec := RedriveDiscordDeliverySpec{JobId: jobID, Reason: "again"}
+	if _, err := fixture.Pool.Exec(ctx, `UPDATE background_jobs SET state='dead' WHERE public_id=$1::uuid`, jobID); err != nil {
+		t.Fatal(err)
+	}
+	again, err := adapter.LockRedriveDiscordDelivery(ctx, spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := adapter.StoreRedriveDiscordDelivery(ctx, RedriveDiscordDeliveryWrite{At: time.Now(), Input: spec, ValidatedInput: spec, Locked: again})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.DesiredRevision != 3 || receipt.AppliedRevision != 2 {
+		t.Fatalf("receipt revisions desired=%d applied=%d, want 3 and 2", receipt.DesiredRevision, receipt.AppliedRevision)
+	}
+
+	// The retired questId alias must not resolve a quest.
+	aliasID := insertJob("redrive-alias", []byte(fmt.Sprintf(`{"questId":%q}`, questID)))
+	alias, _ := redrive(aliasID)
+	if alias.Before == nil || alias.Before.QuestId != nil || alias.Before.DesiredRevision != nil {
+		t.Fatalf("retired questId alias matched a quest: %+v", alias.Before)
+	}
 }
 
 func ptrString(value string) *string { return &value }

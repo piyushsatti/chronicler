@@ -17,6 +17,8 @@ import {
 } from '../adapters/editorSummary.js';
 import type { EditorLoadResult } from '../adapters/editorLoad.js';
 import { schemaForType } from '../editorSchemas.js';
+import { saveNewQuestPlaces } from '../adapters/editorPointcrawlOptionsAdapter.js';
+import { FEATURE_CATEGORY, normalizeHexCode } from '../../../utils/hexCode.js';
 import {
   parseQuestMetadata,
   parseSummaryRelations,
@@ -30,8 +32,42 @@ const documentKinds = {
   guide: 'rule',
   ruling: 'rule',
   'dm-table': 'community',
+  'hall-of-fame': 'community',
   demo: 'codex_entry',
 } satisfies Record<Exclude<EditorTypeKey, 'quest'>, string>;
+
+/** The quest description the API requires ("Quest brief required."); null when fine.
+ *  Pass `body` only when the form can edit it. */
+type PlaceLink = { pointcrawlNodeId: string; role: string };
+/** Order-free identity of a set of places, to tell whether the list changed. */
+function placeKey(links: readonly PlaceLink[]): string {
+  return links
+    .map((link) => `${link.pointcrawlNodeId}:${link.role}`)
+    .sort()
+    .join('|');
+}
+
+export function editorBodyError(typeKey: EditorTypeKey, body?: string): string | null {
+  return typeKey === 'quest' && body !== undefined && body.trim() === ''
+    ? 'Describe the quest for players'
+    : null;
+}
+
+/** The form has a missing title, a field error or an empty quest description: show
+ *  the field hints, never call the API. */
+export function editorFormInvalid(
+  typeKey: EditorTypeKey,
+  mode: EditorMode,
+  meta: EditorMeta,
+  body?: string,
+): boolean {
+  const title = typeof meta.title === 'string' ? meta.title.trim() : '';
+  return (
+    !title ||
+    editorBodyError(typeKey, body) !== null ||
+    Object.keys(schemaErrors(schemaForType(typeKey, meta, {}, mode), meta)).length > 0
+  );
+}
 
 export function useEditorPublish({
   typeKey,
@@ -63,6 +99,7 @@ export function useEditorPublish({
     input: string;
     body: string | null;
     category: string | null;
+    hex: string | null;
     summaryRelations: SummaryRelations | null;
     result: EditorPublishResult;
   } | null>(null);
@@ -86,7 +123,24 @@ export function useEditorPublish({
     }
     return key;
   };
-  return useMutation({
+  // A succeeded request's key is retired so a later return to the same input writes again.
+  const retireReplayKey = (operation: string, input: unknown) => {
+    replayKeys.current.delete(JSON.stringify([operation, scopeKey, input]));
+  };
+  // Places the server acknowledged for the loaded quest, which may differ from `initial`
+  // when the quest update after them failed.
+  const acknowledgedPlaces = useRef<{
+    scopeKey: string;
+    updatedAt: string;
+    places: PlaceLink[];
+  } | null>(null);
+  // The quest a new-mode save created, so a retry after its places failed never creates another.
+  const createdQuest = useRef<{
+    scopeKey: string;
+    input: string;
+    result: EditorPublishResult;
+  } | null>(null);
+  const mutation = useMutation({
     mutationFn: async (shouldPublish: boolean | undefined) => {
       if (writing.current)
         throw safeAppError('A save is already in progress.', 'editor:save');
@@ -102,8 +156,10 @@ export function useEditorPublish({
           );
         const publish = shouldPublish !== false;
         const title = typeof meta.title === 'string' ? meta.title.trim() : '';
-        const errors = schemaErrors(schemaForType(typeKey, meta), meta);
-        if (!title || Object.keys(errors).length > 0) {
+        // Callers check `editorFormInvalid` first, so this guard only catches a direct call.
+        if (
+          editorFormInvalid(typeKey, mode, meta, initial.canEditBody ? body : undefined)
+        ) {
           onInvalidTitle();
           throw safeAppError(
             !title ? 'Title is required' : 'Check the highlighted properties.',
@@ -138,6 +194,7 @@ export function useEditorPublish({
             apl: typeof v.apl === 'number' ? v.apl : null,
             signupType: v.signupType,
             additionalInfo: v.additionalInfo ?? null,
+            voiceChannelId: v.voiceChannelId || null,
           };
           let result: EditorPublishResult;
           if (mode === 'edit') {
@@ -146,8 +203,47 @@ export function useEditorPublish({
                 'Quest is missing an update token. Reload and try again.',
                 'editor:save',
               );
+            // Meta without these keys (a draft saved by an older build) leaves them untouched.
+            const savedArcId =
+              typeof initial.meta.arcId === 'string' ? initial.meta.arcId : '';
+            const arcChanged = typeof v.arcId === 'string' && v.arcId !== savedArcId;
+            const places = v.pointcrawlLinks ?? null;
+            const acknowledged =
+              acknowledgedPlaces.current?.scopeKey === scopeKey &&
+              acknowledgedPlaces.current.updatedAt === initial.updatedAt
+                ? acknowledgedPlaces.current.places
+                : null;
+            const savedPlaces =
+              acknowledged ??
+              (Array.isArray(initial.meta.pointcrawlLinks)
+                ? (initial.meta.pointcrawlLinks as PlaceLink[])
+                : []);
+            // Places need no update token, so they save first; a failed quest save then
+            // retries the same places harmlessly.
+            if (places && placeKey(places) !== placeKey(savedPlaces)) {
+              const placesInput = [initial.recordId, places];
+              try {
+                await saveNewQuestPlaces(
+                  initial.recordId,
+                  places,
+                  replayKey('quest-update-places', placesInput),
+                );
+                retireReplayKey('quest-update-places', placesInput);
+                acknowledgedPlaces.current = {
+                  scopeKey,
+                  updatedAt: initial.updatedAt,
+                  places,
+                };
+              } catch {
+                throw safeAppError(
+                  'The expected destinations were not saved, and the quest was not changed. Save again to retry.',
+                  'editor:quest:places',
+                );
+              }
+            }
             const input = {
               ...payload,
+              ...(arcChanged ? { arcId: v.arcId || null } : {}),
               ...(v.scheduledAt !== initial.meta.scheduledAt
                 ? { scheduledAt: v.scheduledAt }
                 : {}),
@@ -159,14 +255,50 @@ export function useEditorPublish({
               initial.updatedAt,
               replayKey('quest-update', [input, initial.updatedAt]),
             );
+            retireReplayKey('quest-update', [input, initial.updatedAt]);
           } else {
-            const input = { ...payload, scheduledAt: v.scheduledAt, briefBody: body };
-            result = await createQuest(input, replayKey('quest-create', input));
+            const input = {
+              ...payload,
+              scheduledAt: v.scheduledAt,
+              briefBody: body,
+              ...(v.arcId ? { arcId: v.arcId } : {}),
+            };
+            const inputSignature = JSON.stringify(input);
+            const created =
+              createdQuest.current?.scopeKey === scopeKey ? createdQuest.current : null;
+            if (created) {
+              if (created.input !== inputSignature)
+                throw safeAppError(
+                  'The quest was already created. Open it to make further changes.',
+                  'editor:quest:places',
+                );
+              result = created.result;
+            } else {
+              result = await createQuest(input, replayKey('quest-create', input));
+              retireReplayKey('quest-create', input);
+              createdQuest.current = { scopeKey, input: inputSignature, result };
+            }
+            const places = v.pointcrawlLinks ?? [];
+            if (places.length > 0) {
+              try {
+                await saveNewQuestPlaces(
+                  result.id,
+                  places,
+                  replayKey('quest-create-places', [result.id, places]),
+                );
+              } catch {
+                // Saving again reuses the created quest, so it retries only the places.
+                throw safeAppError(
+                  'The quest was created, but its expected destinations were not saved. Save again to retry them.',
+                  'editor:quest:places',
+                );
+              }
+            }
           }
           return { ...result, originScope: scopeKey };
         }
         const kind = documentKinds[typeKey];
-        const docCategory =
+        const rawCategory =
           mode === 'edit'
             ? typeof meta.category === 'string'
               ? meta.category
@@ -180,7 +312,17 @@ export function useEditorPublish({
                   ? typeKey
                   : typeKey === 'dm-table'
                     ? 'dm_table'
-                    : null));
+                    : typeKey === 'hall-of-fame'
+                      ? 'hall_of_fame'
+                      : null));
+        // A guide's group is free text; blank files it under "General" as plain "guide".
+        const docCategory =
+          typeKey === 'guide' ? rawCategory?.trim() || 'guide' : rawCategory;
+        // A Feature carries its map hex in frontmatter; other entries keep theirs untouched.
+        const hex =
+          typeKey === 'codex' && docCategory === FEATURE_CATEGORY
+            ? normalizeHexCode(meta.hex)
+            : null;
         const sourceSummary = typeKey === 'summary' ? initial.summary?.authoring : null;
         let summaryRelations: SummaryRelations | null = null;
         if (
@@ -202,6 +344,7 @@ export function useEditorPublish({
           kind,
           docCategory,
           summaryRelations,
+          hex,
         ]);
         const previous =
           persisted.current?.scopeKey === scopeKey &&
@@ -215,8 +358,13 @@ export function useEditorPublish({
         const acknowledgedCategory = previous
           ? previous.category
           : typeof initial.meta.category === 'string'
-            ? initial.meta.category
+            ? typeKey === 'guide'
+              ? initial.meta.category.trim() || 'guide'
+              : initial.meta.category
             : null;
+        const previousHex = previous
+          ? previous.hex
+          : normalizeHexCode(initial.frontmatter.hex) || null;
         const acknowledgedBodyChanged =
           body !== acknowledgedBody && !(acknowledgedBody === null && body === '');
         const acknowledgedRelations =
@@ -276,6 +424,9 @@ export function useEditorPublish({
             title,
             kind,
             ...(docCategory !== acknowledgedCategory ? { category: docCategory } : {}),
+            ...(hex !== null && hex !== previousHex
+              ? { frontmatter: { ...initial.frontmatter, hex } }
+              : {}),
             expectedRevision: version,
             ...(acknowledgedBodyChanged && initial.canEditBody ? { body } : {}),
           };
@@ -296,6 +447,7 @@ export function useEditorPublish({
             kind,
             category: docCategory,
             visibility: 'public',
+            ...(hex !== null ? { frontmatter: { hex } } : {}),
           };
           saved = await createDocument(input, replayKey('document-create', input));
         }
@@ -305,6 +457,7 @@ export function useEditorPublish({
           input: inputSignature,
           body: initial.canEditBody ? body : null,
           category: docCategory,
+          hex,
           summaryRelations,
           result: saved,
         };
@@ -334,6 +487,7 @@ export function useEditorPublish({
             input: inputSignature,
             body: initial.canEditBody ? body : null,
             category: docCategory,
+            hex,
             summaryRelations,
             result: saved,
           };
@@ -357,4 +511,11 @@ export function useEditorPublish({
         onSuccess(result, publish !== false);
     },
   });
+  return {
+    ...mutation,
+    /** A reset form starts a new quest, which must not reuse the one created before. */
+    forgetCreatedQuest: () => {
+      createdQuest.current = null;
+    },
+  };
 }

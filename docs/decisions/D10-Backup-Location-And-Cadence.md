@@ -11,12 +11,12 @@ Production lost provider-side backups and CI backup minutes. A durable, operator
 
 ## Decision
 
-The **owner’s workstation** is the durable backup store for the production PostgreSQL database on the DigitalOcean droplet. Dumps run **nightly** and **before every deployment**.
+The **owner’s workstation** is the durable backup store for the production PostgreSQL database. Dumps run **nightly** and **before every deployment**. _(Amended 2026-10-31: the database moved from the DigitalOcean droplet to Supabase PostgreSQL, see [D51](/docs/decisions/D51-Production-On-One-VM-Behind-Cloudflare-Tunnel.md); the store and cadence are unchanged.)_
 
-| Question                   | Ruling                                                                                                                       |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Where backups durably live | Owner’s workstation, pulling the production PostgreSQL database from the DigitalOcean droplet — off-provider and off-droplet |
-| Primary mechanism          | Workstation pull is primary; GitHub Actions backup is a redundant second copy when minutes return, not load-bearing          |
+| Question                   | Ruling                                                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Where backups durably live | Owner’s workstation, pulling the production PostgreSQL database — off the database host and off the VM              |
+| Primary mechanism          | Workstation pull is primary; GitHub Actions backup is a redundant second copy when minutes return, not load-bearing |
 
 **Patterns (minimal):** pull-based backup (workstation initiates; compromised server cannot reach backup target); pre-change checkpoint dump before `migrate` on deploy.
 
@@ -28,7 +28,7 @@ The **owner’s workstation** is the durable backup store for the production Pos
 
 | Alternative                            | Why not                                                                 |
 | -------------------------------------- | ----------------------------------------------------------------------- |
-| Push backup from server to workstation | Compromised droplet could reach and destroy backups                     |
+| Push backup from server to workstation | Compromised server could reach and destroy backups                      |
 | Rely on GitHub Actions as primary      | Billing gap made it non-load-bearing; workstation pull needs no billing |
 
 ## Consequences

@@ -17,7 +17,6 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 // ProductPostgres binds the Character product repositories to one caller-owned
@@ -512,45 +511,6 @@ func (p *ProductPostgres) ReadCharacterVerificationHistory(ctx context.Context, 
 	out := member.VerificationPage{Items: make([]member.VerificationView, 0, len(rows)), Total: total}
 	for _, row := range rows {
 		out.Items = append(out.Items, member.VerificationView{Id: db.UUIDString(row.ID), Note: characterTextPointer(row.Note), RecordedAt: row.CreatedAt.Time, TargetId: db.UUIDString(row.SubjectID), TargetType: row.SubjectType, Verdict: row.Decision, VerifiedBy: db.UUIDString(row.DecidedBy)})
-	}
-	return out, nil
-}
-
-func (p *ProductPostgres) ReadBatchCharacters(ctx context.Context, _ auth.Authority, keys []IDKey) ([]product.BatchResult[CharacterView], error) {
-	out := make([]product.BatchResult[CharacterView], len(keys))
-	ids := make([]pgtype.UUID, 0, len(keys))
-	positions := make([]int, 0, len(keys))
-	for i, key := range keys {
-		id, err := characterProductID(key.ID)
-		if err != nil {
-			out[i].Err = err
-			continue
-		}
-		ids = append(ids, id)
-		positions = append(positions, i)
-	}
-	if len(ids) == 0 {
-		return out, nil
-	}
-	rows, err := p.queries().CharacterProductBatchByIDs(ctx, ids)
-	if err != nil {
-		return nil, err
-	}
-	rowIndex := 0
-	for _, row := range rows {
-		// The query preserves input order and duplicates, while omitting missing IDs.
-		for rowIndex < len(positions) && keys[positions[rowIndex]].ID != db.UUIDString(row.ID) {
-			rowIndex++
-		}
-		if rowIndex == len(positions) {
-			break
-		}
-		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.BackgroundText, row.DdbUrl, row.ImageUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
-		if mapErr != nil {
-			return nil, mapErr
-		}
-		out[positions[rowIndex]].Value = &view
-		rowIndex++
 	}
 	return out, nil
 }

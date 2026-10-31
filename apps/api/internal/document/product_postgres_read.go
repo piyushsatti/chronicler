@@ -207,7 +207,7 @@ func (p *ProductPostgres) ReadDocumentRevisions(ctx context.Context, actor auth.
 		if err != nil {
 			return DocumentRevisionPage{}, err
 		}
-		projected, err := projectDocumentView(ctx, scope, *parent, row.Body)
+		projected, err := ProjectDocumentView(ctx, scope, *parent, row.Body)
 		if err != nil {
 			return DocumentRevisionPage{}, err
 		}
@@ -296,7 +296,7 @@ func (p *ProductPostgres) ReadCodexDirectory(ctx context.Context, actor auth.Aut
 		if err != nil {
 			return CodexDirectoryResult{}, err
 		}
-		projected, err := projectDocumentView(ctx, scope, view, row.Body)
+		projected, err := ProjectDocumentView(ctx, scope, view, row.Body)
 		if err != nil {
 			return CodexDirectoryResult{}, err
 		}
@@ -331,7 +331,7 @@ func (p *ProductPostgres) ReadCodexEntry(ctx context.Context, actor auth.Authori
 	if err != nil {
 		return nil, err
 	}
-	projected, err := projectDocumentView(ctx, scope, view, row.Body)
+	projected, err := ProjectDocumentView(ctx, scope, view, row.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -405,12 +405,55 @@ func (p *ProductPostgres) ReadPreviewBody(ctx context.Context, actor auth.Author
 	default:
 		return "", apierr.New(apierr.Invalid, "invalid preview audience")
 	}
+	if spec.MemberHandle != nil {
+		member, err := p.previewMemberScope(ctx, *spec.MemberHandle)
+		if err != nil {
+			return "", err
+		}
+		scope = member
+	}
 	doc := Document{Status: StatusPublished, Visibility: VisibilityPublic, Body: spec.Body, Policy: nil}
 	body, err := doc.EffectiveBody(scope)
 	if err != nil {
 		return "", err
 	}
 	return body, nil
+}
+
+// previewMemberScope is the read scope of the active member who holds exactly
+// this handle, built from the same live authority row and viewerScope that
+// their own reads use. The administrator bypass is removed so the preview
+// shows what the member's markers allow, not what an override would.
+func (p *ProductPostgres) previewMemberScope(ctx context.Context, handle string) (ViewerScope, error) {
+	notFound := apierr.New(apierr.NotFound, "member not found")
+	rows, err := p.queries().ResolveProductMentionHandles(ctx, []string{handle})
+	if err != nil {
+		return ViewerScope{}, err
+	}
+	if len(rows) != 1 {
+		return ViewerScope{}, notFound
+	}
+	row, err := p.queries().GetMemberAuthority(ctx, rows[0].ID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ViewerScope{}, notFound
+	}
+	if err != nil {
+		return ViewerScope{}, err
+	}
+	roles := make([]auth.Role, len(row.Roles))
+	for i, role := range row.Roles {
+		roles[i] = auth.Role(role)
+	}
+	member, err := auth.NewAuthorityWithHandle(db.UUIDString(row.ID), roles, row.Status, row.DmStatus, row.Handle)
+	if err != nil {
+		return ViewerScope{}, notFound // inactive members read nothing
+	}
+	scope, err := p.viewerScope(ctx, member)
+	if err != nil {
+		return ViewerScope{}, err
+	}
+	scope.IsAdmin = false
+	return scope, nil
 }
 
 func (p *ProductPostgres) ReadableDocumentIDs(ctx context.Context, actor auth.Authority, ids []string) (map[string]bool, error) {

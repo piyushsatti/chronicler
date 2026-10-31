@@ -51,21 +51,6 @@ WHERE m.public_id = sqlc.arg(member_id)::uuid AND n.read_at IS NULL
 ORDER BY n.public_id
 FOR UPDATE OF n;
 
--- name: ProductNotificationSubjectDocuments :many
-SELECT d.public_id
-FROM documents d
-WHERE d.public_id = ANY(sqlc.arg(ids)::uuid[]);
-
--- name: ProductNotificationSubjectCharacters :many
-SELECT c.public_id
-FROM characters c
-WHERE c.public_id = ANY(sqlc.arg(ids)::uuid[]);
-
--- name: ProductNotificationSubjectQuests :many
-SELECT q.public_id
-FROM quests q
-WHERE q.public_id = ANY(sqlc.arg(ids)::uuid[]);
-
 -- name: ProductNotificationMarkRead :one
 WITH locked AS MATERIALIZED (
     SELECT n.id

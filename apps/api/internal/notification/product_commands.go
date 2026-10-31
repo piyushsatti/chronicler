@@ -3,7 +3,6 @@ package notification
 import (
 	"context"
 	"encoding/json"
-	"reflect"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
@@ -18,21 +17,9 @@ type ProductCommands struct {
 	Clock  product.Clock
 }
 
-func commandDependencyMissing(value any) bool {
-	if value == nil {
-		return true
-	}
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-		return v.IsNil()
-	}
-	return false
-}
-
 func NewProductCommands(runner uow.Runner[ProductCommandRepos], clock product.Clock) (*ProductCommands, error) {
 	for _, dep := range []any{runner, clock} {
-		if commandDependencyMissing(dep) {
+		if product.MissingDependency(dep) {
 			return nil, apierr.New(apierr.Internal, "notification command dependencies required")
 		}
 	}
@@ -77,7 +64,7 @@ func runNotificationCommand[T any](ctx context.Context, s ProductCommands, actor
 }
 
 func admitNotificationCommand(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation string, meta product.CommandMeta, fingerprint string) (auth.Authority, auth.Request, auth.Decision, idempotency.Claim, error) {
-	if commandDependencyMissing(repos.Authority) || commandDependencyMissing(repos.Policy) || commandDependencyMissing(repos.Replay) {
+	if product.MissingDependency(repos.Authority) || product.MissingDependency(repos.Policy) || product.MissingDependency(repos.Replay) {
 		return auth.Authority{}, auth.Request{}, auth.Decision{}, idempotency.Claim{}, apierr.New(apierr.Internal, "notification transaction dependencies required")
 	}
 	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
@@ -104,7 +91,7 @@ func admitNotificationCommand(ctx context.Context, repos ProductCommandRepos, ac
 
 func completeNotificationCommand[T any](ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, request auth.Request, decision auth.Decision, claim idempotency.Claim, subjectID string, at time.Time, result T) error {
 	if decision.UsedOverride {
-		if commandDependencyMissing(repos.Audit) {
+		if product.MissingDependency(repos.Audit) {
 			return apierr.New(apierr.Internal, "override recorder required")
 		}
 		if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "notification", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at}); err != nil {
@@ -140,7 +127,7 @@ func (s ProductCommands) AcknowledgeSuppressedNotifications(ctx context.Context,
 	}
 	spec = AcknowledgeSuppressedNotificationsSpec{Limit: limit}
 	return runNotificationCommand(ctx, s, actor, "acknowledgeSuppressedNotifications", spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (NotificationWriteReceipt, error) {
-		if commandDependencyMissing(repos.Notification) || commandDependencyMissing(repos.Batch) || commandDependencyMissing(repos.DocumentAudience) {
+		if product.MissingDependency(repos.Notification) || product.MissingDependency(repos.Batch) || product.MissingDependency(repos.DocumentAudience) {
 			return NotificationWriteReceipt{}, apierr.New(apierr.Internal, "notification transaction dependencies required")
 		}
 		locked, err := repos.Notification.LockAcknowledgeSuppressedNotifications(ctx, fresh.Claims().MemberID, spec)

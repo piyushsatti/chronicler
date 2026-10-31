@@ -4,13 +4,17 @@
   --page-title-size: 36px;
   --segment-track-size: 40px;
   --segment-highlight-size: 32px;
-  --font-body:      'Geist', sans-serif;
+  /* One side inset for every segmented option, site nav included. */
+  --segment-option-pad-x: var(--sp-4);
+  --font-body:      'Lato', 'Geist', sans-serif;
   --font-display:   'Fraunces Variable', serif;
   --font-heading:   'Fraunces Variable', serif;
-  --font-narrative: 'Fraunces Variable', serif;
+  /* Long-form reading text is Lato too (owner: "Change the body font
+     everywhere to Lato"); headings and display titles keep their faces. */
+  --font-narrative: var(--font-body);
   --font-mono:      'Geist Mono', monospace;
   /* Title tiers (.type-display/.type-heading/.type-title), D7. Fraunces
-     stays on --font-display/--font-narrative for narrative prose. */
+     stays on --font-display for display text only. */
   --font-title:        'Lexend Variable', 'Geist', sans-serif;
   --font-title-weight: 700;
 }
@@ -242,6 +246,10 @@
   --p-region-mark-pawluck:     #4A6A3D;
   --p-region-mark-viceroc:     #6B4A93;
   --p-region-mark-pelsand:     #8A8273;
+
+  /* Hex-map rings sit on painted art, so they keep one colour in every theme. */
+  --p-map-ring: #fff;
+  --p-map-ring-halo: rgb(0 0 0 / 0.85);
 }
 
 /* ---- Midnight / Ember / Dracula / Vegan x light/dark : B7 (#467) ----
@@ -558,6 +566,8 @@
   --color-good:       var(--color-status-alive);
   --color-warn:       var(--color-status-missing);
   --color-selected-wash: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  --color-map-ring:      var(--p-map-ring);
+  --color-map-ring-halo: var(--p-map-ring-halo);
   --color-hero-bg:    var(--color-bg-panel);
   --color-hero-glow:  var(--color-accent-2);
   --color-hero-ink:   var(--color-text);
@@ -966,7 +976,7 @@
   --rad-sm:   9px;
   --rad-xs:   4px;   /* NEW (#452, fork 2): absorbs off-scale 2/3/4/6 */
   --rad-pill: 999px;
-  --rad-btn:  8px;   /* D9: buttons are rounded rectangles; chips/pills keep --rad-pill */
+  --rad-btn:  10px;   /* D9: buttons are rounded rectangles; chips/pills keep --rad-pill */
 
   /* Layout (round 3, L1). One page frame for every route: PageShell's
    * `.page` reads these and nothing else sets a page width. There is no

@@ -4,7 +4,6 @@ import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { Avatar } from '../../../components/primitives/Avatar.js';
-import { memberLabeler } from '../memberLabels.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
@@ -14,6 +13,7 @@ import type { useMembersPanel } from '../hooks/useMembersPanel.js';
 import { useLayoutEffect, useRef, useState } from 'react';
 import {
   handleLabel,
+  memberLabeler,
   pluralize,
   roleLabel,
   statusLabel,

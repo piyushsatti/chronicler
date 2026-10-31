@@ -13,6 +13,8 @@ import DOCUMENT_BY_ID from './editorDocumentById.graphql?raw';
 import DOCUMENT_BY_SLUG from './editorDocumentBySlug.graphql?raw';
 import { loadSummaryQuest } from './editorSummary.js';
 import { findCodexCategory } from '../../../utils/codexCategories.js';
+import { defaultSessionStart } from '../editorDateTime.js';
+import { isHexCode, normalizeHexCode } from '../../../utils/hexCode.js';
 
 const summaryContextSchema = z.object({
   questId: z.string().uuid(),
@@ -72,8 +74,15 @@ const questLoadSchema = z.object({
   tags: z.array(z.string()).optional().default([]),
   apl: z.number().nullable().optional(),
   signupType: z.string().nullable().optional(),
+  voiceChannelId: z.string().nullable().optional(),
   regions: z.array(z.string()).optional().default([]),
   updatedAt: z.string(),
+  arcId: z.string().nullable().optional(),
+  arc: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
+  pointcrawlLinks: z
+    .array(z.object({ pointcrawlNodeId: z.string(), role: z.enum(['expected', 'visited']) }))
+    .optional()
+    .default([]),
   briefDocument: z
     .object({
       id: z.string(),
@@ -148,8 +157,12 @@ export function parseQuestLoad(wire: unknown): AdapterResult<EditorLoadResult> {
         tags: q.tags,
         apl: q.apl ?? null,
         signupType: q.signupType ?? null,
+        voiceChannelId: q.voiceChannelId ?? '',
         regions: q.regions,
         additionalInfo: brief?.frontmatter.additional_info ?? '',
+        arcId: q.arcId ?? '',
+        arc: q.arc ?? null,
+        pointcrawlLinks: q.pointcrawlLinks,
       },
       body: brief?.effectiveBody ?? null,
       canEditMetadata: brief?.canEditMetadata === true,
@@ -186,6 +199,7 @@ export function parseDocumentLoad(wire: unknown): AdapterResult<EditorLoadResult
         category: d.category ?? null,
         kind: d.kind,
         slug: d.slug,
+        ...(typeof d.frontmatter.hex === 'string' ? { hex: d.frontmatter.hex } : {}),
         ...(d.kind === 'summary' && d.summaryDerived?.authoring
           ? {
               questIds: d.summaryDerived.authoring.questIds,
@@ -218,36 +232,44 @@ export function parseDocumentLoad(wire: unknown): AdapterResult<EditorLoadResult
 function emptyDraft(
   typeKey: EditorTypeKey,
   category?: string | null,
+  context: { timeZone?: string; seriesId?: string; hex?: string } = {},
 ): EditorLoadResult {
   const initialCategory =
     typeKey === 'codex' ? (findCodexCategory(category) ?? category) : category;
   return {
     meta: {
-      title: '',
+      title: typeKey === 'hall-of-fame' ? 'Hall of Fame' : '',
       durationHours: '3',
       slotsMax: '4',
-      scheduledAt: new Date().toISOString(),
+      scheduledAt: defaultSessionStart(new Date(), context.timeZone ?? 'UTC'),
       category:
         initialCategory ??
-        (typeKey === 'guide' || typeKey === 'ruling'
-          ? typeKey
-          : typeKey === 'dm-table'
-            ? 'dm_table'
-            : null),
+        (typeKey === 'guide'
+          ? ''
+          : typeKey === 'ruling'
+            ? typeKey
+            : typeKey === 'dm-table'
+              ? 'dm_table'
+              : typeKey === 'hall-of-fame'
+                ? 'hall_of_fame'
+                : null),
       kind:
         typeKey === 'codex'
           ? 'codex_entry'
           : typeKey === 'guide' || typeKey === 'ruling'
             ? 'rule'
-            : typeKey === 'dm-table'
+            : typeKey === 'dm-table' || typeKey === 'hall-of-fame'
               ? 'community'
               : typeKey,
       ...(typeKey === 'summary' ? { questIds: [], characterId: null } : {}),
       kinds: ['standard'],
+      ...(typeKey === 'quest' ? { arcId: context.seriesId ?? '' } : {}),
+      ...(typeKey === 'codex' && context.hex ? { hex: context.hex } : {}),
       regions: [],
       genres: [],
       tags: [],
-      signupType: 'open',
+      signupType: 'dm_pick',
+      ...(typeKey === 'quest' ? { voiceChannelId: '' } : {}),
     },
     body: '',
     canEditBody: true,
@@ -284,9 +306,21 @@ export async function loadEditorRecord(input: {
   category?: string;
   questId?: string;
   characterId?: string;
+  /** New quests: the viewer's time zone for the default session time. */
+  timeZone?: string;
+  /** New quests: a series to pre-select (`/quests/new?series=<id>`). */
+  seriesId?: string;
+  /** New Codex Features: the map hex to pre-fill (`/codex/Feature/new?hex=LFR7008`). */
+  hex?: string;
 }): Promise<EditorLoadResult> {
   if (input.mode === 'new' || input.typeKey === 'demo') {
-    const draft = emptyDraft(input.typeKey, input.category ?? null);
+    const draft = emptyDraft(input.typeKey, input.category ?? null, {
+      timeZone: input.timeZone,
+      // Only a well-formed series id is pre-selected; anything else starts with no series.
+      seriesId: z.string().uuid().safeParse(input.seriesId).data,
+      // Only a well-formed hex number is pre-filled.
+      hex: isHexCode(input.hex) ? normalizeHexCode(input.hex) : undefined,
+    });
     if (input.typeKey === 'summary' && input.questId !== undefined) {
       const context = summaryContextSchema.safeParse(input);
       if (!context.success)
@@ -352,7 +386,7 @@ export async function loadEditorRecord(input: {
         ? 'codex_entry'
         : input.typeKey === 'guide' || input.typeKey === 'ruling'
           ? 'rule'
-          : input.typeKey === 'dm-table'
+          : input.typeKey === 'dm-table' || input.typeKey === 'hall-of-fame'
             ? 'community'
             : 'summary';
     const category =
@@ -362,10 +396,14 @@ export async function loadEditorRecord(input: {
     if (
       result.data.meta.kind !== expectedKind ||
       (input.typeKey === 'dm-table' && category !== 'dm_table') ||
+      (input.typeKey === 'hall-of-fame' && category !== 'hall_of_fame') ||
       (input.typeKey === 'ruling' && category !== 'ruling') ||
       (input.typeKey === 'guide' && category === 'ruling')
     )
       throw toAppError({ failure: 'NotFound' }, 'editor:kind');
+    // A guide with no group is stored as "guide"; the form shows it as blank.
+    if (input.typeKey === 'guide' && (category === 'guide' || category === 'guides'))
+      return { ...result.data, meta: { ...result.data.meta, category: '' } };
     return result.data;
   } catch (err) {
     throw toAppError(err, 'editor:load');

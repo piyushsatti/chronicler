@@ -164,6 +164,28 @@ type BackstoryType struct {
 	Retired        bool    `json:"retired"`
 }
 
+// One marked span of an unsaved body, from the server's own marker parser.
+// Lines are 1-based and inclusive. handle is the member a MEMBER span addresses;
+// suggestion is a best-effort corrected marker for MALFORMED and LOOKALIKE spans.
+// LIST_NESTED records locate accepted markers inside lists, separately from
+// projection spans; they have no token replacement suggestion.
+// token is the exact source text of the marker defining the span (the offending
+// token for MALFORMED and LOOKALIKE): `[!` through the first `]`, or, when
+// unclosed, `[!` and its first word only, so replacing it with suggestion keeps
+// the prose after it. tokenLine is 1-based; tokenColumn is 1-based and
+// counted in UTF-16 code units, so an editor can replace exactly that range with
+// suggestion without parsing marker grammar.
+type BodySpanAudit struct {
+	StartLine   int          `json:"startLine"`
+	EndLine     int          `json:"endLine"`
+	Kind        BodySpanKind `json:"kind"`
+	Handle      *string      `json:"handle,omitempty"`
+	Suggestion  *string      `json:"suggestion,omitempty"`
+	Token       *string      `json:"token,omitempty"`
+	TokenLine   *int         `json:"tokenLine,omitempty"`
+	TokenColumn *int         `json:"tokenColumn,omitempty"`
+}
+
 type CategoryCountType struct {
 	Category string `json:"category"`
 	Count    int    `json:"count"`
@@ -321,6 +343,7 @@ type CreateQuestInput struct {
 	Apl            *int      `json:"apl,omitempty"`
 	SignupType     *string   `json:"signupType,omitempty"`
 	AdditionalInfo *string   `json:"additionalInfo,omitempty"`
+	VoiceChannelID *string   `json:"voiceChannelId,omitempty"`
 }
 
 type CreationCatalogEntryType struct {
@@ -386,6 +409,28 @@ type DirectoryEntryType struct {
 	DmProfileReviewRevision *int            `json:"dmProfileReviewRevision,omitempty"`
 	TableInfo               json.RawMessage `json:"tableInfo,omitempty"`
 	AvailableDays           []string        `json:"availableDays"`
+}
+
+type DiscordSettingsInput struct {
+	AnnounceChannelID *string                     `json:"announceChannelId,omitempty"`
+	RoleID            *string                     `json:"roleId,omitempty"`
+	VoiceChannels     []*DiscordVoiceChannelInput `json:"voiceChannels"`
+}
+
+type DiscordSettingsType struct {
+	AnnounceChannelID *string                    `json:"announceChannelId,omitempty"`
+	RoleID            *string                    `json:"roleId,omitempty"`
+	VoiceChannels     []*DiscordVoiceChannelType `json:"voiceChannels"`
+}
+
+type DiscordVoiceChannelInput struct {
+	Name      string `json:"name"`
+	ChannelID string `json:"channelId"`
+}
+
+type DiscordVoiceChannelType struct {
+	Name      string `json:"name"`
+	ChannelID string `json:"channelId"`
 }
 
 type DmLastSessionType struct {
@@ -573,8 +618,9 @@ type GameDateType struct {
 }
 
 type GameDayCellType struct {
-	RealDate product.Date `json:"realDate"`
-	GameDay  *int         `json:"gameDay,omitempty"`
+	RealDate product.Date  `json:"realDate"`
+	GameDay  *int          `json:"gameDay,omitempty"`
+	GameDate *GameDateType `json:"gameDate,omitempty"`
 }
 
 type HomeBannerInput struct {
@@ -625,6 +671,7 @@ type MapCreateInput struct {
 	Name      string  `json:"name"`
 	AtlasCode string  `json:"atlasCode"`
 	Family    string  `json:"family"`
+	Grid      string  `json:"grid"`
 	MapKind   string  `json:"mapKind"`
 	RegionID  *string `json:"regionId,omitempty"`
 	AssetPath *string `json:"assetPath,omitempty"`
@@ -636,6 +683,7 @@ type MapType struct {
 	Name            string                `json:"name"`
 	AtlasCode       string                `json:"atlasCode"`
 	Family          string                `json:"family"`
+	Grid            string                `json:"grid"`
 	MapKind         string                `json:"mapKind"`
 	AssetPath       *string               `json:"assetPath,omitempty"`
 	RegionID        *string               `json:"regionId,omitempty"`
@@ -643,6 +691,13 @@ type MapType struct {
 	CreatedAt       time.Time             `json:"createdAt"`
 	PointcrawlNodes []*PointcrawlNodeType `json:"pointcrawlNodes"`
 	PointcrawlEdges []*PointcrawlEdgeType `json:"pointcrawlEdges"`
+}
+
+type MapUpdateInput struct {
+	Name      string  `json:"name"`
+	Family    string  `json:"family"`
+	Grid      string  `json:"grid"`
+	AssetPath *string `json:"assetPath,omitempty"`
 }
 
 type MemberActivityStatsType struct {
@@ -865,6 +920,7 @@ type PointcrawlNodeType struct {
 	X             float64                    `json:"x"`
 	Y             float64                    `json:"y"`
 	Name          string                     `json:"name"`
+	State         PointcrawlNodeState        `json:"state"`
 	LinkedEntries []*PointcrawlEntryLinkType `json:"linkedEntries"`
 	SubmapID      *string                    `json:"submapId,omitempty"`
 	CreatedAt     time.Time                  `json:"createdAt"`
@@ -943,6 +999,7 @@ type QuestEditInput struct {
 	Apl               graphql.Omittable[*int]       `json:"apl,omitempty"`
 	SignupType        graphql.Omittable[*string]    `json:"signupType,omitempty"`
 	AdditionalInfo    graphql.Omittable[*string]    `json:"additionalInfo,omitempty"`
+	VoiceChannelID    graphql.Omittable[*string]    `json:"voiceChannelId,omitempty"`
 }
 
 type QuestFiltersInput struct {
@@ -1050,6 +1107,7 @@ type QuestType struct {
 	Genres           []string                   `json:"genres"`
 	Apl              *int                       `json:"apl,omitempty"`
 	SignupType       *string                    `json:"signupType,omitempty"`
+	VoiceChannelID   *string                    `json:"voiceChannelId,omitempty"`
 	CreatedBy        string                     `json:"createdBy"`
 	CreatedAt        time.Time                  `json:"createdAt"`
 	UpdatedAt        time.Time                  `json:"updatedAt"`
@@ -1311,6 +1369,73 @@ type WeekActivityType struct {
 	Reactions    float64      `json:"reactions"`
 }
 
+// Why an audited body span matters: DM and MEMBER spans are hidden from other
+// readers, MALFORMED spans from everyone; SPOILER spans are visible but blurred;
+// LOOKALIKE spans are visible text whose callout looks like a marker but is not.
+// LIST_NESTED is a diagnostic: a marker does not protect the whole list item.
+type BodySpanKind string
+
+const (
+	BodySpanKindDm         BodySpanKind = "DM"
+	BodySpanKindMember     BodySpanKind = "MEMBER"
+	BodySpanKindSpoiler    BodySpanKind = "SPOILER"
+	BodySpanKindMalformed  BodySpanKind = "MALFORMED"
+	BodySpanKindLookalike  BodySpanKind = "LOOKALIKE"
+	BodySpanKindListNested BodySpanKind = "LIST_NESTED"
+)
+
+var AllBodySpanKind = []BodySpanKind{
+	BodySpanKindDm,
+	BodySpanKindMember,
+	BodySpanKindSpoiler,
+	BodySpanKindMalformed,
+	BodySpanKindLookalike,
+	BodySpanKindListNested,
+}
+
+func (e BodySpanKind) IsValid() bool {
+	switch e {
+	case BodySpanKindDm, BodySpanKindMember, BodySpanKindSpoiler, BodySpanKindMalformed, BodySpanKindLookalike, BodySpanKindListNested:
+		return true
+	}
+	return false
+}
+
+func (e BodySpanKind) String() string {
+	return string(e)
+}
+
+func (e *BodySpanKind) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = BodySpanKind(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid BodySpanKind", str)
+	}
+	return nil
+}
+
+func (e BodySpanKind) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *BodySpanKind) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e BodySpanKind) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type CharacterReviewStatus string
 
 const (
@@ -1534,6 +1659,64 @@ func (e *MemberSortInput) UnmarshalJSON(b []byte) error {
 }
 
 func (e MemberSortInput) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+// Admin-set exploration label on a hex. Display only: it does not change who can see or reach the hex.
+type PointcrawlNodeState string
+
+const (
+	PointcrawlNodeStateLocked   PointcrawlNodeState = "LOCKED"
+	PointcrawlNodeStateUnlocked PointcrawlNodeState = "UNLOCKED"
+	PointcrawlNodeStateMapped   PointcrawlNodeState = "MAPPED"
+)
+
+var AllPointcrawlNodeState = []PointcrawlNodeState{
+	PointcrawlNodeStateLocked,
+	PointcrawlNodeStateUnlocked,
+	PointcrawlNodeStateMapped,
+}
+
+func (e PointcrawlNodeState) IsValid() bool {
+	switch e {
+	case PointcrawlNodeStateLocked, PointcrawlNodeStateUnlocked, PointcrawlNodeStateMapped:
+		return true
+	}
+	return false
+}
+
+func (e PointcrawlNodeState) String() string {
+	return string(e)
+}
+
+func (e *PointcrawlNodeState) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PointcrawlNodeState(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PointcrawlNodeState", str)
+	}
+	return nil
+}
+
+func (e PointcrawlNodeState) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PointcrawlNodeState) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PointcrawlNodeState) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

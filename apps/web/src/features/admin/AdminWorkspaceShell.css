@@ -32,6 +32,9 @@
   block-size: 100%;
 }
 
+/* Pinned with the actions below it, so they line up across the row when a
+   region name wraps. */
 .admin-region-meta {
   min-block-size: 1lh;
+  margin-block-start: auto;
 }

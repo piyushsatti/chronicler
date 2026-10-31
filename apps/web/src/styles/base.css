@@ -255,7 +255,7 @@ a {
   flex: 0 0 auto;
   height: var(--segment-highlight-size);
   min-height: var(--segment-highlight-size);
-  padding: 0 var(--sp-3);
+  padding: 0 var(--segment-option-pad-x);
 }
 
 .nav-drawer-backdrop {

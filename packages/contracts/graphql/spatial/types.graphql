@@ -27,6 +27,7 @@ type MapType {
   name: String!
   atlasCode: String!
   family: String!
+  grid: String!
   mapKind: String!
   assetPath: String
   regionId: ID
@@ -34,6 +35,15 @@ type MapType {
   createdAt: DateTime!
   pointcrawlNodes(limit: Int! = 200, offset: Int! = 0): [PointcrawlNodeType!]!
   pointcrawlEdges(limit: Int! = 200, offset: Int! = 0): [PointcrawlEdgeType!]!
+}
+
+"""
+Admin-set exploration label on a hex. Display only: it does not change who can see or reach the hex.
+"""
+enum PointcrawlNodeState {
+  LOCKED
+  UNLOCKED
+  MAPPED
 }
 
 type PointcrawlEdgeType {
@@ -53,6 +63,7 @@ type PointcrawlNodeType {
   x: Float!
   y: Float!
   name: String!
+  state: PointcrawlNodeState!
   linkedEntries(limit: Int! = 50, offset: Int! = 0): [PointcrawlEntryLinkType!]!
   submapId: ID
   createdAt: DateTime!

@@ -103,10 +103,6 @@ func TestPhase3TaskP03PostgresAcceptance(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	reader, err := NewCompletedReceiptReader(pool)
-	if err != nil {
-		t.Fatal(err)
-	}
 	fingerprint, err := product.Fingerprint(struct{ Timezone string }{"Europe/London"})
 	if err != nil {
 		t.Fatal(err)
@@ -159,17 +155,23 @@ func TestPhase3TaskP03PostgresAcceptance(t *testing.T) {
 	}
 	lookup := func(t *testing.T, actor, key string, want bool) {
 		t.Helper()
-		got, found, err := reader.LookupCompleted(ctx, actor, op, key, fingerprint)
-		if err != nil || found != want {
-			t.Fatalf("lookup = %s %v %v; want found %v", got, found, err, want)
-		}
-		if found {
-			var a, b any
-			if json.Unmarshal(got, &a) != nil || json.Unmarshal(receiptFor(actor), &b) != nil || !reflect.DeepEqual(a, b) {
-				t.Fatalf("stored receipt differs: %s", got)
+		if !want {
+			var raw []byte
+			err := pool.QueryRow(ctx, `SELECT r.receipt FROM idempotency_keys r JOIN members m ON m.id=r.actor_id WHERE m.public_id=$1::uuid AND r.endpoint=$2 AND r.key=$3 AND r.completed_at IS NOT NULL`, actor, "graphql:"+op, key).Scan(&raw)
+			if !errors.Is(err, pgx.ErrNoRows) {
+				t.Fatalf("uncommitted or absent receipt visible: %s %v", raw, err)
 			}
-		} else if got != nil {
-			t.Fatalf("missing lookup returned %s", got)
+			return
+		}
+		tx, repo := begin(t)
+		defer func() { _ = tx.Rollback(ctx) }()
+		claim, err := repo.Claim(ctx, actor, op, key, fingerprint)
+		if err != nil || !claim.Replay {
+			t.Fatalf("committed receipt replay = %+v %v", claim, err)
+		}
+		var got, wantReceipt any
+		if json.Unmarshal(claim.Receipt, &got) != nil || json.Unmarshal(receiptFor(actor), &wantReceipt) != nil || !reflect.DeepEqual(got, wantReceipt) {
+			t.Fatalf("stored receipt differs: %s", claim.Receipt)
 		}
 	}
 	timezone := func(t *testing.T, actor string) string {
@@ -407,10 +409,6 @@ func TestPhase3TaskP03PostgresAcceptance(t *testing.T) {
 		}
 		if err := tx.Commit(ctx); err != nil {
 			t.Fatal(err)
-		}
-		got, found, err := reader.LookupCompleted(ctx, actor, op, key, other)
-		if !errors.As(err, &expected) || expected.Code != apierr.Conflict || found || got != nil {
-			t.Fatalf("lookup conflict = %s %v %v", got, found, err)
 		}
 		if err := pool.QueryRow(ctx, snapshot, "graphql:"+op, actor, key).Scan(&after); err != nil {
 			t.Fatal(err)

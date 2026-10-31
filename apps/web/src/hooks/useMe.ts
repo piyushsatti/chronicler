@@ -25,6 +25,7 @@ export function useMe(): UseQueryResult<MemberViewModel, AppError> {
     },
     enabled: isAuthenticated && sessionReady,
     retry: false,
+    retryOnMount: false,
     staleTime: 0,
     refetchOnWindowFocus: true,
   });

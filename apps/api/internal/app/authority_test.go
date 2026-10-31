@@ -20,11 +20,16 @@ func TestRequestAuthorityReachesDocumentPolicy(t *testing.T) {
 	}
 	want := true
 	h := auth.LiveMiddleware(parse, runtime.Authority, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		scope := (document.Queries{}).ScopeFromContext(r.Context())
+		live, ok := auth.AuthorityFromContext(r.Context())
+		if !ok {
+			t.Fatal("live authority missing")
+		}
+		scope := document.ScopeFromAuthority(live)
 		if scope.IsAdmin || scope.IsDM != want {
 			t.Fatalf("scope=%+v wantDM=%v", scope, want)
 		}
-		if got := scope.Allows(document.VisibilityDMOnly, "doc", "author", nil); got != want {
+		doc := document.Document{ID: "doc", AuthorID: "author", Status: document.StatusPublished, Visibility: document.VisibilityDMOnly}
+		if got := document.Specify(doc).Allows(scope); got != want {
 			t.Fatalf("allows=%v want=%v", got, want)
 		}
 		w.WriteHeader(http.StatusNoContent)

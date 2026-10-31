@@ -26,7 +26,7 @@ flowchart LR
     AG[Agent service] --> A
 ```
 
-The staging site is `chronicler.piyushsatti.com`, with API `chronicler-api.piyushsatti.com` through Cloudflare Tunnel. Production uses `chronicler.smokebombstudios.com` and API `api.chronicler.smokebombstudios.com`. The production API and worker are targeted for one DigitalOcean droplet with PostgreSQL. Current production Compose does not yet include PostgreSQL, ingress, or migrations. The staging and production release workflows are also not implemented.
+The staging site is `chronicler.piyushsatti.com`, with API `chronicler-api.piyushsatti.com` through Cloudflare Tunnel. Production uses `chronicler.smokebombstudios.com` and API `chronicler-prod-api.piyushsatti.com`. The production API, worker and bot are targeted for one VM, published through a `cloudflared` container, with Supabase PostgreSQL ([D51](/docs/decisions/D51-Production-On-One-VM-Behind-Cloudflare-Tunnel.md)). Both release workflows exist; neither has been verified end to end.
 
 Production changes follow the single GitHub Actions release authority in [D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md). See the [deployment runbooks](/deploy/docs/README.md) for the target and its current gaps.
 

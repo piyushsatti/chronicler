@@ -15,6 +15,12 @@
   margin: 0;
 }
 
+/* Series and DM table cards: the count / status line pins to the bottom so it
+   lines up across the row when a title wraps. */
+.dm-dashboard .dm-dashboard__pin {
+  margin-block-start: auto;
+}
+
 .dm-dashboard__quests {
   max-width: 100%;
   overflow-x: auto;

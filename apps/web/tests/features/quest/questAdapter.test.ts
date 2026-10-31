@@ -7,7 +7,6 @@ import {
   parseQuestBoard,
   parseQuestList,
   loadQuestList,
-  loadQuestBoard,
   parseQuestDetail,
 } from '../../../src/features/quest/adapters/questAdapter.js';
 import boardBad from '../../fixtures/wire/quest/board-bad.json';
@@ -154,6 +153,47 @@ describe('parseQuestDetail', () => {
     }
   });
 
+  it('maps a failed Discord attempt to a plain reason, never the raw error', () => {
+    const result = parseQuestDetail({
+      ...detailGood,
+      discordDelivery: {
+        desiredRevision: 3,
+        appliedRevision: 2,
+        overallStatus: 'pending',
+        nextRetryAt: '2026-10-25T18:00:00Z',
+        errorMessage: 'discord api status 403: {"message": "Missing Access"}',
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.discordDelivery.lastAttemptFailed).toBe(true);
+      expect(result.data.discordDelivery.failureReason).toBe(
+        'The bot is missing a Discord permission in the quest channel. An admin must fix it, then retry.',
+      );
+      expect(JSON.stringify(result.data.discordDelivery)).not.toMatch(/Missing Access/);
+    }
+  });
+
+  it('resolves region names from the catalog, joined when several', () => {
+    const second = '33333333-3333-4333-8333-333333333333';
+    const catalog = new Map([
+      ['11111111-1111-4111-8111-111111111111', 'The Marches'],
+      [second, 'Kraghold'],
+    ]);
+    const result = parseQuestDetail(
+      { ...detailGood, regions: [...detailGood.regions, second] },
+      catalog,
+    );
+    expect(result.ok && result.data.regionName).toBe('The Marches, Kraghold');
+  });
+
+  it('leaves regionName null when regions are absent or unresolved', () => {
+    const noRegions = parseQuestDetail({ ...detailGood, regions: [] });
+    expect(noRegions.ok && noRegions.data.regionName).toBeNull();
+    const unresolved = parseQuestDetail(detailGood, new Map());
+    expect(unresolved.ok && unresolved.data.regionName).toBeNull();
+  });
+
   it('rejects bad wire', () => {
     expect(parseQuestDetail(detailBad).ok).toBe(false);
   });
@@ -230,21 +270,6 @@ describe('generic quest list', () => {
       ),
     );
     await expect(loadQuestList(request)).resolves.toEqual({ items: [], total: 3 });
-  });
-
-  it('retains the old board operation for its other consumers', async () => {
-    let variables: unknown;
-    server.use(
-      graphql.query('QuestBoard', ({ variables: received }) => {
-        variables = received;
-        return HttpResponse.json({ data: { questBoard: boardGood } });
-      }),
-    );
-    const board = await loadQuestBoard();
-    expect(variables).toEqual({ limit: 50 });
-    expect(board.map((item) => item.shortCode)).toEqual(
-      boardGood.items.map((item) => item.shortCode),
-    );
   });
 
   it('keys canonical filters and both page arguments independently from the old board', () => {

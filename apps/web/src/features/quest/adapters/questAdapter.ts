@@ -1,7 +1,6 @@
 import type {
   MyCharactersQuery,
   QuestBoardChromeQuery,
-  QuestBoardQuery,
   QuestListQuery,
   QuestQuery,
   QuestRegionsQuery,
@@ -9,7 +8,6 @@ import type {
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import MY_CHARACTERS_QUERY from './myCharacters.graphql?raw';
-import BOARD_QUERY from './questBoard.graphql?raw';
 import CHROME_QUERY from './questBoardChrome.graphql?raw';
 import DETAIL_QUERY from './questDetail.graphql?raw';
 import LIST_QUERY from './questList.graphql?raw';
@@ -19,7 +17,7 @@ import { z } from 'zod';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { toCardStatus, type QuestCardStatus } from '../../../view-models/questCard.js';
-import { formatScheduled } from '../../../utils/format.js';
+import { formatScheduled, formatScheduledShort } from '../../../utils/format.js';
 import {
   questBoardChromeWireSchema,
   questBoardWireSchema,
@@ -27,8 +25,11 @@ import {
   questRegionCatalogWireSchema,
   questParticipantWireSchema,
 } from './quest.wire.schema.js';
+import {
+  discordFailureReason,
+  isDiscordDeliveryTerminal,
+} from '../../../utils/discordDelivery.js';
 
-const TERMINAL_DELIVERY = new Set(['applied', 'failed', 'cancelled', 'skipped']);
 const SEATED = new Set(['signed_up', 'played', 'selected']);
 
 export type DiscordDeliveryView = {
@@ -36,6 +37,12 @@ export type DiscordDeliveryView = {
   appliedRevision: number;
   overallStatus: string;
   isTerminal: boolean;
+  /** When the next attempt runs after a failed one, if one is scheduled. */
+  nextRetryAt: string | null;
+  /** The last attempt failed (the API recorded an error for the current job). */
+  lastAttemptFailed: boolean;
+  /** A short plain reason for that failure; never the raw error text. */
+  failureReason: string | null;
 };
 
 export type QuestBoardParticipantView = {
@@ -70,6 +77,9 @@ export type QuestBoardItemView = {
 export type QuestListFilters = Readonly<{
   status?: string;
   displayStatus?: string;
+  dmId?: string;
+  scheduledFrom?: string;
+  scheduledTo?: string;
 }>;
 
 export type QuestListRequest = {
@@ -96,6 +106,10 @@ export type QuestDetailView = Omit<QuestBoardItemView, 'participants'> & {
   participants: QuestParticipantView[];
   durationHours: number;
   genres: string[];
+  /** Quest kinds in the API vocabulary (`one_shot`, …). */
+  kinds: string[];
+  /** `last_game_played` or `dm_pick`; null when the API has none. */
+  signupType: string | null;
   dmId: string;
   updatedAt: string;
   arc: { id: string; name: string } | null;
@@ -112,6 +126,8 @@ export type QuestBoardCardPropsView = {
   dmName: string | null;
   totalSlots: number;
   when: string;
+  /** Year-less chip label; `when` stays the full, accessible date. */
+  whenShort: string;
   party: Array<{
     characterName: string | null;
     characterId: string | null;
@@ -127,22 +143,34 @@ export type MyCharacterRef = {
   shortCode: string;
 };
 
+export type QuestBoardDmView = {
+  id: string;
+  handle: string;
+  displayName: string | null;
+};
+
 export type QuestBoardChromeView = {
   dmsAcceptingCount: number;
+  /** Every DM in the community directory, for the board's DM filter. */
+  dms: QuestBoardDmView[];
 };
 
 function mapDelivery(d: {
   desiredRevision: number;
   appliedRevision: number;
   overallStatus: string;
+  nextRetryAt?: string | null;
+  errorMessage?: string | null;
 }): DiscordDeliveryView {
-  const status = d.overallStatus.toLowerCase();
+  const failureReason = discordFailureReason(d.errorMessage);
   return {
     desiredRevision: d.desiredRevision,
     appliedRevision: d.appliedRevision,
     overallStatus: d.overallStatus,
-    isTerminal:
-      TERMINAL_DELIVERY.has(status) || d.desiredRevision === d.appliedRevision,
+    isTerminal: isDiscordDeliveryTerminal(d),
+    nextRetryAt: d.nextRetryAt ?? null,
+    lastAttemptFailed: failureReason !== null,
+    failureReason,
   };
 }
 
@@ -195,6 +223,7 @@ export function mapToBoardCardProps(
     dmName: quest.dmName,
     totalSlots: quest.slotsMax,
     when: formatScheduled(quest.scheduledAt, timeZone),
+    whenShort: formatScheduledShort(quest.scheduledAt, timeZone),
     party: seated.map((p) => ({
       characterName: p.characterName,
       characterId: p.characterId,
@@ -236,16 +265,24 @@ export function parseQuestList(
   };
 }
 
-export function parseQuestDetail(wire: unknown): AdapterResult<QuestDetailView> {
+export function parseQuestDetail(
+  wire: unknown,
+  regionNameById: Map<string, string> = new Map(),
+): AdapterResult<QuestDetailView> {
   const parsed = questDetailWireSchema.safeParse(wire);
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
-  const item = mapBoardItem(parsed.data);
+  const item = mapBoardItem(parsed.data, regionNameById);
+  // Detail shows every region the quest touches; board cards keep the first only.
+  const regionNames = parsed.data.regions
+    .map((id) => regionNameById.get(id))
+    .filter((name): name is string => Boolean(name));
   return {
     ok: true,
     data: {
       ...item,
+      regionName: regionNames.length > 0 ? regionNames.join(', ') : null,
       participants: parsed.data.participants.map((p) => ({
         memberId: p.memberId,
         characterId: p.characterId,
@@ -256,6 +293,8 @@ export function parseQuestDetail(wire: unknown): AdapterResult<QuestDetailView> 
       })),
       durationHours: parsed.data.durationHours,
       genres: parsed.data.genres,
+      kinds: parsed.data.kinds,
+      signupType: parsed.data.signupType ?? null,
       dmId: parsed.data.dmId,
       updatedAt: parsed.data.updatedAt,
       arc: parsed.data.arc,
@@ -290,6 +329,7 @@ export async function loadQuestBoardChrome(): Promise<QuestBoardChromeView> {
   try {
     let offset = 0;
     let dmsAcceptingCount = 0;
+    const dms: QuestBoardDmView[] = [];
     for (;;) {
       const data = await graphqlRequest<QuestBoardChromeQuery>(CHROME_QUERY, {
         offset,
@@ -298,27 +338,21 @@ export async function loadQuestBoardChrome(): Promise<QuestBoardChromeView> {
       dmsAcceptingCount += page.entries.filter(
         (entry) => entry.isDm && entry.acceptingPlayers,
       ).length;
+      for (const entry of page.entries) {
+        if (entry.isDm)
+          dms.push({
+            id: entry.memberId,
+            handle: entry.handle,
+            displayName: entry.displayName ?? null,
+          });
+      }
       offset += page.entries.length;
-      if (offset >= page.total) return { dmsAcceptingCount };
+      if (offset >= page.total) return { dmsAcceptingCount, dms };
       if (page.entries.length === 0)
         throw toAppError({ failure: 'InvalidWire' }, 'quest:board-chrome');
     }
   } catch (err) {
     throw toAppError(err, 'quest:board-chrome');
-  }
-}
-
-export async function loadQuestBoard(): Promise<QuestBoardItemView[]> {
-  try {
-    const [data, regions] = await Promise.all([
-      graphqlRequest<QuestBoardQuery>(BOARD_QUERY, { limit: 50 }),
-      loadQuestRegions(),
-    ]);
-    const result = parseQuestBoard(data.questBoard, regions);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'quest:board');
-    return completeRosterPages(result.data);
-  } catch (err) {
-    throw toAppError(err, 'quest:board');
   }
 }
 
@@ -351,14 +385,18 @@ export async function loadQuest(opts: {
   shortCode?: string;
 }): Promise<QuestDetailView> {
   try {
-    const data = await graphqlRequest<QuestQuery>(DETAIL_QUERY, {
-      id: opts.id ?? null,
-      shortCode: opts.shortCode ?? null,
-    });
+    const [data, regions] = await Promise.all([
+      graphqlRequest<QuestQuery>(DETAIL_QUERY, {
+        id: opts.id ?? null,
+        shortCode: opts.shortCode ?? null,
+      }),
+      // Quest.regions is ids only; a catalog failure must not hide the quest itself.
+      loadQuestRegions().catch(() => new Map<string, string>()),
+    ]);
     if (data.quest == null) {
       throw toAppError({ failure: 'NotFound' }, 'quest:detail');
     }
-    const result = parseQuestDetail(data.quest);
+    const result = parseQuestDetail(data.quest, regions);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'quest:detail');
     return {
       ...result.data,

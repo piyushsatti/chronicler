@@ -28,23 +28,3 @@ func (q *Queries) CountUnreadNotificationsByMember(ctx context.Context, memberID
 	err := row.Scan(&column_1)
 	return column_1, err
 }
-
-const markNotificationsReadByMember = `-- name: MarkNotificationsReadByMember :exec
-UPDATE notifications
-SET read_at = transaction_timestamp()
-WHERE member_id = (
-    SELECT m.id FROM members m WHERE m.public_id = $1
-)
-AND public_id = ANY($2::uuid[])
-AND read_at IS NULL
-`
-
-type MarkNotificationsReadByMemberParams struct {
-	MemberID  pgtype.UUID   `json:"member_id"`
-	PublicIds []pgtype.UUID `json:"public_ids"`
-}
-
-func (q *Queries) MarkNotificationsReadByMember(ctx context.Context, arg MarkNotificationsReadByMemberParams) error {
-	_, err := q.db.Exec(ctx, markNotificationsReadByMember, arg.MemberID, arg.PublicIds)
-	return err
-}

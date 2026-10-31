@@ -40,10 +40,3 @@ func TextOrEmpty(t pgtype.Text) string {
 	}
 	return t.String
 }
-
-func OptString(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}

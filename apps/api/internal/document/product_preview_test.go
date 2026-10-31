@@ -32,8 +32,8 @@ func TestPreviewUsesSelectedAudienceWithoutDatabaseOrPrivilegedBodyBypass(t *tes
 	foreign := "10000000-0000-4000-8000-000000000002"
 	selfAuthor := self
 	body := "PUBLIC\n> [!DM]\n> DM SECRET\n\n> [!dm:@Current]\n> CURRENT SECRET\n\n> [!dm:@Other]\n> FOREIGN SECRET\n\n> [!dm:]\n> MALFORMED SECRET\n\n> [!note]\n> NOTE"
-	playerBody := "PUBLIC\n> [!redacted]\n\n> [!dm:@Current]\n> CURRENT SECRET\n\n> [!redacted]\n\n> [!redacted]\n\n> [!note]\n> NOTE"
-	dmBody := "PUBLIC\n> [!DM]\n> DM SECRET\n\n> [!dm:@Current]\n> CURRENT SECRET\n\n> [!redacted]\n\n> [!redacted]\n\n> [!note]\n> NOTE"
+	playerBody := "PUBLIC\n> [!redacted]\n> ████████████████████\n\n> [!dm:@Current]\n> CURRENT SECRET\n\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████\n\n> [!note]\n> NOTE"
+	dmBody := "PUBLIC\n> [!DM]\n> DM SECRET\n\n> [!dm:@Current]\n> CURRENT SECRET\n\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████\n\n> [!note]\n> NOTE"
 	actor := func(roles []auth.Role, dmStatus string) auth.Authority {
 		t.Helper()
 		value, err := auth.NewAuthorityWithHandle(self, roles, "active", dmStatus, "Current")
@@ -89,7 +89,7 @@ func TestPreviewUsesSelectedAudienceWithoutDatabaseOrPrivilegedBodyBypass(t *tes
 		{name: "empty body", actor: player, audience: PreviewAudiencePlayer},
 		{name: "maximum body", actor: player, audience: PreviewAudiencePlayer, body: strings.Repeat("x", 128*1024), want: strings.Repeat("x", 128*1024)},
 		{name: "ordinary unknown callout", actor: player, audience: PreviewAudiencePlayer, body: "> [!unknown-callout]\n> ORDINARY VISIBLE", want: "> [!unknown-callout]\n> ORDINARY VISIBLE"},
-		{name: "malformed audience", actor: player, audience: PreviewAudiencePlayer, body: "> [!audience:unknown]\n> HIDDEN", want: "> [!redacted]"},
+		{name: "malformed audience", actor: player, audience: PreviewAudiencePlayer, body: "> [!audience:unknown]\n> HIDDEN", want: "> [!redacted]\n> ████████████████████"},
 		{name: "guest domain denied", audience: PreviewAudiencePlayer, body: body, code: apierr.Forbidden},
 		{name: "player DM denied", actor: player, audience: PreviewAudienceDM, body: body, code: apierr.Forbidden},
 		{name: "verifier DM denied", actor: verifier, audience: PreviewAudienceDM, body: body, code: apierr.Forbidden},

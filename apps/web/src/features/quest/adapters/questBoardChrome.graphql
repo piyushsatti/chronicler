@@ -1,6 +1,6 @@
 query QuestBoardChrome($offset: Int! = 0) {
   communityDirectory(
-    filters: { acceptingPlayers: true, role: "dm" }
+    filters: { role: "dm" }
     limit: 50
     offset: $offset
   ) {
@@ -8,6 +8,7 @@ query QuestBoardChrome($offset: Int! = 0) {
     entries {
       memberId
       handle
+      displayName
       acceptingPlayers
       isDm
     }

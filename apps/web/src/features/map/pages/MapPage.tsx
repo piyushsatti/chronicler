@@ -15,8 +15,7 @@ import { MapNodeDetails } from '../components/MapNodeDetails.js';
 import { MapRegionDetails } from '../components/MapRegionDetails.js';
 import { PointcrawlViewport } from '../components/PointcrawlViewport.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
-import { Chip } from '../../../components/primitives/Chip.js';
-import { edgeDisplayLabel } from '../edgeLabel.js';
+import { placeWords } from '../mapWords.js';
 import styles from './map.module.css';
 
 const DECLARATION: PageDeclaration = {
@@ -37,6 +36,7 @@ export function MapPage(): React.JSX.Element {
   } | null>(null);
   const map = page.map.data;
   const mapLoaded = map !== undefined;
+  const words = placeWords(map ?? { edges: [] });
   const selected = map?.nodes.find((node) => node.id === params.get('node')) ?? null;
   const noticeScope = JSON.stringify([
     page.actorScope,
@@ -85,8 +85,7 @@ export function MapPage(): React.JSX.Element {
     else if (nextNode) select(nextNode);
   }
   const viewport = useRef<MapViewportHandle>(null);
-  const closeDetails = () => {
-    const id = selected?.id;
+  const clearSelection = () =>
     setParams(
       (current) => {
         const next = new URLSearchParams(current);
@@ -95,6 +94,9 @@ export function MapPage(): React.JSX.Element {
       },
       { replace: true },
     );
+  const closeDetails = () => {
+    const id = selected?.id;
+    clearSelection();
     if (id) viewport.current?.focusNode(id);
   };
   useEffect(() => {
@@ -115,29 +117,39 @@ export function MapPage(): React.JSX.Element {
   const regionName =
     page.region?.name ?? (map?.regionId === null ? 'Global' : 'Region unavailable');
   const body = (
-    <div className={`stack ${styles.page}`}>
+    <div className={`stack ${styles.page}`} data-gap="5">
       <PageHeader
-        title={requestedAtlas ? (map?.name ?? 'Map') : 'Maps'}
+        title={requestedAtlas ? (map?.name ?? 'Map') : 'Map'}
         lede={
           requestedAtlas
             ? 'Campaign map · Follow the roads, then follow the stories.'
             : 'Browse the places your campaign has charted.'
         }
         actions={
-          page.canCreate ? (
-            <Button
-              variant="secondary"
-              onClick={() =>
-                setEdit({
-                  kind: 'create',
-                  regions: page.creatableRegions,
-                  global: page.isAdmin,
-                })
-              }
-            >
-              Create map
-            </Button>
-          ) : null
+          <>
+            {requestedAtlas && map?.canEdit ? (
+              <Button
+                variant="secondary"
+                onClick={() => setEdit({ kind: 'map', map })}
+              >
+                Edit map
+              </Button>
+            ) : null}
+            {page.canCreate ? (
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  setEdit({
+                    kind: 'create',
+                    regions: page.creatableRegions,
+                    global: page.isAdmin,
+                  })
+                }
+              >
+                Create map
+              </Button>
+            ) : null}
+          </>
         }
       />
       {notice?.noticeScope === noticeScope &&
@@ -145,17 +157,13 @@ export function MapPage(): React.JSX.Element {
         <p role="alert">{notice.message}</p>
       ) : null}
       {page.directory.isError ? (
-        <div role="alert">
-          Map directory could not load.{' '}
-          <Button
-            variant="ghost"
-            onClick={() => {
-              page.retryDirectory();
-            }}
-          >
-            Retry directory
-          </Button>
-        </div>
+        <StatePanel
+          status="error"
+          error={toAppError(page.directory.error, 'map:directory')}
+          title="Map directory could not load."
+          onRetry={page.retryDirectory}
+          retryLabel="Retry directory"
+        />
       ) : null}
       {!requestedAtlas && page.directory.isPending ? (
         <StatePanel status="loading" />
@@ -184,7 +192,7 @@ export function MapPage(): React.JSX.Element {
             <>
               {params.get('node') &&
               !map.nodes.some((node) => node.id === params.get('node')) ? (
-                <p role="status">The requested location is unavailable on this map.</p>
+                <p role="status">The requested {words.one} is unavailable on this map.</p>
               ) : null}
               <div data-map-ready="true" className="stack">
                 <div className={styles.explorer}>
@@ -201,38 +209,34 @@ export function MapPage(): React.JSX.Element {
                     map={map}
                     selectedId={selected?.id ?? null}
                     onSelect={select}
+                    onClear={clearSelection}
+                    onAddAt={
+                      map.canEdit && words.one === 'location'
+                        ? (at) =>
+                            setEdit({
+                              kind: 'node',
+                              map,
+                              node: null,
+                              maps: page.directory.data?.maps ?? [],
+                              at,
+                            })
+                        : undefined
+                    }
                     actions={
                       map.canEdit ? (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              setEdit({
-                                kind: 'node',
-                                map,
-                                node: null,
-                                maps: page.directory.data?.maps ?? [],
-                              })
-                            }
-                          >
-                            Add location
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            disabled={map.nodes.length < 2}
-                            onClick={() =>
-                              setEdit({
-                                kind: 'edge',
-                                map,
-                                edge: null,
-                                nodes: map.nodes,
-                              })
-                            }
-                          >
-                            Add connection
-                          </Button>
-                        </>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            setEdit({
+                              kind: 'node',
+                              map,
+                              node: null,
+                              maps: page.directory.data?.maps ?? [],
+                            })
+                          }
+                        >
+                          Add {words.one}
+                        </Button>
                       ) : null
                     }
                   />
@@ -246,7 +250,6 @@ export function MapPage(): React.JSX.Element {
                       onReload={reload}
                       region={regionName}
                       onClose={closeDetails}
-                      onSelect={select}
                       onShowOnMap={() => viewport.current?.centerNode(selected.id)}
                     />
                   ) : (
@@ -272,18 +275,18 @@ export function MapPage(): React.JSX.Element {
                     data-map-selection-feedback={selected.id}
                     className={styles.srOnly}
                   >
-                    Selected location: {selected.name}.
+                    Selected {words.one}: {selected.name}.
                   </p>
                 ) : null}
                 <section
                   className={`card ${styles.disclosure}`}
-                  aria-label="Map locations"
+                  aria-label={`Map ${words.many}`}
                 >
                   <details>
                     <summary className="type-title">
-                      Locations ({map.nodes.length})
+                      {words.Many} ({map.nodes.length})
                     </summary>
-                    <ul className={styles.nodeList} aria-label="Map locations">
+                    <ul className={styles.nodeList} aria-label={`Map ${words.many}`}>
                       {map.nodes.map((node) => (
                         <li key={node.id}>
                           <button
@@ -300,77 +303,7 @@ export function MapPage(): React.JSX.Element {
                         </li>
                       ))}
                     </ul>
-                    {map.nodes.length === 0 ? <p>No locations to select.</p> : null}
-                  </details>
-                </section>
-                <section
-                  className={`card ${styles.disclosure}`}
-                  aria-label="Map connections"
-                >
-                  <details>
-                    <summary className="type-title">
-                      Connections ({map.edges.length})
-                    </summary>
-                    {map.edges.length ? (
-                      <ul className={styles.connections}>
-                        {map.edges.map((edge) => {
-                          const a = map.nodes.find((node) => node.id === edge.nodeA);
-                          const b = map.nodes.find((node) => node.id === edge.nodeB);
-                          const touchesSelected =
-                            selected !== null &&
-                            (edge.nodeA === selected.id || edge.nodeB === selected.id);
-                          return a && b ? (
-                            <li key={edge.id}>
-                              <span className={styles.connection}>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => select(a.id)}
-                                >
-                                  {a.name}
-                                </Button>
-                                <span aria-hidden="true">
-                                  {edge.directed ? '→' : '↔'}
-                                </span>
-                                <span className={styles.srOnly}>
-                                  {edge.directed
-                                    ? 'leads one way to'
-                                    : 'connects both ways with'}
-                                </span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => select(b.id)}
-                                >
-                                  {b.name}
-                                </Button>
-                                <Chip size="sm" tone="line">
-                                  {edgeDisplayLabel(edge)}
-                                </Chip>
-                              </span>
-                              {map.canEdit && touchesSelected ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    setEdit({
-                                      kind: 'edge',
-                                      map,
-                                      edge,
-                                      nodes: map.nodes,
-                                    })
-                                  }
-                                >
-                                  Edit connection
-                                </Button>
-                              ) : null}
-                            </li>
-                          ) : null;
-                        })}
-                      </ul>
-                    ) : (
-                      <p>No connections recorded.</p>
-                    )}
+                    {map.nodes.length === 0 ? <p>No {words.many} to select.</p> : null}
                   </details>
                 </section>
               </div>
@@ -380,14 +313,14 @@ export function MapPage(): React.JSX.Element {
           ) : !page.directory.isError ? (
             <StatePanel
               status="empty"
-              emptyMessage="No pointcrawl maps are available for this viewer."
+              emptyMessage="No maps are available for this viewer."
             />
           ) : null}
         </>
       ) : null}
       {edit ? (
         <MapEditDialog
-          key={`${scopeKey}:${edit.kind}:${edit.kind === 'node' ? edit.node?.id : edit.kind === 'edge' ? edit.edge?.id : edit.kind === 'link' ? edit.node.id : ''}`}
+          key={`${scopeKey}:${edit.kind}:${edit.kind === 'node' ? `${edit.node?.id ?? ''}${edit.at ? `@${edit.at.x},${edit.at.y}` : ''}` : edit.kind === 'link' ? edit.node.id : ''}`}
           edit={edit}
           onClose={() => setEdit(null)}
           onSaved={reload}

@@ -1,7 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { PointcrawlViewport } from '../../../src/features/map/components/PointcrawlViewport.js';
-import good from '../../fixtures/wire/map/good.json';
+import {
+  MAP_ROUTES_STORAGE_KEY,
+  PointcrawlViewport,
+} from '../../../src/features/map/components/PointcrawlViewport.js';
+import good from '../../fixtures/wire/map/goodMap.js';
+
+// These suites cover route drawing; routes are hidden by default, so opt in.
+beforeEach(() => localStorage.setItem(MAP_ROUTES_STORAGE_KEY, 'true'));
 
 const map = { ...good, nodes: good.pointcrawlNodes, edges: good.pointcrawlEdges };
 
@@ -15,7 +21,7 @@ describe('R16b route key availability', () => {
       />,
     );
     expect(
-      screen.getByRole('group', { name: 'Lightfall pointcrawl graph' }),
+      screen.getByRole('group', { name: 'Lightfall map' }),
     ).toBeVisible();
     expect(
       screen.queryByRole('button', { name: 'Key to route line styles' }),
@@ -76,7 +82,7 @@ describe('R16b route key availability', () => {
         onSelect={vi.fn()}
       />,
     );
-    const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+    const graph = screen.getByRole('group', { name: 'Lightfall map' });
     const anchor = graph.querySelector(`[data-node-id="${start.id}"]`);
     const plate = anchor?.querySelector('rect');
     const label = anchor?.querySelector('text:last-child');

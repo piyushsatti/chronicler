@@ -11,7 +11,6 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 
-	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -22,7 +21,7 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 	if resolver == nil {
 		return PlaceholderHandler()
 	}
-	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
+	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: resolver, Complexity: graph.ListComplexity()}))
 	srv.SetErrorPresenter(func(ctx context.Context, err error) *gqlerror.Error {
 		presented := gql.DefaultErrorPresenter(ctx, err)
 		if expected, ok := errors.AsType[*apierr.Error](err); ok {
@@ -39,15 +38,14 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 	})
 	srv.AddTransport(transport.POST{})
 	srv.Use(extension.Introspection{})
+	if limits.MaxDepth > 0 {
+		srv.Use(depthLimit{max: limits.MaxDepth})
+	}
 	if limits.MaxComplexity > 0 {
 		srv.Use(extension.FixedComplexityLimit(limits.MaxComplexity))
 	}
-	if limits.MaxDepth > 0 {
-		srv.Use(extension.FixedComplexityLimit(limits.MaxComplexity))
-	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := document.WithScopeCache(r.Context())
-		ctx = WithLoaders(ctx, NewLoaderRegistry())
+		ctx := WithLoaders(r.Context(), NewLoaderRegistry())
 		if authority != nil {
 			claims := auth.FromContext(r.Context())
 			var initial *auth.Authority

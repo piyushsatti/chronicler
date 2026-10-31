@@ -1,22 +1,40 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
+import { Modal } from '../../../components/primitives/Modal.js';
 import { documentHref } from '../../../utils/documentHref.js';
 import {
   useMapNodeDetails,
   type MapNodeDetailsProps,
 } from '../hooks/useMapNodeDetails.js';
-import { Chip } from '../../../components/primitives/Chip.js';
-import { humanizeKey } from '../../../utils/format.js';
+import { placeWords } from '../mapWords.js';
+import { cardExcerpt } from '../../../utils/markdownText.js';
+import {
+  FEATURE_CATEGORY,
+  MAX_FEATURES_PER_HEX,
+  isHexCode,
+  normalizeHexCode,
+} from '../../../utils/hexCode.js';
+import { isDm } from '../../../auth/roles.js';
+import { useMe } from '../../../hooks/useMe.js';
 import { MapPanelBody } from './MapPanelBody.js';
+import { NodeStateSwatch } from './NodeStateSwatch.js';
+import { useNodeState } from '../hooks/useNodeState.js';
+import { nodeStateLabel, nodeStateMeaning } from '../nodeState.js';
 import styles from '../pages/map.module.css';
+import stateStyles from './nodeState.module.css';
 export function MapNodeDetails(props: MapNodeDetailsProps) {
-  const { map, node, maps, onEdit, onReload, region, onClose, onShowOnMap, onSelect } =
-    props;
+  const { map, node, maps, onEdit, onReload, region, onClose, onShowOnMap } = props;
   const { pending, error, documentIds, documents, submap, unlink } =
     useMapNodeDetails(props);
+  const me = useMe();
+  const hexState = useNodeState(props);
+  const [confirming, setConfirming] = useState<{
+    documentId: string;
+    relation: string;
+    title: string;
+  } | null>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -29,62 +47,51 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
           : 'smooth',
       });
   }, [node.id]);
-  const locationLink = node.linkedEntries.find((link) => link.relation === 'location');
-  const locationIndex = locationLink
-    ? documentIds.indexOf(locationLink.documentId)
-    : -1;
-  const description =
-    locationIndex >= 0
-      ? documents[Math.floor(locationIndex / 5)]?.data?.[locationIndex % 5]
-          ?.effectiveBody
-      : null;
+  const words = placeWords(map);
+  const entryAt = (documentId: string) => {
+    const index = documentIds.indexOf(documentId);
+    return documents[Math.floor(index / 5)]?.data?.[index % 5];
+  };
+  // Server enforces the cap; this hides the button once a hex is full.
+  const featureCount = node.linkedEntries.filter(
+    (link) =>
+      link.relation === 'subject' &&
+      entryAt(link.documentId)?.category === FEATURE_CATEGORY,
+  ).length;
+  const newFeature =
+    isDm(me.data?.roles) &&
+    isHexCode(node.name) &&
+    featureCount < MAX_FEATURES_PER_HEX ? (
+      <Link
+        className="btn btn--secondary btn--sm"
+        to={`/codex/${FEATURE_CATEGORY}/new?hex=${encodeURIComponent(normalizeHexCode(node.name))}`}
+      >
+        New entry
+      </Link>
+    ) : null;
+  // A hex or location may hold many Locations; Features are placed by their own hex number.
   const linkAction = map.canEdit ? (
-    <Button variant="secondary" onClick={() => onEdit({ kind: 'link', map, node })}>
-      Link a Codex entry
-    </Button>
-  ) : null;
+      <Button variant="secondary" onClick={() => onEdit({ kind: 'link', map, node })}>
+        Link a Location
+      </Button>
+    ) : null;
   return (
     <section
       ref={panel}
       className={styles.details}
       id="map-location-details"
-      aria-label="Selected location"
+      aria-label={`Selected ${words.one}`}
       data-map-selected={node.id}
       data-map-panel="true"
-      onKeyDown={(event) => {
-        if (
-          ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(
-            event.key,
-          ) &&
-          !(
-            event.target instanceof HTMLInputElement ||
-            event.target instanceof HTMLTextAreaElement
-          )
-        ) {
-          event.preventDefault();
-          const index = map.nodes.findIndex((item) => item.id === node.id);
-          const next =
-            event.key === 'Home'
-              ? 0
-              : event.key === 'End'
-                ? map.nodes.length - 1
-                : (index +
-                    (event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1) +
-                    map.nodes.length) %
-                  map.nodes.length;
-          const target = map.nodes[next];
-          if (target) onSelect(target.id);
-        }
-      }}
     >
       <header className={styles.detailHeader}>
         <div className={styles.detailTopline}>
-          <span>Place</span>
+          <span>{words.One}</span>
           <button
             ref={closeButton}
             type="button"
             className={styles.detailClose}
-            aria-label="Close place details"
+            aria-label={`Close ${words.one} details`}
             onClick={onClose}
           >
             ×
@@ -94,10 +101,32 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
         <p className={styles.detailLocation}>{region}</p>
       </header>
       <MapPanelBody>
-        {description ? (
-          <div className={styles.detailDescription}>
-            <ContentRenderer body={description} />
-          </div>
+        {hexState.hexMap ? (
+          <>
+            <p className={stateStyles.stateRow} data-node-state={hexState.state}>
+              <span className={stateStyles.stateName}>Hex state</span>
+              <span
+                className={stateStyles.stateValue}
+                title={nodeStateMeaning(hexState.state)}
+              >
+                <NodeStateSwatch state={hexState.state} />
+                {nodeStateLabel(hexState.state)}
+              </span>
+              {hexState.canSet ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  pending={hexState.pending}
+                  onClick={() => {
+                    void hexState.cycle();
+                  }}
+                >
+                  Change to {nodeStateLabel(hexState.next)}
+                </Button>
+              ) : null}
+            </p>
+            {hexState.error ? <p role="alert">{hexState.error}</p> : null}
+          </>
         ) : null}
         <h3 className={styles.linkedHeading}>
           Linked documents <span>{node.linkedEntries.length}</span>
@@ -115,7 +144,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
         {node.linkedEntries.length === 0 ? (
           <EmptyState
             className={styles.linkedEmpty}
-            message="No Codex entries are linked to this location yet."
+            message={`No Codex entries are linked to this ${words.one} yet.`}
             action={
               linkAction ?? (
                 <Link className="btn btn--secondary btn--sm" to="/codex">
@@ -155,36 +184,34 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
                         document.title
                       )}
                     </h4>
-                    <div className={styles.docMeta}>
-                      <Chip size="sm" tone="category">
-                        {document.kind === 'codex_entry'
-                          ? 'Codex'
-                          : humanizeKey(document.kind)}
-                        {document.category
-                          ? ` · ${humanizeKey(document.category)}`
-                          : ''}
-                      </Chip>
-                      <span className={styles.relationChip}>
-                        {humanizeKey(link.relation)}
-                      </span>
-                    </div>
-                    {document.effectiveBody && link.relation !== 'location' ? (
-                      <details className={styles.entryPreview}>
-                        <summary>Read entry preview</summary>
-                        <ContentRenderer body={document.effectiveBody} />
-                      </details>
+                    {cardExcerpt(document.effectiveBody, 180) ? (
+                      <p className={styles.entrySummary}>
+                        {cardExcerpt(document.effectiveBody, 180)}
+                      </p>
                     ) : null}
-                    {map.canEdit ? (
+                    {document.category === FEATURE_CATEGORY ? (
+                      map.canEdit ? (
+                        <p className="type-caption">
+                          A Feature sits on the hex named in its entry. Edit the entry
+                          to move it or take it off the map.
+                        </p>
+                      ) : null
+                    ) : map.canEdit ? (
                       <Button
                         size="sm"
-                        variant="danger"
+                        variant="ghost"
+                        aria-label={`Unlink ${document.title}`}
                         pending={pending === `${link.documentId}:${link.relation}`}
                         disabled={Boolean(pending)}
-                        onClick={() => {
-                          void unlink(link.documentId, link.relation);
-                        }}
+                        onClick={() =>
+                          setConfirming({
+                            documentId: link.documentId,
+                            relation: link.relation,
+                            title: document.title,
+                          })
+                        }
                       >
-                        Unlink {document.title}
+                        Unlink
                       </Button>
                     ) : null}
                   </>
@@ -214,11 +241,38 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
             size="sm"
             onClick={() => onEdit({ kind: 'node', map, node, maps })}
           >
-            Edit location
+            Edit {words.one}
           </Button>
         ) : null}
         {node.linkedEntries.length ? linkAction : null}
+        {newFeature}
       </MapPanelBody>
+      {confirming ? (
+        <Modal open title={`Unlink ${confirming.title}?`} onClose={() => setConfirming(null)}>
+          <div className="stack">
+            <p className="type-body">
+              {confirming.title} stays in the Codex. It is only removed from {words.one}{' '}
+              {node.name}.
+            </p>
+            <div className="row">
+              <Button type="button" variant="ghost" onClick={() => setConfirming(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => {
+                  const { documentId, relation } = confirming;
+                  setConfirming(null);
+                  void unlink(documentId, relation);
+                }}
+              >
+                Unlink
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
       <div className={styles.detailFooter}>
         <span>
           <i />

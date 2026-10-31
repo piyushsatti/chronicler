@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { DmApprovalNotice } from '../../../components/domain/DmApprovalNotice.js';
+import { SeriesCreateAction } from '../../../components/domain/SeriesCreateAction.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
@@ -95,7 +97,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
         lede="Plan your next session and manage your quests, series and DM tables."
         actions={
           <>
-            <Link className="btn btn--secondary" to="/me">
+            <Link className="btn btn--secondary" to={view.profileHref}>
               Edit DM profile
             </Link>
             {view.canCreateQuest && data.quests.items.length > 0 ? (
@@ -106,6 +108,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
           </>
         }
       />
+      <DmApprovalNotice />
       <CardGrid className="dm-dashboard__stats" gap={3} aria-label="Your DM stats">
         <StatTile label="Quests posted" value={data.quests.total} />
         {data.dmStats ? <StatTile label="Sessions run" value={data.dmStats.sessionCount} /> : null}
@@ -120,7 +123,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
             <Link className="type-link" to="/me">Your page and DM profile</Link>
             <Link className="type-link" to="/calendar">Quest calendar</Link>
             <Link className="type-link" to="/quests">Browse all quests</Link>
-            {view.canCreateQuest ? <Link className="type-link" to="/series/new">Create a series</Link> : null}
+            {view.canCreateQuest ? <SeriesCreateAction label="Create a series" variant="ghost" size="sm" showAuthorityError={false} /> : null}
           </Card>
         }
       >
@@ -163,21 +166,26 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
         </section>
       </Card>
       <Card className="stack" as="section" aria-label="Your series">
-        <h2 className="type-heading">Your series</h2>
+        <div className="row" data-wrap="1" data-justify="between" data-align="center">
+          <h2 className="type-heading">Your series</h2>
+          {data.series.length > 0 ? (
+            <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />
+          ) : null}
+        </div>
         {data.series.length === 0 ? (
           <EmptyState
             kind="generic"
             message="You have not created a quest series yet."
             action={view.canCreateQuest
-              ? <Link className="btn btn--secondary btn--sm" to="/series/new">Create a series</Link>
-              : <Link className="btn btn--secondary btn--sm" to="/me">View your DM profile</Link>}
+              ? <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />
+              : <Link className="btn btn--secondary btn--sm" to={view.profileHref}>View your DM profile</Link>}
           />
         ) : (
           <CardGrid as="ul" gap={3}>
             {data.series.map((series) => (
               <li className="card stack" key={series.id}>
                 <Link className="type-title" to={`/series/${encodeURIComponent(series.id)}`}>{series.name}</Link>
-                <p className="type-caption">{pluralize(series.questCount, 'quest')}</p>
+                <p className="type-caption dm-dashboard__pin">{pluralize(series.questCount, 'quest')}</p>
               </li>
             ))}
           </CardGrid>
@@ -210,7 +218,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
                 <Link className="type-title" to={`/community/dm-table/${table.slug}`}>
                   {table.title}
                 </Link>
-                <p className="type-caption">{statusLabel(table.status)}</p>
+                <p className="type-caption dm-dashboard__pin">{statusLabel(table.status)}</p>
                 {table.canEditMetadata ? (
                   <Link className="type-link" to={`/editor/dm-table/${table.id}/edit`}>
                     Edit table

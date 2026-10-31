@@ -1,6 +1,11 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { loadAdminOperations } from '../adapters/adminAdapter.js';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../../api/queryKeys.js';
+import { toAppError } from '../../../errors/toAppError.js';
+import {
+  loadAdminOperations,
+  redriveDiscordDelivery,
+} from '../adapters/adminAdapter.js';
 import {
   panelState,
   useAdminAuthority,
@@ -10,6 +15,7 @@ import type { AdminPaginationState } from './useAdminPage.js';
 
 export function useAdminOperations() {
   const authority = useAdminAuthority();
+  const queryClient = useQueryClient();
   const [deliveryOffset, setDeliveryOffset] = useState(0);
   const [alertOffset, setAlertOffset] = useState(0);
   const query = useQuery({
@@ -30,7 +36,31 @@ export function useAdminOperations() {
         signal,
       ),
   });
-  useAuthorityFailures(query.error);
+  const [redriveFeedback, setRedriveFeedback] = useState<{
+    message: string;
+    isError: boolean;
+  } | null>(null);
+  const redrive = useMutation<unknown, unknown, string>({
+    mutationKey: ['adminCommand', authority.commandKey, 'redriveDiscordDelivery'],
+    networkMode: 'always',
+    retry: false,
+    mutationFn: authority.guardMutation((command, jobId: string) =>
+      redriveDiscordDelivery({ jobId }, command),
+    ),
+    onSuccess: async () => {
+      if (!authority.isCurrent()) return;
+      setRedriveFeedback({ message: 'Delivery queued to try again.', isError: false });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminOperations });
+    },
+    onError: (error) => {
+      if (!authority.isCurrent()) return;
+      setRedriveFeedback({
+        message: toAppError(error, 'admin:delivery:redrive').userMessage,
+        isError: true,
+      });
+    },
+  });
+  useAuthorityFailures(query.error, redrive.error);
   function page(
     offset: number,
     total: number | undefined,
@@ -57,6 +87,8 @@ export function useAdminOperations() {
     query: panelState(query, 'admin:operations'),
     deliveryPage: page(deliveryOffset, query.data?.deliveryTotal, setDeliveryOffset),
     alertPage: page(alertOffset, query.data?.activeAlertCount, setAlertOffset),
+    redrive: panelState(redrive, 'admin:delivery:redrive'),
+    redriveFeedback,
   };
 }
 

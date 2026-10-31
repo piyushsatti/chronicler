@@ -8,11 +8,15 @@
 
 The bot forwards **normalized observations** to the API. Observations are not facts. Idempotency and durability for accepted work belong on the API side; the bot may keep only a transport buffer across short outages.
 
+The bot calls the API over the internal network. In production, public traffic reaches the API only through Cloudflare, where a WAF custom rule on the API hostname blocks `/v1/ingest/*` ([D51](/docs/decisions/D51-Production-On-One-VM-Behind-Cloudflare-Tunnel.md)); the bot never takes that path. Agent, GraphQL, authentication and health paths are not blocked. Ingest still requires its machine credential at the API boundary. Production startup requires `INGEST_SECRET` and `JWT_SECRET` to be at least 32 characters each.
+
 ## Enforcement
 
-| Mechanism                                                          | Location                                                                                                                     | Status       |
-| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| Activity and heartbeat bodies match `DiscordEvent` and `Heartbeat` | [ingest.test.ts](/apps/discord/tests/unit/interface/ingest.test.ts) against [openapi.yaml](/packages/contracts/openapi.yaml) | **enforced** |
+| Mechanism                                                          | Location                                                                                                                     | Status                                         |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Activity and heartbeat bodies match `DiscordEvent` and `Heartbeat` | [ingest.test.ts](/apps/discord/tests/unit/interface/ingest.test.ts) against [openapi.yaml](/packages/contracts/openapi.yaml) | **enforced**                                   |
+| Public ingest rejection at the edge                                | Cloudflare WAF custom rule on the production API hostname, set up per the [runbook](/deploy/docs/deploy-runbook.md)          | **not enforced** by the repository; unverified |
+| Production machine-secret minimum                                  | `TestValidateProductionRequiresStrongMachineSecrets` in [config tests](/apps/api/internal/platform/config/validate_test.go)  | **enforced**                                   |
 
 ## Provider
 

@@ -174,6 +174,25 @@
   overflow-wrap: anywhere;
 }
 
+/* A selected choice chip is filled, not just tinted, so it never reads like an
+   unselected one. Outranks editor.css's `.hf2 .pf-tag` ground and border. */
+.workspace :global(.pf-tag[aria-pressed='true']) {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg-deep);
+  font-weight: 600;
+}
+
+.workspace :global(.pf-tag[aria-pressed='false']) {
+  background: transparent;
+  border-color: var(--color-border-2);
+  color: var(--color-text-2);
+}
+
+.workspace :global(.pf-tag[aria-pressed]) {
+  padding-inline: var(--sp-2);
+}
+
 .workspace :global(.pf-tag-label) {
   min-inline-size: 0;
   overflow-wrap: anywhere;
@@ -198,19 +217,22 @@
   overflow-wrap: anywhere;
 }
 
+/* The line being typed reads as a line of the document, not a boxed field:
+   the accent bar and tint from editor.css mark it, so it gets no border,
+   no ring and no fixed height. */
 .workspace :global(.le-input) {
   inline-size: 100%;
   max-inline-size: 100%;
   min-inline-size: 0;
-  min-block-size: 6rem;
   font-family: inherit;
-  border: 1px solid var(--color-border-2);
+  border-block: 0;
+  border-inline-end: 0;
   resize: none;
 }
 
+/* The textarea only exists on the active line, so the accent bar is its focus mark. */
 .workspace :global(.le-input):focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: none;
 }
 
 /* The formatting buttons scroll in one row instead of wrapping into a
@@ -320,15 +342,6 @@
   background: var(--color-bg-panel);
 }
 
-.items {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 .items > li {
   display: flex;
   flex-wrap: wrap;
@@ -422,4 +435,48 @@
 .workspace :global(.pf-label) {
   flex-wrap: wrap;
   column-gap: var(--sp-2);
+}
+
+/* Blocks the server's body audit marks (auditBody). A tinted edge and a text
+   badge name who can read the block, so the colour is never the only signal. */
+.auditBlock {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.auditBlock[data-audit='SPOILER'] {
+  background: color-mix(in srgb, var(--color-text-2) 6%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-text-2);
+}
+
+.auditBlock[data-audit='MALFORMED'] {
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-danger);
+}
+
+.auditBadge {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: var(--sp-2) var(--sp-2) 0;
+  color: var(--color-text-2);
+  font-weight: 600;
+}
+
+.auditWarning {
+  align-items: center;
+  margin: 0 var(--sp-2) var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  border-inline-start: 2px solid var(--color-warn);
+  background: color-mix(in srgb, var(--color-warn) 8%, transparent);
+}
+
+.auditWarning > p {
+  margin: 0;
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+}
+
+.previewViewer {
+  align-items: center;
 }

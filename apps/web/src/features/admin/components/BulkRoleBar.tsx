@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import type { useBulkRoleBar } from '../hooks/useBulkRoleBar.js';
-import { memberLabeler } from '../memberLabels.js';
+import { memberLabeler } from '../../../utils/format.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import { Select } from '../../../components/primitives/Select.js';
 
@@ -49,11 +49,14 @@ export function BulkRoleBar({
               setTouched(true);
               setForm((f) => ({
                 ...f,
-                baseTier: value === 'Spectator' ? 'Spectator' : 'Player',
+                baseTier: value === 'Guest' || value === 'Player' || value === 'Guest + Player'
+                  ? value : 'Spectator',
               }));
             }}
             options={[
               { value: 'Player', label: 'Player' },
+              { value: 'Guest', label: 'Guest' },
+              { value: 'Guest + Player', label: 'Guest + Player' },
               { value: 'Spectator', label: 'Spectator' },
             ]}
           />

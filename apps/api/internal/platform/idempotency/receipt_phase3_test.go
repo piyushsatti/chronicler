@@ -97,8 +97,9 @@ func TestCompletePreservesLegacyNotificationAndStagedMetadataPaths(t *testing.T)
 					if !staged && !bytes.Equal(stored, input) {
 						t.Fatal("no-fact legacy/proof bytes changed")
 					}
-					reader, _ := NewCompletedReceiptReader(&receiptTestTx{rows: []receiptTestRow{storedReceiptRow(&fingerprint, stored, true)}})
-					decoded, found, err := reader.LookupCompleted(t.Context(), actor, claim.Operation, claim.Key, fingerprint)
+					replay, _ := NewRepository(&receiptTestTx{rows: []receiptTestRow{noReceiptRow(pgx.ErrNoRows), storedReceiptRow(&fingerprint, stored, true)}})
+					replayed, err := replay.Claim(t.Context(), actor, claim.Operation, claim.Key, fingerprint)
+					decoded, found := replayed.Receipt, replayed.Replay
 					var got, want any
 					if err != nil || !found || json.Unmarshal(decoded, &got) != nil || json.Unmarshal(input, &want) != nil || !reflect.DeepEqual(got, want) {
 						t.Fatalf("result/notification replay changed: %s err=%v", decoded, err)
@@ -301,28 +302,14 @@ func TestStoredOverrideMetadataIsStrictAndBoundToActualReceiptRow(t *testing.T) 
 		strings.Replace(string(facts), `"at":"2026-10-20T12:00:00Z"`, `"at":"2026-10-20T13:00:00+01:00"`, 1),
 	} {
 		stored := []byte(`{"Id":"result","_authorizationOverrides":` + corrupted + `}`)
-		for _, replay := range []bool{false, true} {
-			tx := &receiptTestTx{}
-			if replay {
-				tx.rows = append(tx.rows, noReceiptRow(pgx.ErrNoRows))
-			}
-			tx.rows = append(tx.rows, storedReceiptRow(&fingerprint, stored, true))
-			if replay {
-				repo, _ := NewRepository(tx)
-				claim, err := repo.Claim(t.Context(), actor, "editPublishedDocument", "key", fingerprint)
-				if err == nil || claim.Replay || claim.Receipt != nil {
-					t.Fatalf("corrupt replay exposed result: %s %+v %v", corrupted, claim, err)
-				}
-			} else {
-				reader, _ := NewCompletedReceiptReader(tx)
-				got, found, err := reader.LookupCompleted(t.Context(), actor, "editPublishedDocument", "key", fingerprint)
-				if err == nil || found || got != nil {
-					t.Fatalf("corrupt lookup exposed result: %s %s %v %v", corrupted, got, found, err)
-				}
-			}
-			if len(tx.writes) != 0 {
-				t.Fatal("corrupt replay wrote SQL")
-			}
+		tx := &receiptTestTx{rows: []receiptTestRow{noReceiptRow(pgx.ErrNoRows), storedReceiptRow(&fingerprint, stored, true)}}
+		repo, _ := NewRepository(tx)
+		claim, err := repo.Claim(t.Context(), actor, "editPublishedDocument", "key", fingerprint)
+		if err == nil || claim.Replay || claim.Receipt != nil {
+			t.Fatalf("corrupt replay exposed result: %s %+v %v", corrupted, claim, err)
+		}
+		if len(tx.writes) != 0 {
+			t.Fatal("corrupt replay wrote SQL")
 		}
 	}
 }
@@ -403,25 +390,12 @@ func TestPhase3TaskP03Acceptance(t *testing.T) {
 		}
 	}
 
-	t.Run("constructors-reject-nil-and-reader-is-read-only", func(t *testing.T) {
+	t.Run("constructor-rejects-nil-transaction", func(t *testing.T) {
 		var tx *receiptTestTx
 		for _, input := range []pgx.Tx{nil, tx} {
 			if repo, err := NewRepository(input); err == nil || repo != nil {
 				t.Fatalf("nil transaction = %v, %v", repo, err)
 			}
-		}
-		if reader, err := NewCompletedReceiptReader(nil); err == nil || reader != nil {
-			t.Fatalf("nil reader = %v, %v", reader, err)
-		}
-		if reader, err := NewCompletedReceiptReader(tx); err == nil || reader != nil {
-			t.Fatalf("typed nil reader = %v, %v", reader, err)
-		}
-		reader, err := NewCompletedReceiptReader(&receiptTestTx{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, ok := any(reader).(Repository); ok {
-			t.Fatal("completed reader exposes mutation repository")
 		}
 	})
 
@@ -487,40 +461,25 @@ func TestPhase3TaskP03Acceptance(t *testing.T) {
 
 	t.Run("fingerprint-mismatch-is-conflict-and-never-returns-receipt", func(t *testing.T) {
 		other := strings.Repeat("0", 64)
-		for _, claimMode := range []bool{false, true} {
-			tx := &receiptTestTx{}
-			if claimMode {
-				tx.rows = append(tx.rows, noReceiptRow(pgx.ErrNoRows))
-			}
-			tx.rows = append(tx.rows, storedReceiptRow(&other, receipt, true))
-			if claimMode {
-				claim, err := newRepo(t, tx).Claim(ctx, actor, operation, key, fingerprint)
-				assertCode(t, err, apierr.Conflict)
-				if claim.Replay || claim.Receipt != nil {
-					t.Fatalf("conflict exposed receipt: %+v", claim)
-				}
-			} else {
-				reader, _ := NewCompletedReceiptReader(tx)
-				got, found, err := reader.LookupCompleted(ctx, actor, operation, key, fingerprint)
-				assertCode(t, err, apierr.Conflict)
-				if got != nil || found {
-					t.Fatalf("conflict exposed receipt: %s %v", got, found)
-				}
-			}
-			if len(tx.writes) != 0 {
-				t.Fatal("conflict wrote data")
-			}
+		tx := &receiptTestTx{rows: []receiptTestRow{noReceiptRow(pgx.ErrNoRows), storedReceiptRow(&other, receipt, true)}}
+		claim, err := newRepo(t, tx).Claim(ctx, actor, operation, key, fingerprint)
+		assertCode(t, err, apierr.Conflict)
+		if claim.Replay || claim.Receipt != nil {
+			t.Fatalf("conflict exposed receipt: %+v", claim)
+		}
+		if len(tx.writes) != 0 {
+			t.Fatal("conflict wrote data")
 		}
 	})
 
-	t.Run("lookup-missing-legacy-and-corrupt-completion", func(t *testing.T) {
+	t.Run("collision-rejects-missing-legacy-and-corrupt-completion", func(t *testing.T) {
 		for _, c := range []struct {
 			name               string
 			row                receiptTestRow
 			wantFound, wantErr bool
 		}{
-			{"missing", noReceiptRow(pgx.ErrNoRows), false, false},
-			{"legacy-three-null", storedReceiptRow(nil, nil, false), false, false},
+			{"missing", noReceiptRow(pgx.ErrNoRows), false, true},
+			{"legacy-three-null", storedReceiptRow(nil, nil, false), false, true},
 			{"complete", storedReceiptRow(&fingerprint, receipt, true), true, false},
 			{"uncompleted", storedReceiptRow(&fingerprint, nil, false), false, true},
 			{"no-fingerprint", storedReceiptRow(nil, receipt, true), false, true},
@@ -529,14 +488,14 @@ func TestPhase3TaskP03Acceptance(t *testing.T) {
 			{"no-time", storedReceiptRow(&fingerprint, receipt, false), false, true},
 		} {
 			t.Run(c.name, func(t *testing.T) {
-				tx := &receiptTestTx{rows: []receiptTestRow{c.row}}
-				reader, _ := NewCompletedReceiptReader(tx)
-				got, found, err := reader.LookupCompleted(ctx, actor, operation, key, fingerprint)
+				tx := &receiptTestTx{rows: []receiptTestRow{noReceiptRow(pgx.ErrNoRows), c.row}}
+				claim, err := newRepo(t, tx).Claim(ctx, actor, operation, key, fingerprint)
+				got, found := claim.Receipt, claim.Replay
 				if found != c.wantFound || (err != nil) != c.wantErr || found && string(got) != string(receipt) || !found && got != nil {
-					t.Fatalf("lookup = %s, %v, %v", got, found, err)
+					t.Fatalf("replay = %s, %v, %v", got, found, err)
 				}
-				if len(tx.writes) != 0 || strings.Contains(tx.reads[0].query, "FOR UPDATE") {
-					t.Fatal("completed reader mutated or locked receipt")
+				if len(tx.writes) != 0 || len(tx.reads) != 2 || !strings.HasSuffix(tx.reads[1].query, "FOR UPDATE OF r") {
+					t.Fatal("replay wrote data or failed to lock the winning receipt")
 				}
 			})
 		}
@@ -547,9 +506,6 @@ func TestPhase3TaskP03Acceptance(t *testing.T) {
 			tx := &receiptTestTx{}
 			repo := newRepo(t, tx)
 			_, err := repo.Claim(ctx, input[0], input[1], input[2], input[3])
-			assertCode(t, err, apierr.Invalid)
-			reader, _ := NewCompletedReceiptReader(tx)
-			_, _, err = reader.LookupCompleted(ctx, input[0], input[1], input[2], input[3])
 			assertCode(t, err, apierr.Invalid)
 			if len(tx.reads)+len(tx.writes) != 0 {
 				t.Fatal("invalid input reached database")
@@ -610,10 +566,6 @@ func TestPhase3TaskP03Acceptance(t *testing.T) {
 			if err == nil || claim.Receipt != nil || claim.Replay {
 				t.Fatalf("failed claim = %+v, %v", claim, err)
 			}
-		}
-		reader, _ := NewCompletedReceiptReader(&receiptTestTx{rows: []receiptTestRow{noReceiptRow(sentinel)}})
-		if _, found, err := reader.LookupCompleted(ctx, actor, operation, key, fingerprint); found || !errors.Is(err, sentinel) {
-			t.Fatalf("lookup error lost = %v, %v", found, err)
 		}
 		for _, writeErr := range []error{nil, sentinel} {
 			tx := &receiptTestTx{rows: []receiptTestRow{insertedReceiptRow(fingerprint)}, writeErr: writeErr}

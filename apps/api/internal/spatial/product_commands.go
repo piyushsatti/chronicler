@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"reflect"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
@@ -25,41 +23,22 @@ type ProductCommands struct {
 
 func NewProductCommands(runner uow.Runner[ProductCommandRepos], clock product.Clock, ids product.IDGenerator) (*ProductCommands, error) {
 	for _, dep := range []any{runner, clock, ids} {
-		if dep == nil {
+		if product.MissingDependency(dep) {
 			return nil, apierr.New(apierr.Internal, "spatial command dependencies required")
-		}
-		v := reflect.ValueOf(dep)
-		switch v.Kind() {
-		case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-			if v.IsNil() {
-				return nil, apierr.New(apierr.Internal, "spatial command dependencies required")
-			}
 		}
 	}
 	return &ProductCommands{Runner: runner, Clock: clock, IDs: ids}, nil
-}
-
-func commandDependencyMissing(value any) bool {
-	if value == nil {
-		return true
-	}
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-		return v.IsNil()
-	}
-	return false
 }
 
 func commandPublicID(value *string) error {
 	if value == nil {
 		return nil
 	}
-	parsed, err := uuid.Parse(*value)
-	if err != nil || parsed == uuid.Nil || !strings.EqualFold(parsed.String(), *value) {
+	canonical, ok := product.CanonicalPublicID(*value)
+	if !ok {
 		return apierr.New(apierr.Invalid, "invalid public id")
 	}
-	*value = parsed.String()
+	*value = canonical
 	return nil
 }
 
@@ -132,7 +111,7 @@ func admitSpatialCommand(ctx context.Context, repos ProductCommandRepos, actor a
 	var admission spatialAdmission
 	var zero auth.Decision
 	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-		if commandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return auth.Authority{}, admission, zero, apierr.New(apierr.Internal, "spatial transaction dependencies required")
 		}
 	}
@@ -172,7 +151,7 @@ func replaySpatialCommand[T any](ctx context.Context, repos ProductCommandRepos,
 
 func completeSpatialCommand[T any](ctx context.Context, repos ProductCommandRepos, claim idempotency.Claim, result T, decision auth.Decision, actor auth.Authority, request auth.Request, subjectID string, at time.Time) error {
 	if decision.UsedOverride {
-		if commandDependencyMissing(repos.Audit) {
+		if product.MissingDependency(repos.Audit) {
 			return apierr.New(apierr.Internal, "override recorder required")
 		}
 		switch view := any(result).(type) {
@@ -195,6 +174,9 @@ func completeSpatialCommand[T any](ctx context.Context, repos ProductCommandRepo
 }
 
 func (s ProductCommands) CreateMap(ctx context.Context, actor auth.Authority, spec CreateMapSpec, meta product.CommandMeta) (MapView, error) {
+	if spec.Input.Grid == "" {
+		spec.Input.Grid = "point"
+	}
 	if err := validateMapCreate(spec.Input); err != nil {
 		return MapView{}, err
 	}
@@ -219,6 +201,29 @@ func (s ProductCommands) CreateMap(ctx context.Context, actor auth.Authority, sp
 			ValidatedInput: spec,
 			Locked:         locked,
 		})
+	})
+}
+
+func (s ProductCommands) UpdateMap(ctx context.Context, actor auth.Authority, spec UpdateMapSpec, meta product.CommandMeta) (MapView, error) {
+	if err := validateMapUpdate(spec.Input); err != nil {
+		return MapView{}, err
+	}
+	if err := commandPublicID(&spec.MapId); err != nil {
+		return MapView{}, err
+	}
+	var locked UpdateMapState
+	return runSpatialAdmittedCommand(ctx, s, actor, "updateMap", func(repos ProductCommandRepos, fresh auth.Authority) (spatialAdmission, error) {
+		var err error
+		locked, err = repos.Map.LockUpdateMap(ctx, spec)
+		if err != nil {
+			return spatialAdmission{}, err
+		}
+		if !locked.Exists {
+			return spatialAdmission{}, apierr.New(apierr.NotFound, "map not found")
+		}
+		return mapAdmission("Mutation.updateMap", auth.MapFacts{ID: &spec.MapId, RegionID: locked.RegionID})
+	}, spec, meta, spec.MapId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (MapView, error) {
+		return repos.Map.StoreUpdateMap(ctx, UpdateMapWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
 	})
 }
 
@@ -520,8 +525,35 @@ func (s ProductCommands) UpsertPointcrawlNode(ctx context.Context, actor auth.Au
 	})
 }
 
+// SetPointcrawlNodeState records an admin-set hex state and unlocks locked hex neighbours when mapped.
+// Authority is admin-only (ruleAdmin), checked before lookup so non-admins cannot probe node existence.
+func (s ProductCommands) SetPointcrawlNodeState(ctx context.Context, actor auth.Authority, spec SetPointcrawlNodeStateSpec, meta product.CommandMeta) (PointcrawlNodeView, error) {
+	if !validPointcrawlNodeState(spec.State) {
+		return PointcrawlNodeView{}, apierr.New(apierr.Invalid, "invalid pointcrawl node state")
+	}
+	for _, id := range []*string{&spec.MapId, &spec.NodeId} {
+		if err := commandPublicID(id); err != nil {
+			return PointcrawlNodeView{}, err
+		}
+	}
+	request, err := auth.ForOperation("Mutation.setPointcrawlNodeState")
+	if err != nil {
+		return PointcrawlNodeView{}, err
+	}
+	return runSpatialCommand(ctx, s, actor, "setPointcrawlNodeState", request, spec, meta, spec.NodeId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (PointcrawlNodeView, error) {
+		locked, err := repos.Map.LockSetPointcrawlNodeState(ctx, spec)
+		if err != nil {
+			return PointcrawlNodeView{}, err
+		}
+		if !locked.Exists {
+			return PointcrawlNodeView{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+		}
+		return repos.Map.StoreSetPointcrawlNodeState(ctx, SetPointcrawlNodeStateWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
+	})
+}
+
 func admitPointcrawlNode(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec UpsertPointcrawlNodeSpec, locked *UpsertPointcrawlNodeState) (spatialAdmission, error) {
-	if commandDependencyMissing(repos.Containment) {
+	if product.MissingDependency(repos.Containment) {
 		return spatialAdmission{}, apierr.New(apierr.Internal, "containment writer required")
 	}
 	if err := repos.Containment.LockContainment(ctx); err != nil {

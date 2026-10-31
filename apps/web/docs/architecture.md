@@ -61,7 +61,7 @@ Each adapter PR adds at least one bad-wire test.
 
 Shell allocation and page arrangement come from [`@pi/react-imposition`](https://github.com/piyushsatti/imposition) (`github:piyushsatti/imposition#v0.1.0`): `ImpositionShell`, `PageHost`, `useContainerToken`, `navPatternFor`. Pages author a `PageDeclaration` and region renderers only. Nav pattern is never chosen in a page. No `@media` layout breakpoints in `apps/web/src`. No temporary breakpoint table.
 
-Map composes the pointcrawl SVG, equivalent location list and selected location details through `PageHost`. Compact layouts retain keyboard selection and the list. Hexes and a separate discovery model are retired; see [Map guidance](/apps/web/docs/map-authoring.md).
+Map composes the pointcrawl SVG, equivalent location list and selected location details through `PageHost`. Compact layouts retain keyboard selection and the list. A hexflower map is a pointcrawl map whose nodes are named by hex number (for example `LFR7008`); a Codex Feature names its hex in frontmatter `hex`, and when a DM or admin publishes it the API links it to that node on the Lightfall map, at most four published Features per hex. Hex-grid cell storage and a separate discovery model stay retired; see [Map guidance](/apps/web/docs/map-authoring.md).
 
 Color and type stay Chronicler tokens. Skin Imposition chrome via `--imposition-*` overrides in `base.css`.
 
@@ -83,4 +83,4 @@ Primary navigation has exactly six destinations: Home (`/`), Quests (`/quests`),
 
 Use the [accepted API behavior](/apps/api/docs/design/graphql-product/behavior.md) for retained operations. Map browsing and editing use current pointcrawl records and Document references. Hybrid Search uses safe Document full text and member-prefix matching with separate totals and pages. Search and the command palette share canonical reader destinations.
 
-Do not restore hexes, fog, retired social requests or follows, cosmetic equipment, terminal-job redrive or D-AGENT under frontend completion. Historical visual examples do not authorize new storage, mock production behavior or alternate API ownership. The [QA route registry](/apps/web/docs/parity/qa-route-registry.json) records route dispositions and verification evidence.
+Do not restore hex-grid cell storage, fog, retired social requests or follows, cosmetic equipment, terminal-job redrive or D-AGENT under frontend completion. Historical visual examples do not authorize new storage, mock production behavior or alternate API ownership. The [QA route registry](/apps/web/docs/parity/qa-route-registry.json) records route dispositions and verification evidence.

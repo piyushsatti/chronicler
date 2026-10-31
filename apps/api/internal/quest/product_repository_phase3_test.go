@@ -17,7 +17,6 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
 	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 )
 
@@ -73,7 +72,7 @@ func TestPhase3TaskQUE02RepositoryPortsMatchGoSeams(t *testing.T) {
 		}
 		return strings.ReplaceAll(b.String(), "quest.", "")
 	}
-	repositoryPorts := map[string]int{"ArcReadRepository": 18, "ArcWriteRepository": 19, "ProductBatchRepository": 20, "QuestReadRepository": 21, "QuestWriteRepository": 22}
+	repositoryPorts := map[string]int{"ArcReadRepository": 15, "ArcWriteRepository": 16, "ProductBatchRepository": 17, "QuestReadRepository": 18, "QuestWriteRepository": 19}
 	for name, index := range repositoryPorts {
 		t.Run(name, func(t *testing.T) {
 			if index >= len(contract.Repositories) {
@@ -171,7 +170,7 @@ func TestPhase3TaskQUE02RepositoryPortsMatchGoSeams(t *testing.T) {
 			"Notice": reflect.TypeFor[notification.ProducerRepos](), "Audit": reflect.TypeFor[auth.OverrideRecorder](),
 			"Characters": reflect.TypeFor[character.AdmissionReader](), "Brief": reflect.TypeFor[document.BriefWriter](),
 			"Summaries": reflect.TypeFor[document.SummaryWriter](), "Places": reflect.TypeFor[spatial.PlaceReader](),
-			"Jobs": reflect.TypeFor[jobs.Writer](), "Tags": reflect.TypeFor[TagNormalizer](),
+			"Tags":             reflect.TypeFor[TagNormalizer](),
 			"Withdrawals":      reflect.TypeFor[character.QuestWithdrawalWriter](),
 			"Rewards":          reflect.TypeFor[character.QuestRewardWriter](),
 			"SummaryDocuments": reflect.TypeFor[SummaryDocumentReader](),

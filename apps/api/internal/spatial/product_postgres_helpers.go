@@ -43,18 +43,11 @@ func pgDateFromProduct(d product.Date) (pgtype.Date, error) {
 	return out, nil
 }
 
-func productDateFromAny(value any) (product.Date, error) {
-	switch v := value.(type) {
-	case time.Time:
-		return product.Date(v.Format("2006-01-02")), nil
-	case string:
-		if _, err := time.Parse("2006-01-02", v); err != nil {
-			return "", apierr.New(apierr.Invalid, "invalid date")
-		}
-		return product.Date(v), nil
-	default:
+func productDateFromPGDate(value pgtype.Date) (product.Date, error) {
+	if !value.Valid || value.InfinityModifier != pgtype.Finite {
 		return "", apierr.New(apierr.Invalid, "invalid date")
 	}
+	return product.Date(value.Time.Format("2006-01-02")), nil
 }
 
 func pgTimestamptz(t time.Time) pgtype.Timestamptz {
@@ -119,13 +112,14 @@ func (p *ProductPostgres) documentSQLViewer(ctx context.Context, actor auth.Auth
 	return document.SQLScope(scope), nil
 }
 
-func mapProductMapRow(id pgtype.UUID, name, atlasCode, mapKind, family string, regionID pgtype.UUID, assetPath pgtype.Text, createdAt pgtype.Timestamptz, createdBy pgtype.UUID) MapView {
+func mapProductMapRow(id pgtype.UUID, name, atlasCode, mapKind, family, grid string, regionID pgtype.UUID, assetPath pgtype.Text, createdAt pgtype.Timestamptz, createdBy pgtype.UUID) MapView {
 	view := MapView{
 		Id:        db.UUIDString(id),
 		Name:      name,
 		AtlasCode: atlasCode,
 		MapKind:   mapKind,
 		Family:    family,
+		Grid:      grid,
 		CreatedAt: createdAt.Time,
 		RegionId:  uuidPtr(regionID),
 	}
@@ -182,11 +176,12 @@ func mapArchonRow(regionID, memberID pgtype.UUID, grantedAt pgtype.Timestamptz, 
 	return view
 }
 
-func mapPointcrawlNodeRow(id, mapID pgtype.UUID, name string, x, y float64, submapID pgtype.UUID, createdAt pgtype.Timestamptz) PointcrawlNodeView {
+func mapPointcrawlNodeRow(id, mapID pgtype.UUID, name string, x, y float64, submapID pgtype.UUID, createdAt pgtype.Timestamptz, state string) PointcrawlNodeView {
 	view := PointcrawlNodeView{
 		Id:        db.UUIDString(id),
 		MapId:     db.UUIDString(mapID),
 		Name:      name,
+		State:     state,
 		X:         x,
 		Y:         y,
 		CreatedAt: createdAt.Time,
@@ -264,6 +259,6 @@ func readMapByPublicID(ctx context.Context, q *dbgen.Queries, mapID pgtype.UUID)
 	if err != nil {
 		return nil, err
 	}
-	view := mapProductMapRow(row.MapID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy)
+	view := mapProductMapRow(row.MapID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.Grid, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy)
 	return &view, nil
 }

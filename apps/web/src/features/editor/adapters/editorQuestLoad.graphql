@@ -10,8 +10,18 @@ query EditorQuestLoad($id: ID, $shortCode: String) {
     tags
     apl
     signupType
+    voiceChannelId
     regions
     updatedAt
+    arcId
+    arc {
+      id
+      name
+    }
+    pointcrawlLinks(limit: 100) {
+      pointcrawlNodeId
+      role
+    }
     briefDocument {
       id
       slug

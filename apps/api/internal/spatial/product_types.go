@@ -30,86 +30,25 @@ type GameDayCellView struct {
 	RealDate product.Date
 }
 
-type HexChangePage struct {
-	Items []HexChangeView
-	Total int32
-}
-
-type HexChangeView struct {
-	CausedByMember *string
-	CausedByQuest  *string
-	HexId          string
-	Id             string
-	Kind           string
-	NewValue       *string
-	Note           *string
-	OccurredAt     time.Time
-	OldValue       *string
-}
-
-type HexEdgeFields struct {
-	ASide      *string
-	DocumentId *string
-	EdgeType   string
-	HexA       string
-	HexB       string
-}
-
-type HexEdgeView struct {
-	ASide      *string
-	DocumentId *string
-	EdgeType   string
-	HexA       string
-	HexB       string
-	Id         string
-	MapId      string
-}
-
-type HexEditFields struct {
-	Climate   product.Optional[string]
-	Elevation product.Optional[string]
-	Note      string
-	SubmapId  product.Optional[string]
-	Terrain   product.Optional[string]
-}
-
-type HexEntryLinkView struct {
-	DocumentId string
-	HexId      string
-	Relation   string
-}
-
-type HexView struct {
-	Climate   *string
-	Col       int32
-	CreatedAt *time.Time
-	Elevation *string
-	Hexcode   *string
-	Id        string
-	MapId     string
-	Row       int32
-	SubmapId  *string
-	Terrain   *string
-}
-
 type MapCreateFields struct {
 	AssetPath *string
 	AtlasCode string
 	Cols      *int32
 	Family    string
+	Grid      string
 	MapKind   string
 	Name      string
 	RegionId  *string
 	Rows      *int32
 }
 
-type MapPlaceView struct {
-	Category   string
-	DocumentId string
-	HexId      string
-	Hexcode    string
-	Slug       string
-	Title      string
+// MapUpdateFields are the editable map fields. The atlas code (the map's address) and the
+// map kind never change after creation.
+type MapUpdateFields struct {
+	AssetPath *string
+	Family    string
+	Grid      string
+	Name      string
 }
 
 type MapView struct {
@@ -120,43 +59,12 @@ type MapView struct {
 	CreatedAt time.Time
 	CreatedBy *string
 	Family    string
+	Grid      string
 	Id        string
 	MapKind   string
 	Name      string
 	RegionId  *string
 	Rows      *int32
-}
-
-type MapViewView struct {
-	AtlasCode   string
-	Cols        *int32
-	MapId       string
-	Name        string
-	Places      []MapPlaceView
-	Rows        *int32
-	TotalPlaces int32
-}
-
-type PoiFields struct {
-	DiscoveryTier      string
-	DocumentId         *string
-	Id                 *string
-	IsCharterObjective bool
-	PoiType            string
-}
-
-type PoiPage struct {
-	Items []PoiView
-	Total int32
-}
-
-type PoiView struct {
-	DiscoveryTier      string
-	DocumentId         *string
-	HexId              string
-	Id                 string
-	IsCharterObjective bool
-	PoiType            string
 }
 
 type PointcrawlEdgeFields struct {
@@ -202,6 +110,7 @@ type PointcrawlNodeView struct {
 	Id        string
 	MapId     string
 	Name      string
+	State     string
 	SubmapId  *string
 	X         float64
 	Y         float64
@@ -283,6 +192,11 @@ type CreateMapSpec struct {
 	Input MapCreateFields
 }
 
+type UpdateMapSpec struct {
+	MapId string
+	Input MapUpdateFields
+}
+
 type CreateRegionSpec struct {
 	Input RegionFields
 }
@@ -293,12 +207,6 @@ type CreateTimeAnchorSpec struct {
 
 type DeleteRegionSpec struct {
 	RegionId string
-}
-
-type LinkHexEntrySpec struct {
-	HexId      string
-	DocumentId string
-	Relation   string
 }
 
 type LinkPointcrawlEntrySpec struct {
@@ -317,11 +225,6 @@ type RevokeArchonSpec struct {
 	RegionId string
 }
 
-type SetHexEdgeSpec struct {
-	MapId string
-	Input HexEdgeFields
-}
-
 type SetPointcrawlEdgeSpec struct {
 	MapId string
 	Input PointcrawlEdgeFields
@@ -331,12 +234,6 @@ type TransitionRegionSpec struct {
 	Id   string
 	To   string
 	Note string
-}
-
-type UnlinkHexEntrySpec struct {
-	HexId      string
-	DocumentId string
-	Relation   string
 }
 
 type UnlinkPointcrawlEntrySpec struct {
@@ -350,11 +247,6 @@ type UpdateGameCalendarSpec struct {
 	Definition json.RawMessage
 }
 
-type UpdateHexSpec struct {
-	Id    string
-	Input HexEditFields
-}
-
 type UpdateRegionSpec struct {
 	Id    string
 	Input RegionFields
@@ -365,14 +257,15 @@ type UpdateTimeAnchorSpec struct {
 	Input TimeAnchorFields
 }
 
-type UpsertPoiSpec struct {
-	HexId string
-	Input PoiFields
-}
-
 type UpsertPointcrawlNodeSpec struct {
 	MapId string
 	Input PointcrawlNodeFields
+}
+
+type SetPointcrawlNodeStateSpec struct {
+	MapId  string
+	NodeId string
+	State  string
 }
 
 type ArchonAssignmentsSpec struct {
@@ -392,26 +285,8 @@ type GameDateSpec struct {
 	RealDate product.Date
 }
 
-type HexSpec struct {
-	MapId string
-	Col   int32
-	Row   int32
-}
-
-type HexHistorySpec struct {
-	HexId  string
-	Limit  int32
-	Offset int32
-}
-
 type MapSpec struct {
 	AtlasCode string
-}
-
-type MapViewSpec struct {
-	AtlasCode string
-	Limit     int32
-	Offset    int32
 }
 
 type MapsSpec struct {
@@ -421,22 +296,10 @@ type MapsSpec struct {
 	Offset  int32
 }
 
-type PoisForHexSpec struct {
-	HexId  string
-	Limit  int32
-	Offset int32
-}
-
 type RealDatesSpec struct {
 	GameDay int32
 	Limit   int32
 	Offset  int32
-}
-
-type RecentHexChangesSpec struct {
-	MapId  *string
-	Limit  int32
-	Offset int32
 }
 
 type RegionActivitySpec struct {
@@ -523,19 +386,6 @@ type DeleteRegionState struct {
 	LinkedDocumentIDs []string
 }
 
-type LinkHexEntryState struct {
-	Exists            bool
-	SubjectID         string
-	OwnerID           string
-	Version           int64
-	UpdatedAt         *time.Time
-	Before            *MapView
-	MapKind           string
-	RegionID          *string
-	EndpointIDs       []string
-	LinkedDocumentIDs []string
-}
-
 type LinkPointcrawlEntryState struct {
 	Exists            bool
 	SubjectID         string
@@ -576,19 +426,6 @@ type RevokeArchonState struct {
 	LinkedDocumentIDs []string
 }
 
-type SetHexEdgeState struct {
-	Exists            bool
-	SubjectID         string
-	OwnerID           string
-	Version           int64
-	UpdatedAt         *time.Time
-	Before            *MapView
-	MapKind           string
-	RegionID          *string
-	EndpointIDs       []string
-	LinkedDocumentIDs []string
-}
-
 type SetPointcrawlEdgeState struct {
 	Exists            bool
 	SubjectID         string
@@ -610,19 +447,6 @@ type TransitionRegionState struct {
 	Version           int64
 	UpdatedAt         *time.Time
 	Before            *RegionView
-	MapKind           string
-	RegionID          *string
-	EndpointIDs       []string
-	LinkedDocumentIDs []string
-}
-
-type UnlinkHexEntryState struct {
-	Exists            bool
-	SubjectID         string
-	OwnerID           string
-	Version           int64
-	UpdatedAt         *time.Time
-	Before            *MapView
 	MapKind           string
 	RegionID          *string
 	EndpointIDs       []string
@@ -658,19 +482,6 @@ type UpdateGameCalendarState struct {
 	Trajectory        []TimeAnchorView
 }
 
-type UpdateHexState struct {
-	Exists            bool
-	SubjectID         string
-	OwnerID           string
-	Version           int64
-	UpdatedAt         *time.Time
-	Before            *MapView
-	MapKind           string
-	RegionID          *string
-	EndpointIDs       []string
-	LinkedDocumentIDs []string
-}
-
 type UpdateRegionState struct {
 	Exists            bool
 	SubjectID         string
@@ -698,19 +509,6 @@ type UpdateTimeAnchorState struct {
 	Trajectory        []TimeAnchorView
 }
 
-type UpsertPoiState struct {
-	Exists            bool
-	SubjectID         string
-	OwnerID           string
-	Version           int64
-	UpdatedAt         *time.Time
-	Before            *MapView
-	MapKind           string
-	RegionID          *string
-	EndpointIDs       []string
-	LinkedDocumentIDs []string
-}
-
 type UpsertPointcrawlNodeState struct {
 	Exists            bool
 	SubjectID         string
@@ -735,6 +533,22 @@ type AssignArchonWrite struct {
 	DecisionID     *string
 	RevisionID     *string
 	EventKey       *string
+}
+
+type UpdateMapState struct {
+	Exists    bool
+	SubjectID string
+	MapKind   string
+	RegionID  *string
+	Before    *MapView
+}
+
+type UpdateMapWrite struct {
+	ActorID        string
+	At             time.Time
+	Input          UpdateMapSpec
+	Locked         UpdateMapState
+	ValidatedInput UpdateMapSpec
 }
 
 type CreateMapWrite struct {
@@ -785,18 +599,6 @@ type DeleteRegionWrite struct {
 	EventKey       *string
 }
 
-type LinkHexEntryWrite struct {
-	ActorID        string
-	At             time.Time
-	Input          LinkHexEntrySpec
-	Locked         LinkHexEntryState
-	ValidatedInput LinkHexEntrySpec
-	HistoryID      *string
-	DecisionID     *string
-	RevisionID     *string
-	EventKey       *string
-}
-
 type LinkPointcrawlEntryWrite struct {
 	ActorID        string
 	At             time.Time
@@ -833,18 +635,6 @@ type RevokeArchonWrite struct {
 	EventKey       *string
 }
 
-type SetHexEdgeWrite struct {
-	ActorID        string
-	At             time.Time
-	Input          SetHexEdgeSpec
-	Locked         SetHexEdgeState
-	ValidatedInput SetHexEdgeSpec
-	HistoryID      *string
-	DecisionID     *string
-	RevisionID     *string
-	EventKey       *string
-}
-
 type SetPointcrawlEdgeWrite struct {
 	ActorID        string
 	At             time.Time
@@ -863,18 +653,6 @@ type TransitionRegionWrite struct {
 	Input          TransitionRegionSpec
 	Locked         TransitionRegionState
 	ValidatedInput TransitionRegionSpec
-	HistoryID      *string
-	DecisionID     *string
-	RevisionID     *string
-	EventKey       *string
-}
-
-type UnlinkHexEntryWrite struct {
-	ActorID        string
-	At             time.Time
-	Input          UnlinkHexEntrySpec
-	Locked         UnlinkHexEntryState
-	ValidatedInput UnlinkHexEntrySpec
 	HistoryID      *string
 	DecisionID     *string
 	RevisionID     *string
@@ -905,18 +683,6 @@ type UpdateGameCalendarWrite struct {
 	EventKey       *string
 }
 
-type UpdateHexWrite struct {
-	ActorID        string
-	At             time.Time
-	Input          UpdateHexSpec
-	Locked         UpdateHexState
-	ValidatedInput UpdateHexSpec
-	HistoryID      *string
-	DecisionID     *string
-	RevisionID     *string
-	EventKey       *string
-}
-
 type UpdateRegionWrite struct {
 	ActorID        string
 	At             time.Time
@@ -941,16 +707,19 @@ type UpdateTimeAnchorWrite struct {
 	EventKey       *string
 }
 
-type UpsertPoiWrite struct {
+type SetPointcrawlNodeStateState struct {
+	Exists   bool
+	MapKind  string
+	RegionID *string
+	Node     *PointcrawlNodeView
+}
+
+type SetPointcrawlNodeStateWrite struct {
 	ActorID        string
 	At             time.Time
-	Input          UpsertPoiSpec
-	Locked         UpsertPoiState
-	ValidatedInput UpsertPoiSpec
-	HistoryID      *string
-	DecisionID     *string
-	RevisionID     *string
-	EventKey       *string
+	Input          SetPointcrawlNodeStateSpec
+	Locked         SetPointcrawlNodeStateState
+	ValidatedInput SetPointcrawlNodeStateSpec
 }
 
 type UpsertPointcrawlNodeWrite struct {

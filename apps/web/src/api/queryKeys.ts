@@ -4,6 +4,9 @@ export const queryKeys = featureQueryKeys as {
   home: readonly ['home'];
   homeLanes: readonly ['homeLanes'];
   siteStats: readonly ['siteStats'];
+  homeRecentChronicles: (
+    authenticated: boolean,
+  ) => readonly ['homeRecentChronicles', boolean];
   me: readonly ['me'];
   myPrivateNotes: (memberId: string) => readonly ['myPrivateNotes', string];
   character: (id: string) => readonly ['character', string];

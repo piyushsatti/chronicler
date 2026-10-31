@@ -6,15 +6,17 @@
 /* ── prose base ─────────────────────────────────────────────────────── */
 .cr-prose { color: var(--color-text-2); font-family: var(--font-body); font-size: 15px; line-height: 1.8; max-width: var(--page-max-reading); min-width: 0; overflow-wrap: anywhere; }
 /* ── summary adventure prose — design: Fraunces 18px (display) ──────── */
-.summary-prose .cr-prose { font-family: var(--font-display); font-size: 18px; line-height: 1.6; color: var(--color-text); }
+.summary-prose .cr-prose { font-family: var(--font-body); font-size: 18px; line-height: 1.6; color: var(--color-text); }
 .cr-prose.cr-inline { display: inline; font-size: inherit; line-height: inherit; max-width: none; color: inherit; }
 .cr-prose.cr-preview { font-family: inherit; font-size: inherit; line-height: inherit; max-width: none; color: inherit; }
+/* Page modules reset `.root p`/`.detail h2` margins at one class + one element; the doubled
+   class keeps prose spacing ahead of those resets wherever ContentRenderer is placed. */
+.cr-prose.cr-prose p { margin: 0 0 14px; text-wrap: pretty; }
 .cr-prose.cr-preview p { margin: 0; }
-.cr-prose > .cr-md:last-child > :last-child { margin-bottom: 0; }
-.cr-prose p { margin: 0 0 14px; text-wrap: pretty; }
-.cr-prose h2 { font-family: var(--font-display); font-weight: 600; font-size: 21px; letter-spacing: -.01em; color: var(--color-text); margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--color-border); }
-.cr-prose h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--color-text); margin: 22px 0 8px; }
-.cr-prose h4 { font-family: var(--font-body); font-weight: 700; font-size: 14px; color: var(--color-text-2); margin: 20px 0 6px; }
+.cr-prose.cr-prose > .cr-md:last-child > :last-child { margin-bottom: 0; }
+.cr-prose.cr-prose h2 { font-family: var(--font-display); font-weight: 600; font-size: 21px; letter-spacing: -.01em; color: var(--color-text); margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--color-border); }
+.cr-prose.cr-prose h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--color-text); margin: 22px 0 8px; }
+.cr-prose.cr-prose h4 { font-family: var(--font-body); font-weight: 700; font-size: 14px; color: var(--color-text-2); margin: 20px 0 6px; }
 .cr-prose strong { color: var(--color-text); font-weight: 600; }
 .cr-prose em { font-style: italic; color: var(--color-text); }
 .cr-prose del { color: var(--color-text-3); }
@@ -47,7 +49,8 @@
 
 /* ── GFM tables ─────────────────────────────────────────────────────── */
 .cr-prose table { border-collapse: collapse; width: 100%; margin: 0 0 18px; font-size: 13.5px; }
-.cr-prose th, .cr-prose td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+/* Cells break between words; a table wider than its column scrolls inside .cr-table-scroll. */
+.cr-prose th, .cr-prose td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; overflow-wrap: break-word; word-break: normal; }
 .cr-prose thead th { font-family: var(--font-body); font-size: 12.5px; color: var(--color-text-3); font-weight: 500; border-bottom: 1px solid var(--color-border-2); }
 .cr-prose tbody tr:hover { background: var(--color-bg-surface); }
 
@@ -71,6 +74,19 @@
 .cr-callout[data-variant="dm"] .cr-callout-ic { color: var(--color-accent); }
 .cr-callout[data-variant="tip"] { border-color: color-mix(in srgb, var(--color-status-alive) 20%, transparent); background: color-mix(in srgb, var(--color-status-alive) 5%, transparent); }
 .cr-callout[data-variant="tip"] .cr-callout-ic { color: var(--color-status-alive); }
+/* D45 redaction: the server sends only bar shapes; draw them as solid spoiler bars. */
+.cr-callout[data-variant="redacted"] { border-color: var(--color-border-2); }
+.cr-redacted-bars { display: grid; gap: 4px; margin-top: 4px; font-family: var(--font-mono); font-size: 13.5px; line-height: 1.5; }
+.cr-redacted-line { display: block; min-height: 1.5em; }
+.cr-prose .cr-redacted-more { margin: 6px 0 0; font-size: 12.5px; color: var(--color-text-3); }
+.cr-redacted-bar { color: transparent; background: var(--color-text-3); border-radius: 4px; word-break: break-all; -webkit-box-decoration-break: clone; box-decoration-break: clone; user-select: none; }
+/* [!spoiler]: presentation only (D20); blurred until the reader activates the toggle. */
+.cr-spoiler { position: relative; }
+.cr-callout[data-variant="spoiler"][data-open="false"] .cr-spoiler-body { filter: blur(6px); user-select: none; }
+.cr-spoiler-toggle { margin-top: 6px; padding: 0; border: none; background: none; color: var(--color-accent); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.cr-callout[data-variant="spoiler"][data-open="false"] .cr-spoiler-toggle { position: absolute; inset: 0; margin: 0; display: grid; place-items: center; }
+.cr-spoiler-toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 6px; }
+.cr-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* ── mermaid ────────────────────────────────────────────────────────── */
 .cr-mmd { margin: 0 0 18px; padding: 18px 18px 12px; background: var(--color-bg-panel); border: 1px solid var(--color-border); border-radius: 12px; text-align: center; overflow: auto; }

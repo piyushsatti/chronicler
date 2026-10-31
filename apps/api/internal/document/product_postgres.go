@@ -112,7 +112,7 @@ func (p *ProductPostgres) loadDocumentView(ctx context.Context, id, actorID stri
 	if err != nil {
 		return DocumentView{}, err
 	}
-	projected, err := projectDocumentView(ctx, scope, view, row.Body)
+	projected, err := ProjectDocumentView(ctx, scope, view, row.Body)
 	if err != nil {
 		return DocumentView{}, err
 	}

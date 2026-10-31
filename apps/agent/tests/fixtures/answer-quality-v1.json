@@ -526,6 +526,53 @@
       "critical": false
     },
     {
+      "id": "combat-shove-prone-opportunity",
+      "slice": "combat",
+      "question": "If I use the Shove action to knock a creature prone and then move away from it, how do Shove, the prone condition, and opportunity attacks interact? Cite every rule source you use.",
+      "answerability": "answerable",
+      "required_patterns": [
+        "push (?:the target|it) 5 feet",
+        "Prone",
+        "does not (?:itself )?move the target",
+        "reach",
+        "crawl",
+        "half (?:its|your) Speed",
+        "Reaction",
+        "can see",
+        "Disengage",
+        "attack rolls?[^.]*Disadvantage"
+      ],
+      "forbidden_patterns": [
+        "Prone moves it out of your reach",
+        "Prone[^.]*cannot make an Opportunity Attack",
+        "Prone[^.]*Opportunity Attacks are not possible",
+        "prone target has no available Reaction",
+        "Prone prevents Opportunity Attacks",
+        "Disengage still provokes",
+        "do not need to be able to see",
+        "Opportunity Attacks do not require a Reaction",
+        "Prone creature does not have Disadvantage",
+        "Opportunity Attack does not have Disadvantage",
+        "Prone removes the target from your reach",
+        "Leaving reach does not provoke"
+      ],
+      "accepted_sources": [
+        {
+          "document_id": "9ef03b94-71ac-518e-a158-2359214e3bc6",
+          "content_version": "8f3727bdda799cb941f92e161f4e25d9f77fe89cae8f3ba52ac410997b773eae"
+        },
+        {
+          "document_id": "45b5abf0-3def-5c93-9029-058ca676926c",
+          "content_version": "56ee2add330dd19f9c9fb90429d7e1869b525cebf4d75acf0ca4897c6a58ab17"
+        },
+        {
+          "document_id": "d74bdc37-de58-52f7-af2a-2dfaf1ecbdcd",
+          "content_version": "544ecd9d35182511253915282d5d1eb85d8fb642377177f44bf1c470fa11771e"
+        }
+      ],
+      "critical": true
+    },
+    {
       "id": "combat-zero-hp",
       "slice": "combat",
       "question": "What happens when I drop to 0 hit points?",

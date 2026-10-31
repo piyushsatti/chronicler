@@ -88,3 +88,127 @@
   font: inherit;
   color: inherit;
 }
+
+/* Filter button and popover (QuestBoardView). The trigger is the Popover's
+   own button; this span is its face. */
+.filterButton {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 40px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-pill);
+  background: var(--color-bg-deep);
+  color: var(--color-text-2);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.filterButton:is([data-active], [data-open]) {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+:global(.pop-trigger):focus-visible .filterButton {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.filterBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--rad-pill);
+  background: var(--color-accent);
+  color: var(--color-bg-deep);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.srOnly {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The popover's content box aligns children to its trigger side; the form
+   should fill the panel instead. */
+:global(.pop-content).filterPanel {
+  align-items: stretch;
+}
+
+.filterPanel {
+  box-sizing: border-box;
+  /* 281px panel from the Filter dropdown spec, capped to the viewport. */
+  --filter-panel-size: 17.5625rem;
+  inline-size: min(var(--filter-panel-size), calc(100vw - var(--sp-4)));
+  padding: var(--sp-4);
+  border-radius: var(--rad-sm);
+}
+
+.filterForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filterHeading {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.filterLabel {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.filterControl {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  height: 36px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-sm);
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+  font: inherit;
+  color-scheme: light;
+  accent-color: var(--color-accent);
+}
+
+:global([data-mode='dark']) .filterControl {
+  color-scheme: dark;
+}
+
+.filterControl:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
+}
+
+.filterActions {
+  display: flex;
+  gap: var(--sp-2);
+}

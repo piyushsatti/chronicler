@@ -64,16 +64,20 @@
   gap: var(--sp-3);
 }
 
+/* Fills the stretched card; the captions pin to the bottom so they line up
+   across the row when a name wraps. */
 .directoryCard {
   display: flex;
   align-items: flex-start;
   gap: var(--sp-3);
+  block-size: 100%;
   min-width: 0;
 }
 
 .directoryCardBody {
   display: flex;
   flex-direction: column;
+  align-self: stretch;
   gap: var(--sp-1);
   min-width: 0;
 }
@@ -81,6 +85,10 @@
 .directoryCardBody h2,
 .directoryCardBody p {
   margin: 0;
+}
+
+.directoryCardBody > h2 + p {
+  margin-block-start: auto;
 }
 
 .root :global(.chip).mineFilter {
@@ -234,39 +242,6 @@
   flex-direction: column;
   gap: var(--sp-1);
   min-width: 0;
-}
-
-.tabEmpty {
-  margin: 0;
-  padding: var(--sp-5);
-  border: 1px dashed var(--color-border-2);
-  border-radius: var(--rad-sm);
-  color: var(--color-text-3);
-  text-align: center;
-}
-
-.cardRow {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  min-width: 0;
-}
-
-.cardAvatar {
-  flex: 0 0 auto;
-  display: inline-flex;
-}
-
-.cardBody {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  min-width: 0;
-}
-
-.cardBody h2,
-.cardBody p {
-  margin: 0;
 }
 
 :global([data-width-class='compact']) .token {

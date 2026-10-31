@@ -9,6 +9,8 @@ import DETAIL_QUERY from './chronicleDetail.graphql?raw';
 import AUTHOR_NAME_QUERY from './chronicleAuthorName.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import { nextCivilDay } from '../../../utils/format.js';
+import { cardExcerpt } from '../../../utils/markdownText.js';
+import { acceptCompletePage } from '../../../utils/completePages.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import {
   chronicleDetailWireSchema,
@@ -67,6 +69,9 @@ export type ChronicleDetailView = {
   summary: (typeof chronicleSummaryDerivedWireSchema)['_output'];
 };
 
+/** Card excerpt length; chronicle cards show it unclamped. */
+const EXCERPT_LENGTH = 160;
+
 type FrontmatterShape = {
   excerpt?: unknown;
   tags?: unknown;
@@ -82,11 +87,14 @@ function mapListItem(
 ): ChronicleListItemView {
   const fm = frontmatterOf(item.frontmatter);
   const derived = item.summaryDerived ?? null;
+  // The shared card rule (Codex, Rules): the authored excerpt first, else the
+  // body's prose, as plain words cut with "…". An authored empty excerpt stays
+  // empty, and a non-string one shows nothing.
   const excerpt = Object.hasOwn(fm, 'excerpt')
     ? typeof fm.excerpt === 'string'
-      ? fm.excerpt
+      ? (cardExcerpt(null, EXCERPT_LENGTH, fm.excerpt) ?? '')
       : null
-    : item.effectiveBody?.replace(/\s+/g, ' ').trim().slice(0, 160) || null;
+    : cardExcerpt(item.effectiveBody, EXCERPT_LENGTH);
   const tags = Array.isArray(fm.tags)
     ? fm.tags.filter((t): t is string => typeof t === 'string')
     : [];
@@ -203,21 +211,10 @@ export async function loadChronicleList(
       const result = parseChronicleList(data.documents, data.gameCalendar.definition);
       if (!result.ok) throw toAppError({ failure: result.failure }, 'chronicle:list');
       const page = result.data;
-      if (
-        page.total > 2_147_483_647 ||
-        (total !== undefined && page.total !== total) ||
-        page.items.length > 100 ||
-        items.length + page.items.length > page.total ||
-        (page.items.length < 100 && items.length + page.items.length < page.total)
-      )
+      const pageIds = page.items.map((item) => item.id);
+      if (!acceptCompletePage(ids, total, { total: page.total, ids: pageIds }))
         throw toAppError({ failure: 'InvalidWire' }, 'chronicle:list-pages');
-      for (const item of page.items) {
-        const id = item.id.toLowerCase();
-        if (ids.has(id))
-          throw toAppError({ failure: 'InvalidWire' }, 'chronicle:list-pages');
-        ids.add(id);
-        items.push(item);
-      }
+      items.push(...page.items);
       total = page.total;
       eraAbbrev = page.eraAbbrev;
     } while (items.length < total);

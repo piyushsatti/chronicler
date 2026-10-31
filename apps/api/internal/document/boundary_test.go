@@ -3,8 +3,6 @@ package document
 import (
 	"context"
 	"errors"
-	"sync"
-	"sync/atomic"
 	"testing"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
@@ -20,9 +18,15 @@ func verifiedContext(t *testing.T, id string, roles []auth.Role) context.Context
 	return auth.WithAuthority(context.Background(), a)
 }
 
+type revisionAuthorRepo struct{ authorID string }
+
+func (r revisionAuthorRepo) RevisionAuthor(context.Context, string) (string, error) {
+	return r.authorID, nil
+}
+
 func TestPrivilegedCallbacksAreGatedBeforeDelegation(t *testing.T) {
 	var revisions, trash int
-	q := Queries{Repo: policyReadRepo{document: Document{ID: "doc", AuthorID: "author", Status: StatusPublished, Visibility: VisibilityPublic}},
+	q := Queries{Repo: revisionAuthorRepo{authorID: "author"},
 		Revisions: func(context.Context, string, int, int) ([]Revision, error) {
 			revisions++
 			return []Revision{{Title: "raw revision"}}, nil
@@ -76,58 +80,5 @@ func assertBoundaryError(t *testing.T, err error, code apierr.Code) {
 	expected, ok := errors.AsType[*apierr.Error](err)
 	if !ok || expected.Code != code {
 		t.Fatalf("err=%v want=%s", err, code)
-	}
-}
-
-type countedScopeRepo struct {
-	policyReadRepo
-	calls atomic.Int32
-	err   error
-}
-
-func (r *countedScopeRepo) ReaderIDs(context.Context, string) (map[string]struct{}, error) {
-	r.calls.Add(1)
-	return r.readers, r.err
-}
-
-func TestScopeSharedOnlyWithinRequestAndGrantFailuresPropagate(t *testing.T) {
-	repo := &countedScopeRepo{policyReadRepo: policyReadRepo{document: Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic}}}
-	q := Queries{Repo: repo}
-	base := verifiedContext(t, "reader", []auth.Role{auth.Player})
-	for range 2 {
-		ctx := WithScopeCache(base)
-		var wg sync.WaitGroup
-		for range 8 {
-			wg.Go(func() {
-				if _, err := q.ByID(ctx, "doc"); err != nil {
-					t.Errorf("ByID: %v", err)
-				}
-			})
-		}
-		wg.Wait()
-	}
-	if repo.calls.Load() != 2 {
-		t.Fatalf("grant reads=%d want=2", repo.calls.Load())
-	}
-	repo.err = errors.New("grant lookup unavailable")
-	ctx := WithScopeCache(base)
-	if _, err := q.ByID(ctx, "doc"); !errors.Is(err, repo.err) {
-		t.Fatalf("ByID err=%v", err)
-	}
-	if _, _, err := q.List(ctx, ListFilter{}); !errors.Is(err, repo.err) {
-		t.Fatalf("List err=%v", err)
-	}
-}
-
-func TestBatchLoaderUsesQueryBoundary(t *testing.T) {
-	q := Queries{Repo: policyReadRepo{document: Document{ID: "doc", AuthorID: "author", Status: StatusDraft, Body: "private"}}}
-	loader := BatchLoader{Queries: q}
-	denied, err := loader.LoadMany(context.Background(), []string{"doc"})
-	if err != nil || len(denied) != 0 {
-		t.Fatalf("denied batch=%+v err=%v", denied, err)
-	}
-	allowed, err := loader.LoadMany(verifiedContext(t, "author", []auth.Role{auth.Player}), []string{"doc"})
-	if err != nil || len(allowed) != 1 || allowed[0].Body != "private" {
-		t.Fatalf("author batch=%+v err=%v", allowed, err)
 	}
 }

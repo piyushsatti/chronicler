@@ -3,8 +3,9 @@ info:
   title: Chronicler API
   version: 0.1.0
   description: Accepted HTTP protocol contract. Product operations use POST /v1/graphql.
-    Product REST route removal and GraphQL runtime implementation remain pending;
-    split SDL is authoritative for product fields.
+    Quest commands, notification mark-read, and character/member legacy reads use GraphQL only. Other product
+    REST routes remain mounted during the transition; split SDL is authoritative
+    for product fields.
 servers:
   - url: /
 paths:

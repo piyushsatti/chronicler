@@ -7,40 +7,34 @@ import (
 	"testing"
 )
 
-func TestNotificationsMarkReadCanonicalContractAndMount(t *testing.T) {
-	const path = "/v1/me/notifications/read"
-	const operation = "POST " + path
+func TestNotificationsMarkReadUsesGraphQLWithoutLegacyMount(t *testing.T) {
+	const operation = "POST /v1/me/notifications/read"
+	for _, op := range mountMuxOperations(t) {
+		if op == operation {
+			t.Fatal("legacy mark-read route remains mounted")
+		}
+	}
+	if _, ok := muxOnlyAllowlist[operation]; ok {
+		t.Fatal("retired mark-read route remains allowlisted")
+	}
 	routing, err := os.ReadFile(filepath.Join(contractsDir(t), "field-routing.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	mapped := false
 	for _, line := range strings.Split(string(routing), "\n") {
-		if strings.Contains(line, "markNotificationsRead") && strings.Contains(line, "`"+operation+"`") {
+		if strings.Contains(line, "`"+operation+"`") && strings.Contains(line, "GraphQL Mutation.markNotificationsRead") {
 			mapped = true
 		}
 	}
 	if !mapped {
-		t.Fatal("mark-read lost canonical REST routing")
-	}
-	registrations := 0
-	for _, op := range mountMuxOperations(t) {
-		if op == operation {
-			registrations++
-		}
-	}
-	if registrations != 1 {
-		t.Fatalf("mark-read registrations=%d", registrations)
-	}
-	if _, ok := muxOnlyAllowlist[operation]; !ok {
-		t.Fatal("transitional REST mark-read must stay on muxOnlyAllowlist until deleted")
+		t.Fatal("retired REST operation lost its GraphQL replacement mapping")
 	}
 	schema, err := os.ReadFile(filepath.Join(contractsDir(t), "schema.graphql"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc := string(schema)
-	if !strings.Contains(doc, "markNotificationsRead(") {
+	if !strings.Contains(string(schema), "markNotificationsRead(") {
 		t.Fatal("markNotificationsRead GraphQL mutation missing")
 	}
 }

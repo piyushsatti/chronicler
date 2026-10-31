@@ -68,10 +68,6 @@ type CharacterWriteRepository interface {
 	StoreUpsertDowntimeProject(ctx context.Context, write UpsertDowntimeProjectWrite) (DowntimeProjectView, error)
 }
 
-type ProductBatchRepository interface {
-	ReadBatchCharacters(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[CharacterView], error)
-}
-
 type ReferenceReadRepository interface {
 	ReadBackstories(ctx context.Context, actor auth.Authority, spec BackstoriesSpec) (BackstoryPage, error)
 	ReadCreationCatalog(ctx context.Context, actor auth.Authority, spec CreationCatalogSpec) (CreationCatalogPage, error)
@@ -104,8 +100,6 @@ type QuestWithdrawalWriter interface {
 
 var ErrWithdrawalPlanChanged = errors.New("character withdrawal plan changed before locks")
 
-type IDKey struct{ ID string }
-
 type WithdrawalPlan struct {
 	OwnedCharacterID string
 	CharacterIDs     []string
@@ -122,7 +116,6 @@ type WithdrawalEffects struct {
 type ProductReadRepos struct {
 	Character        CharacterReadRepository
 	Reference        ReferenceReadRepository
-	Batch            ProductBatchRepository
 	DocumentAudience document.ReferenceAudienceReader
 }
 

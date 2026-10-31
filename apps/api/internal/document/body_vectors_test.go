@@ -10,9 +10,9 @@ import (
 
 func TestLegacyWholeDocumentAccessDoesNotBypassBodyScopes(t *testing.T) {
 	raw := "PUBLIC\n> [!DM]\n> DM-SECRET\n\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!dm:]\n> MALFORMED-SECRET\n\n> [!spoiler]\n> SPOILER-VISIBLE"
-	redacted := "PUBLIC\n> [!redacted]\n\n> [!redacted]\n\n> [!redacted]\n\n> [!spoiler]\n> SPOILER-VISIBLE"
-	dmBody := "PUBLIC\n> [!DM]\n> DM-SECRET\n\n> [!redacted]\n\n> [!redacted]\n\n> [!spoiler]\n> SPOILER-VISIBLE"
-	memberBody := "PUBLIC\n> [!redacted]\n\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!redacted]\n\n> [!spoiler]\n> SPOILER-VISIBLE"
+	redacted := "PUBLIC\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████\n\n> [!spoiler]\n> SPOILER-VISIBLE"
+	dmBody := "PUBLIC\n> [!DM]\n> DM-SECRET\n\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████\n\n> [!spoiler]\n> SPOILER-VISIBLE"
+	memberBody := "PUBLIC\n> [!redacted]\n> ████████████████████\n\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!redacted]\n> ████████████████████\n\n> [!spoiler]\n> SPOILER-VISIBLE"
 	for _, policy := range []json.RawMessage{nil, json.RawMessage(`null`)} {
 		for _, visibility := range []Visibility{VisibilityPublic, VisibilityDMOnly, VisibilityRestricted} {
 			d := Document{ID: "doc", AuthorID: "author", Status: StatusPublished, Visibility: visibility, Policy: policy, Body: raw}

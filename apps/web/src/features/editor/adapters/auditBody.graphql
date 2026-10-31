@@ -1,0 +1,12 @@
+query AuditBody($body: String!) {
+  auditBody(body: $body) {
+    startLine
+    endLine
+    kind
+    handle
+    suggestion
+    token
+    tokenLine
+    tokenColumn
+  }
+}

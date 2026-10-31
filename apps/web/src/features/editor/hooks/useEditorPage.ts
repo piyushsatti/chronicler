@@ -5,7 +5,7 @@ import {
   createNeedsLiveDm,
   type CreateActor,
 } from '../../../auth/createRules.js';
-import { hasRole, isAdmin } from '../../../auth/roles.js';
+import { hasRole, isAdmin, isDm } from '../../../auth/roles.js';
 import { useLiveDm, type LiveDmState } from '../../../hooks/useLiveDm.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
@@ -94,8 +94,12 @@ function createAccessFor(
   };
 }
 
-const LOCATIONS_ACCESS = { canAuthorLocations: true };
-const NO_ACCESS = { canAuthorLocations: false };
+const SCHEMA_ACCESS = {
+  none: { canAuthorLocations: false, canAuthorFeatures: false },
+  locations: { canAuthorLocations: true, canAuthorFeatures: false },
+  features: { canAuthorLocations: false, canAuthorFeatures: true },
+  all: { canAuthorLocations: true, canAuthorFeatures: true },
+} as const;
 
 /** Whether this account may start the record; rules editors pass the server's review proof. */
 export type CreateAccess =
@@ -115,6 +119,7 @@ export function useEditorPage(
   const meQuery = useMe();
   const me = meQuery.data;
   const canAuthorLocations = isAdmin(me?.roles) || hasRole(me?.roles, 'archon');
+  const canAuthorFeatures = isDm(me?.roles);
   const enabled = typeKey === 'demo' || (auth.isAuthenticated && auth.sessionReady);
   const query = useEditorRecord(
     {
@@ -124,11 +129,20 @@ export function useEditorPage(
       id: params.id,
       slug: params.slug,
       category: params.category,
+      ...(typeKey === 'quest' && mode === 'new'
+        ? {
+            timeZone: editorTimeZone(timeZone),
+            seriesId: search.get('series') ?? undefined,
+          }
+        : {}),
       ...(typeKey === 'summary' && mode === 'new'
         ? {
             questId: search.get('questId') ?? undefined,
             characterId: search.get('characterId') ?? undefined,
           }
+        : {}),
+      ...(typeKey === 'codex' && mode === 'new'
+        ? { hex: search.get('hex') ?? undefined }
         : {}),
     },
     enabled,
@@ -142,7 +156,18 @@ export function useEditorPage(
     category: params.category,
     enabled: enabled && query.isSuccess,
     actorId: auth.memberId,
-    schemaAccess: canAuthorLocations ? LOCATIONS_ACCESS : NO_ACCESS,
+    viewerMemberId: me?.id ?? null,
+    viewerIsAdmin: isAdmin(me?.roles),
+    schemaAccess:
+      SCHEMA_ACCESS[
+        canAuthorLocations
+          ? canAuthorFeatures
+            ? 'all'
+            : 'locations'
+          : canAuthorFeatures
+            ? 'features'
+            : 'none'
+      ],
     sessionIsCurrent: () => typeKey === 'demo' || auth.isCurrentSession(auth.token),
     onReload: async () => {
       await query.refetch();

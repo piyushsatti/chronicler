@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
+import { SeriesCreateAction } from '../../../components/domain/SeriesCreateAction.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Chip } from '../../../components/primitives/Chip.js';
@@ -93,7 +94,7 @@ function DmInformation({
         <p className="type-caption">Nothing here yet.</p>
         {canCreate ? <div className={styles.chips}>
           <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">New DM table</Link>
-          <Link className="btn btn--secondary btn--sm" to="/series/new">Create a series</Link>
+          <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />
           {canCreateQuest ? <Link className="btn btn--secondary btn--sm" to="/quests/new">Post a quest</Link> : null}
         </div> : null}
       </Card>
@@ -126,7 +127,7 @@ function DmInformation({
                     >
                       {table.title}
                     </Link>
-                    <Chip size="sm" tone="status">
+                    <Chip size="sm" tone="status" className={styles.pinEnd}>
                       {statusLabel(table.status)}
                     </Chip>
                     {table.canEditBody || table.canEditMetadata ? (
@@ -187,12 +188,12 @@ function DmInformation({
       <Card className="stack" pad={4}>
         <div className={styles.cardHead}>
           <h2 className="type-heading">Series</h2>
-          {canCreate ? <Link className="btn btn--secondary btn--sm" to="/series/new">Create a series</Link> : null}
+          {canCreate ? <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} /> : null}
         </div>
         {state.details.isError ? <StatePanel variant="inline" status="error" error={toAppError(state.details.error, 'profile:series')} /> :
           state.details.isPending ? <StatePanel variant="inline" status="loading" /> :
-          state.details.data?.questArcs.items.length ? <CardGrid>{state.details.data.questArcs.items.map((arc) => <Card key={arc.id} variant="clickable" to={`/series/${arc.id}`} pad={4}><h3 className="type-title">{arc.name}</h3><p className="type-caption">{pluralize(arc.questCount, 'quest')}</p></Card>)}</CardGrid> :
-          <EmptyState message="No quest series have been shared yet." action={canCreate ? <Link className="type-link" to="/series/new">Create a series</Link> : <Link className="type-link" to="/quests">Browse quests</Link>} />}
+          state.details.data?.questArcs.items.length ? <CardGrid>{state.details.data.questArcs.items.map((arc) => <Card key={arc.id} variant="clickable" to={`/series/${arc.id}`} className={`stack ${styles.pinCard}`} pad={4}><h3 className="type-title">{arc.name}</h3><p className={`type-caption ${styles.pinEnd}`}>{pluralize(arc.questCount, 'quest')}</p></Card>)}</CardGrid> :
+          <EmptyState message="No quest series have been shared yet." action={canCreate ? <SeriesCreateAction label="Create a series" variant="ghost" size="sm" showAuthorityError={false} /> : <Link className="type-link" to="/quests">Browse quests</Link>} />}
       </Card>
       <Card className="stack" pad={4}>
         <h2 className="type-heading">Quests</h2>
@@ -295,7 +296,7 @@ function ProfileView({
   me: ReturnType<typeof useMe>;
 }) {
   const [edit, setEdit] = useUrlParam('edit');
-  const editing = edit === 'profile';
+  const editing = edit === 'profile' || edit === 'availability';
   const profile = page.profile;
   const showDmInformation = role === 'dm' || profile.member.roles.includes('dm');
   const dmDetails = useProfileDmDetails(profile.member.id, showDmInformation);
@@ -317,37 +318,14 @@ function ProfileView({
   const hasActivity =
     activity.messages + activity.reactions + activity.voiceMinutes > 0;
   const name = personLabels([profile.member])[0];
-  const rail = (
-    <Card className="stack" pad={4}>
-      <h2 className="type-heading">Availability</h2>
-      {profile.availability.length ? <p className="type-caption">Weekly times as supplied by this member; their time zone is not shared.</p> : null}
-      {profile.availability.length ? (
-        <ul className={styles.slots}>
-          {profile.availability.map((slot, index) => (
-            <li key={index}>
-              <Chip size="md" tone="neutral">
-                {weekdayLabel(slot.day, { plural: true })}{' '}
-                {clockLabel(slot.startTime)}–{clockLabel(slot.endTime)}
-              </Chip>
-              {slot.note ? <span className="type-caption">{slot.note}</span> : null}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <EmptyState
-          message={owner ? 'Add your availability from Edit profile.' : `${name} hasn't set their availability.`}
-          action={owner ? <Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Set availability</Button> : <Link className="type-link" to="/quests">Find a quest</Link>}
-        />
-      )}
-    </Card>
-  );
   const editor = owner && editing ? (
     <Card className={styles.owner} pad={4}>
       <ProfileOwnerActions
         key={profile.member.id}
         profile={profile}
-        canAvailability={roles.includes('player') || roles.includes('admin')}
+        canAvailability={roles.includes('guest') || roles.includes('player') || roles.includes('admin')}
         canDm={canDm}
+        focusAvailability={edit === 'availability'}
       />
     </Card>
   ) : null;
@@ -386,7 +364,6 @@ function ProfileView({
         owner={owner}
         sessionsRun={sessionsRun}
         availability={availabilityStat}
-        rail={rail}
         editor={editor}
         toolbarActions={<PageToolbar.IconAction label={`Back to ${role === 'dm' ? 'DMs' : 'Players'}`} href={role === 'dm' ? '/dms' : '/players'}>←</PageToolbar.IconAction>}
         about={about}
@@ -396,7 +373,7 @@ function ProfileView({
               title={<span className={styles.titleRow}><span aria-hidden="true"><Avatar name={name} src={profile.member.avatarUrl ?? undefined} size="lg" online={false} /></span>{name}</span>}
               actions={owner ? <Button variant="secondary" aria-expanded={editing} onClick={() => setEdit(editing ? '' : 'profile')}>{editing ? 'Close editor' : 'Edit profile'}</Button> : null}
               meta={<>
-                {profile.member.roles.filter((value) => value === 'dm' || value === 'player' || value === 'admin').map((value) => <Chip key={value} size="sm" tone="line">{roleLabel(value)}</Chip>)}
+                {profile.member.roles.filter((value) => value === 'guest' || value === 'dm' || value === 'player' || value === 'admin').map((value) => <Chip key={value} size="sm" tone="line">{roleLabel(value)}</Chip>)}
                 {profile.dmProfile && page.member.isDm ? <Chip size="sm" tone={profile.dmProfile.acceptingPlayers ? 'accent' : 'line'}>{profile.dmProfile.acceptingPlayers ? 'Accepting players' : 'Not accepting players'}</Chip> : null}
                 {profile.availability.map((slot, index) => <Chip key={`${slot.day}-${slot.startTime}-${index}`} size="sm" tone="neutral">{weekdayLabel(slot.day, { plural: true })} {clockLabel(slot.startTime)}–{clockLabel(slot.endTime)}</Chip>)}
               </>}

@@ -3,6 +3,8 @@ package jobs
 import (
 	"context"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type State string
@@ -35,20 +37,22 @@ type Job struct {
 	CompletionOperation string
 	CompletionPayload   []byte
 	ErrorMessage        string
-}
-
-type Writer interface {
-	EnqueueDesired(ctx context.Context, questID string, desiredRevision int32, at time.Time) (string, error)
+	// SafeErrorCode is a stable, display-safe failure code (no provider text).
+	// Empty means none; only FailWithCode sets it.
+	SafeErrorCode string
 }
 
 // Store is the job table used by the worker.
 type Store interface {
 	Enqueue(ctx context.Context, job Job) error
+	EnqueueScheduled(ctx context.Context, job Job) (bool, error)
 	ClaimOne(ctx context.Context, lane string) (Job, error)
 	Renew(ctx context.Context, receipt Receipt) (Lease, error)
 	Succeed(ctx context.Context, receipt Receipt) error
 	Retry(ctx context.Context, receipt Receipt, after time.Duration, reason string) error
 	Fail(ctx context.Context, receipt Receipt, state State, reason string) error
+	// FailWithCode is Fail that also records a safe error code for operators.
+	FailWithCode(ctx context.Context, receipt Receipt, state State, reason, safeCode string) error
 }
 
 // QuestDiscordPayload is the discord-lane body. ID is the internal quest
@@ -74,4 +78,9 @@ func Backoff(attempt int) time.Duration {
 		return 5 * time.Minute
 	}
 	return d
+}
+
+type ExecutionScope struct {
+	Receipt    Receipt
+	Connection *pgxpool.Conn
 }

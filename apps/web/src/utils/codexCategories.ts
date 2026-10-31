@@ -27,11 +27,6 @@ export const CODEX_CATEGORY_VALUES: readonly CodexCategory[] = CODEX_CATEGORIES.
  */
 export const GATED_CODEX_CATEGORY: CodexCategory = 'Locations';
 
-/** Exact match against the stored values. */
-export function isCodexCategory(value: unknown): value is CodexCategory {
-  return CODEX_CATEGORY_VALUES.some((category) => category === value);
-}
-
 /** Case-insensitive lookup, for legacy rows and route params. */
 export function findCodexCategory(
   value: string | null | undefined,

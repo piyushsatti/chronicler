@@ -1,0 +1,8 @@
+query MapContainment($atlasCode: String!, $limit: Int! = 200, $offset: Int! = 0) {
+  map(atlasCode: $atlasCode) {
+    id
+    pointcrawlNodes(limit: $limit, offset: $offset) {
+      submapId
+    }
+  }
+}

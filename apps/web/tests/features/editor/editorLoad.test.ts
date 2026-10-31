@@ -10,6 +10,66 @@ import { server } from '../../../src/mocks/server.js';
 import { schemaForType } from '../../../src/features/editor/editorSchemas.js';
 import { schemaErrors } from '../../../src/features/editor/editorValidation.js';
 
+describe('guide group', () => {
+  it('starts a new guide with a blank group the form can fill in', async () => {
+    const loaded = await loadEditorRecord({ typeKey: 'guide', mode: 'new' });
+    expect(loaded.meta.category).toBe('');
+    const fields = schemaForType('guide', loaded.meta, {}, 'new');
+    expect(fields.map((field) => field.label)).toContain('Group');
+    expect(schemaForType('ruling', loaded.meta).map((field) => field.label)).not.toContain(
+      'Group',
+    );
+  });
+  it('rejects a group over 60 characters', () => {
+    const meta = { title: 'Guide', category: 'x'.repeat(61) };
+    expect(schemaErrors(schemaForType('guide', meta), meta)).toHaveProperty('category');
+  });
+});
+
+describe('Hall of Fame editor', () => {
+  it('starts a new page titled Hall of Fame in its own community category', async () => {
+    const loaded = await loadEditorRecord({ typeKey: 'hall-of-fame', mode: 'new' });
+    expect(loaded.meta).toMatchObject({
+      title: 'Hall of Fame',
+      kind: 'community',
+      category: 'hall_of_fame',
+    });
+  });
+  it('refuses to open a different community document in it', async () => {
+    server.use(
+      graphql.query('EditorDocumentById', () =>
+        HttpResponse.json({
+          data: {
+            documentById: {
+              id: '33333333-3333-4333-8333-333333333333',
+              slug: 'notice',
+              kind: 'community',
+              category: 'notice',
+              title: 'Notice',
+              effectiveBody: 'x',
+              status: 'published',
+              visibility: 'public',
+              authorId: '11111111-1111-4111-8111-111111111111',
+              canEditBody: true,
+              canEditMetadata: true,
+              version: 1,
+              frontmatter: {},
+              policy: [],
+            },
+          },
+        }),
+      ),
+    );
+    await expect(
+      loadEditorRecord({
+        typeKey: 'hall-of-fame',
+        mode: 'edit',
+        id: '33333333-3333-4333-8333-333333333333',
+      }),
+    ).rejects.toMatchObject({ kind: 'not_found' });
+  });
+});
+
 describe('qualified Codex category initialization', () => {
   it.each([
     ['artifact', 'Artifact'],
@@ -32,8 +92,29 @@ describe('qualified Codex category initialization', () => {
   ])('loads %s as the supported %s authoring category', async (category, expected) => {
     const loaded = await loadEditorRecord({ typeKey: 'codex', mode: 'new', category });
     expect(loaded.meta.category).toBe(expected);
-    const meta = { ...loaded.meta, title: 'Qualified Codex draft' };
+    const meta = {
+      ...loaded.meta,
+      title: 'Qualified Codex draft',
+      ...(expected === 'Feature' ? { hex: 'LFR7008' } : {}),
+    };
     expect(schemaErrors(schemaForType('codex', meta), meta)).toEqual({});
+  });
+
+  it('requires a Feature to name its hex and fills it from the map link', async () => {
+    const blank = await loadEditorRecord({
+      typeKey: 'codex',
+      mode: 'new',
+      category: 'Feature',
+    });
+    const meta = { ...blank.meta, title: 'Old Mill' };
+    expect(schemaErrors(schemaForType('codex', meta), meta)).toHaveProperty('hex');
+    const linked = await loadEditorRecord({
+      typeKey: 'codex',
+      mode: 'new',
+      category: 'Feature',
+      hex: 'lfr7008',
+    });
+    expect(linked.meta.hex).toBe('LFR7008');
   });
 
   it.each(['Rules', 'Unknown', '', undefined])(

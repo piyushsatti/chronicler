@@ -107,14 +107,14 @@ func (q *Queries) CountProductTimeAnchors(ctx context.Context) (int32, error) {
 
 const createProductMap = `-- name: CreateProductMap :one
 WITH inserted AS (
-  INSERT INTO maps(name,atlas_code,map_kind,family,region_id,asset_path,created_by)
-  VALUES ($1,$2,$3,$4,
-          (SELECT r.id FROM regions r WHERE r.public_id=$5::uuid),
-          $6,
-          (SELECT actor.id FROM members actor WHERE actor.public_id=$7::uuid))
-  RETURNING id, public_id, name, atlas_code, map_kind, region_id, asset_path, created_at, created_by, family
+  INSERT INTO maps(name,atlas_code,map_kind,family,grid,region_id,asset_path,created_by)
+  VALUES ($1,$2,$3,$4,$5,
+          (SELECT r.id FROM regions r WHERE r.public_id=$6::uuid),
+          $7,
+          (SELECT actor.id FROM members actor WHERE actor.public_id=$8::uuid))
+  RETURNING id, public_id, name, atlas_code, map_kind, region_id, asset_path, created_at, created_by, family, grid
 )
-SELECT i.public_id AS id,i.name,i.atlas_code,i.map_kind,i.family,
+SELECT i.public_id AS id,i.name,i.atlas_code,i.map_kind,i.family,i.grid,
        r.public_id AS region_id,i.asset_path,i.created_at,
        a.public_id AS created_by
 FROM inserted i LEFT JOIN regions r ON r.id=i.region_id
@@ -126,6 +126,7 @@ type CreateProductMapParams struct {
 	AtlasCode string      `json:"atlas_code"`
 	MapKind   string      `json:"map_kind"`
 	Family    string      `json:"family"`
+	Grid      string      `json:"grid"`
 	RegionID  pgtype.UUID `json:"region_id"`
 	AssetPath pgtype.Text `json:"asset_path"`
 	ActorID   pgtype.UUID `json:"actor_id"`
@@ -137,6 +138,7 @@ type CreateProductMapRow struct {
 	AtlasCode string             `json:"atlas_code"`
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 	RegionID  pgtype.UUID        `json:"region_id"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -149,6 +151,7 @@ func (q *Queries) CreateProductMap(ctx context.Context, arg CreateProductMapPara
 		arg.AtlasCode,
 		arg.MapKind,
 		arg.Family,
+		arg.Grid,
 		arg.RegionID,
 		arg.AssetPath,
 		arg.ActorID,
@@ -160,6 +163,7 @@ func (q *Queries) CreateProductMap(ctx context.Context, arg CreateProductMapPara
 		&i.AtlasCode,
 		&i.MapKind,
 		&i.Family,
+		&i.Grid,
 		&i.RegionID,
 		&i.AssetPath,
 		&i.CreatedAt,
@@ -256,7 +260,7 @@ func (q *Queries) CreateProductTimeAnchor(ctx context.Context, arg CreateProduct
 }
 
 const getProductMap = `-- name: GetProductMap :one
-SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        r.public_id AS region_id, m.asset_path, m.created_at,
        author.public_id AS created_by
 FROM maps m
@@ -271,6 +275,7 @@ type GetProductMapRow struct {
 	AtlasCode string             `json:"atlas_code"`
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 	RegionID  pgtype.UUID        `json:"region_id"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -286,6 +291,7 @@ func (q *Queries) GetProductMap(ctx context.Context, atlasCode string) (GetProdu
 		&i.AtlasCode,
 		&i.MapKind,
 		&i.Family,
+		&i.Grid,
 		&i.RegionID,
 		&i.AssetPath,
 		&i.CreatedAt,
@@ -421,6 +427,40 @@ func (q *Queries) LinkProductPointcrawlEntry(ctx context.Context, arg LinkProduc
 	return i, err
 }
 
+const listProductArchonAssignmentRegions = `-- name: ListProductArchonAssignmentRegions :many
+SELECT r.public_id
+FROM archon_assignments a
+JOIN regions r ON r.id=a.region_id
+JOIN members m ON m.id=a.member_id
+WHERE m.public_id=$1::uuid
+  AND r.public_id=ANY($2::uuid[])
+`
+
+type ListProductArchonAssignmentRegionsParams struct {
+	MemberID  pgtype.UUID   `json:"member_id"`
+	RegionIds []pgtype.UUID `json:"region_ids"`
+}
+
+func (q *Queries) ListProductArchonAssignmentRegions(ctx context.Context, arg ListProductArchonAssignmentRegionsParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listProductArchonAssignmentRegions, arg.MemberID, arg.RegionIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var public_id pgtype.UUID
+		if err := rows.Scan(&public_id); err != nil {
+			return nil, err
+		}
+		items = append(items, public_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProductArchonAssignments = `-- name: ListProductArchonAssignments :many
 SELECT r.public_id AS region_id, m.public_id AS member_id, a.created_at AS granted_at,
        grantor.public_id AS granted_by
@@ -478,7 +518,7 @@ func (q *Queries) ListProductArchonAssignments(ctx context.Context, arg ListProd
 }
 
 const listProductCalendarCells = `-- name: ListProductCalendarCells :many
-SELECT requested.real_date,mapping.game_day
+SELECT requested.real_date::date AS real_date,mapping.game_day
 FROM generate_series($1::date,$2::date-1,interval '1 day') requested(real_date)
 LEFT JOIN game_time_map mapping ON mapping.real_date=requested.real_date::date
 ORDER BY requested.real_date
@@ -490,7 +530,7 @@ type ListProductCalendarCellsParams struct {
 }
 
 type ListProductCalendarCellsRow struct {
-	RealDate interface{} `json:"real_date"`
+	RealDate pgtype.Date `json:"real_date"`
 	GameDay  pgtype.Int4 `json:"game_day"`
 }
 
@@ -515,7 +555,7 @@ func (q *Queries) ListProductCalendarCells(ctx context.Context, arg ListProductC
 }
 
 const listProductMaps = `-- name: ListProductMaps :many
-SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        r.public_id AS region_id, m.asset_path, m.created_at,
        author.public_id AS created_by
 FROM maps m
@@ -540,6 +580,7 @@ type ListProductMapsRow struct {
 	AtlasCode string             `json:"atlas_code"`
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 	RegionID  pgtype.UUID        `json:"region_id"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -566,6 +607,7 @@ func (q *Queries) ListProductMaps(ctx context.Context, arg ListProductMapsParams
 			&i.AtlasCode,
 			&i.MapKind,
 			&i.Family,
+			&i.Grid,
 			&i.RegionID,
 			&i.AssetPath,
 			&i.CreatedAt,
@@ -834,7 +876,7 @@ func (q *Queries) ListProductPointcrawlLinksForNodes(ctx context.Context, arg Li
 const listProductPointcrawlNodesForMaps = `-- name: ListProductPointcrawlNodesForMaps :many
 WITH ranked AS (
 SELECT k.ordinality::int AS key_ordinal,(k.value->>'parent_id')::uuid AS parent_id,m.public_id AS map_id,n.public_id AS id,n.name,n.x,n.y,
-       n.created_at,submap.public_id AS submap_id,
+       n.created_at,submap.public_id AS submap_id,n.state,
        COALESCE($1::boolean
          AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=n.id AND loc.relation='location')
          AND NOT EXISTS (
@@ -861,11 +903,11 @@ WHERE NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
          $1::boolean,$5::boolean,$6::uuid[])
    )
 )
-SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,name,x,y,created_at,submap_id,admin_override
+SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,name,x,y,created_at,submap_id,state,admin_override
 FROM ranked WHERE rn>row_offset AND rn<=row_offset+row_limit
 UNION ALL
 SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(m.id IS NOT NULL),
-       NULL::uuid,''::text,0::double precision,0::double precision,NULL::timestamptz,NULL::uuid,false::boolean
+       NULL::uuid,''::text,0::double precision,0::double precision,NULL::timestamptz,NULL::uuid,''::text,false::boolean
 FROM jsonb_array_elements($7::jsonb) WITH ORDINALITY k(value,ordinality)
 LEFT JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
 WHERE NOT EXISTS (SELECT 1 FROM ranked r WHERE r.key_ordinal=k.ordinality AND r.rn>(k.value->>'offset')::int AND r.rn<=((k.value->>'offset')::int+(k.value->>'limit')::int))
@@ -893,6 +935,7 @@ type ListProductPointcrawlNodesForMapsRow struct {
 	Y             float64            `json:"y"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	SubmapID      pgtype.UUID        `json:"submap_id"`
+	State         string             `json:"state"`
 	AdminOverride bool               `json:"admin_override"`
 }
 
@@ -924,6 +967,7 @@ func (q *Queries) ListProductPointcrawlNodesForMaps(ctx context.Context, arg Lis
 			&i.Y,
 			&i.CreatedAt,
 			&i.SubmapID,
+			&i.State,
 			&i.AdminOverride,
 		); err != nil {
 			return nil, err
@@ -1177,7 +1221,7 @@ func (q *Queries) LockProductContainmentGraph(ctx context.Context) error {
 }
 
 const lockProductMap = `-- name: LockProductMap :one
-SELECT m.id,m.public_id AS map_id,m.name,m.atlas_code,m.map_kind,m.family,
+SELECT m.id,m.public_id AS map_id,m.name,m.atlas_code,m.map_kind,m.family,m.grid,
        r.public_id AS region_id,m.asset_path,m.created_at,
        creator.public_id AS created_by
 FROM maps m LEFT JOIN regions r ON r.id=m.region_id
@@ -1192,6 +1236,7 @@ type LockProductMapRow struct {
 	AtlasCode string             `json:"atlas_code"`
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 	RegionID  pgtype.UUID        `json:"region_id"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -1208,6 +1253,7 @@ func (q *Queries) LockProductMap(ctx context.Context, mapID pgtype.UUID) (LockPr
 		&i.AtlasCode,
 		&i.MapKind,
 		&i.Family,
+		&i.Grid,
 		&i.RegionID,
 		&i.AssetPath,
 		&i.CreatedAt,
@@ -1217,7 +1263,7 @@ func (q *Queries) LockProductMap(ctx context.Context, mapID pgtype.UUID) (LockPr
 }
 
 const lockProductMapByAtlasCode = `-- name: LockProductMapByAtlasCode :one
-SELECT m.id, m.public_id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.id, m.public_id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        m.region_id, m.asset_path, m.created_at, m.created_by
 FROM maps m WHERE m.atlas_code=$1 FOR UPDATE
 `
@@ -1229,6 +1275,7 @@ type LockProductMapByAtlasCodeRow struct {
 	AtlasCode string             `json:"atlas_code"`
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 	RegionID  pgtype.Int8        `json:"region_id"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -1245,6 +1292,7 @@ func (q *Queries) LockProductMapByAtlasCode(ctx context.Context, atlasCode strin
 		&i.AtlasCode,
 		&i.MapKind,
 		&i.Family,
+		&i.Grid,
 		&i.RegionID,
 		&i.AssetPath,
 		&i.CreatedAt,
@@ -1337,7 +1385,7 @@ func (q *Queries) LockProductPointcrawlEntryIdentity(ctx context.Context, arg Lo
 }
 
 const lockProductPointcrawlNode = `-- name: LockProductPointcrawlNode :one
-SELECT n.id, n.public_id, n.map_id, n.name, n.x, n.y, n.submap_id, n.created_at,
+SELECT n.id, n.public_id, n.map_id, n.name, n.x, n.y, n.submap_id, n.created_at, n.state,
        m.public_id AS map_public_id,submap.public_id AS submap_public_id
 FROM pointcrawl_nodes n JOIN maps m ON m.id=n.map_id
 LEFT JOIN maps submap ON submap.id=n.submap_id
@@ -1353,6 +1401,7 @@ type LockProductPointcrawlNodeRow struct {
 	Y              float64            `json:"y"`
 	SubmapID       pgtype.Int8        `json:"submap_id"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	State          string             `json:"state"`
 	MapPublicID    pgtype.UUID        `json:"map_public_id"`
 	SubmapPublicID pgtype.UUID        `json:"submap_public_id"`
 }
@@ -1369,6 +1418,7 @@ func (q *Queries) LockProductPointcrawlNode(ctx context.Context, nodeID pgtype.U
 		&i.Y,
 		&i.SubmapID,
 		&i.CreatedAt,
+		&i.State,
 		&i.MapPublicID,
 		&i.SubmapPublicID,
 	)
@@ -1511,46 +1561,6 @@ func (q *Queries) ReadProductGameDate(ctx context.Context, realDate pgtype.Date)
 	return i, err
 }
 
-const readProductGameDates = `-- name: ReadProductGameDates :many
-SELECT k.ordinality, k.real_date, d.game_day, calendar.definition
-FROM unnest($1::date[]) WITH ORDINALITY AS k(real_date, ordinality)
-LEFT JOIN game_time_map d ON d.real_date=k.real_date
-LEFT JOIN game_calendar calendar ON calendar.id=1
-ORDER BY k.ordinality
-`
-
-type ReadProductGameDatesRow struct {
-	Ordinality interface{} `json:"ordinality"`
-	RealDate   interface{} `json:"real_date"`
-	GameDay    pgtype.Int4 `json:"game_day"`
-	Definition []byte      `json:"definition"`
-}
-
-func (q *Queries) ReadProductGameDates(ctx context.Context, realDates []pgtype.Date) ([]ReadProductGameDatesRow, error) {
-	rows, err := q.db.Query(ctx, readProductGameDates, realDates)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ReadProductGameDatesRow{}
-	for rows.Next() {
-		var i ReadProductGameDatesRow
-		if err := rows.Scan(
-			&i.Ordinality,
-			&i.RealDate,
-			&i.GameDay,
-			&i.Definition,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const readProductMapReference = `-- name: ReadProductMapReference :one
 SELECT m.public_id AS map_id,r.public_id AS region_id
 FROM maps m LEFT JOIN regions r ON r.id=m.region_id
@@ -1582,6 +1592,7 @@ WITH target AS (
  FROM target t JOIN quest_regions qr ON qr.region_id=t.id
  JOIN quests q ON q.id=qr.quest_id
  WHERE q.deleted_at IS NULL
+   AND q.scheduled_at + q.duration_hours * interval '1 hour' > $2::timestamptz
 ), counts AS (
  SELECT count(*) FILTER (WHERE display_status='filling')::int AS filling_count,
         count(*) FILTER (WHERE display_status='scheduled')::int AS scheduled_count,
@@ -1973,6 +1984,60 @@ func (q *Queries) SetProductPointcrawlEdge(ctx context.Context, arg SetProductPo
 	return i, err
 }
 
+const setProductPointcrawlNodeState = `-- name: SetProductPointcrawlNodeState :one
+WITH changed AS (
+ UPDATE pointcrawl_nodes n SET state=$1::text
+ FROM maps m
+ WHERE n.public_id=$2::uuid AND m.id=n.map_id AND m.public_id=$3::uuid
+ RETURNING n.created_at, n.id, n.map_id, n.name, n.public_id, n.submap_id, n.x, n.y, n.state
+), unlocked_neighbours AS (
+ UPDATE pointcrawl_nodes n SET state='unlocked'
+ FROM changed c
+ WHERE c.state='mapped' AND n.map_id=c.map_id AND n.state='locked'
+   AND EXISTS (
+     SELECT 1 FROM pointcrawl_edges e
+     WHERE e.map_id=c.map_id AND e.kind='hex'
+       AND ((e.node_a=c.id AND e.node_b=n.id) OR (e.node_b=c.id AND e.node_a=n.id))
+   )
+ RETURNING n.id
+)
+SELECT c.public_id AS id,m.public_id AS map_id,c.name,c.x,c.y,submap.public_id AS submap_id,c.created_at,c.state
+FROM changed c JOIN maps m ON m.id=c.map_id LEFT JOIN maps submap ON submap.id=c.submap_id
+`
+
+type SetProductPointcrawlNodeStateParams struct {
+	State  string      `json:"state"`
+	NodeID pgtype.UUID `json:"node_id"`
+	MapID  pgtype.UUID `json:"map_id"`
+}
+
+type SetProductPointcrawlNodeStateRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	MapID     pgtype.UUID        `json:"map_id"`
+	Name      string             `json:"name"`
+	X         float64            `json:"x"`
+	Y         float64            `json:"y"`
+	SubmapID  pgtype.UUID        `json:"submap_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	State     string             `json:"state"`
+}
+
+func (q *Queries) SetProductPointcrawlNodeState(ctx context.Context, arg SetProductPointcrawlNodeStateParams) (SetProductPointcrawlNodeStateRow, error) {
+	row := q.db.QueryRow(ctx, setProductPointcrawlNodeState, arg.State, arg.NodeID, arg.MapID)
+	var i SetProductPointcrawlNodeStateRow
+	err := row.Scan(
+		&i.ID,
+		&i.MapID,
+		&i.Name,
+		&i.X,
+		&i.Y,
+		&i.SubmapID,
+		&i.CreatedAt,
+		&i.State,
+	)
+	return i, err
+}
+
 const softDeleteProductRegion = `-- name: SoftDeleteProductRegion :execrows
 UPDATE regions r SET deleted_at=$1,
   deleted_by=(SELECT id FROM members WHERE public_id=$2::uuid)
@@ -2104,6 +2169,65 @@ func (q *Queries) UpdateProductCalendar(ctx context.Context, arg UpdateProductCa
 	return i, err
 }
 
+const updateProductMap = `-- name: UpdateProductMap :one
+WITH updated AS (
+  UPDATE maps SET name=$1,family=$2,grid=$3,
+         asset_path=$4
+  WHERE public_id=$5::uuid
+  RETURNING id, public_id, name, atlas_code, map_kind, region_id, asset_path, created_at, created_by, family, grid
+)
+SELECT u.public_id AS id,u.name,u.atlas_code,u.map_kind,u.family,u.grid,
+       r.public_id AS region_id,u.asset_path,u.created_at,
+       a.public_id AS created_by
+FROM updated u LEFT JOIN regions r ON r.id=u.region_id
+LEFT JOIN members a ON a.id=u.created_by
+`
+
+type UpdateProductMapParams struct {
+	Name      string      `json:"name"`
+	Family    string      `json:"family"`
+	Grid      string      `json:"grid"`
+	AssetPath pgtype.Text `json:"asset_path"`
+	MapID     pgtype.UUID `json:"map_id"`
+}
+
+type UpdateProductMapRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	AtlasCode string             `json:"atlas_code"`
+	MapKind   string             `json:"map_kind"`
+	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
+	RegionID  pgtype.UUID        `json:"region_id"`
+	AssetPath pgtype.Text        `json:"asset_path"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	CreatedBy pgtype.UUID        `json:"created_by"`
+}
+
+func (q *Queries) UpdateProductMap(ctx context.Context, arg UpdateProductMapParams) (UpdateProductMapRow, error) {
+	row := q.db.QueryRow(ctx, updateProductMap,
+		arg.Name,
+		arg.Family,
+		arg.Grid,
+		arg.AssetPath,
+		arg.MapID,
+	)
+	var i UpdateProductMapRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.AtlasCode,
+		&i.MapKind,
+		&i.Family,
+		&i.Grid,
+		&i.RegionID,
+		&i.AssetPath,
+		&i.CreatedAt,
+		&i.CreatedBy,
+	)
+	return i, err
+}
+
 const updateProductRegion = `-- name: UpdateProductRegion :one
 WITH prior_row AS (
  SELECT r.id, r.public_id, r.name, r.kind, r.charter_deadline, r.document_id, r.created_at, r.deleted_at, r.deleted_by FROM regions r WHERE r.public_id=$1 AND r.deleted_at IS NULL AND r.kind=$2 FOR UPDATE
@@ -2214,7 +2338,7 @@ WITH input AS (
      SELECT 1 FROM pointcrawl_nodes existing WHERE existing.public_id=$1::uuid
        AND existing.map_id=m.id))
 ), prior AS (
- SELECT n.created_at, n.id, n.map_id, n.name, n.public_id, n.submap_id, n.x, n.y FROM pointcrawl_nodes n JOIN input i ON i.node_public_id=n.public_id FOR UPDATE OF n
+ SELECT n.created_at, n.id, n.map_id, n.name, n.public_id, n.submap_id, n.x, n.y, n.state FROM pointcrawl_nodes n JOIN input i ON i.node_public_id=n.public_id FOR UPDATE OF n
 ), changed AS (
  INSERT INTO pointcrawl_nodes(public_id,map_id,name,x,y,submap_id,created_at)
  SELECT i.node_public_id,i.map_internal_id,i.name,i.x,i.y,i.submap_id,$7
@@ -2224,11 +2348,11 @@ WITH input AS (
  WHERE pointcrawl_nodes.map_id=EXCLUDED.map_id AND
    (pointcrawl_nodes.name IS DISTINCT FROM EXCLUDED.name OR pointcrawl_nodes.x IS DISTINCT FROM EXCLUDED.x
     OR pointcrawl_nodes.y IS DISTINCT FROM EXCLUDED.y OR pointcrawl_nodes.submap_id IS DISTINCT FROM EXCLUDED.submap_id)
- RETURNING created_at, id, map_id, name, public_id, submap_id, x, y
+ RETURNING created_at, id, map_id, name, public_id, submap_id, x, y, state
 ), result_rows AS (
- SELECT created_at, id, map_id, name, public_id, submap_id, x, y FROM changed UNION ALL SELECT p.created_at, p.id, p.map_id, p.name, p.public_id, p.submap_id, p.x, p.y FROM prior p WHERE NOT EXISTS(SELECT 1 FROM changed)
+ SELECT created_at, id, map_id, name, public_id, submap_id, x, y, state FROM changed UNION ALL SELECT p.created_at, p.id, p.map_id, p.name, p.public_id, p.submap_id, p.x, p.y, p.state FROM prior p WHERE NOT EXISTS(SELECT 1 FROM changed)
 )
-SELECT r.public_id AS id,m.public_id AS map_id,r.name,r.x,r.y,submap.public_id AS submap_id,r.created_at
+SELECT r.public_id AS id,m.public_id AS map_id,r.name,r.x,r.y,submap.public_id AS submap_id,r.created_at,r.state
 FROM result_rows r JOIN maps m ON m.id=r.map_id LEFT JOIN maps submap ON submap.id=r.submap_id
 `
 
@@ -2250,6 +2374,7 @@ type UpsertProductPointcrawlNodeRow struct {
 	Y         float64            `json:"y"`
 	SubmapID  pgtype.UUID        `json:"submap_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	State     string             `json:"state"`
 }
 
 func (q *Queries) UpsertProductPointcrawlNode(ctx context.Context, arg UpsertProductPointcrawlNodeParams) (UpsertProductPointcrawlNodeRow, error) {
@@ -2271,6 +2396,7 @@ func (q *Queries) UpsertProductPointcrawlNode(ctx context.Context, arg UpsertPro
 		&i.Y,
 		&i.SubmapID,
 		&i.CreatedAt,
+		&i.State,
 	)
 	return i, err
 }

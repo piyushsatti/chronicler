@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { EditorMeta, FieldSchema } from './types.js';
 import { isEditorInstant } from './editorDateTime.js';
+import { QUEST_KINDS } from './editorConstants.js';
 
 export function fieldEmpty(field: FieldSchema, val: unknown): boolean {
   if (field.type === 'toggle') return false;
@@ -42,7 +43,7 @@ const questMeta = z.object({
   scheduledAt: z.string().refine(isEditorInstant),
   durationHours: z.coerce.number().positive().finite(),
   slotsMax: z.coerce.number().int().positive(),
-  signupType: z.enum(['open', 'application', 'invite']),
+  signupType: z.enum(['last_game_played', 'dm_pick']),
   apl: z.union([
     z.literal(''),
     z.null(),
@@ -50,6 +51,20 @@ const questMeta = z.object({
     z.coerce.number().int().positive(),
   ]),
   additionalInfo: z.string().nullish(),
+  /** Optional Discord voice channel from the admin list; '' means none. */
+  voiceChannelId: z.union([z.literal(''), z.string().regex(/^[0-9]{17,20}$/)]).nullish(),
+  /** Optional series for a new quest; '' means none. */
+  arcId: z.union([z.literal(''), z.string().uuid()]).nullish(),
+  /** Map places a new quest heads to; saved after the quest is created. */
+  pointcrawlLinks: z
+    .array(
+      z.object({
+        pointcrawlNodeId: z.string().uuid(),
+        role: z.enum(['expected', 'visited']),
+      }),
+    )
+    .max(100)
+    .nullish(),
 });
 
 export function parseQuestMetadata(value: unknown) {
@@ -64,10 +79,39 @@ const recovery = z.object({
 
 export type Snapshot = Pick<z.infer<typeof recovery>, 'meta' | 'body'>;
 
+/** Earlier builds saved quest kinds in an older vocabulary. A recovered draft keeps
+ * only kinds the API accepts, renaming the one that changed spelling, so the chips
+ * show what will be sent. */
+const RENAMED_QUEST_KINDS: Record<string, string> = { oneshot: 'one_shot' };
+const QUEST_KIND_VALUES = new Set(QUEST_KINDS.map(([value]) => value));
+function currentQuestKinds(kinds: unknown): unknown {
+  if (!Array.isArray(kinds)) return kinds;
+  const mapped = kinds
+    .map((kind) => (typeof kind === 'string' ? (RENAMED_QUEST_KINDS[kind] ?? kind) : kind))
+    .filter((kind): kind is string => typeof kind === 'string' && QUEST_KIND_VALUES.has(kind));
+  return [...new Set(mapped)];
+}
+
 export function restoreEditorDraft(raw: string | null): Snapshot | null {
+  const restored = restoreEditorDraftWithTime(raw);
+  return restored ? restored.snapshot : null;
+}
+
+/** A recovered draft and when it was last saved on this device. */
+export function restoreEditorDraftWithTime(
+  raw: string | null,
+): { snapshot: Snapshot; savedAt: string } | null {
   try {
     const parsed = recovery.safeParse(JSON.parse(raw ?? 'null'));
-    return parsed.success ? { meta: parsed.data.meta, body: parsed.data.body } : null;
+    if (!parsed.success) return null;
+    const meta = parsed.data.meta;
+    return {
+      snapshot: {
+        meta: 'kinds' in meta ? { ...meta, kinds: currentQuestKinds(meta.kinds) } : meta,
+        body: parsed.data.body,
+      },
+      savedAt: parsed.data.savedAt,
+    };
   } catch {
     return null;
   }

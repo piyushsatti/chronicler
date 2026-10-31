@@ -3,6 +3,15 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { ChannelType, PermissionsBitField } from 'discord.js';
+
+function publicChannel() {
+  return {
+    type: ChannelType.GuildVoice,
+    guild: { roles: { everyone: { id: 'guild-1' } } },
+    permissionsFor: () => new PermissionsBitField(['ViewChannel']),
+  } as never;
+}
 
 function fakeMessage(overrides: Record<string, unknown> = {}) {
   return {
@@ -43,6 +52,12 @@ describe('normalizeMessageCreate', () => {
     );
 
     expect(event).toBeNull();
+  });
+
+  it('skips Discord system messages from human authors', async () => {
+    const { normalizeMessageCreate } = await import('@discord/activity/normalize.js');
+
+    expect(normalizeMessageCreate(fakeMessage({ system: true }) as never)).toBeNull();
   });
 
   it('skips a message missing a channel id', async () => {
@@ -139,7 +154,7 @@ describe('VoiceSessionTracker', () => {
 
   it('returns null on join (opens a session, nothing to forward yet)', async () => {
     const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
-    const tracker = new VoiceSessionTracker();
+    const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
 
     const event = tracker.handleVoiceStateUpdate(
       fakeVoiceState(null) as never,
@@ -151,7 +166,7 @@ describe('VoiceSessionTracker', () => {
 
   it('emits a voice SniffedEvent on leave with rounded elapsed minutes', async () => {
     const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
-    const tracker = new VoiceSessionTracker();
+    const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
 
     tracker.handleVoiceStateUpdate(
       fakeVoiceState(null) as never,
@@ -175,7 +190,7 @@ describe('VoiceSessionTracker', () => {
 
   it('returns null for a sub-minute session', async () => {
     const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
-    const tracker = new VoiceSessionTracker();
+    const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
 
     tracker.handleVoiceStateUpdate(
       fakeVoiceState(null) as never,
@@ -193,7 +208,7 @@ describe('VoiceSessionTracker', () => {
 
   it('closes the old session and opens a new one on channel switch', async () => {
     const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
-    const tracker = new VoiceSessionTracker();
+    const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
 
     tracker.handleVoiceStateUpdate(
       fakeVoiceState(null) as never,
@@ -219,7 +234,7 @@ describe('VoiceSessionTracker', () => {
 
   it('ignores mute/deaf-only updates (no channel transition)', async () => {
     const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
-    const tracker = new VoiceSessionTracker();
+    const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
 
     tracker.handleVoiceStateUpdate(
       fakeVoiceState(null) as never,
@@ -235,7 +250,7 @@ describe('VoiceSessionTracker', () => {
 
   it('ignores bot voice states entirely', async () => {
     const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
-    const tracker = new VoiceSessionTracker();
+    const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
 
     tracker.handleVoiceStateUpdate(
       fakeVoiceState(null, 'bot-1', true) as never,
@@ -252,7 +267,7 @@ describe('VoiceSessionTracker', () => {
 
   it('starts empty and emits nothing for time it did not see', async () => {
     const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
-    const tracker = new VoiceSessionTracker();
+    const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
 
     expect(tracker.sessionCount()).toBe(0);
     const leave = tracker.handleVoiceStateUpdate(

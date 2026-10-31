@@ -13,6 +13,8 @@ import {
   ruleDocumentWireSchema,
   rulesListWireSchema,
 } from './rules.wire.schema.js';
+import { cardExcerpt } from '../../../utils/markdownText.js';
+import { acceptCompletePage } from '../../../utils/completePages.js';
 
 export type RuleListItemView = {
   id: string;
@@ -44,54 +46,13 @@ export type RulesHubView = {
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
-/** A leading YAML block's `summary:` line, unquoted. */
-function frontmatterSummary(body: string): string | null {
-  const block = FRONTMATTER.exec(body)?.[1];
-  const line = block?.split(/\r?\n/).find((entry) => /^summary\s*:/.test(entry));
-  if (!line) return null;
-  const value = line
-    .replace(/^summary\s*:\s*/, '')
-    .trim()
-    .replace(/^(['"])(.*)\1$/, '$2');
-  return value || null;
-}
-
-/** Reduces Markdown to the words a reader would see, for one-line previews. */
-export function markdownToPlainText(body: string): string {
-  return body
-    .replace(FRONTMATTER, '')
-    .replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, ' ')
-    .replace(/<[^>\n]+>/g, ' ')
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(
-      /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
-      (_m, target: string, label?: string) => (label ?? target).trim(),
-    )
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]+)\]\[[^\]]*\]/g, '$1')
-    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
-    .replace(/^\s{0,3}>\s?/gm, '')
-    .replace(/^\s*(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/gm, '')
-    .replace(/^\s*(?:[-*_]\s*){3,}$/gm, ' ')
-    .replace(/^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-*:?\s*$/gm, ' ')
-    .replace(/\|/g, ' ')
-    .replace(/(\*\*|__)(.+?)\1/g, '$2')
-    .replace(/(^|[^\w*])[*_]([^*_\n]+)[*_](?=[^\w*]|$)/g, '$1$2')
-    .replace(/~~(.+?)~~/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-const EXCERPT_LENGTH = 180;
+/* Short enough that a two-line card clamp rarely cuts it, so the visible
+ * text ends on the whole word and "…" from plainExcerpt. */
+const EXCERPT_LENGTH = 100;
 
 function excerptOf(body: string | null | undefined): string | null {
-  if (!body) return null;
-  const text = frontmatterSummary(body) ?? markdownToPlainText(body);
-  if (text.length <= EXCERPT_LENGTH) return text || null;
-  const cut = text.slice(0, EXCERPT_LENGTH);
-  const lastSpace = cut.lastIndexOf(' ');
-  return `${(lastSpace > EXCERPT_LENGTH / 2 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+  // The shared card rule: an authored summary first, else the body's prose.
+  return cardExcerpt(body, EXCERPT_LENGTH);
 }
 
 function mapListItem(
@@ -182,20 +143,9 @@ export async function loadRulesHub(session: RulesReadSession): Promise<RulesHubV
       if (!result.ok) throw toAppError({ failure: result.failure }, 'rules:list');
       const page = result.data;
       const items = [...page.guides, ...page.rulings];
-      if (
-        page.total > 2_147_483_647 ||
-        (total !== undefined && page.total !== total) ||
-        items.length > 100 ||
-        ids.size + items.length > page.total ||
-        (items.length < 100 && ids.size + items.length < page.total)
-      )
+      const pageIds = items.map((item) => item.id);
+      if (!acceptCompletePage(ids, total, { total: page.total, ids: pageIds }))
         throw toAppError({ failure: 'InvalidWire' }, 'rules:list-pages');
-      for (const item of items) {
-        const id = item.id.toLowerCase();
-        if (ids.has(id))
-          throw toAppError({ failure: 'InvalidWire' }, 'rules:list-pages');
-        ids.add(id);
-      }
       guides.push(...page.guides);
       rulings.push(...page.rulings);
       total = page.total;

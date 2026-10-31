@@ -42,13 +42,11 @@ func TestFrontendQuestRegionsProjectAcrossCommandsAndReads(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertRegions(byCode)
-	missing := uuid.NewString()
-	batch, err := repo.ReadBatchQuests(ctx, f.actor, []IDKey{{ID: created.Id}, {ID: missing}, {ID: created.Id}})
-	if err != nil || len(batch) != 3 || batch[1].Value != nil {
-		t.Fatalf("batch=%+v err=%v", batch, err)
+	byID, err := repo.ReadQuest(ctx, f.actor, QuestSpec{Id: &created.Id})
+	if err != nil {
+		t.Fatal(err)
 	}
-	assertRegions(batch[0].Value)
-	assertRegions(batch[2].Value)
+	assertRegions(byID)
 	arc, err := f.commands.UpsertQuestArc(ctx, f.actor, UpsertQuestArcSpec{Name: "Region projection arc"}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
 	if err != nil {
 		t.Fatal(err)

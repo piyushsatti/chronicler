@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { DateTimePicker } from '../../../components/interactive/DateTimePicker.js';
 import { Menu } from '../../../components/primitives/Menu.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { QUEST_STATUSES, TAG_SUGGESTIONS, WORLD_SEASONS } from '../editorConstants.js';
-import type { EditorOptions, FieldSchema } from '../types.js';
+import type { EditorFieldOptions, EditorOptions, FieldSchema } from '../types.js';
+import {
+  PointcrawlLinkPicker,
+  type PointcrawlLinkValue,
+} from '../../../components/domain/PointcrawlLinkPicker.js';
+import { toAppError } from '../../../errors/toAppError.js';
 import type { EditorRegionRow } from '../adapters/editorRegionsAdapter.js';
 import { StubNotice } from '../../../components/foundation/StubNotice.js';
 import styles from '../editor.module.css';
@@ -91,30 +96,44 @@ export function TextField({
   onChange,
   onCommit,
   bad,
+  suggestions,
 }: {
   field: FieldSchema & { mono?: boolean };
   value: string;
   onChange: (v: string) => void;
   onCommit?: () => void;
   bad?: boolean;
+  /** Offered by the browser as the user types; any other text is still accepted. */
+  suggestions?: string[];
 }): React.JSX.Element {
+  const listId = useId();
   return (
-    <input
-      aria-label={field.label}
-      aria-required={field.required || undefined}
-      aria-invalid={bad || undefined}
-      className={`pf-input field${field.mono || field.type === 'code' ? ' pf-mono' : ''}${bad ? ' pf-bad' : ''}`}
-      value={value ?? ''}
-      readOnly={field.readOnly}
-      placeholder={field.placeholder ?? ''}
-      style={
-        field.mono || field.type === 'code'
-          ? { fontFamily: 'var(--font-mono)' }
-          : undefined
-      }
-      onChange={(e) => onChange(e.target.value)}
-      onBlur={() => onCommit?.()}
-    />
+    <>
+      <input
+        list={suggestions?.length ? listId : undefined}
+        aria-label={field.label}
+        aria-required={field.required || undefined}
+        aria-invalid={bad || undefined}
+        className={`pf-input field${field.mono || field.type === 'code' ? ' pf-mono' : ''}${bad ? ' pf-bad' : ''}`}
+        value={value ?? ''}
+        readOnly={field.readOnly}
+        placeholder={field.placeholder ?? ''}
+        style={
+          field.mono || field.type === 'code'
+            ? { fontFamily: 'var(--font-mono)' }
+            : undefined
+        }
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => onCommit?.()}
+      />
+      {suggestions?.length ? (
+        <datalist id={listId}>
+          {suggestions.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+      ) : null}
+    </>
   );
 }
 
@@ -221,6 +240,99 @@ export function RegionField({
       renderOption={(o) => o as string}
       onChange={onChange}
     />
+  );
+}
+
+/** Optional series for a new quest: the viewer's own series, or none. */
+export function SeriesField({
+  value,
+  onChange,
+  options,
+  current,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: EditorOptions<{ id: string; name: string }>;
+  /** A saved quest's series, kept as a choice even when the viewer's own list lacks it. */
+  current?: { id: string; name: string };
+}): React.JSX.Element {
+  if (options.status === 'error' || options.status === 'loading')
+    return (
+      <div>
+        <OptionState options={options} label="Series" />
+      </div>
+    );
+  const listed = options.status === 'ready' ? options.items : [];
+  const items = current?.id && !listed.some((item) => item.id === current.id) ? [current, ...listed] : listed;
+  const choices: [string, string][] = [
+    ['', 'No series'],
+    ...items.map((item): [string, string] => [item.id, item.name]),
+  ];
+  const foreign = value !== '' && !items.some((item) => item.id === value);
+  const picker = (
+    <Picker
+      value={value}
+      options={choices}
+      placeholder="No series"
+      renderValue={(v) => choices.find(([id]) => id === v)?.[1] ?? 'No series'}
+      renderOption={(o) => (Array.isArray(o) ? o[1] : o)}
+      onChange={onChange}
+    />
+  );
+  if (!foreign) return picker;
+  // A linked or recovered series the viewer may not use is not sent; say so.
+  return (
+    <div className="stack" data-gap="1">
+      {picker}
+      <p className="pf-err" role="status">
+        You can’t add quests to that series. The quest will be created with no series.
+      </p>
+    </div>
+  );
+}
+
+/** Optional Discord voice channel for a quest, picked from the admin's list. */
+export function VoiceChannelField({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: EditorOptions<{ name: string; channelId: string }>;
+}): React.JSX.Element {
+  if (options.status === 'error' || options.status === 'loading')
+    return (
+      <div>
+        <OptionState options={options} label="Voice channels" />
+      </div>
+    );
+  const items = options.status === 'ready' ? options.items : [];
+  const unlisted = value !== '' && !items.some((item) => item.channelId === value);
+  const choices: [string, string][] = [
+    ['', 'No voice channel'],
+    ...items.map((item): [string, string] => [item.channelId, item.name]),
+    ...(unlisted
+      ? [[value, 'Saved channel (no longer in the list)'] as [string, string]]
+      : []),
+  ];
+  return (
+    <div className="stack" data-gap="1">
+      <Picker
+        value={value}
+        options={choices}
+        placeholder="No voice channel"
+        renderValue={(v) => choices.find(([id]) => id === v)?.[1] ?? 'No voice channel'}
+        renderOption={(o) => (Array.isArray(o) ? o[1] : o)}
+        onChange={onChange}
+      />
+      {options.status === 'empty' ? (
+        <p className="type-caption">
+          No voice channels are listed yet. An admin adds them under Admin, Delivery,
+          Discord settings.
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -370,7 +482,9 @@ export function DateTimeField({
         }}
         ariaLabel={label}
       />
-      <span className="type-caption">Shown in your time zone ({timeZone.replace(/_/g, ' ')})</span>
+      <span className="type-caption">
+        Shown in your time zone ({timeZone.replace(/_/g, ' ')})
+      </span>
       {unresolved?.status === 'gap' ? (
         <p role="alert">This time does not exist in {timeZone}. Choose another time.</p>
       ) : unresolved?.status === 'invalid' ? (
@@ -548,29 +662,72 @@ export function MultiSelectField({
   field,
   value,
   onChange,
+  replaceDefault = false,
 }: {
   field: FieldSchema;
   value: string[];
   onChange: (v: string[]) => void;
+  /** Only on a new record: there the default was preselected, not chosen. */
+  replaceDefault?: boolean;
 }): React.JSX.Element {
   const opts = (field.options ?? []) as (string | [string, string])[];
   const selected = value ?? [];
+  // On a new record the preselected default (a quest's "Standard") gives way to
+  // the first other pick, unless the user chose it here; then it stays alongside
+  // the others. A saved record's values were all chosen, so nothing is replaced.
+  const defaultChosen = useRef(false);
   const toggle = (v: string): void => {
-    onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
+    const fallback = field.defaultOption;
+    if (v === fallback) defaultChosen.current = !selected.includes(v);
+    if (selected.includes(v)) {
+      onChange(selected.filter((x) => x !== v));
+    } else if (
+      replaceDefault &&
+      fallback &&
+      v !== fallback &&
+      !defaultChosen.current &&
+      selected.length === 1 &&
+      selected[0] === fallback
+    ) {
+      onChange([v]);
+    } else {
+      onChange([...selected, v]);
+    }
   };
   return (
     <div className="pf-tags row" data-wrap="1">
       {opts.map((opt) => {
         const [v, label] = Array.isArray(opt) ? opt : [opt, opt];
+        const on = selected.includes(v);
         return (
           <button
             key={v}
             type="button"
             className="pf-tag chip"
-            data-tone={selected.includes(v) ? 'accent' : 'line'}
-            aria-pressed={selected.includes(v)}
+            data-tone={on ? 'accent' : 'line'}
+            data-selected={on ? '1' : undefined}
+            aria-pressed={on}
             onClick={() => toggle(v)}
           >
+            {on ? (
+              <svg
+                className="pf-tag-check"
+                data-el="editor.chip.check"
+                aria-hidden="true"
+                viewBox="0 0 12 12"
+                width="12"
+                height="12"
+              >
+                <path
+                  d="M2.5 6.5 5 9l4.5-6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : null}
             {label}
           </button>
         );
@@ -698,3 +855,40 @@ export function StubField({ field }: { field: FieldSchema }): React.JSX.Element 
 }
 
 export { pfIcon };
+
+/** A quest's expected destinations, searched by hex or location code. A saved quest
+ *  also marks places visited. */
+export function PointcrawlField({
+  value,
+  onChange,
+  places,
+  markVisited = false,
+}: {
+  value: PointcrawlLinkValue[];
+  onChange: (v: PointcrawlLinkValue[]) => void;
+  places: EditorFieldOptions['places'];
+  markVisited?: boolean;
+}): React.JSX.Element {
+  if (places.error)
+    return (
+      <div role="alert">
+        <p>{toAppError(places.error, 'editor:map-places').userMessage}</p>
+        <button type="button" className="pf-input field" onClick={places.onRetry}>
+          Map places unavailable — tap to retry
+        </button>
+      </div>
+    );
+  return (
+    <PointcrawlLinkPicker
+      maps={places.maps}
+      atlasCode={places.atlasCode}
+      onAtlasChange={places.setAtlasCode}
+      nodes={places.nodes}
+      nodesLoading={places.loading}
+      links={value}
+      onChange={onChange}
+      roles={markVisited ? ['expected', 'visited'] : ['expected']}
+      canMarkVisited={markVisited && places.canEdit}
+    />
+  );
+}

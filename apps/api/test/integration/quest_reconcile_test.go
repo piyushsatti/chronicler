@@ -65,9 +65,11 @@ func TestReconcileAfterRunningBurst(t *testing.T) {
 	applier := delivery.NewPostgresRevisionApplier(pool.Pool)
 	// Finish the claimed job via Succeed after sync, then reconcile — mirrors ProcessOne.
 	sync := delivery.RESTSync{
-		Token: "tok", ChannelID: "chan",
+		Token: "tok", GuildID: "111111111111111111",
+		FallbackChannelID: "222222222222222222", FallbackOrigin: "https://chronicler.example",
+		Settings: applier, Quests: applier,
 		HTTP: srv.Client(), APIBase: srv.URL,
-		Apply: applier, Messages: applier,
+		Apply: applier,
 	}
 	var payload jobs.QuestDiscordPayload
 	if err := json.Unmarshal(claimed.Payload, &payload); err != nil {

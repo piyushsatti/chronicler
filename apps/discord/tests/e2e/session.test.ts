@@ -6,7 +6,7 @@ import {
   type ServerResponse,
 } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { ChannelType } from 'discord.js';
+import { ChannelType, PermissionsBitField } from 'discord.js';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { completedQuestion } from '../fixtures/api.js';
 
@@ -27,12 +27,31 @@ function scriptedClient() {
     destroy: ReturnType<typeof vi.fn>;
     once: EventEmitter['once'];
     guilds: { cache: { size: number } };
+    channels: { cache: Map<string, unknown> };
     ws: { shards: Map<number, unknown> };
   };
   client.user = { id: 'bot', tag: 'bot#0001' };
   client.login = vi.fn().mockResolvedValue(undefined);
   client.destroy = vi.fn();
   client.guilds = { cache: { size: 1 } };
+  // Activity is forwarded only from channels everyone can view (finding 32).
+  const everyone = {
+    id: 'test-guild-id',
+    permissions: new PermissionsBitField(['ViewChannel']),
+  };
+  client.channels = {
+    cache: new Map([
+      [
+        'channel-1',
+        {
+          id: 'channel-1',
+          type: ChannelType.GuildText,
+          guild: { id: 'test-guild-id', roles: { everyone } },
+          permissionsFor: () => everyone.permissions,
+        },
+      ],
+    ]),
+  };
   client.ws = { shards: new Map([[0, {}]]) };
   return client;
 }

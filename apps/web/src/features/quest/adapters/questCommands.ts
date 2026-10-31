@@ -6,8 +6,6 @@ import type {
   TransitionQuestStatusMutation,
   QuestSelectParticipantsMutation,
   QuestAttestParticipationMutation,
-  QuestSetPointcrawlLinksMutation,
-  QuestSetArcMutation,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -17,20 +15,15 @@ import TRANSITION from './questTransition.graphql?raw';
 import CLOSE from './questClose.graphql?raw';
 import SELECT from './questSelect.graphql?raw';
 import ATTEST from './questAttest.graphql?raw';
-import POINTCRAWL from './questPointcrawl.graphql?raw';
-import ARC from './questArcEdit.graphql?raw';
 
 export type Attendance = { characterId: string; status: 'played' | 'no_show' };
 export type Reward = { characterId: string; pcxp: number; note?: string };
-export type PointcrawlLink = { pointcrawlNodeId: string; role: 'expected' | 'visited' };
 export type QuestCommand =
   | { kind: 'signup' | 'withdraw'; questId: string; characterId: string }
   | { kind: 'transition'; questId: string; to: 'played' | 'cancelled' }
   | { kind: 'select'; questId: string; characterIds: string[] }
   | { kind: 'attest'; questId: string; entries: Attendance[] }
-  | { kind: 'close'; questId: string; attendance: Attendance[]; rewards: Reward[] }
-  | { kind: 'pointcrawl'; questId: string; links: PointcrawlLink[] }
-  | { kind: 'arc'; questId: string; arcId: string | null; expectedUpdatedAt: string };
+  | { kind: 'close'; questId: string; attendance: Attendance[]; rewards: Reward[] };
 
 const participant = z.object({ characterId: z.string().uuid(), status: z.string() });
 const quest = z.object({ id: z.string().uuid(), status: z.string() });
@@ -100,28 +93,6 @@ export async function executeQuestCommand(
         });
         quest.parse(data.closeQuest);
         return 'Quest closed. The recorded PCXP awards are final.';
-      }
-      case 'pointcrawl': {
-        const data = await graphqlRequest<QuestSetPointcrawlLinksMutation>(POINTCRAWL, {
-          questId,
-          links: command.links,
-          meta,
-        });
-        z.array(
-          z.object({ pointcrawlNodeId: z.string().uuid(), role: z.string() }),
-        ).parse(data.setQuestPointcrawlLinks);
-        return 'Pointcrawl associations saved.';
-      }
-      case 'arc': {
-        const data = await graphqlRequest<QuestSetArcMutation>(ARC, {
-          id: questId,
-          input: { expectedUpdatedAt: command.expectedUpdatedAt, arcId: command.arcId },
-          meta,
-        });
-        z.object({ id: z.string().uuid(), updatedAt: z.string() }).parse(
-          data.updateQuest,
-        );
-        return 'Quest arc membership saved.';
       }
       default: {
         const exhaustive: never = command;

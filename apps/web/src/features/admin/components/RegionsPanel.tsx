@@ -242,9 +242,11 @@ export function RegionsPanel({
             Create region
           </Button>
         </div>
-        <p className="type-caption">
-          Use Advance on an existing region to move it forward.
-        </p>
+        {regions.data.some((region) => view.nextKind(region.kind)) ? (
+          <p className="type-caption">
+            Use Advance on an existing region to move it forward.
+          </p>
+        ) : null}
       </Card>
       {view.advancement ? (
         <Modal

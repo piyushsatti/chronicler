@@ -2,3 +2,13 @@
 .panel :is(h3, p) {
   margin: 0;
 }
+
+/* Fills its list item so the row is one height; the status chips pin to the
+   bottom and line up when a name wraps. */
+.card {
+  block-size: 100%;
+}
+
+.card > :last-child {
+  margin-block-start: auto;
+}

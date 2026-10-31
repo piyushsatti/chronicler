@@ -44,6 +44,26 @@ func (m *MemoryStore) Enqueue(_ context.Context, j Job) error {
 	m.Jobs = append(m.Jobs, j)
 	return nil
 }
+func (m *MemoryStore) EnqueueScheduled(ctx context.Context, j Job) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, old := range m.Jobs {
+		if old.Key == j.Key {
+			return false, nil
+		}
+	}
+	j.ID = strconv.Itoa(len(m.Jobs) + 1)
+	j.State = Queued
+	j.NextRunAt = m.now()
+	if j.Payload == nil {
+		j.Payload = []byte(`{}`)
+	}
+	m.Jobs = append(m.Jobs, j)
+	return true, nil
+}
 func (m *MemoryStore) ClaimOne(ctx context.Context, lane string) (Job, error) {
 	if e := ctx.Err(); e != nil {
 		return Job{}, e
@@ -89,9 +109,12 @@ func (m *MemoryStore) Succeed(ctx context.Context, r Receipt) error {
 	})
 }
 func (m *MemoryStore) Fail(ctx context.Context, r Receipt, state State, reason string) error {
+	return m.FailWithCode(ctx, r, state, reason, "")
+}
+func (m *MemoryStore) FailWithCode(ctx context.Context, r Receipt, state State, reason, safeCode string) error {
 	return m.mutate(ctx, r, func(j *Job, t int64, n time.Time) error {
 		p, _ := json.Marshal(map[string]string{"reason": reason})
-		return j.Finish(t, n, "fail", state, p, 0, reason)
+		return j.FailWithCode(t, n, state, p, reason, safeCode)
 	})
 }
 func (m *MemoryStore) Retry(ctx context.Context, r Receipt, after time.Duration, reason string) error {

@@ -3,12 +3,11 @@ package site
 import (
 	"context"
 	"encoding/json"
-	"reflect"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
+	"github.com/piyushsatti/chronicler/apps/api/internal/delivery"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
@@ -25,30 +24,11 @@ type ProductCommands struct {
 
 func NewProductCommands(runner uow.Runner[ProductCommandRepos], clock product.Clock, ids product.IDGenerator) (*ProductCommands, error) {
 	for _, dep := range []any{runner, clock, ids} {
-		if dep == nil {
+		if product.MissingDependency(dep) {
 			return nil, apierr.New(apierr.Internal, "site command dependencies required")
-		}
-		v := reflect.ValueOf(dep)
-		switch v.Kind() {
-		case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-			if v.IsNil() {
-				return nil, apierr.New(apierr.Internal, "site command dependencies required")
-			}
 		}
 	}
 	return &ProductCommands{Runner: runner, Clock: clock, IDs: ids}, nil
-}
-
-func siteCommandDependencyMissing(value any) bool {
-	if value == nil {
-		return true
-	}
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-		return v.IsNil()
-	}
-	return false
 }
 
 func runSiteCommand[T any](ctx context.Context, s ProductCommands, actor auth.Authority, operation string, spec any, meta product.CommandMeta, subjectID string, mutate func(ProductCommandRepos, auth.Authority, time.Time) (T, error)) (T, error) {
@@ -92,7 +72,7 @@ func runSiteCommand[T any](ctx context.Context, s ProductCommands, actor auth.Au
 func admitSiteCommand(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation string) (auth.Authority, auth.Request, auth.Decision, error) {
 	var zero auth.Decision
 	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-		if siteCommandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return auth.Authority{}, auth.Request{}, zero, apierr.New(apierr.Internal, "site transaction dependencies required")
 		}
 	}
@@ -119,7 +99,7 @@ func admitSiteCommand(ctx context.Context, repos ProductCommandRepos, actor auth
 
 func completeSiteCommand[T any](ctx context.Context, repos ProductCommandRepos, claim idempotency.Claim, result T, decision auth.Decision, actor auth.Authority, request auth.Request, subjectID string, at time.Time) error {
 	if decision.UsedOverride {
-		if siteCommandDependencyMissing(repos.Audit) {
+		if product.MissingDependency(repos.Audit) {
 			return apierr.New(apierr.Internal, "override recorder required")
 		}
 		if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{ActorID: actor.Claims().MemberID, Operation: request.Operation(), SubjectType: "site", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at}); err != nil {
@@ -134,11 +114,11 @@ func completeSiteCommand[T any](ctx context.Context, repos ProductCommandRepos, 
 }
 
 func siteCommandID(value *string) error {
-	parsed, err := uuid.Parse(*value)
-	if err != nil || parsed == uuid.Nil || !strings.EqualFold(parsed.String(), *value) {
+	canonical, ok := product.CanonicalPublicID(*value)
+	if !ok {
 		return apierr.New(apierr.Invalid, "invalid public id")
 	}
-	*value = parsed.String()
+	*value = canonical
 	return nil
 }
 
@@ -196,8 +176,8 @@ func (s ProductCommands) UpdateHomeBanner(ctx context.Context, actor auth.Author
 func (s ProductCommands) UpdateQuestAnnouncementRoleSetting(ctx context.Context, actor auth.Authority, spec UpdateQuestAnnouncementRoleSettingSpec, meta product.CommandMeta) (QuestAnnouncementRoleSettingView, error) {
 	if spec.Input.RoleId != nil {
 		roleID := strings.TrimSpace(*spec.Input.RoleId)
-		if roleID == "" || len(roleID) > 64 {
-			return QuestAnnouncementRoleSettingView{}, apierr.New(apierr.Invalid, "invalid announcement role id")
+		if !delivery.ValidSnowflake(roleID) {
+			return QuestAnnouncementRoleSettingView{}, apierr.New(apierr.Invalid, "announcement role ID must be a Discord ID of 17 to 20 digits")
 		}
 		spec.Input.RoleId = &roleID
 	}

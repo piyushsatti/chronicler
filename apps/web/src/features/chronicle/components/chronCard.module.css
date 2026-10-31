@@ -67,7 +67,7 @@
   max-width: var(--page-max-reading);
   margin: var(--sp-2) 0 0;
   color: var(--color-text-2);
-  font-family: var(--font-narrative);
+  font-family: var(--font-body);
   font-size: 17px;
   line-height: 1.55;
 }

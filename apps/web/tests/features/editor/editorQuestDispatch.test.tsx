@@ -40,7 +40,7 @@ function questMeta(scheduledAt: string) {
     regions: ['region-id'],
     genres: [],
     tags: [],
-    signupType: 'open',
+    signupType: 'dm_pick',
     additionalInfo: 'Retained note',
   };
 }
@@ -134,3 +134,250 @@ it.each(['2026-03-08T02:30', '2026-11-01T01:30', '', '2026-02-30T12:00:00Z'])(
     expect(operations).toEqual([]);
   },
 );
+
+const nodeA = '22222222-2222-4222-8222-222222222222';
+const nodeB = '33333333-3333-4333-8333-333333333333';
+const arcA = '44444444-4444-4444-8444-444444444444';
+const arcB = '55555555-5555-4555-8555-555555555555';
+
+async function saveEdit(
+  saved: Record<string, unknown>,
+  changed: Record<string, unknown>,
+) {
+  const operations: string[] = [];
+  const inputs: Record<string, { input: Record<string, unknown> }> = {};
+  server.use(
+    graphql.operation(({ operationName, variables }) => {
+      operations.push(operationName);
+      inputs[operationName] = variables as { input: Record<string, unknown> };
+      return HttpResponse.json({
+        data: {
+          updateQuest: { id, shortCode: 'Q-ONE', updatedAt: '2030-01-01T00:00:00Z' },
+          setQuestPointcrawlLinks: [],
+        },
+      });
+    }),
+  );
+  const initial = { ...initialQuest('edit'), meta: { ...initialQuest('edit').meta, ...saved } };
+  const client = createTestQueryClient();
+  const { result } = renderHook(
+    () =>
+      useEditorPublish({
+        typeKey: 'quest',
+        mode: 'edit',
+        initial,
+        meta: { ...questMeta(sourceTime), ...changed },
+        body: 'Edited brief',
+        onInvalidTitle: () => {},
+        onSuccess: () => {},
+      }),
+    {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children),
+    },
+  );
+  await act(async () => {
+    await result.current.mutateAsync(true);
+  });
+  return { operations, inputs };
+}
+
+it('saves a changed series and destinations of an edited Quest, places first', async () => {
+  const { operations, inputs } = await saveEdit(
+    { arcId: arcA, pointcrawlLinks: [{ pointcrawlNodeId: nodeA, role: 'visited' }] },
+    {
+      arcId: arcB,
+      pointcrawlLinks: [
+        { pointcrawlNodeId: nodeA, role: 'visited' },
+        { pointcrawlNodeId: nodeB, role: 'expected' },
+      ],
+    },
+  );
+  expect(operations).toEqual(['EditorSetQuestPlaces', 'UpdateQuest']);
+  expect(inputs.UpdateQuest.input.arcId).toBe(arcB);
+});
+
+it('saves a visited destination for a newly created Quest, places after creation', async () => {
+  const operations: string[] = [];
+  const inputs: Record<string, Record<string, unknown>> = {};
+  server.use(
+    graphql.operation(({ operationName, variables }) => {
+      operations.push(operationName);
+      inputs[operationName] = variables as Record<string, unknown>;
+      return HttpResponse.json({
+        data: {
+          createQuest: { id, shortCode: 'Q-ONE', updatedAt: '2030-01-01T00:00:00Z' },
+          setQuestPointcrawlLinks: [],
+        },
+      });
+    }),
+  );
+  const initial = initialQuest('new');
+  const client = createTestQueryClient();
+  const { result } = renderHook(
+    () =>
+      useEditorPublish({
+        typeKey: 'quest',
+        mode: 'new',
+        initial,
+        meta: {
+          ...questMeta(sourceTime),
+          pointcrawlLinks: [{ pointcrawlNodeId: nodeA, role: 'visited' }],
+        },
+        body: 'Edited brief',
+        onInvalidTitle: () => {},
+        onSuccess: () => {},
+      }),
+    {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children),
+    },
+  );
+  await act(async () => {
+    await result.current.mutateAsync(true);
+  });
+  expect(operations).toEqual(['CreateQuest', 'EditorSetQuestPlaces']);
+  expect(inputs.EditorSetQuestPlaces.links).toEqual([
+    { pointcrawlNodeId: nodeA, role: 'visited' },
+  ]);
+});
+
+it('takes an edited Quest out of its series when the series is cleared', async () => {
+  const { inputs } = await saveEdit({ arcId: arcA }, { arcId: '' });
+  expect(inputs.UpdateQuest.input.arcId).toBeNull();
+});
+
+/** Saves one edited Quest repeatedly while every quest update fails, recording each places write. */
+function failingQuestUpdates() {
+  const placeWrites: { links: unknown; key: string }[] = [];
+  server.use(
+    graphql.operation(({ operationName, variables }) => {
+      if (operationName === 'EditorSetQuestPlaces') {
+        placeWrites.push({
+          links: variables.links,
+          key: (variables.meta as { idempotencyKey: string }).idempotencyKey,
+        });
+        return HttpResponse.json({ data: { setQuestPointcrawlLinks: [] } });
+      }
+      return HttpResponse.json({ errors: [{ message: 'Temporary failure' }] });
+    }),
+  );
+  const initial = initialQuest('edit');
+  initial.meta = { ...initial.meta, pointcrawlLinks: [] };
+  const client = createTestQueryClient();
+  const { result, rerender } = renderHook(
+    ({ links }: { links: { pointcrawlNodeId: string; role: string }[] }) =>
+      useEditorPublish({
+        typeKey: 'quest',
+        mode: 'edit',
+        initial,
+        meta: { ...questMeta(sourceTime), pointcrawlLinks: links },
+        body: 'Edited brief',
+        onInvalidTitle: () => {},
+        onSuccess: () => {},
+      }),
+    {
+      initialProps: { links: [] as { pointcrawlNodeId: string; role: string }[] },
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children),
+    },
+  );
+  const save = async (links: { pointcrawlNodeId: string; role: string }[]) => {
+    rerender({ links });
+    await act(async () => {
+      await expect(result.current.mutateAsync(false)).rejects.toBeDefined();
+    });
+  };
+  return { placeWrites, save };
+}
+
+it('clears destinations the server stored before a failed quest update, though the loaded Quest had none', async () => {
+  const { placeWrites, save } = failingQuestUpdates();
+  await save([{ pointcrawlNodeId: nodeA, role: 'expected' }]);
+  await save([]);
+  expect(placeWrites.map((write) => write.links)).toEqual([
+    [{ pointcrawlNodeId: nodeA, role: 'expected' }],
+    [],
+  ]);
+});
+
+it('writes destinations A, B, then A again with a fresh key each time', async () => {
+  const a = [{ pointcrawlNodeId: nodeA, role: 'expected' }];
+  const b = [{ pointcrawlNodeId: nodeB, role: 'expected' }];
+  const { placeWrites, save } = failingQuestUpdates();
+  await save(a);
+  await save(b);
+  await save(a);
+  expect(placeWrites.map((write) => write.links)).toEqual([a, b, a]);
+  expect(new Set(placeWrites.map((write) => write.key)).size).toBe(3);
+});
+
+it('leaves series and destinations alone when an edited Quest did not change them', async () => {
+  const link = { pointcrawlNodeId: nodeA, role: 'expected' };
+  const { operations, inputs } = await saveEdit(
+    { arcId: arcA, pointcrawlLinks: [link] },
+    { arcId: arcA, pointcrawlLinks: [link] },
+  );
+  expect(operations).toEqual(['UpdateQuest']);
+  expect(inputs.UpdateQuest.input).not.toHaveProperty('arcId');
+});
+
+it('never creates a second Quest when a save after a failed places write changes or keeps the form', async () => {
+  const operations: string[] = [];
+  let failPlaces = true;
+  server.use(
+    graphql.operation(({ operationName }) => {
+      operations.push(operationName);
+      if (operationName === 'EditorSetQuestPlaces' && failPlaces)
+        return HttpResponse.json({ errors: [{ message: 'Temporary failure' }] });
+      return HttpResponse.json({
+        data: {
+          createQuest: { id, shortCode: 'Q-ONE', updatedAt: '2030-01-01T00:00:00Z' },
+          setQuestPointcrawlLinks: [],
+        },
+      });
+    }),
+  );
+  const initial = initialQuest('new');
+  const client = createTestQueryClient();
+  const { result, rerender } = renderHook(
+    ({ title }: { title: string }) =>
+      useEditorPublish({
+        typeKey: 'quest',
+        mode: 'new',
+        initial,
+        meta: {
+          ...questMeta(sourceTime),
+          title,
+          pointcrawlLinks: [{ pointcrawlNodeId: nodeA, role: 'expected' }],
+        },
+        body: 'Edited brief',
+        onInvalidTitle: () => {},
+        onSuccess: () => {},
+      }),
+    {
+      initialProps: { title: 'Quest' },
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children),
+    },
+  );
+  await act(async () => {
+    await expect(result.current.mutateAsync(false)).rejects.toMatchObject({
+      userMessage:
+        'The quest was created, but its expected destinations were not saved. Save again to retry them.',
+    });
+  });
+  rerender({ title: 'Renamed quest' });
+  await act(async () => {
+    await expect(result.current.mutateAsync(false)).rejects.toMatchObject({
+      userMessage: 'The quest was already created. Open it to make further changes.',
+    });
+  });
+  expect(operations.filter((name) => name === 'CreateQuest')).toHaveLength(1);
+  failPlaces = false;
+  rerender({ title: 'Quest' });
+  await act(async () => {
+    await result.current.mutateAsync(false);
+  });
+  expect(operations).toEqual(['CreateQuest', 'EditorSetQuestPlaces', 'EditorSetQuestPlaces']);
+});

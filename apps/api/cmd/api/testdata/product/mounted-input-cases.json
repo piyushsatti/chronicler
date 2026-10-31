@@ -2107,7 +2107,7 @@
         "kinds": ["event"],
         "regionIds": ["10000000-0000-4000-8000-000000000021"],
         "scheduledAt": "2026-10-17T19:00:00Z",
-        "signupType": "application",
+        "signupType": "dm_pick",
         "slotsMax": 3,
         "tags": ["bridge"],
         "title": "Bridge at night"
@@ -2198,7 +2198,7 @@
         },
         {
           "field_id": "SDL-QuestEditInput-signupType",
-          "value": "application",
+          "value": "dm_pick",
           "null": "INVALID; no business/history/notification/job/receipt writes",
           "omitted": "preserve old value for patch; create uses explicit documented default",
           "complete": false

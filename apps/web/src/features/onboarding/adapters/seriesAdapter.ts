@@ -6,6 +6,7 @@ import type {
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { safeAppError, toAppError } from '../../../errors/toAppError.js';
+import { TransportError } from '../../../errors/types.js';
 import ARC from './seriesArc.graphql?raw';
 import AUTHORITY from './seriesAuthority.graphql?raw';
 import UPSERT from './seriesUpsert.graphql?raw';
@@ -100,6 +101,8 @@ export async function loadSeriesAuthority(handle: string) {
       .parse(wire.memberProfile);
     return {
       memberId: profile.member.id,
+      /** DM profile review status: draft, pending, approved or rejected; null when there is none. */
+      dmStatus: profile.dmProfile?.status ?? null,
       canCreate:
         profile.member.status === 'active' &&
         profile.member.roles.includes('dm') &&
@@ -125,6 +128,18 @@ export async function upsertSeriesArc(
     });
     return arcSchema.parse(wire.upsertQuestArc);
   } catch (error) {
+    // Expected refusals carry the API's reason; anything else stays generic.
+    const message =
+      error instanceof TransportError &&
+      (error.code === 'INVALID' || error.code === 'FORBIDDEN')
+        ? (error.serverMessage?.trim() ?? '')
+        : '';
+    if (message)
+      throw safeAppError(
+        `The series was not saved: ${message.charAt(0).toUpperCase()}${message.slice(1)}.`,
+        'series:write',
+        error,
+      );
     throw toAppError(
       error instanceof z.ZodError ? { failure: 'InvalidWire' } : error,
       'series:write',

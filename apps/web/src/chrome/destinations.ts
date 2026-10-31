@@ -8,7 +8,8 @@ export type SiteDestination = {
 export type NavAuth = {
   isAuthenticated: boolean;
   isAdmin: boolean;
-  canVerify: boolean;
+  /** Holds the dm role (or admin): shows the DM dashboard link. */
+  isDm?: boolean;
 };
 
 function matchesPath(pathname: string, prefixes: readonly string[]): boolean {
@@ -17,7 +18,7 @@ function matchesPath(pathname: string, prefixes: readonly string[]): boolean {
   );
 }
 
-/** Six live bar destinations. Characters and Map are not bar items. */
+/** Seven live bar destinations. Characters is not a bar item. */
 export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
   {
     id: 'home',
@@ -43,7 +44,13 @@ export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
     label: 'Codex',
     href: '/codex',
     matches: (pathname) =>
-      matchesPath(pathname, ['/codex', '/npcs', '/factions', '/regions', '/map']),
+      matchesPath(pathname, ['/codex', '/npcs', '/factions', '/regions']),
+  },
+  {
+    id: 'map',
+    label: 'Map',
+    href: '/map',
+    matches: (pathname) => matchesPath(pathname, ['/map']),
   },
   {
     id: 'rules',
@@ -60,26 +67,26 @@ export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
   },
 ];
 
-const VERIFY_DESTINATION: SiteDestination = {
-  id: 'verification',
-  label: 'Verification',
-  href: '/admin/review',
-  matches: (pathname) => matchesPath(pathname, ['/admin/review']),
-};
-
-/** The admin workspace, minus Verification, which keeps its own link. */
+/** Review stays reachable as Admin → Review, so it has no bar item of its own. */
 const ADMIN_DESTINATION: SiteDestination = {
   id: 'admin',
   label: 'Admin',
   href: '/admin',
-  matches: (pathname) =>
-    matchesPath(pathname, ['/admin', '/gallery']) && !VERIFY_DESTINATION.matches(pathname),
+  matches: (pathname) => matchesPath(pathname, ['/admin', '/gallery']),
 };
 
-/** Verification and Admin join the same link list when the member holds the right. */
+/** The member's DM dashboard; `/dms` (the directory) stays under Community. */
+const DM_DESTINATION: SiteDestination = {
+  id: 'dm',
+  label: 'DM',
+  href: '/dm',
+  matches: (pathname) => matchesPath(pathname, ['/dm']),
+};
+
+/** DM and Admin join the same link list when the member holds the role. */
 export function destinationsForAuth(auth?: NavAuth): readonly SiteDestination[] {
   const extras = [
-    ...(auth?.canVerify ? [VERIFY_DESTINATION] : []),
+    ...(auth?.isDm ? [DM_DESTINATION] : []),
     ...(auth?.isAdmin ? [ADMIN_DESTINATION] : []),
   ];
   return [...PRIMARY_DESTINATIONS, ...extras];
@@ -89,9 +96,6 @@ export function currentDestinationId(
   pathname: string,
   destinations: readonly SiteDestination[] = PRIMARY_DESTINATIONS,
 ): string {
-  if (VERIFY_DESTINATION.matches(pathname)) {
-    return VERIFY_DESTINATION.id;
-  }
   const match = destinations.find((destination) => destination.matches(pathname));
   return match?.id ?? 'home';
 }

@@ -421,8 +421,15 @@ input MapCreateInput {
   name: String!
   atlasCode: String!
   family: String!
+  grid: String! = "point"
   mapKind: String!
   regionId: ID
+  assetPath: String
+}
+input MapUpdateInput {
+  name: String!
+  family: String!
+  grid: String!
   assetPath: String
 }
 input QuestPointcrawlLinkInput {
@@ -473,6 +480,7 @@ input QuestEditInput {
   apl: Int
   signupType: String
   additionalInfo: String
+  voiceChannelId: String
 }
 input QuestSummaryInput {
   documentId: ID
@@ -497,6 +505,15 @@ input HomeBannerInput {
   mediaKind: String
   mediaUrl: String
   mediaLabel: String
+}
+input DiscordVoiceChannelInput {
+  name: String!
+  channelId: String!
+}
+input DiscordSettingsInput {
+  announceChannelId: String
+  roleId: String
+  voiceChannels: [DiscordVoiceChannelInput!]!
 }
 input AnnouncementRoleInput {
   enabled: Boolean!
@@ -554,7 +571,13 @@ extend type Query {
     offset: Int! = 0
   ): DocumentRevisionPage!
   documentsTrash(limit: Int! = 50, offset: Int! = 0): DocumentListResult!
-  previewBody(body: String!, audience: PreviewAudience!, authorId: ID): String!
+  previewBody(
+    body: String!
+    audience: PreviewAudience!
+    authorId: ID
+    memberHandle: String
+  ): String!
+  auditBody(body: String!): [BodySpanAudit!]!
   lieutenantAssignments(
     memberId: ID
     npcDocumentId: ID
@@ -689,6 +712,45 @@ type LieutenantAssignmentType {
 enum PreviewAudience {
   PLAYER
   DM
+}
+
+"""
+Why an audited body span matters: DM and MEMBER spans are hidden from other
+readers, MALFORMED spans from everyone; SPOILER spans are visible but blurred;
+LOOKALIKE spans are visible text whose callout looks like a marker but is not.
+LIST_NESTED is a diagnostic: a marker does not protect the whole list item.
+"""
+enum BodySpanKind {
+  DM
+  MEMBER
+  SPOILER
+  MALFORMED
+  LOOKALIKE
+  LIST_NESTED
+}
+
+"""
+One marked span of an unsaved body, from the server's own marker parser.
+Lines are 1-based and inclusive. handle is the member a MEMBER span addresses;
+suggestion is a best-effort corrected marker for MALFORMED and LOOKALIKE spans.
+LIST_NESTED records locate accepted markers inside lists, separately from
+projection spans; they have no token replacement suggestion.
+token is the exact source text of the marker defining the span (the offending
+token for MALFORMED and LOOKALIKE): `[!` through the first `]`, or, when
+unclosed, `[!` and its first word only, so replacing it with suggestion keeps
+the prose after it. tokenLine is 1-based; tokenColumn is 1-based and
+counted in UTF-16 code units, so an editor can replace exactly that range with
+suggestion without parsing marker grammar.
+"""
+type BodySpanAudit {
+  startLine: Int!
+  endLine: Int!
+  kind: BodySpanKind!
+  handle: String
+  suggestion: String
+  token: String
+  tokenLine: Int
+  tokenColumn: Int
 }
 
 type SummaryDerivedType {
@@ -1255,6 +1317,7 @@ input CreateQuestInput {
   apl: Int = null
   signupType: String = null
   additionalInfo: String = null
+  voiceChannelId: String = null
 }
 
 type OpenQuestSeatType {
@@ -1272,6 +1335,17 @@ type OpenQuestSeatType {
 type OpenQuestSeatsResult {
   entries: [OpenQuestSeatType!]!
   total: Int!
+}
+
+type DiscordVoiceChannelType {
+  name: String!
+  channelId: String!
+}
+
+type DiscordSettingsType {
+  announceChannelId: String
+  roleId: String
+  voiceChannels: [DiscordVoiceChannelType!]!
 }
 
 type QuestAnnouncementRoleSettingType {
@@ -1395,6 +1469,7 @@ type QuestType {
   genres: [String!]!
   apl: Int
   signupType: String
+  voiceChannelId: String
   createdBy: ID!
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -1461,6 +1536,8 @@ extend type Query {
   discordDeliveryMode: String!
   homeBanner: HomeBannerType!
   questAnnouncementRoleSetting: QuestAnnouncementRoleSettingType!
+  discordSettings: DiscordSettingsType!
+  questVoiceChannels: [DiscordVoiceChannelType!]!
 }
 extend type Mutation {
   updateHomeBanner(input: HomeBannerInput!, meta: CommandMeta!): HomeBannerType!
@@ -1468,6 +1545,10 @@ extend type Mutation {
     input: AnnouncementRoleInput!
     meta: CommandMeta!
   ): QuestAnnouncementRoleSettingType!
+  updateDiscordSettings(
+    input: DiscordSettingsInput!
+    meta: CommandMeta!
+  ): DiscordSettingsType!
   redriveDiscordDelivery(
     jobId: ID!
     reason: String!
@@ -1563,6 +1644,7 @@ input DmSummaryFiltersInput {
 type GameDayCellType {
   realDate: Date!
   gameDay: Int
+  gameDate: GameDateType
 }
 
 type HomeBannerType {
@@ -1651,6 +1733,7 @@ extend type Query {
 }
 extend type Mutation {
   createMap(input: MapCreateInput!, meta: CommandMeta!): MapType!
+  updateMap(id: ID!, input: MapUpdateInput!, meta: CommandMeta!): MapType!
   createRegion(input: RegionInput!, meta: CommandMeta!): RegionType!
   updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionType!
   transitionRegion(id: ID!, to: String!, note: String!, meta: CommandMeta!): RegionType!
@@ -1668,6 +1751,12 @@ extend type Mutation {
   upsertPointcrawlNode(
     mapId: ID!
     input: PointcrawlNodeInput!
+    meta: CommandMeta!
+  ): PointcrawlNodeType!
+  setPointcrawlNodeState(
+    mapId: ID!
+    nodeId: ID!
+    state: PointcrawlNodeState!
     meta: CommandMeta!
   ): PointcrawlNodeType!
   setPointcrawlEdge(
@@ -1738,6 +1827,7 @@ type MapType {
   name: String!
   atlasCode: String!
   family: String!
+  grid: String!
   mapKind: String!
   assetPath: String
   regionId: ID
@@ -1745,6 +1835,15 @@ type MapType {
   createdAt: DateTime!
   pointcrawlNodes(limit: Int! = 200, offset: Int! = 0): [PointcrawlNodeType!]!
   pointcrawlEdges(limit: Int! = 200, offset: Int! = 0): [PointcrawlEdgeType!]!
+}
+
+"""
+Admin-set exploration label on a hex. Display only: it does not change who can see or reach the hex.
+"""
+enum PointcrawlNodeState {
+  LOCKED
+  UNLOCKED
+  MAPPED
 }
 
 type PointcrawlEdgeType {
@@ -1764,6 +1863,7 @@ type PointcrawlNodeType {
   x: Float!
   y: Float!
   name: String!
+  state: PointcrawlNodeState!
   linkedEntries(limit: Int! = 50, offset: Int! = 0): [PointcrawlEntryLinkType!]!
   submapId: ID
   createdAt: DateTime!

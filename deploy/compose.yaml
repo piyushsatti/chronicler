@@ -36,7 +36,7 @@ services:
       context: ../apps/api
     environment:
       API_ADDR: ':8080'
-      DATABASE_URL: postgres://chronicler:chronicler@postgres:5432/chronicler?sslmode=disable
+      DATABASE_URL: postgres://chronicler:chronicler@postgres:5432/chronicler?sslmode=disable&pool_max_conns=10
       JWT_SECRET: ${JWT_SECRET:-dev-only-change-me}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-dev}
@@ -58,9 +58,10 @@ services:
       context: ../apps/api
       dockerfile: Dockerfile.worker
     environment:
-      DATABASE_URL: postgres://chronicler:chronicler@postgres:5432/chronicler?sslmode=disable
+      DATABASE_URL: postgres://chronicler:chronicler@postgres:5432/chronicler?sslmode=disable&pool_max_conns=10
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_ANNOUNCE_CHANNEL_ID: ${DISCORD_ANNOUNCE_CHANNEL_ID:-}
+      GUILD_ID: ${GUILD_ID:-}
       DISCORD_DELIVERY_DRY_RUN: ${DISCORD_DELIVERY_DRY_RUN:-1}
     depends_on:
       migrate:

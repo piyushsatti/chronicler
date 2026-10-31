@@ -35,7 +35,7 @@ func questStorageSnapshot(t *testing.T, f questCloseFixture) string {
 }
 
 func editorQuestInput() CreateQuestSpec {
-	signup, info := "open", "Initial additional info"
+	signup, info := "last_game_played", "Initial additional info"
 	return CreateQuestSpec{Input: CreateQuestFields{Title: "Editor roundtrip", BriefBody: "Initial brief", ScheduledAt: time.Date(2030, 1, 15, 18, 0, 0, 0, time.UTC), DurationHours: 3, SlotsMax: 4, Kinds: []string{"standard"}, SignupType: &signup, AdditionalInfo: &info}}
 }
 
@@ -46,7 +46,7 @@ func TestFrontendQuestEditorCreateReadSyncUpdateRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if created.DocumentId == nil || created.SignupType == nil || *created.SignupType != "open" {
+	if created.DocumentId == nil || created.SignupType == nil || *created.SignupType != "last_game_played" {
 		t.Fatalf("created=%+v", created)
 	}
 	reader, _ := NewProductPostgres(f.fixture.Pool)
@@ -59,9 +59,9 @@ func TestFrontendQuestEditorCreateReadSyncUpdateRoundtrip(t *testing.T) {
 			t.Fatalf("empty participants=%+v", slot)
 		}
 	}
-	regions, err := reader.ReadBatchQuestRegions(ctx, f.actor, []QuestRegionsKey{{ParentID: created.Id, Limit: 20}})
-	if err != nil || len(regions) != 1 || regions[0].Err != nil || regions[0].Value == nil || len(regions[0].Value.Items) != 0 {
-		t.Fatalf("empty regions=%+v err=%v", regions, err)
+	stored, err := reader.ReadQuest(ctx, f.actor, QuestSpec{Id: &created.Id})
+	if err != nil || stored == nil || stored.Regions == nil || len(stored.Regions) != 0 {
+		t.Fatalf("empty regions=%+v err=%v", stored, err)
 	}
 	links, err := reader.ReadBatchQuestHexes(ctx, f.actor, []QuestHexesKey{{ParentID: created.Id, Limit: 20}})
 	if err != nil || len(links) != 1 || links[0].Err != nil || links[0].Value == nil || len(links[0].Value.Items) != 0 {
@@ -109,7 +109,7 @@ func TestFrontendQuestEditorCreateReadSyncUpdateRoundtrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	brief, err = docs.ReadDocumentById(ctx, f.actor, document.DocumentByIdSpec{Id: *created.DocumentId})
-	if err != nil || updated.DocumentId == nil || *updated.DocumentId != brief.Id || brief.Title != title || brief.EffectiveBody == nil || *brief.EffectiveBody != body || brief.Category == nil || *brief.Category != "Preserved category" || updated.ArcId != nil || updated.Apl != nil || updated.SignupType == nil || *updated.SignupType != "open" {
+	if err != nil || updated.DocumentId == nil || *updated.DocumentId != brief.Id || brief.Title != title || brief.EffectiveBody == nil || *brief.EffectiveBody != body || brief.Category == nil || *brief.Category != "Preserved category" || updated.ArcId != nil || updated.Apl != nil || updated.SignupType == nil || *updated.SignupType != "last_game_played" {
 		t.Fatalf("update=%+v brief=%+v err=%v", updated, brief, err)
 	}
 	if err := json.Unmarshal(brief.Frontmatter, &fm); err != nil {
@@ -146,7 +146,7 @@ func TestFrontendQuestDelegatedCreateRequiresApprovedDM(t *testing.T) {
 func TestFrontendQuestSignupTypeRejectedBeforeAnyWrites(t *testing.T) {
 	f := newQuestCloseFixture(t)
 	ctx := context.Background()
-	for _, value := range []string{"dm_pick", "", "OPEN", "unknown"} {
+	for _, value := range []string{"open", "application", "invite", "", "OPEN", "unknown"} {
 		input := editorQuestInput()
 		input.Input.SignupType = &value
 		before := questStorageSnapshot(t, f)
@@ -319,7 +319,7 @@ func TestFrontendQuestEditorPreservesAndClearsNullableMetadata(t *testing.T) {
 	if err != nil || created.ArcId != nil || created.Apl != nil || created.SignupType != nil {
 		t.Fatalf("null create=%+v err=%v", created, err)
 	}
-	apl, signup := int32(4), "application"
+	apl, signup := int32(4), "dm_pick"
 	set, err := f.commands.UpdateQuest(ctx, f.actor, UpdateQuestSpec{Id: created.Id, Input: QuestEditFields{ExpectedUpdatedAt: created.UpdatedAt, Apl: product.Optional[int32]{Set: true, Value: &apl}, SignupType: product.Optional[string]{Set: true, Value: &signup}}}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
 	if err != nil || set.Apl == nil || *set.Apl != 4 || set.SignupType == nil || *set.SignupType != signup || set.ArcId != nil {
 		t.Fatalf("set nullable=%+v err=%v", set, err)

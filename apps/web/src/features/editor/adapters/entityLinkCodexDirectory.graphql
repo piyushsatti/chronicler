@@ -1,5 +1,6 @@
-query EntityLinkCodexDirectory {
-  codexDirectory(categoryPrefix: null, search: null) {
+query EntityLinkCodexDirectory($limit: Int!, $offset: Int!) {
+  codexDirectory(categoryPrefix: null, search: null, limit: $limit, offset: $offset) {
+    total
     items {
       id
       slug

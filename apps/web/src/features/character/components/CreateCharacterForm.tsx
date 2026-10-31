@@ -41,6 +41,28 @@ function ValidatedField({
   );
 }
 
+/** Species, class and background come first, in that order; any other kind follows by name. */
+const KIND_ORDER = ['species', 'class', 'background'];
+const KIND_LABEL: Record<string, string> = {
+  species: 'Species',
+  class: 'Class',
+  background: 'Background',
+};
+
+function kindLabel(kind: string): string {
+  return KIND_LABEL[kind] ?? kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+function groupByKind<T extends { kind: string }>(options: readonly T[]): [string, T[]][] {
+  const groups = new Map<string, T[]>();
+  for (const option of options) groups.set(option.kind, [...(groups.get(option.kind) ?? []), option]);
+  const rank = (kind: string) => {
+    const index = KIND_ORDER.indexOf(kind);
+    return index === -1 ? KIND_ORDER.length : index;
+  };
+  return [...groups].sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b));
+}
+
 function invalidProps(id: string, error: string | undefined) {
   return {
     id,
@@ -225,24 +247,25 @@ export function CreateCharacterForm({
                 No creation options are available for this region.
               </p>
             ) : (
-              state.query.data.catalog.map((option) => (
-                <Checkbox
-                  key={option.id}
-                  disabled={state.create.isPending || state.query.isPlaceholderData}
-                  checked={picks.includes(option.id)}
-                  onCheckedChange={(checked) =>
-                    setPicks((prev) =>
-                      checked
-                        ? [...prev, option.id]
-                        : prev.filter((id) => id !== option.id),
-                    )
-                  }
-                  label={
-                    <>
-                      {option.name} <span className="type-caption">{option.kind}</span>
-                    </>
-                  }
-                />
+              groupByKind(state.query.data.catalog).map(([kind, options]) => (
+                <fieldset key={kind} className="stack" data-option-kind={kind}>
+                  <legend className="type-label">{kindLabel(kind)}</legend>
+                  {options.map((option) => (
+                    <Checkbox
+                      key={option.id}
+                      disabled={state.create.isPending || state.query.isPlaceholderData}
+                      checked={picks.includes(option.id)}
+                      onCheckedChange={(checked) =>
+                        setPicks((prev) =>
+                          checked
+                            ? [...prev, option.id]
+                            : prev.filter((id) => id !== option.id),
+                        )
+                      }
+                      label={option.name}
+                    />
+                  ))}
+                </fieldset>
               ))
             )}
           </fieldset>

@@ -37,6 +37,12 @@ Request limits: submit/claim/renew/retry 16 KiB; completion 64 KiB. Response lim
 | `apps/discord` | [mentions.md](/apps/discord/docs/mentions.md) — POST then poll                |
 | `apps/agent`   | [http-transport.md](/apps/agent/docs/http-transport.md) — claim then complete |
 
+## Archive evidence
+
+The answer worker reads Archive MCP evidence. Archive obtains current anonymous bodies from GraphQL `effectiveBody`, with candidate eligibility checked on every read. Bootstrap snapshots pin candidate identities and file integrity; they cannot authorize disclosure of frozen text.
+
+The Archive reads only document IDs from the database view `archive_documents_v1` (migration `0015`), which applies SQL `document_readable` for an anonymous viewer. Bodies come from the anonymous GraphQL `effectiveBody`, so Go remains the only marker projector ([D50](/docs/decisions/D50-Archive-Uses-Current-Anonymous-Projections.md)). See [Archive](/apps/agent/docs/archive.md) and the [local stack](/deploy/docs/agent-archive-local.md).
+
 ## Related decisions
 
 - [D42](/apps/api/docs/decisions/D42-Worker-And-Migrations.md) — worker binary and agent boundary

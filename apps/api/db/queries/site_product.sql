@@ -12,12 +12,6 @@ WITH totals AS (
          JOIN members m ON m.id = p.member_id
          WHERE m.status = 'active' AND 'dm' = ANY(m.roles)
            AND p.status = 'approved') AS total_dms
-), activity AS (
-    SELECT
-        coalesce(sum(amount) FILTER (WHERE kind = 'voice'), 0)::double precision AS voice_minutes,
-        coalesce(sum(amount) FILTER (WHERE kind = 'message'), 0)::double precision AS messages,
-        coalesce(sum(amount) FILTER (WHERE kind = 'reaction'), 0)::double precision AS reactions
-    FROM discord_activity_events
 ), role_counts AS (
     SELECT roles.role, count(DISTINCT m.id)::integer AS member_count
     FROM members m
@@ -26,11 +20,16 @@ WITH totals AS (
 )
 SELECT totals.total_members, totals.active_characters, totals.total_maps,
        totals.total_pointcrawl_nodes, totals.total_regions, totals.total_quests,
-       totals.total_dms, activity.voice_minutes, activity.messages,
-       activity.reactions, role_counts.role, role_counts.member_count
-FROM totals CROSS JOIN activity
+       totals.total_dms, role_counts.role, role_counts.member_count
+FROM totals
 LEFT JOIN role_counts ON true
 ORDER BY role_counts.role;
+-- name: SiteActivitySummary :one
+SELECT
+        coalesce(sum(amount) FILTER (WHERE kind = 'voice'), 0)::double precision AS voice_minutes,
+        coalesce(sum(amount) FILTER (WHERE kind = 'message'), 0)::double precision AS messages,
+        coalesce(sum(amount) FILTER (WHERE kind = 'reaction'), 0)::double precision AS reactions
+    FROM discord_activity_events;
 -- name: SiteMemberDiscovery :many
 WITH matching AS MATERIALIZED (
     SELECT public_id, handle, display_name, avatar_url
@@ -119,7 +118,7 @@ SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.lease_token, b.next_
        b.completion_operation, b.completion_payload, b.error_message, b.safe_error_code,
        q.public_id AS quest_public_id, q.discord_desired_revision, q.discord_applied_revision
 FROM background_jobs b
-LEFT JOIN quests q ON q.public_id::text = b.payload ->> 'questId'
+LEFT JOIN quests q ON q.public_id::text = b.payload ->> 'public_id'
 WHERE b.public_id = sqlc.arg(job_id)::uuid AND b.kind = 'quest_discord_delivery'
 FOR UPDATE OF b;
 -- name: SiteRedriveDiscordDeliveryJob :one
@@ -155,6 +154,7 @@ WITH job_alerts AS (
         updated_at AS last_seen_at
     FROM background_jobs
     WHERE state IN ('dead', 'repair_required')
+      AND kind <> 'agent_question'
 ),
 heartbeat_alerts AS (
     SELECT
@@ -189,6 +189,7 @@ WITH job_alerts AS (
     SELECT public_id
     FROM background_jobs
     WHERE state IN ('dead', 'repair_required')
+      AND kind <> 'agent_question'
 ),
 heartbeat_alerts AS (
     SELECT 1

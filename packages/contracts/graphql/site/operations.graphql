@@ -16,6 +16,8 @@ extend type Query {
   discordDeliveryMode: String!
   homeBanner: HomeBannerType!
   questAnnouncementRoleSetting: QuestAnnouncementRoleSettingType!
+  discordSettings: DiscordSettingsType!
+  questVoiceChannels: [DiscordVoiceChannelType!]!
 }
 extend type Mutation {
   updateHomeBanner(input: HomeBannerInput!, meta: CommandMeta!): HomeBannerType!
@@ -23,6 +25,10 @@ extend type Mutation {
     input: AnnouncementRoleInput!
     meta: CommandMeta!
   ): QuestAnnouncementRoleSettingType!
+  updateDiscordSettings(
+    input: DiscordSettingsInput!
+    meta: CommandMeta!
+  ): DiscordSettingsType!
   redriveDiscordDelivery(
     jobId: ID!
     reason: String!

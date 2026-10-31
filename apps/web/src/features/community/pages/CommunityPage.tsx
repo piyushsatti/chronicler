@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
@@ -15,6 +15,8 @@ import { Button } from '../../../components/primitives/Button.js';
 import { WeekGrid, bucketFor } from '../../../components/primitives/WeekGrid.js';
 import { useToast } from '../../../hooks/useToast.js';
 import { useCommunityCharacters, useCommunityPage } from '../hooks/useCommunityPage.js';
+import { HallOfFamePanel } from '../components/HallOfFamePanel.js';
+import { useMe } from '../../../hooks/useMe.js';
 import type { CommunityMemberView } from '../types.js';
 import { memberLabeler } from '../memberLabels.js';
 import { useUrlParam } from '../../../hooks/useUrlParam.js';
@@ -29,7 +31,7 @@ import { isCharacterImageUrl } from '../../../utils/characterImageUrl.js';
 import type { CommunityCharacterView } from '../adapters/communityAdapter.js';
 import styles from './community.module.css';
 
-const TAB_IDS = ['muster', 'members', 'characters'] as const;
+const TAB_IDS = ['muster', 'members', 'characters', 'hall-of-fame'] as const;
 const ROLE_FILTERS = ['everyone', 'player', 'dm'] as const;
 type RoleFilter = (typeof ROLE_FILTERS)[number];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -144,6 +146,7 @@ function CommunityCharacterCard({
 
 export function CommunityPage(): React.JSX.Element {
   const page = useCommunityPage();
+  const me = useMe();
   const { addToast } = useToast();
   const characters = useCommunityCharacters();
   const [params, setParams] = useSearchParams();
@@ -227,7 +230,9 @@ export function CommunityPage(): React.JSX.Element {
       characters.data && !characters.isError
         ? pluralize(visibleCharacters.length, 'character')
         : undefined,
+    'hall-of-fame': undefined,
   };
+  const ownHandle = me.data?.handle.replace(/^@/, '');
   const clearSearch = needle ? (
     <Button variant="secondary" size="sm" onClick={() => setQuery('')}>
       Clear search
@@ -264,12 +269,14 @@ export function CommunityPage(): React.JSX.Element {
                   segments={track}
                   count={counts[tab]}
                   actions={
-                    <PageToolbar.Search
-                      label="Search the community"
-                      placeholder="Search by name"
-                      value={query}
-                      onValueChange={setQuery}
-                    />
+                    tab === 'hall-of-fame' ? undefined : (
+                      <PageToolbar.Search
+                        label="Search the community"
+                        placeholder="Search by name"
+                        value={query}
+                        onValueChange={setQuery}
+                      />
+                    )
                   }
                 />
               )}
@@ -280,7 +287,17 @@ export function CommunityPage(): React.JSX.Element {
                   panel: (
                     <div className="stack" data-gap="5">
                       <Card pad={4} className="stack" data-gap="3">
-                        <h2 className="type-title">Members free each day</h2>
+                        <div className="row" data-justify="between" data-wrap="1" data-gap="3">
+                          <h2 className="type-title">Members free each day</h2>
+                          {ownHandle ? (
+                            <Link
+                              className="btn btn--primary btn--sm"
+                              to="/me?edit=availability"
+                            >
+                              Mark yourself free
+                            </Link>
+                          ) : null}
+                        </div>
                         <WeekGrid
                           ariaLabel="Who's free this week"
                           heat={false}
@@ -387,6 +404,11 @@ export function CommunityPage(): React.JSX.Element {
                   ) : (
                     <StatePanel status="loading" />
                   ),
+                },
+                {
+                  id: 'hall-of-fame',
+                  label: 'Hall of Fame',
+                  panel: <HallOfFamePanel />,
                 },
               ]}
             />

@@ -309,6 +309,9 @@ func notificationLabel(event Event) string {
 		}
 		return "Quest signup confirmed"
 	case QuestWaitlistPromoted:
+		if *event.Facts.ToStatus == "waitlisted" {
+			return "Moved to the waitlist"
+		}
 		return "Quest waitlist promoted"
 	case DocumentEdited:
 		return "Document edited"

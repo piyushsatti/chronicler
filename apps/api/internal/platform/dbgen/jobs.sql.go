@@ -14,7 +14,7 @@ import (
 const enqueueJob = `-- name: EnqueueJob :exec
 INSERT INTO background_jobs (job_key,kind,lane,state,payload,next_run_at)
 VALUES ($1,$2,$3,'queued',$4,clock_timestamp())
-ON CONFLICT(job_key) DO UPDATE SET state='queued',payload=EXCLUDED.payload,attempts=0,error_message=NULL,
+ON CONFLICT(job_key) DO UPDATE SET state='queued',payload=EXCLUDED.payload,attempts=0,error_message=NULL,safe_error_code=NULL,
  next_run_at=clock_timestamp(),updated_at=clock_timestamp(),completion_operation=NULL,completion_payload=NULL
 WHERE background_jobs.state<>'running' AND background_jobs.kind<>'agent_question'
 `
@@ -229,8 +229,8 @@ const saveLeasedJob = `-- name: SaveLeasedJob :execrows
 UPDATE background_jobs SET state=$1,attempts=$2,lease_token=$3,
  lease_expires_at=$4,claimed_at=$5,attempt_deadline_at=$6,
  next_run_at=$7,completion_operation=$8,completion_payload=$9,
- error_message=$10,updated_at=$11
-WHERE id=$12
+ error_message=$10,safe_error_code=$11,updated_at=$12
+WHERE id=$13
 `
 
 type SaveLeasedJobParams struct {
@@ -244,6 +244,7 @@ type SaveLeasedJobParams struct {
 	CompletionOperation pgtype.Text        `json:"completion_operation"`
 	CompletionPayload   []byte             `json:"completion_payload"`
 	ErrorMessage        pgtype.Text        `json:"error_message"`
+	SafeErrorCode       pgtype.Text        `json:"safe_error_code"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	ID                  int64              `json:"id"`
 }
@@ -260,6 +261,7 @@ func (q *Queries) SaveLeasedJob(ctx context.Context, arg SaveLeasedJobParams) (i
 		arg.CompletionOperation,
 		arg.CompletionPayload,
 		arg.ErrorMessage,
+		arg.SafeErrorCode,
 		arg.UpdatedAt,
 		arg.ID,
 	)

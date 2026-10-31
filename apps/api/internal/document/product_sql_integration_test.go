@@ -91,60 +91,6 @@ func doc03KeyedProductArgs(t *testing.T, query string, values pgx.StrictNamedArg
 	return values
 }
 
-func doc03NamedSQL(t *testing.T, name, mode string) string {
-	t.Helper()
-	data, err := os.ReadFile("../../db/queries/documents.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	matches := 0
-	var query string
-	for _, part := range strings.Split(string(data), "-- name: ")[1:] {
-		header, body, ok := strings.Cut(part, "\n")
-		if !ok {
-			continue
-		}
-		fields := strings.Fields(header)
-		if len(fields) > 0 && fields[0] == name {
-			matches++
-			if strings.TrimSpace(header) != name+" "+mode {
-				t.Fatalf("wrong annotation for %s: %q", name, header)
-			}
-			query = strings.TrimSpace(body)
-		}
-	}
-	if matches != 1 {
-		t.Fatalf("named SQL %s occurrence count=%d, want exactly one", name, matches)
-	}
-	return query
-}
-
-func doc03SQL(t *testing.T, name, mode string) string {
-	t.Helper()
-	q := doc03NamedSQL(t, name, mode)
-	ordered := []string{"viewer_admin", "viewer_id", "viewer_roles", "viewer_handle", "viewer_live_dm", "reader_ids", "slug"}
-	positions := map[string]int{}
-	return doc03Macro.ReplaceAllStringFunc(q, func(token string) string {
-		var key string
-		if strings.HasPrefix(token, "sqlc.narg(") {
-			key = strings.TrimSuffix(strings.TrimPrefix(token, "sqlc.narg("), ")")
-		} else {
-			key = strings.TrimSuffix(strings.TrimPrefix(token, "sqlc.arg("), ")")
-		}
-		if n, ok := positions[key]; ok {
-			return fmt.Sprintf("$%d", n)
-		}
-		for i, item := range ordered {
-			if item == key {
-				positions[key] = i + 1
-				return fmt.Sprintf("$%d", i+1)
-			}
-		}
-		t.Fatalf("unexpected sqlc macro %q", token)
-		return ""
-	})
-}
-
 func TestPhase3TaskDOC03BacklinksPostgresAcceptance(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -191,8 +137,6 @@ func TestPhase3TaskDOC03BacklinksPostgresAcceptance(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	countSQL := doc03SQL(t, "CountDocumentBacklinks", ":one")
-	listSQL := doc03SQL(t, "ListDocumentBacklinksBySlug", ":many")
 	productCountSQL := doc03ProductSQL(t, "CountProductDocumentBacklinks", ":one")
 	productListSQL := doc03ProductSQL(t, "ListProductDocumentBacklinks", ":many")
 	type expectedRow struct {
@@ -201,46 +145,8 @@ func TestPhase3TaskDOC03BacklinksPostgresAcceptance(t *testing.T) {
 	}
 	check := func(name string, viewer uuid.UUID, admin bool, want []expectedRow, wantAggregate bool) {
 		t.Helper()
-		args := []any{admin, viewer, []string{}, "", false, []uuid.UUID{}, "doc03-target"}
 		var count int64
 		var aggregate bool
-		if err := pool.QueryRow(ctx, countSQL, args...).Scan(&count, &aggregate); err != nil {
-			t.Fatalf("%s count: %v", name, err)
-		}
-		if count != int64(len(want)) || aggregate != wantAggregate {
-			t.Fatalf("%s count=(%d,%v), want (%d,%v)", name, count, aggregate, len(want), wantAggregate)
-		}
-		rows, err := pool.Query(ctx, listSQL, args...)
-		if err != nil {
-			t.Fatalf("%s list: %v", name, err)
-		}
-		defer rows.Close()
-		got := 0
-		for rows.Next() {
-			var source, target uuid.UUID
-			var relation, kind, slug string
-			var override bool
-			if err := rows.Scan(&source, &target, &relation, &kind, &slug, &override); err != nil {
-				t.Fatalf("%s row: %v", name, err)
-			}
-			if got >= len(want) {
-				t.Fatalf("%s returned extra row %s", name, source)
-			}
-			expected := want[got]
-			if source != expected.id || target != targetUUID || relation != "link" || kind != "community" || override != expected.override {
-				t.Fatalf("%s row %d=(%s,%s,%s,%s,%v), want source=%s target=%s link community override=%v", name, got, source, target, relation, kind, override, expected.id, targetUUID, expected.override)
-			}
-			if (got == 0 && slug != "doc03-source-newer") || (got == 1 && slug != "doc03-source-older") {
-				t.Fatalf("%s row %d slug=%q violates updated_at order", name, got, slug)
-			}
-			got++
-		}
-		if err := rows.Err(); err != nil {
-			t.Fatalf("%s list rows: %v", name, err)
-		}
-		if got != len(want) {
-			t.Fatalf("%s list returned %d rows, count expected %d", name, got, len(want))
-		}
 		productCountArgs := doc03KeyedProductArgs(t, productCountSQL, pgx.StrictNamedArgs{"viewer_admin": admin, "viewer_id": viewer, "viewer_roles": []string{}, "viewer_handle": "", "viewer_live_dm": false, "slug": "doc03-target"})
 		if err := pool.QueryRow(ctx, productCountSQL, productCountArgs).Scan(&count, &aggregate); err != nil {
 			t.Fatalf("%s product count: %v", name, err)
@@ -270,6 +176,9 @@ func TestPhase3TaskDOC03BacklinksPostgresAcceptance(t *testing.T) {
 			if source != expected.id || target != targetUUID || relation != "link" || kind != "community" || override != expected.override {
 				productRows.Close()
 				t.Fatalf("%s product row %d=(%s,%s,%s,%s,%v), want source=%s target=%s link community override=%v", name, productGot, source, target, relation, kind, override, expected.id, targetUUID, expected.override)
+			}
+			if (productGot == 0 && source == source2UUID && slug != "doc03-source-newer") || (source == source1UUID && slug != "doc03-source-older") {
+				t.Fatalf("%s wrong source slug %q", name, slug)
 			}
 			productGot++
 		}

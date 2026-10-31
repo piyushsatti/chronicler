@@ -62,7 +62,6 @@ func NewResolver(services Services) (*Resolver, error) {
 		BatchProviders: BatchProviders{
 			Member:       services.MemberQueries,
 			Document:     services.DocumentQueries,
-			Character:    services.CharacterQueries,
 			Quest:        services.QuestQueries,
 			Notification: services.NotificationQueries,
 			Site:         services.SiteQueries,

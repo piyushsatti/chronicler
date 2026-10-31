@@ -16,7 +16,6 @@ export function TimeAnchorPanel({
   const { formatDateTime } = useDateFormatter();
   const {
     BLANK,
-    toLocalInputValue,
     anchors,
     editingId,
     setEditingId,
@@ -34,7 +33,7 @@ export function TimeAnchorPanel({
   const startEdit = (anchor: AdminTimeAnchorView): void => {
     setEditingId(anchor.id);
     setForm({
-      realUtc: toLocalInputValue(anchor.realUtc),
+      realUtc: anchor.realUtc,
       epochDay: String(anchor.epochDay),
       rate: String(anchor.rate),
       note: anchor.note ?? '',

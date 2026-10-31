@@ -1,15 +1,37 @@
 import { useState } from 'react';
 import { Field } from '../foundation/Field.js';
 import { StatePanel } from '../foundation/StatePanel.js';
-import { Button } from '../primitives/Button.js';
+import { Button, type ButtonProps } from '../primitives/Button.js';
 import { Modal } from '../primitives/Modal.js';
-import { useSeriesPage } from '../../hooks/useSeriesPage.js';
+import { seriesNameError, useSeriesPage } from '../../hooks/useSeriesPage.js';
 
-export function SeriesCreateAction(): React.JSX.Element | null {
+type SeriesCreateActionProps = {
+  label?: string;
+  variant?: ButtonProps['variant'];
+  size?: ButtonProps['size'];
+  /** False inside a row of other actions, where an error panel would break the row. */
+  showAuthorityError?: boolean;
+};
+
+/** The one way to start a series: a button that opens the create dialog.
+ * Renders nothing unless the viewer is an approved DM. */
+export function SeriesCreateAction({
+  label = 'New series',
+  variant = 'secondary',
+  size = 'md',
+  showAuthorityError = true,
+}: SeriesCreateActionProps = {}): React.JSX.Element | null {
   const page = useSeriesPage('');
   const [open, setOpen] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  if (page.checkingAuthority)
+    return (
+      <Button variant={variant} size={size} disabled>
+        Checking your DM status…
+      </Button>
+    );
   if (!page.canCreate)
-    return page.authorityError ? (
+    return showAuthorityError && page.authorityError ? (
       <StatePanel
         status="error"
         error={page.authorityError}
@@ -18,8 +40,15 @@ export function SeriesCreateAction(): React.JSX.Element | null {
     ) : null;
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        New series
+      <Button
+        variant={variant}
+        size={size}
+        onClick={() => {
+          setNameError(null);
+          setOpen(true);
+        }}
+      >
+        {label}
       </Button>
       <Modal
         open={open}
@@ -30,13 +59,22 @@ export function SeriesCreateAction(): React.JSX.Element | null {
         <form
           className="stack"
           data-gap="4"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            const data = new FormData(event.currentTarget);
-            void page.save(null, String(data.get('name') ?? ''), () => setOpen(false));
+            const name = String(new FormData(event.currentTarget).get('name') ?? '');
+            const invalid = seriesNameError(name);
+            setNameError(invalid);
+            if (!invalid) void page.save(null, name, () => setOpen(false));
           }}
         >
-          <Field label="New series name" name="name" required maxLength={200} />
+          <Field
+            label="New series name"
+            name="name"
+            required
+            error={nameError ?? undefined}
+            onChange={() => setNameError(null)}
+          />
           {page.error ? <StatePanel status="error" error={page.error} /> : null}
           <div className="row" data-gap="3" data-wrap="1">
             <Button type="submit" pending={page.pending}>

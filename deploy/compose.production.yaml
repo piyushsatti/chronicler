@@ -1,10 +1,20 @@
-# Production: deployed only via GitHub Actions (D33). Do not run this file by
-# hand against a production host; local use (e.g. a Triton rehearsal) is for
-# validating the stack with throwaway data.
+# Release stack for staging and production, deployed only via GitHub Actions
+# (D33, D51). Do not run this file by hand against a production host; local use
+# (e.g. a Triton rehearsal) is for validating the stack with throwaway data.
 #
-# Containers: chronicler-postgres, chronicler-api (HTTP API + background-job
-# worker in one process), chronicler-discord-bot, and chronicler-caddy (TLS
-# reverse proxy, enabled only with `--profile tls`, i.e. on the droplet).
+# Containers: chronicler-api (HTTP API + background-job worker in one process),
+# chronicler-discord-bot, and two optional pieces chosen by Compose profiles:
+#   local-db  chronicler-postgres, the Compose-managed PostgreSQL (staging).
+#             Without it the API needs DATABASE_URL (hosted PostgreSQL, i.e.
+#             Supabase in production).
+#   tunnel    chronicler-cloudflared, the Cloudflare Tunnel connector that
+#             publishes the API (production). The VM has no inbound ports.
+#             Staging uses a tunnel on its host instead and leaves this off.
+# Select profiles with COMPOSE_PROFILES (the deploy workflow does).
+#
+# Compose interpolates every service, including ones in inactive profiles, so
+# `:?` cannot guard a variable that only one mode needs. Mode-specific values
+# are checked by the deploy workflow; `:?` below covers what both modes need.
 #
 # Migrations are not a container and never run at boot. Apply them explicitly:
 #   docker compose -f deploy/compose.production.yaml run --rm chronicler-api migrate
@@ -18,10 +28,14 @@ name: chronicler-production
 services:
   chronicler-postgres:
     image: postgres:16-alpine
+    profiles: ['local-db']
+    # Not `:?`: see the header. The image refuses to initialise without
+    # POSTGRES_PASSWORD, and the API's local URL is built from the same three
+    # variables.
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER-}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD-}
+      POSTGRES_DB: ${POSTGRES_DB-}
     volumes:
       - chronicler_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -38,7 +52,9 @@ services:
     environment:
       CHRONICLER_ENV: production
       API_ADDR: ':8080'
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@chronicler-postgres:5432/${POSTGRES_DB}?sslmode=disable
+      # DATABASE_URL (hosted PostgreSQL) wins; otherwise the local-db URL.
+      # pgxpool reads pool_max_conns; libpq tools reject it (see scripts/backup-db).
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER-}:${POSTGRES_PASSWORD-}@chronicler-postgres:5432/${POSTGRES_DB-}?sslmode=disable&pool_max_conns=10}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       INGEST_SECRET: ${INGEST_SECRET:?set INGEST_SECRET}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
@@ -52,6 +68,7 @@ services:
       # Background-job worker (runs inside this process): Discord REST delivery.
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_ANNOUNCE_CHANNEL_ID: ${DISCORD_ANNOUNCE_CHANNEL_ID:-}
+      GUILD_ID: ${GUILD_ID:-}
       DISCORD_DELIVERY_DRY_RUN: ${DISCORD_DELIVERY_DRY_RUN:-}
       AGENT_INLINE_COMPLETE: ${AGENT_INLINE_COMPLETE:-}
     stop_grace_period: 30s
@@ -60,6 +77,8 @@ services:
     depends_on:
       chronicler-postgres:
         condition: service_healthy
+        # Absent unless the local-db profile is on (hosted database).
+        required: false
     healthcheck:
       test: ['CMD', '/api', 'healthcheck']
       interval: 10s
@@ -90,20 +109,18 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Droplet only: `docker compose --profile tls up -d`. Automatic Let's Encrypt
-  # for ${API_DOMAIN}; DNS must point at the droplet and 80/443 must be open.
-  chronicler-caddy:
-    image: caddy:2-alpine
-    profiles: ['tls']
+  # Production ingress (profile `tunnel`): dials out to Cloudflare, which
+  # terminates TLS for the public hostname and forwards over this network. The
+  # tunnel is remotely managed; its public hostname (API_DOMAIN) must route
+  # to http://chronicler-api:8080 in Cloudflare. TUNNEL_TOKEN is what
+  # `cloudflared tunnel run` reads; the CLOUDFLARE_TUNNEL_TOKEN secret feeds it.
+  chronicler-cloudflared:
+    # 2026.10.2 is the minimum after Cloudflare's 2026-10-20 eMudhra advisory.
+    image: cloudflare/cloudflared:2026.10.2
+    profiles: ['tunnel']
+    command: tunnel --no-autoupdate run
     environment:
-      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN}
-    ports:
-      - '80:80'
-      - '443:443'
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN-}
     depends_on:
       chronicler-api:
         condition: service_healthy
@@ -111,5 +128,3 @@ services:
 
 volumes:
   chronicler_pg_data:
-  caddy_data:
-  caddy_config:

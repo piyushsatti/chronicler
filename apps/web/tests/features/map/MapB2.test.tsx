@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import {
   act,
   fireEvent,
@@ -13,9 +13,15 @@ import { Route, Routes } from 'react-router-dom';
 import { server } from '../../../src/mocks/server.js';
 import { MapPage } from '../../../src/features/map/pages/MapPage.js';
 import { MapSketch } from '../../../src/features/map/components/MapDirectory.js';
-import { PointcrawlViewport } from '../../../src/features/map/components/PointcrawlViewport.js';
+import {
+  MAP_ROUTES_STORAGE_KEY,
+  PointcrawlViewport,
+} from '../../../src/features/map/components/PointcrawlViewport.js';
 import { renderWithProviders } from '../../test-utils.js';
-import good from '../../fixtures/wire/map/good.json';
+import good from '../../fixtures/wire/map/goodMap.js';
+
+// These suites cover route drawing; routes are hidden by default, so opt in.
+beforeEach(() => localStorage.setItem(MAP_ROUTES_STORAGE_KEY, 'true'));
 
 const first = good.pointcrawlNodes[0]!;
 const pointcrawl = {
@@ -63,15 +69,13 @@ describe('B2 directory', () => {
       ),
     );
     page('/map');
-    expect(
-      await screen.findByRole('heading', { name: 'Maps', level: 1 }),
-    ).toBeVisible();
-    expect(screen.queryByRole('region', { name: 'Pointcrawl viewport' })).toBeNull();
+    expect(await screen.findByRole('heading', { name: 'Map', level: 1 })).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Map viewport' })).toBeNull();
     expect(await screen.findByRole('button', { name: 'All maps' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    expect(await screen.findByText('3 locations · 1 connection')).toBeVisible();
+    expect(await screen.findByText('3 locations')).toBeVisible();
     expect(await screen.findByText('No locations have been added yet.')).toBeVisible();
     expect(
       screen.getByRole('link', { name: /QA temporary-looking map/ }),
@@ -124,7 +128,7 @@ describe('B2 directory', () => {
 });
 
 describe('B2 atlas', () => {
-  it('renders numbered pins at unscaled coordinates, all real edge kinds, arrows, present labels, and a data-only legend', () => {
+  it('renders unnumbered pins at unscaled coordinates, all real edge kinds, arrows, present labels, and a data-only legend', () => {
     const kinds = ['road', 'trail', 'river', 'pass'];
     const map = {
       ...pointcrawl,
@@ -141,10 +145,12 @@ describe('B2 atlas', () => {
       })),
     };
     render(<PointcrawlViewport map={map} selectedId={null} onSelect={vi.fn()} />);
-    const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+    const graph = screen.getByRole('group', { name: 'Lightfall map' });
     const pin = within(graph).getByRole('button', { name: first.name });
     expect(pin).toHaveAttribute('transform', 'translate(1200 100)');
-    expect(pin).toHaveTextContent('01');
+    // Owner feedback: no always-on pin numbers.
+    expect(pin).not.toHaveTextContent('01');
+    expect(graph.querySelector('[data-map-ring]')).toBeNull();
     expect(pin.querySelector('rect')).not.toBeNull();
     const arrow = graph.querySelector('marker');
     expect(Number(arrow?.getAttribute('refX')) - 10).toBeGreaterThan(25);
@@ -196,7 +202,7 @@ describe('B2 atlas', () => {
           onSelect={vi.fn()}
         />,
       );
-      const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+      const graph = screen.getByRole('group', { name: 'Lightfall map' });
       const edge = graph.querySelector('[data-edge-kind="river_ford"]');
       if (painted) expect(edge?.querySelector('text')?.textContent).toBe(label);
       else expect(edge?.querySelector('text')).toBeNull();
@@ -206,10 +212,10 @@ describe('B2 atlas', () => {
     },
   );
 
-  it('keeps the region panel present until a real node is selected and supports repeated keyboard selection with Escape focus return', async () => {
+  it('keeps the region panel present until a real node is selected and supports Tab and Enter selection with Escape focus return', async () => {
     page();
     const graph = await screen.findByRole('group', {
-      name: 'Lightfall pointcrawl graph',
+      name: 'Lightfall map',
     });
     expect(screen.queryByRole('region', { name: 'Selected location' })).toBeNull();
     expect(screen.getByRole('region', { name: 'Map region' })).toBeVisible();
@@ -219,13 +225,15 @@ describe('B2 atlas', () => {
     expect(
       await screen.findByRole('region', { name: 'Selected location' }),
     ).toHaveTextContent(first.name);
-    expect(screen.getByRole('button', { name: 'Close place details' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Close location details' })).toHaveFocus();
+    // Arrow keys no longer move between places, from the panel or from a pin.
     fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
     expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
-      'Old Watchtower',
+      first.name,
     );
-    expect(screen.getByRole('button', { name: 'Close place details' })).toHaveFocus();
-    fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
+    fireEvent.keyDown(within(graph).getByRole('button', { name: 'River Crossing' }), {
+      key: ' ',
+    });
     expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
       'River Crossing',
     );
@@ -234,15 +242,19 @@ describe('B2 atlas', () => {
     expect(screen.getByRole('region', { name: 'Map region' })).toBeVisible();
     expect(within(graph).getByRole('button', { name: 'River Crossing' })).toHaveFocus();
     fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' });
+    expect(screen.queryByRole('region', { name: 'Selected location' })).toBeNull();
+    fireEvent.keyDown(within(graph).getByRole('button', { name: 'Old Watchtower' }), {
+      key: 'Enter',
+    });
     expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
       'Old Watchtower',
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Close place details' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close location details' }));
     expect(within(graph).getByRole('button', { name: 'Old Watchtower' })).toHaveFocus();
     expect(screen.queryByRole('region', { name: 'Selected location' })).toBeNull();
   });
 
-  it('uses the location document description, lists only real linked documents with types and relation pills, and links an actual submap', async () => {
+  it('uses the location document description, lists only real linked documents by title and description, and links an actual submap', async () => {
     const location = {
       id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
       slug: 'real-location',
@@ -316,9 +328,10 @@ describe('B2 atlas', () => {
       'href',
       '/codex/actual-feature',
     );
-    expect(within(panel).getByText('Codex · Location')).toBeVisible();
-    expect(within(panel).getByText('Codex · Feature')).toBeVisible();
-    expect(within(panel).getByText('Subject')).toBeVisible();
+    // Linked documents show a title and a description only: no category or relation tags.
+    expect(within(panel).queryByText('Codex · Location')).toBeNull();
+    expect(within(panel).queryByText('Codex · Feature')).toBeNull();
+    expect(within(panel).queryByText('Subject')).toBeNull();
     expect(
       within(panel).getByRole('link', { name: 'Explore Underkeep' }),
     ).toHaveAttribute('href', '/map/UNDER');
@@ -352,6 +365,19 @@ describe('B2 atlas', () => {
     const parent = { ...good, pointcrawlNodes: [{ ...first, submapId: child.id }] };
     const maps = [parent, child, nearby, other];
     server.use(
+      graphql.query('MapContainment', ({ variables }) => {
+        const map = maps.find((item) => item.atlasCode === variables.atlasCode);
+        return HttpResponse.json({
+          data: {
+            map: map
+              ? {
+                  id: map.id,
+                  pointcrawlNodes: map.pointcrawlNodes.map(({ submapId }) => ({ submapId })),
+                }
+              : null,
+          },
+        });
+      }),
       graphql.query('MapDirectory', () =>
         HttpResponse.json({ data: { maps, regions: [region] } }),
       ),
@@ -374,6 +400,29 @@ describe('B2 atlas', () => {
     expect(within(navigation).queryByRole('link', { name: 'Unrelated' })).toBeNull();
   });
 
+  it('previews a map card with its art and falls back to the sketch when the art fails', async () => {
+    const painted = { ...good, assetPath: 'atlases/example.webp' };
+    server.use(
+      graphql.query('MapDirectory', () =>
+        HttpResponse.json({ data: { maps: [painted], regions: [region] } }),
+      ),
+      graphql.query('MapAtlas', () => HttpResponse.json({ data: { map: painted } })),
+    );
+    page('/map');
+    const art = await waitFor(() => {
+      const image = document.querySelector(`img[data-map-art="${good.atlasCode}"]`);
+      expect(image).not.toBeNull();
+      return image!;
+    });
+    expect(art).toHaveAttribute('src', '/atlases/example.webp');
+    expect(document.querySelector('[data-map-sketch]')).toBeNull();
+    fireEvent.error(art);
+    await waitFor(() =>
+      expect(document.querySelector(`[data-map-sketch="${good.atlasCode}"]`)).not.toBeNull(),
+    );
+    expect(document.querySelector('img[data-map-art]')).toBeNull();
+  });
+
   it('resolves map assets from the app root and preserves their native coordinate system', async () => {
     class MapImage {
       onload: (() => void) | null = null;
@@ -392,7 +441,7 @@ describe('B2 atlas', () => {
         onSelect={vi.fn()}
       />,
     );
-    const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+    const graph = screen.getByRole('group', { name: 'Lightfall map' });
     expect(graph.querySelector('image')).toHaveAttribute(
       'href',
       '/atlases/example.webp',
@@ -421,7 +470,7 @@ describe('B2 atlas', () => {
         onSelect={vi.fn()}
       />,
     );
-    const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+    const graph = screen.getByRole('group', { name: 'Lightfall map' });
     await waitFor(() => expect(graph.querySelector('image')).toBeNull());
     expect(within(graph).getAllByRole('button')).toHaveLength(3);
     expect(graph.querySelectorAll('polyline')).toHaveLength(1);
@@ -431,7 +480,7 @@ describe('B2 atlas', () => {
   it('zooms with wheel and pinch and recentres the selected place with Show on map', async () => {
     page(`/map/LFC?node=${first.id}`);
     const graph = await screen.findByRole('group', {
-      name: 'Lightfall pointcrawl graph',
+      name: 'Lightfall map',
     });
     const initial = graph.getAttribute('viewBox');
     fireEvent.wheel(graph, { deltaY: -100 });
@@ -457,7 +506,7 @@ describe('B2 atlas', () => {
   });
 
   it.each([false, true])(
-    'gates established edit controls on canEdit=%s without inventing an Edit map route',
+    'gates established edit controls on canEdit=%s with an Edit map button but no Edit map route',
     async (canEdit) => {
       server.use(
         graphql.query('MapAtlas', () =>
@@ -465,11 +514,12 @@ describe('B2 atlas', () => {
         ),
       );
       page();
-      await screen.findByRole('group', { name: 'Lightfall pointcrawl graph' });
+      await screen.findByRole('group', { name: 'Lightfall map' });
       expect(Boolean(screen.queryByRole('button', { name: 'Add location' }))).toBe(
         canEdit,
       );
-      expect(screen.queryByRole('button', { name: 'Edit map' })).toBeNull();
+      // Edit map is a dialog button for editors, never a route.
+      expect(Boolean(screen.queryByRole('button', { name: 'Edit map' }))).toBe(canEdit);
       expect(screen.queryByRole('link', { name: 'Edit map' })).toBeNull();
     },
   );

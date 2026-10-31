@@ -25,6 +25,7 @@ A missing delete surface is not a retention decision. Campaign records, member p
 | Archon / lieutenant assignments                                                            | Hard revoke is the retained policy; preserving the fact of a revoked grant remains an explicit open improvement.                                                                                        |
 | Availability, document reader/link sets, quest region/hex sets, DDB proficiency projection | Internal replace-on-write may hard-delete the superseded set; this does not authorize deleting the owning record or its history.                                                                        |
 | Game-time mapping                                                                          | Internal cutoff purge of regenerable projection, not source facts.                                                                                                                                      |
+| Bot heartbeats (`bot_heartbeats`)                                                          | Disposable operational samples. Prune hourly when `received_at` is strictly earlier than seven days before the tick; preserve the exact cutoff and newer samples.                                       |
 | Hex / node entry claims                                                                    | Hard unclaim of a live link, where that source family is supported.                                                                                                                                     |
 | POIs                                                                                       | **Unresolved:** the historical unreachable delete helper established no policy. Decide before admitting a delete surface.                                                                               |
 
@@ -43,6 +44,8 @@ The later indefinite revision-retention ruling replaces the original open-durati
 ## Enforced by
 
 Document reads exclude `documents.deleted_at`; this enforces tombstone visibility only. The [live-authority interface](/docs/interfaces/live-authority.md) and API schema guidance distinguish policy from implemented lifecycle surfaces. The complete matrix is **not enforced**; current schema cascades can delete retained history if an aggregate is physically removed.
+
+`PruneBotHeartbeats` and `TestHourlyMaintenancePrunesOldHeartbeats` enforce the heartbeat cutoff. This amendment uses bounded retention for disposable samples and preserves the API as the single lifecycle authority.
 
 ## Reopen triggers
 

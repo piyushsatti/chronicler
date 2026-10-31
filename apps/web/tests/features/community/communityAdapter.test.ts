@@ -1,39 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  loadCommunityHub,
-  parseCommunityDirectory,
-} from '../../../src/features/community/adapters/communityAdapter.js';
+import { loadCommunityHub } from '../../../src/features/community/adapters/communityAdapter.js';
 import { graphqlRequest } from '../../../src/api/graphql.js';
 import { TransportError } from '../../../src/errors/types.js';
 import good from '../../fixtures/wire/community/directory-good.json';
-
-describe('parseCommunityDirectory', () => {
-  it('splits dms and players', () => {
-    const result = parseCommunityDirectory(good);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data.dms).toHaveLength(1);
-      expect(result.data.players).toHaveLength(1);
-    }
-  });
-
-  it('keeps a dual-role member in both rosters and preserves declared availability', () => {
-    const result = parseCommunityDirectory({
-      ...good,
-      total: 1,
-      entries: [
-        { ...good.entries[0], roles: ['dm', 'player'], availableDays: ['sat'] },
-      ],
-    });
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data.dms).toHaveLength(1);
-      expect(result.data.players).toHaveLength(1);
-      expect(result.data.memberCount).toBe(1);
-      expect(result.data.players[0]?.availableDays).toEqual(['sat']);
-    }
-  });
-});
 
 vi.mock('../../../src/api/graphql.js', () => ({ graphqlRequest: vi.fn() }));
 
@@ -48,6 +17,34 @@ const directoryMembers = Array.from({ length: 201 }, (_, index) => ({
 }));
 const response = (entries: typeof directoryMembers, total: number) => ({
   communityDirectory: { entries, total },
+});
+
+describe('loadCommunityHub roster split', () => {
+  beforeEach(() => vi.mocked(graphqlRequest).mockReset());
+
+  it('splits dms and players', async () => {
+    vi.mocked(graphqlRequest).mockResolvedValueOnce({ communityDirectory: good });
+    const hub = await loadCommunityHub();
+    expect(hub.dms).toHaveLength(1);
+    expect(hub.players).toHaveLength(1);
+  });
+
+  it('keeps a dual-role member in both rosters and preserves declared availability', async () => {
+    vi.mocked(graphqlRequest).mockResolvedValueOnce({
+      communityDirectory: {
+        ...good,
+        total: 1,
+        entries: [
+          { ...good.entries[0], roles: ['dm', 'player'], availableDays: ['sat'] },
+        ],
+      },
+    });
+    const hub = await loadCommunityHub();
+    expect(hub.dms).toHaveLength(1);
+    expect(hub.players).toHaveLength(1);
+    expect(hub.memberCount).toBe(1);
+    expect(hub.players[0]?.availableDays).toEqual(['sat']);
+  });
 });
 
 describe('loadCommunityHub complete roster', () => {

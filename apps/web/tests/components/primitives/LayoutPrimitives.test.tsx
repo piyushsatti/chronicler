@@ -51,6 +51,42 @@ describe('PageHeader', () => {
     );
   });
 
+  it('keeps title and lede in the same place with or without an action button (owner items 5, 7)', () => {
+    const structure = (withAction: boolean) => {
+      const { container, unmount } = render(
+        <PageHeader
+          title="Codex"
+          lede="The campaign wiki."
+          actions={withAction ? <a href="/codex/new">New Codex entry</a> : null}
+        />,
+      );
+      const header = container.querySelector('.page-header')!;
+      const shape = [...header.querySelectorAll('*')]
+        .filter((node) => !node.closest('.page-header__actions'))
+        .map((node) => node.className);
+      const row = header.querySelector('.page-header__row')!;
+      const lede = header.querySelector('.page-header__lede')!;
+      expect(row.nextElementSibling).toBe(lede);
+      unmount();
+      return shape;
+    };
+    // Spectator (no button) and DM (button) get the same title and lede tree.
+    expect(structure(true)).toEqual(structure(false));
+
+    // The action box is out of the block flow on wide screens: it has no block
+    // size, is centred on the heading, and never wraps under the title.
+    const actions = primitivesCss.match(/\n\.page-header__actions \{([^}]*)\}/)?.[1] ?? '';
+    expect(actions).toMatch(/block-size:\s*0;/);
+    expect(actions).toMatch(/align-self:\s*center;/);
+    expect(actions).toMatch(/flex-wrap:\s*nowrap;/);
+    expect(primitivesCss).toMatch(/\.page-header__row \{\s*display:\s*contents;/);
+    expect(primitivesCss).not.toMatch(/align-items:\s*last baseline/);
+    // On phones the actions drop below the lede and meta instead of between them.
+    const compact = primitivesCss.match(/\[data-width-class='compact'\] \.page-header__actions \{([^}]*)\}/)?.[1] ?? '';
+    expect(compact).toMatch(/order:\s*1;/);
+    expect(compact).toMatch(/block-size:\s*auto;/);
+  });
+
   it('renders only the title when nothing else is given', () => {
     const { container } = render(<PageHeader title="Codex" level={2} />);
     expect(screen.getByRole('heading', { level: 2, name: 'Codex' })).toBeInTheDocument();

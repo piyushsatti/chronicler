@@ -1,5 +1,5 @@
 -- name: GetProductMap :one
-SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        r.public_id AS region_id, m.asset_path, m.created_at,
        author.public_id AS created_by
 FROM maps m
@@ -7,7 +7,7 @@ LEFT JOIN regions r ON r.id = m.region_id
 LEFT JOIN members author ON author.id = m.created_by
 WHERE m.atlas_code = sqlc.arg(atlas_code);
 -- name: ListProductMaps :many
-SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        r.public_id AS region_id, m.asset_path, m.created_at,
        author.public_id AS created_by
 FROM maps m
@@ -20,7 +20,7 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 -- name: ListProductPointcrawlNodesForMaps :many
 WITH ranked AS (
 SELECT k.ordinality::int AS key_ordinal,(k.value->>'parent_id')::uuid AS parent_id,m.public_id AS map_id,n.public_id AS id,n.name,n.x,n.y,
-       n.created_at,submap.public_id AS submap_id,
+       n.created_at,submap.public_id AS submap_id,n.state,
        COALESCE(sqlc.arg(viewer_admin)::boolean
          AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=n.id AND loc.relation='location')
          AND NOT EXISTS (
@@ -47,11 +47,11 @@ WHERE NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
          sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
    )
 )
-SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,name,x,y,created_at,submap_id,admin_override
+SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,name,x,y,created_at,submap_id,state,admin_override
 FROM ranked WHERE rn>row_offset AND rn<=row_offset+row_limit
 UNION ALL
 SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(m.id IS NOT NULL),
-       NULL::uuid,''::text,0::double precision,0::double precision,NULL::timestamptz,NULL::uuid,false::boolean
+       NULL::uuid,''::text,0::double precision,0::double precision,NULL::timestamptz,NULL::uuid,''::text,false::boolean
 FROM jsonb_array_elements(sqlc.arg(keys)::jsonb) WITH ORDINALITY k(value,ordinality)
 LEFT JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
 WHERE NOT EXISTS (SELECT 1 FROM ranked r WHERE r.key_ordinal=k.ordinality AND r.rn>(k.value->>'offset')::int AND r.rn<=((k.value->>'offset')::int+(k.value->>'limit')::int))
@@ -247,6 +247,7 @@ WITH target AS (
  FROM target t JOIN quest_regions qr ON qr.region_id=t.id
  JOIN quests q ON q.id=qr.quest_id
  WHERE q.deleted_at IS NULL
+   AND q.scheduled_at + q.duration_hours * interval '1 hour' > sqlc.arg(as_of)::timestamptz
 ), counts AS (
  SELECT count(*) FILTER (WHERE display_status='filling')::int AS filling_count,
         count(*) FILTER (WHERE display_status='scheduled')::int AS scheduled_count,
@@ -283,6 +284,13 @@ SELECT count(*)::int FROM archon_assignments a
 JOIN regions r ON r.id=a.region_id JOIN members m ON m.id=a.member_id
 WHERE (sqlc.narg(region_id)::uuid IS NULL OR r.public_id=sqlc.narg(region_id))
   AND (sqlc.narg(member_id)::uuid IS NULL OR m.public_id=sqlc.narg(member_id));
+-- name: ListProductArchonAssignmentRegions :many
+SELECT r.public_id
+FROM archon_assignments a
+JOIN regions r ON r.id=a.region_id
+JOIN members m ON m.id=a.member_id
+WHERE m.public_id=sqlc.arg(member_id)::uuid
+  AND r.public_id=ANY(sqlc.arg(region_ids)::uuid[]);
 -- name: ReadProductCalendar :one
 SELECT calendar.definition,calendar.updated_at,
        mapping.game_day AS current_game_day
@@ -294,19 +302,13 @@ SELECT mapping.game_day,calendar.definition
 FROM (SELECT sqlc.arg(real_date)::date AS real_date) requested
 LEFT JOIN game_time_map mapping ON mapping.real_date=requested.real_date
 LEFT JOIN game_calendar calendar ON calendar.id=1;
--- name: ReadProductGameDates :many
-SELECT k.ordinality, k.real_date, d.game_day, calendar.definition
-FROM unnest(sqlc.arg(real_dates)::date[]) WITH ORDINALITY AS k(real_date, ordinality)
-LEFT JOIN game_time_map d ON d.real_date=k.real_date
-LEFT JOIN game_calendar calendar ON calendar.id=1
-ORDER BY k.ordinality;
 -- name: ListProductRealDates :many
 SELECT real_date FROM game_time_map WHERE game_day=sqlc.arg(game_day)
 ORDER BY real_date LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 -- name: CountProductRealDates :one
 SELECT count(*)::int FROM game_time_map WHERE game_day=sqlc.arg(game_day);
 -- name: ListProductCalendarCells :many
-SELECT requested.real_date,mapping.game_day
+SELECT requested.real_date::date AS real_date,mapping.game_day
 FROM generate_series(sqlc.arg(real_from)::date,sqlc.arg(real_to)::date-1,interval '1 day') requested(real_date)
 LEFT JOIN game_time_map mapping ON mapping.real_date=requested.real_date::date
 ORDER BY requested.real_date;
@@ -338,7 +340,7 @@ WITH predecessor AS (
 SELECT * FROM predecessor UNION ALL SELECT * FROM future
 ORDER BY real_utc,id;
 -- name: LockProductMapByAtlasCode :one
-SELECT m.id, m.public_id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.id, m.public_id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        m.region_id, m.asset_path, m.created_at, m.created_by
 FROM maps m WHERE m.atlas_code=sqlc.arg(atlas_code) FOR UPDATE;
 -- name: ReadProductMapReference :one
@@ -347,7 +349,7 @@ FROM maps m LEFT JOIN regions r ON r.id=m.region_id
 WHERE m.public_id=sqlc.arg(map_id)::uuid
   AND (m.region_id IS NULL OR r.deleted_at IS NULL);
 -- name: LockProductMap :one
-SELECT m.id,m.public_id AS map_id,m.name,m.atlas_code,m.map_kind,m.family,
+SELECT m.id,m.public_id AS map_id,m.name,m.atlas_code,m.map_kind,m.family,m.grid,
        r.public_id AS region_id,m.asset_path,m.created_at,
        creator.public_id AS created_by
 FROM maps m LEFT JOIN regions r ON r.id=m.region_id
@@ -359,7 +361,7 @@ SELECT r.id, r.public_id, r.name, r.kind, r.charter_deadline, r.document_id,
 FROM regions r LEFT JOIN documents d ON d.id=r.document_id
 WHERE r.public_id=sqlc.arg(region_id) FOR UPDATE OF r;
 -- name: LockProductPointcrawlNode :one
-SELECT n.id, n.public_id, n.map_id, n.name, n.x, n.y, n.submap_id, n.created_at,
+SELECT n.id, n.public_id, n.map_id, n.name, n.x, n.y, n.submap_id, n.created_at, n.state,
        m.public_id AS map_public_id,submap.public_id AS submap_public_id
 FROM pointcrawl_nodes n JOIN maps m ON m.id=n.map_id
 LEFT JOIN maps submap ON submap.id=n.submap_id
@@ -386,14 +388,14 @@ WHERE m.public_id=sqlc.arg(member_id) AND r.public_id=sqlc.arg(region_id)
 FOR UPDATE OF a;
 -- name: CreateProductMap :one
 WITH inserted AS (
-  INSERT INTO maps(name,atlas_code,map_kind,family,region_id,asset_path,created_by)
-  VALUES (sqlc.arg(name),sqlc.arg(atlas_code),sqlc.arg(map_kind),sqlc.arg(family),
+  INSERT INTO maps(name,atlas_code,map_kind,family,grid,region_id,asset_path,created_by)
+  VALUES (sqlc.arg(name),sqlc.arg(atlas_code),sqlc.arg(map_kind),sqlc.arg(family),sqlc.arg(grid),
           (SELECT r.id FROM regions r WHERE r.public_id=sqlc.narg(region_id)::uuid),
           sqlc.narg(asset_path),
           (SELECT actor.id FROM members actor WHERE actor.public_id=sqlc.arg(actor_id)::uuid))
   RETURNING *
 )
-SELECT i.public_id AS id,i.name,i.atlas_code,i.map_kind,i.family,
+SELECT i.public_id AS id,i.name,i.atlas_code,i.map_kind,i.family,i.grid,
        r.public_id AS region_id,i.asset_path,i.created_at,
        a.public_id AS created_by
 FROM inserted i LEFT JOIN regions r ON r.id=i.region_id
@@ -422,8 +424,27 @@ WITH input AS (
 ), result_rows AS (
  SELECT * FROM changed UNION ALL SELECT p.* FROM prior p WHERE NOT EXISTS(SELECT 1 FROM changed)
 )
-SELECT r.public_id AS id,m.public_id AS map_id,r.name,r.x,r.y,submap.public_id AS submap_id,r.created_at
+SELECT r.public_id AS id,m.public_id AS map_id,r.name,r.x,r.y,submap.public_id AS submap_id,r.created_at,r.state
 FROM result_rows r JOIN maps m ON m.id=r.map_id LEFT JOIN maps submap ON submap.id=r.submap_id;
+-- name: SetProductPointcrawlNodeState :one
+WITH changed AS (
+ UPDATE pointcrawl_nodes n SET state=sqlc.arg(state)::text
+ FROM maps m
+ WHERE n.public_id=sqlc.arg(node_id)::uuid AND m.id=n.map_id AND m.public_id=sqlc.arg(map_id)::uuid
+ RETURNING n.*
+), unlocked_neighbours AS (
+ UPDATE pointcrawl_nodes n SET state='unlocked'
+ FROM changed c
+ WHERE c.state='mapped' AND n.map_id=c.map_id AND n.state='locked'
+   AND EXISTS (
+     SELECT 1 FROM pointcrawl_edges e
+     WHERE e.map_id=c.map_id AND e.kind='hex'
+       AND ((e.node_a=c.id AND e.node_b=n.id) OR (e.node_b=c.id AND e.node_a=n.id))
+   )
+ RETURNING n.id
+)
+SELECT c.public_id AS id,m.public_id AS map_id,c.name,c.x,c.y,submap.public_id AS submap_id,c.created_at,c.state
+FROM changed c JOIN maps m ON m.id=c.map_id LEFT JOIN maps submap ON submap.id=c.submap_id;
 -- name: SetProductPointcrawlEdge :one
 WITH input AS (
  SELECT COALESCE(sqlc.narg(edge_id)::uuid,gen_random_uuid()) AS edge_public_id,m.id AS map_internal_id,
@@ -619,3 +640,15 @@ WHERE r.public_id=sqlc.arg(region_id)::uuid AND r.deleted_at IS NULL
                   AND c.deleted_at IS NULL AND c.status='active')
   AND NOT EXISTS (SELECT 1 FROM quest_regions qr JOIN quests q ON q.id=qr.quest_id
                   WHERE qr.region_id=r.id AND q.deleted_at IS NULL AND q.status IN ('open','full'));
+-- name: UpdateProductMap :one
+WITH updated AS (
+  UPDATE maps SET name=sqlc.arg(name),family=sqlc.arg(family),grid=sqlc.arg(grid),
+         asset_path=sqlc.narg(asset_path)
+  WHERE public_id=sqlc.arg(map_id)::uuid
+  RETURNING *
+)
+SELECT u.public_id AS id,u.name,u.atlas_code,u.map_kind,u.family,u.grid,
+       r.public_id AS region_id,u.asset_path,u.created_at,
+       a.public_id AS created_by
+FROM updated u LEFT JOIN regions r ON r.id=u.region_id
+LEFT JOIN members a ON a.id=u.created_by;

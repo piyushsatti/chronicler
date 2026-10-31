@@ -35,14 +35,6 @@ func (r *queryRepository) ReadCommunityDirectory(_ context.Context, actor auth.A
 	r.called("CommunityDirectory", actor, spec)
 	return CommunityDirectoryResult{Total: 7}, r.err
 }
-func (r *queryRepository) ReadDmRequests(_ context.Context, actor auth.Authority, spec DmRequestsSpec) (RequestPage, error) {
-	r.called("DmRequests", actor, spec)
-	return RequestPage{Total: 7}, r.err
-}
-func (r *queryRepository) ReadIsFollowing(_ context.Context, actor auth.Authority, spec IsFollowingSpec) (bool, error) {
-	r.called("IsFollowing", actor, spec)
-	return true, r.err
-}
 func (r *queryRepository) ReadMember(_ context.Context, actor auth.Authority, spec MemberSpec) (*MemberView, error) {
 	r.called("Member", actor, spec)
 	return &r.member, r.err
@@ -86,10 +78,6 @@ func (r *queryRepository) ReadMyPersonalization(_ context.Context, actor auth.Au
 func (r *queryRepository) ReadMyPrivateNotes(_ context.Context, actor auth.Authority, spec MyPrivateNotesSpec) (PrivateNotesView, error) {
 	r.called("MyPrivateNotes", actor, spec)
 	return PrivateNotesView{}, r.err
-}
-func (r *queryRepository) ReadMyRequests(_ context.Context, actor auth.Authority, spec MyRequestsSpec) (RequestPage, error) {
-	r.called("MyRequests", actor, spec)
-	return RequestPage{Total: 7}, r.err
 }
 func (r *queryRepository) ReadMyUnlocks(_ context.Context, actor auth.Authority, spec MyUnlocksSpec) (GrantSnapshot, error) {
 	r.called("MyUnlocks", actor, spec)
@@ -179,7 +167,7 @@ func queryService(t *testing.T) (*ProductQueries, *queryRepository, *queryObserv
 	discord := "other-discord"
 	repo := &queryRepository{member: MemberView{Id: queryOtherID, DiscordId: &discord}}
 	observer := &queryObserver{}
-	service, err := NewProductQueries(ProductReadRepos{Member: repo, Social: repo, Reference: repo, Batch: repo}, policy, func() time.Time { return time.Date(2026, 10, 18, 10, 0, 0, 123456789, time.UTC) }, observer, NewGrantReconciler())
+	service, err := NewProductQueries(ProductReadRepos{Member: repo, Reference: repo, Batch: repo}, policy, func() time.Time { return time.Date(2026, 10, 18, 10, 0, 0, 123456789, time.UTC) }, observer, NewGrantReconciler())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +184,7 @@ func requireQueryCode(t *testing.T, err error, code apierr.Code) {
 func TestProductQueriesConstructorRejectsEveryMissingDependency(t *testing.T) {
 	service, _, _ := queryService(t)
 	for _, typed := range []bool{false, true} {
-		for index := range 8 {
+		for index := range 7 {
 			reads, policy, clock, observer, reconciler := service.Reads, service.Policy, service.Clock, service.OverrideReads, service.Reconciler
 			var repo *queryRepository
 			var obs *queryObserver
@@ -213,25 +201,20 @@ func TestProductQueriesConstructorRejectsEveryMissingDependency(t *testing.T) {
 					reads.Reference = repo
 				}
 			case 2:
-				reads.Social = nil
-				if typed {
-					reads.Social = repo
-				}
-			case 3:
 				reads.Batch = nil
 				if typed {
 					reads.Batch = repo
 				}
-			case 4:
+			case 3:
 				policy = nil
-			case 5:
+			case 4:
 				clock = nil
-			case 6:
+			case 5:
 				observer = nil
 				if typed {
 					observer = obs
 				}
-			case 7:
+			case 6:
 				reconciler = nil
 				if typed {
 					reconciler = rec

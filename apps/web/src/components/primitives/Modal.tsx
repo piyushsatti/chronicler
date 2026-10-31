@@ -14,6 +14,8 @@ export type ModalProps = {
    * rest scrolls inside. */
   size?: 'sm' | 'md' | 'lg' | 'palette';
   className?: string;
+  /** Where focus goes when the dialog closes (Base UI `finalFocus`); default: where it was. */
+  finalFocus?: React.ComponentProps<typeof Dialog.Popup>['finalFocus'];
 };
 
 /**
@@ -30,6 +32,7 @@ export function Modal({
   onClose,
   size = 'md',
   className,
+  finalFocus,
 }: ModalProps): React.JSX.Element {
   const popupRef = useRef<HTMLDivElement>(null);
   // Base UI's default moves focus to the first tabbable (the Close button)
@@ -59,6 +62,7 @@ export function Modal({
           data-size={size === 'md' ? undefined : size}
           aria-modal="true"
           initialFocus={initialFocus}
+          finalFocus={finalFocus}
         >
           <header className="pr-modal__header">
             <Dialog.Title className="type-heading">{title}</Dialog.Title>

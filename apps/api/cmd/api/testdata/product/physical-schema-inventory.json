@@ -1083,6 +1083,11 @@
           "declaration": "TEXT DEFAULT 'CAMPAIGN'::TEXT NOT NULL",
           "source": "apps/api/db/migrations/0001_init.sql",
           "stage": "squash_a1"
+        },
+        "grid": {
+          "declaration": "TEXT DEFAULT 'POINT'::TEXT NOT NULL CHECK (grid IN ('point', 'hex'))",
+          "source": "apps/api/db/migrations/0006_many_locations_per_hex.sql",
+          "stage": "m4_map_grid"
         }
       },
       "baseline_ddl": "\n\n    id bigint NOT NULL,\n    public_id uuid DEFAULT gen_random_uuid() NOT NULL,\n    name text NOT NULL,\n    atlas_code text NOT NULL,\n    map_kind text NOT NULL,\n    region_id bigint,\n    cols integer,\n    rows integer,\n    asset_path text,\n    created_at timestamp with time zone DEFAULT now() NOT NULL,\n    created_by bigint,\n    family text DEFAULT 'campaign'::text NOT NULL,\n    CONSTRAINT maps_family_check CHECK ((family ~ '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$'::text)),\n    CONSTRAINT maps_hexgrid_shape_check CHECK (((map_kind <> 'hexgrid'::text) OR ((region_id IS NOT NULL) AND (cols IS NOT NULL) AND (rows IS NOT NULL)))),\n    CONSTRAINT maps_map_kind_check CHECK ((map_kind = 'pointcrawl'::text))\n"
@@ -1483,6 +1488,11 @@
           "declaration": "DOUBLE PRECISION NOT NULL",
           "source": "apps/api/db/migrations/0001_init.sql",
           "stage": "squash_a1"
+        },
+        "state": {
+          "declaration": "TEXT DEFAULT 'LOCKED'::TEXT NOT NULL CHECK (state IN ('locked', 'unlocked', 'mapped'))",
+          "source": "apps/api/db/migrations/0011_pointcrawl_node_state.sql",
+          "stage": "m11_pointcrawl_node_state"
         }
       },
       "baseline_ddl": "\n\n    created_at timestamp with time zone NOT NULL,\n    id bigint NOT NULL,\n    map_id bigint NOT NULL,\n    name text NOT NULL,\n    public_id uuid DEFAULT gen_random_uuid() NOT NULL,\n    submap_id bigint,\n    x double precision NOT NULL,\n    y double precision NOT NULL\n"
@@ -1543,6 +1553,11 @@
           "declaration": "BOOLEAN DEFAULT FALSE NOT NULL",
           "source": "apps/api/db/migrations/0001_init.sql",
           "stage": "squash_a1"
+        },
+        "dm_picked": {
+          "declaration": "BOOLEAN DEFAULT FALSE NOT NULL",
+          "source": "apps/api/db/migrations/0009_quest_participant_dm_picked.sql",
+          "stage": "m9_quest_participant_dm_picked"
         },
         "created_at": {
           "declaration": "TIMESTAMPTZ DEFAULT NOW() NOT NULL",

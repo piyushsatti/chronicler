@@ -94,10 +94,10 @@ LEFT JOIN members a ON a.id=g.granted_by WHERE m.public_id=sqlc.arg(member_id)::
 ORDER BY g.granted_at DESC,u.public_id DESC;
 -- name: ProductLockMembers :many
 SELECT public_id,roles,status,updated_at FROM members
-WHERE public_id=ANY(sqlc.arg(member_ids)::uuid[]) ORDER BY public_id FOR UPDATE;
+WHERE public_id=ANY(sqlc.arg(member_ids)::uuid[]) ORDER BY public_id FOR NO KEY UPDATE;
 -- name: ProductLockDmProfile :one
 SELECT m.public_id,p.* FROM members m JOIN dm_profiles p ON p.member_id=m.id
-WHERE m.public_id=sqlc.arg(member_id)::uuid FOR UPDATE OF m,p;
+WHERE m.public_id=sqlc.arg(member_id)::uuid FOR NO KEY UPDATE OF m FOR UPDATE OF p;
 -- name: ProductLockUnlockable :one
 SELECT * FROM unlockables WHERE public_id=sqlc.arg(unlockable_id)::uuid FOR UPDATE;
 -- name: ProductUpdateMemberProfile :one
@@ -245,7 +245,7 @@ WITH inputs AS (
  FROM jsonb_array_elements(sqlc.arg(changes)::jsonb) j
 ), prior AS MATERIALIZED (
  SELECT m.id,m.public_id,m.roles AS old_roles,i.roles AS new_roles,i.history_id,i.note
- FROM inputs i JOIN members m ON m.public_id=i.member_id ORDER BY m.public_id FOR UPDATE OF m
+ FROM inputs i JOIN members m ON m.public_id=i.member_id ORDER BY m.public_id FOR NO KEY UPDATE OF m
 ), changed AS (
  UPDATE members m SET roles=p.new_roles,updated_at=sqlc.arg(at)::timestamptz
  FROM prior p WHERE m.id=p.id RETURNING m.id,m.public_id,m.roles,m.updated_at

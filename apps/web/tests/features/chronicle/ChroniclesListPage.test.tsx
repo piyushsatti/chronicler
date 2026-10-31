@@ -48,6 +48,20 @@ describe('ChroniclesListPage', () => {
     expect(screen.queryByRole('link', { name: 'New entry' })).not.toBeInTheDocument();
   });
 
+  it('uses the shared toolbar with the same segment size and spacing as Codex and Rules (owner item 8)', async () => {
+    renderWithProviders(<ChroniclesListPage />);
+    await screen.findByText('Vault Delve — Session recap');
+    const toolbar = screen.getByRole('region', { name: 'Filter chronicles' });
+    expect(toolbar).toHaveAttribute('data-component', 'PageToolbar');
+    const segments = within(toolbar).getByRole('toolbar', { name: 'Chronicle date range' });
+    expect(segments).toHaveAttribute('data-size', 'md');
+    const heading = screen.getByRole('heading', { level: 1, name: 'Chronicles' });
+    const stack = toolbar.parentElement?.parentElement;
+    expect(stack).toHaveClass('stack');
+    expect(stack).toHaveAttribute('data-gap', '5');
+    expect(stack).toContainElement(heading);
+  });
+
   it('disambiguates shared author names and keeps author handles searchable', async () => {
     const user = userEvent.setup();
     const seenHandles: string[] = [];
@@ -98,6 +112,23 @@ describe('ChroniclesListPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('asks a signed-out visitor to sign in when the server answers 403', async () => {
+    server.use(
+      graphql.query('ChronicleList', () =>
+        HttpResponse.json(
+          { errors: [{ message: 'forbidden', extensions: { code: 'FORBIDDEN' } }] },
+          { status: 403 },
+        ),
+      ),
+    );
+    renderWithProviders(<ChroniclesListPage />);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Sign in to see this');
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+    expect(screen.queryByRole('heading', { name: 'Something went wrong' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+  });
+
   it('shows the empty timeline state with a configured era', async () => {
     server.use(
       graphql.query('ChronicleList', () =>
@@ -136,10 +167,10 @@ describe('ChroniclesListPage', () => {
     expect(screen.queryByText('Vault Delve — Session recap')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'New entry' })).not.toBeInTheDocument();
     release();
-    expect(await screen.findByRole('link', { name: 'New entry' })).toHaveAttribute(
-      'href',
-      '/summaries/new',
-    );
+    const newEntry = await screen.findByRole('link', { name: 'New entry' });
+    expect(newEntry).toHaveAttribute('href', '/summaries/new');
+    // The small header action keeps the title-to-lede spacing the Rules page has.
+    expect(newEntry).toHaveClass('btn', 'btn--primary', 'btn--sm');
   });
 
   it('offers no new entry to accounts the summary editor would deny', async () => {

@@ -8,10 +8,6 @@ SELECT m.public_id AS id, m.roles, m.status, m.handle,
 FROM members m
 LEFT JOIN dm_profiles dp ON dp.member_id = m.id
 WHERE m.public_id = $1;
--- name: GetMemberByHandle :one
-SELECT public_id AS id, discord_id, handle, display_name, avatar_url, roles, status
-FROM members
-WHERE handle = $1;
 -- name: GetMemberByDiscordID :one
 SELECT public_id AS id, discord_id, handle, display_name, avatar_url, roles, status
 FROM members

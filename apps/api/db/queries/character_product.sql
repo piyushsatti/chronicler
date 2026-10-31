@@ -121,35 +121,6 @@ SELECT count(*)::int AS total
 FROM characters c
 JOIN members owner ON owner.id = c.owner_id
 WHERE c.deleted_at IS NULL AND owner.public_id = sqlc.arg(owner_id)::uuid;
--- name: CharacterProductBatchByIDs :many
-WITH requested AS (
-    SELECT requested.public_id, requested.ordinality
-    FROM unnest(sqlc.arg(character_ids)::uuid[]) WITH ORDINALITY AS requested(public_id, ordinality)
-)
-SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
-       c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
-       c.description, c.background_text, c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
-       ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
-       c.verification_submitted_at,
-       CASE WHEN c.verification_submitted_at IS NOT NULL
-                  AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
-            THEN 'PENDING'
-            ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status
-FROM requested
-JOIN characters c ON c.public_id = requested.public_id AND c.deleted_at IS NULL
-JOIN members owner ON owner.id = c.owner_id
-LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
-LEFT JOIN documents guild ON guild.id = c.guild_document_id
-LEFT JOIN regions region ON region.id = c.region_id
-LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
-LEFT JOIN LATERAL (
-    SELECT verification.verdict, verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-ORDER BY requested.ordinality;
 -- name: CharacterProductLockByID :one
 SELECT c.id, c.public_id, c.owner_id, c.status, c.updated_at, c.player_xp,
        c.backstory_id, c.guild_document_id, c.region_id, c.deleted_at,
@@ -482,14 +453,6 @@ SELECT count(*)::int AS total
 FROM downtime_projects project
 JOIN characters character ON character.id = project.character_id
 WHERE character.public_id = $1;
--- name: CharacterProductLockDowntimeProject :one
-SELECT project.id, project.public_id, project.character_id, project.name,
-       project.target, project.goal, project.notes, project.progress,
-       project.status, project.updated_at
-FROM downtime_projects project
-JOIN characters character ON character.id = project.character_id
-WHERE character.public_id = $1 AND project.public_id = $2
-FOR UPDATE OF project;
 -- name: CharacterProductInsertDowntimeProject :one
 WITH inserted AS (
     INSERT INTO downtime_projects (character_id, name, target, goal, notes, progress, status, updated_at)
@@ -547,11 +510,6 @@ WHERE public_id = sqlc.arg(character_id)::uuid
   AND status = 'pending_approval'
   AND updated_at = sqlc.arg(expected_updated_at)::timestamptz
 RETURNING public_id AS id, verification_submitted_at, updated_at;
--- name: CharacterProductLockClaimCharacter :one
-SELECT character.id, character.public_id, character.owner_id, character.player_xp
-FROM characters character
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-FOR UPDATE;
 -- name: CharacterProductListLogs :many
 SELECT log.public_id AS id, character.public_id AS character_id, quest.public_id AS quest_id,
        log.body, log.created_at, creator.public_id AS created_by
@@ -617,13 +575,16 @@ RETURNING backstory.public_id AS id, backstory.name, backstory.lore, backstory.c
 -- name: CharacterProductInsertCharacter :one
 INSERT INTO characters (
     public_id, short_code, name, owner_id, status, backstory_id, guild_document_id,
-    region_id, description, background_text, ddb_url, image_url, created_at, updated_at
+    region_id, description, background_text, ddb_url, image_url, created_at, updated_at,
+    verification_submitted_at
 )
 SELECT sqlc.arg(character_id)::uuid, sqlc.arg(short_code)::text, sqlc.arg(name)::text,
        owner.id, 'pending_approval', backstory.id, guild.id, region.id,
        sqlc.narg(description)::text, sqlc.narg(background_text)::text, sqlc.narg(ddb_url)::text,
        sqlc.narg(image_url)::text,
-       sqlc.arg(at)::timestamptz, sqlc.arg(at)::timestamptz
+       sqlc.arg(at)::timestamptz, sqlc.arg(at)::timestamptz,
+       -- A new character goes straight to the review queue.
+       sqlc.arg(at)::timestamptz
 FROM members owner
 LEFT JOIN backstories backstory ON backstory.public_id = sqlc.narg(backstory_id)::uuid
 LEFT JOIN documents guild ON guild.public_id = sqlc.narg(guild_id)::uuid
@@ -677,13 +638,6 @@ WHERE character.public_id = sqlc.arg(character_id)::uuid
   AND character.deleted_at IS NULL
   AND (sqlc.narg(quest_id)::uuid IS NULL OR quest.id IS NOT NULL)
 RETURNING public_id AS id, body, created_at;
--- name: CharacterProductLockCharacterLog :one
-SELECT log.id, log.public_id, log.character_id, log.quest_id, log.body, log.created_at, log.created_by
-FROM character_logs log
-JOIN characters character ON character.id = log.character_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-  AND log.public_id = sqlc.arg(log_id)::uuid
-FOR UPDATE OF log;
 -- name: CharacterProductDeleteCharacterLog :one
 DELETE FROM character_logs log
 USING characters character
@@ -696,7 +650,7 @@ SELECT document.public_id AS id, document.kind, document.slug, document.title,
        document.category, document.status, document.visibility, document.policy,
        document.frontmatter_yaml, author.public_id AS author_id, document.published_at,
        document.deleted_at, deleted_by.public_id AS deleted_by, document.updated_at,
-       document.version, document.body
+       document.version
 FROM document_links link
 JOIN documents document ON document.id = link.source_id
 JOIN characters character ON character.id = link.character_target_id
@@ -706,6 +660,9 @@ WHERE character.public_id = sqlc.arg(character_id)::uuid
   AND link.relation = 'summarizes'
   AND document.kind = 'summary'
   AND document.deleted_at IS NULL
+  AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
+      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+      sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
 ORDER BY link.summary_append_order ASC, document.public_id ASC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 -- name: CharacterProductCountSummaries :one
@@ -713,23 +670,14 @@ SELECT count(*)::int AS total
 FROM document_links link
 JOIN documents document ON document.id = link.source_id
 JOIN characters character ON character.id = link.character_target_id
+JOIN members author ON author.id = document.author_id
 WHERE character.public_id = sqlc.arg(character_id)::uuid
   AND link.relation = 'summarizes'
   AND document.kind = 'summary'
-  AND document.deleted_at IS NULL;
--- name: CharacterProductSumProgression :one
-SELECT COALESCE(sum(ledger.delta), 0)::int AS total
-FROM character_progression_ledger ledger
-JOIN characters character ON character.id = ledger.character_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid;
--- name: CharacterProductListCatalogPickIds :many
-SELECT catalog.public_id AS id
-FROM character_catalog_picks pick
-JOIN characters character ON character.id = pick.character_id
-JOIN creation_catalog catalog ON catalog.id = pick.catalog_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-ORDER BY catalog.public_id ASC;
-
+  AND document.deleted_at IS NULL
+  AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
+      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+      sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[]);
 -- name: CharacterProductValidateCreationReferences :one
 SELECT
     (sqlc.narg(backstory_id)::uuid IS NULL OR EXISTS (

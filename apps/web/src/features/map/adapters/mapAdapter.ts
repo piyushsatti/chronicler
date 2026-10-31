@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type {
   MapDocumentsQuery,
   MapAtlasQuery,
+  MapContainmentQuery,
   MapNodeLinksQuery,
   MapDirectoryQuery,
   MapAssignmentsQuery,
@@ -10,6 +11,8 @@ import type {
   MapDocumentQuery,
   MapLocationDocumentsQuery,
   MapCreateMutation,
+  MapUpdateMutation,
+  MapUpdateMutationVariables,
   MapCreateMutationVariables,
   MapSaveNodeMutation,
   MapSaveNodeMutationVariables,
@@ -19,12 +22,13 @@ import type {
   MapLinkEntryMutationVariables,
   MapQuestTitlesQuery,
   MapUnlinkEntryMutation,
+  MapSetNodeStateMutation,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { safeAppError, toAppError } from '../../../errors/toAppError.js';
 import { TransportError } from '../../../errors/types.js';
-import type { AdapterResult } from '../../../errors/types.js';
 import ATLAS from './map.graphql?raw';
+import CONTAINMENT from './mapContainment.graphql?raw';
 import LINKS from './mapNodeLinks.graphql?raw';
 import DIRECTORY from './mapDirectory.graphql?raw';
 import ASSIGNMENTS from './mapAssignments.graphql?raw';
@@ -34,19 +38,24 @@ import DOCUMENT from './mapDocument.graphql?raw';
 import DOCUMENTS from './mapDocuments.graphql?raw';
 import LOCATIONS from './mapLocationDocuments.graphql?raw';
 import CREATE from './mapCreate.graphql?raw';
+import UPDATE from './mapUpdate.graphql?raw';
 import NODE from './mapSaveNode.graphql?raw';
 import EDGE from './mapSaveEdge.graphql?raw';
 import LINK from './mapLinkEntry.graphql?raw';
 import UNLINK from './mapUnlinkEntry.graphql?raw';
 import QUEST_TITLES from './mapQuestTitles.graphql?raw';
+import NODE_STATE from './mapSetNodeState.graphql?raw';
+import { NODE_STATES, type NodeState } from '../nodeState.js';
 
 const id = z.string().uuid();
+const nodeState = z.enum(NODE_STATES);
 const mapSchema = z.object({
   id,
   canEdit: z.boolean(),
   name: z.string(),
   atlasCode: z.string(),
   family: z.string(),
+  grid: z.string(),
   mapKind: z.string(),
   assetPath: z.string().nullable(),
   regionId: id.nullable(),
@@ -66,9 +75,14 @@ const nodeSchema = z.object({
   x: z.number().finite(),
   y: z.number().finite(),
   name: z.string(),
+  state: nodeState,
   submapId: id.nullable(),
   createdAt: z.string(),
   linkedEntries: z.array(entrySchema),
+});
+const containmentSchema = z.object({
+  id,
+  pointcrawlNodes: z.array(z.object({ submapId: id.nullable() })),
 });
 const edgeSchema = z.object({
   id,
@@ -130,12 +144,6 @@ export type MapDocument = z.infer<typeof documentSchema>;
 export type Pointcrawl = MapAtlasView & { nodes: MapNode[]; edges: MapEdge[] };
 export type MapDirectory = { maps: MapAtlasView[]; regions: MapRegion[] };
 
-export function parseMap(wire: unknown): AdapterResult<MapAtlasView> {
-  const parsed = mapSchema.safeParse(wire);
-  return parsed.success
-    ? { ok: true, data: parsed.data }
-    : { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-}
 function parse<T>(schema: z.ZodType<T>, wire: unknown): T {
   const parsed = schema.safeParse(wire);
   if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'map:wire');
@@ -197,6 +205,20 @@ export async function loadMapDirectory(): Promise<MapDirectory> {
     if (pageMaps.length < 50 && pageRegions.length < 50) break;
   }
   return { maps, regions };
+}
+export async function loadMapContainment(atlasCode: string) {
+  const nodes: z.infer<typeof containmentSchema>['pointcrawlNodes'] = [];
+  for (let offset = 0; ; offset += 200) {
+    const data = await graphqlRequest<MapContainmentQuery>(CONTAINMENT, {
+      atlasCode,
+      limit: 200,
+      offset,
+    });
+    if (!data.map) throw toAppError({ failure: 'NotFound' }, 'map:load');
+    const page = parse(containmentSchema, data.map);
+    nodes.push(...page.pointcrawlNodes);
+    if (page.pointcrawlNodes.length < 200) return { id: page.id, nodes };
+  }
 }
 export async function loadAssignments(filters: {
   memberId?: string;
@@ -287,6 +309,18 @@ export async function createMap(
   });
   return parse(z.object({ id, atlasCode: z.string() }), data.createMap);
 }
+export async function updateMap(
+  mapId: string,
+  input: MapUpdateMutationVariables['input'],
+  idempotencyKey: string,
+) {
+  const data = await graphqlRequest<MapUpdateMutation>(UPDATE, {
+    id: mapId,
+    input,
+    meta: { idempotencyKey },
+  });
+  return parse(z.object({ id, atlasCode: z.string() }), data.updateMap);
+}
 export async function saveNode(
   mapId: string,
   input: MapSaveNodeMutationVariables['input'],
@@ -310,6 +344,21 @@ export async function saveEdge(
     meta: { idempotencyKey },
   });
   return parse(z.object({ id }), data.setPointcrawlEdge);
+}
+/** Admin-only: records a hex's display state. The server rejects every other caller. */
+export async function setNodeState(
+  mapId: string,
+  nodeId: string,
+  state: NodeState,
+  idempotencyKey: string,
+) {
+  const data = await graphqlRequest<MapSetNodeStateMutation>(NODE_STATE, {
+    mapId,
+    nodeId,
+    state,
+    meta: { idempotencyKey },
+  });
+  return parse(z.object({ id, state: nodeState }), data.setPointcrawlNodeState);
 }
 export async function changeEntry(
   input: Omit<MapLinkEntryMutationVariables, 'meta'>,

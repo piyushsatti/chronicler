@@ -3,8 +3,6 @@ package jobs_test
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"reflect"
 	"testing"
 	"time"
 
@@ -19,54 +17,17 @@ func (r *recStore) Enqueue(_ context.Context, job jobs.Job) error {
 	r.job = job
 	return nil
 }
+func (r *recStore) EnqueueScheduled(ctx context.Context, job jobs.Job) (bool, error) {
+	return true, r.Enqueue(ctx, job)
+}
 func (r *recStore) ClaimOne(context.Context, string) (jobs.Job, error) { return jobs.Job{}, nil }
 func (r *recStore) Succeed(context.Context, jobs.Receipt) error        { return nil }
 func (r *recStore) Retry(context.Context, jobs.Receipt, time.Duration, string) error {
 	return nil
 }
 func (r *recStore) Fail(context.Context, jobs.Receipt, jobs.State, string) error { return nil }
-
-func TestWriterEnqueueDesiredMatchesGoSeam(t *testing.T) {
-	var contract struct {
-		Seams []struct {
-			ID        string `json:"id"`
-			Interface string `json:"interface"`
-			Signature string `json:"signature"`
-		} `json:"provider_caller_seams"`
-	}
-	data, err := os.ReadFile("../../../docs/design/graphql-product/go-seams.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal(data, &contract); err != nil {
-		t.Fatal(err)
-	}
-	var signature string
-	for _, seam := range contract.Seams {
-		if seam.ID == "CROSS-jobs.Writer-EnqueueDesired" && seam.Interface == "jobs.Writer" {
-			signature = seam.Signature
-			break
-		}
-	}
-	if signature != "EnqueueDesired(ctx context.Context, questID string, desiredRevision int32, at time.Time) (string,error)" {
-		t.Fatalf("canonical Writer seam = %q", signature)
-	}
-	typ := reflect.TypeFor[jobs.Writer]()
-	if typ.NumMethod() != 1 {
-		t.Fatalf("Writer has %d methods, want 1", typ.NumMethod())
-	}
-	method, ok := typ.MethodByName("EnqueueDesired")
-	if !ok {
-		t.Fatal("Writer is missing EnqueueDesired")
-	}
-	want := reflect.FuncOf(
-		[]reflect.Type{reflect.TypeFor[context.Context](), reflect.TypeFor[string](), reflect.TypeFor[int32](), reflect.TypeFor[time.Time]()},
-		[]reflect.Type{reflect.TypeFor[string](), reflect.TypeFor[error]()},
-		false,
-	)
-	if method.Type != want {
-		t.Fatalf("Writer.EnqueueDesired type = %v, want %v", method.Type, want)
-	}
+func (r *recStore) FailWithCode(context.Context, jobs.Receipt, jobs.State, string, string) error {
+	return nil
 }
 
 func TestEnqueueQuestDiscordUsesPublicKeyAndRevision(t *testing.T) {

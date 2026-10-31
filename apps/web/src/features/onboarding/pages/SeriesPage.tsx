@@ -13,17 +13,24 @@ import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { Modal } from '../../../components/primitives/Modal.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { useSeriesPage } from '../../../hooks/useSeriesPage.js';
+import { seriesNameError, useSeriesPage } from '../../../hooks/useSeriesPage.js';
 import { isSentinelDate, personLabels, pluralize } from '../../../utils/format.js';
 import { toCardStatus } from '../../../view-models/questCard.js';
+import styles from './seriesPage.module.css';
 
 const SEATED = new Set(['signed_up', 'selected', 'played']);
+
+/** The quest create form with this series pre-selected. */
+function newQuestHref(arcId: string): string {
+  return `/quests/new?series=${encodeURIComponent(arcId)}`;
+}
 
 export function SeriesPage(): React.JSX.Element {
   const { shortCode = '' } = useParams();
   const page = useSeriesPage(shortCode);
   const dates = useDateFormatter();
   const [renaming, setRenaming] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
   const arc = !page.arc.isError ? page.arc.data : undefined;
   const dms = [
     ...new Map(
@@ -74,10 +81,25 @@ export function SeriesPage(): React.JSX.Element {
               ) : undefined
             }
             actions={
-              page.canRename ? (
-                <Button variant="secondary" onClick={() => setRenaming(true)}>
-                  Rename series
-                </Button>
+              page.canRename || (page.canAddQuest && arc) ? (
+                <>
+                  {page.canAddQuest && arc ? (
+                    <Link className="btn btn--primary" to={newQuestHref(arc.id)}>
+                      New quest in this series
+                    </Link>
+                  ) : null}
+                  {page.canRename ? (
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setNameError(null);
+                        setRenaming(true);
+                      }}
+                    >
+                      Rename series
+                    </Button>
+                  ) : null}
+                </>
               ) : undefined
             }
           />
@@ -108,13 +130,14 @@ export function SeriesPage(): React.JSX.Element {
             ) : arc.quests.length ? (
               <CardGrid as="ol" aria-label="Quests in this series" gap={5}>
                 {arc.quests.map((quest) => (
-                  <li key={quest.id}>
+                  <li key={quest.id} className={styles.cardItem}>
                     <QuestCard
                       code={quest.shortCode}
                       title={quest.briefDocument?.title ?? 'Untitled quest'}
                       description={quest.briefDocument?.effectiveBody}
                       status={toCardStatus(quest.displayStatus, quest.status)}
                       when={dates.formatScheduled(quest.scheduledAt)}
+                      whenShort={dates.formatScheduledShort(quest.scheduledAt)}
                       dmUsername={quest.dm?.handle}
                       dmName={
                         quest.dm
@@ -142,9 +165,15 @@ export function SeriesPage(): React.JSX.Element {
               <EmptyState
                 message="No quests belong to this series yet."
                 action={
-                  <Link className="btn btn--secondary btn--sm" to="/quests">
-                    Browse the quest board
-                  </Link>
+                  page.canAddQuest ? (
+                    <Link className="btn btn--primary btn--sm" to={newQuestHref(arc.id)}>
+                      New quest in this series
+                    </Link>
+                  ) : (
+                    <Link className="btn btn--secondary btn--sm" to="/quests">
+                      Browse the quest board
+                    </Link>
+                  )
                 }
               />
             )}
@@ -160,20 +189,22 @@ export function SeriesPage(): React.JSX.Element {
                 key={arc.name}
                 className="stack"
                 data-gap="4"
+                noValidate
                 onSubmit={(event) => {
                   event.preventDefault();
-                  const data = new FormData(event.currentTarget);
-                  void page.save(arc.id, String(data.get('name') ?? ''), () =>
-                    setRenaming(false),
-                  );
+                  const name = String(new FormData(event.currentTarget).get('name') ?? '');
+                  const invalid = seriesNameError(name);
+                  setNameError(invalid);
+                  if (!invalid) void page.save(arc.id, name, () => setRenaming(false));
                 }}
               >
                 <Field
                   label="Series name"
                   name="name"
                   required
-                  maxLength={200}
                   defaultValue={arc.name}
+                  error={nameError ?? undefined}
+                  onChange={() => setNameError(null)}
                 />
                 {page.error ? <StatePanel status="error" error={page.error} /> : null}
                 <div className="row" data-gap="3" data-wrap="1">

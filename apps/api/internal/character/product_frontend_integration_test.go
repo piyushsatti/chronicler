@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 
 	"testing"
 	"time"
@@ -114,6 +115,8 @@ func (f *frontendCharacterFixture) snapshot(t *testing.T) string {
 	t.Helper()
 	var value string
 	err := f.db.Pool.QueryRow(context.Background(), `SELECT jsonb_build_object(
+      'members',(SELECT jsonb_agg(to_jsonb(m) ORDER BY m.id) FROM members m),
+      'role_changes',(SELECT jsonb_agg(to_jsonb(r) ORDER BY r.id) FROM role_changes r),
       'characters',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.id) FROM characters c),
       'quests',(SELECT jsonb_agg(to_jsonb(q) ORDER BY q.id) FROM quests q),
       'participants',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.quest_id,p.character_id) FROM quest_participants p),
@@ -127,6 +130,324 @@ func (f *frontendCharacterFixture) snapshot(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return value
+}
+
+func TestApprovedCharacterPromotesGuestAtomically(t *testing.T) {
+	ctx := context.Background()
+	guestFixture := func(t *testing.T) *frontendCharacterFixture {
+		t.Helper()
+		f := newFrontendCharacterFixture(t)
+		if _, err := f.db.Pool.Exec(ctx, `UPDATE members SET roles=ARRAY['guest','archon'] WHERE public_id=$1::uuid`, f.owner.Claims().MemberID); err != nil {
+			t.Fatal(err)
+		}
+		var err error
+		f.owner, err = auth.NewAuthority(f.owner.Claims().MemberID, []auth.Role{auth.Role("guest"), auth.Archon}, "active", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return f
+	}
+	submit := func(t *testing.T, f *frontendCharacterFixture) character.CharacterView {
+		t.Helper()
+		hero := f.create(t)
+		value, err := f.commands.SubmitForVerification(ctx, f.owner, character.SubmitForVerificationSpec{CharacterId: hero.Id, ExpectedUpdatedAt: hero.UpdatedAt}, commandMeta())
+		if err != nil || value.VerificationSubmittedAt == nil {
+			t.Fatalf("submission=%+v err=%v", value, err)
+		}
+		return value
+	}
+	assertPromotion := func(t *testing.T, f *frontendCharacterFixture) {
+		t.Helper()
+		var roles, oldRoles, newRoles []string
+		var histories int
+		var actor string
+		err := f.db.Pool.QueryRow(ctx, `SELECT m.roles,(SELECT count(*) FROM role_changes r WHERE r.member_id=m.id),r.old_roles,r.new_roles,a.public_id::text FROM members m JOIN role_changes r ON r.member_id=m.id JOIN members a ON a.id=r.changed_by WHERE m.public_id=$1::uuid`, f.owner.Claims().MemberID).Scan(&roles, &histories, &oldRoles, &newRoles, &actor)
+		if err != nil || !slices.Equal(roles, []string{"archon", "player"}) || histories != 1 || !slices.Equal(oldRoles, []string{"guest", "archon"}) || !slices.Equal(newRoles, roles) || actor != f.verifier.Claims().MemberID {
+			t.Fatalf("roles=%v histories=%d old=%v new=%v actor=%s err=%v", roles, histories, oldRoles, newRoles, actor, err)
+		}
+	}
+	t.Run("rejection then approval replay and retirement", func(t *testing.T) {
+		f := guestFixture(t)
+		hero := submit(t, f)
+		spec := character.DecideVerificationSpec{CharacterId: hero.Id, ExpectedSubmittedAt: *hero.VerificationSubmittedAt, Verdict: member.VerificationVerdictRejected}
+		if _, err := f.commands.DecideVerification(ctx, f.verifier, spec, commandMeta()); err != nil {
+			t.Fatal(err)
+		}
+		var roles []string
+		var histories int
+		if err := f.db.Pool.QueryRow(ctx, `SELECT roles,(SELECT count(*) FROM role_changes) FROM members WHERE public_id=$1::uuid`, f.owner.Claims().MemberID).Scan(&roles, &histories); err != nil || !slices.Equal(roles, []string{"guest", "archon"}) || histories != 0 {
+			t.Fatalf("rejection roles=%v history=%d err=%v", roles, histories, err)
+		}
+		reader, _ := character.NewProductPostgres(f.db.Pool)
+		current, err := reader.ReadCharacter(ctx, f.owner, character.CharacterSpec{Id: &hero.Id})
+		if err != nil {
+			t.Fatal(err)
+		}
+		hero, err = f.commands.SubmitForVerification(ctx, f.owner, character.SubmitForVerificationSpec{CharacterId: hero.Id, ExpectedUpdatedAt: current.UpdatedAt}, commandMeta())
+		if err != nil {
+			t.Fatal(err)
+		}
+		spec.ExpectedSubmittedAt, spec.Verdict = *hero.VerificationSubmittedAt, member.VerificationVerdictApproved
+		meta := commandMeta()
+		approved, err := f.commands.DecideVerification(ctx, f.verifier, spec, meta)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertPromotion(t, f)
+		before := f.snapshot(t)
+		replay, err := f.commands.DecideVerification(ctx, f.verifier, spec, meta)
+		if err != nil || replay.Id != approved.Id || f.snapshot(t) != before {
+			t.Fatalf("replay=%+v err=%v", replay, err)
+		}
+		current, err = reader.ReadCharacter(ctx, f.owner, character.CharacterSpec{Id: &hero.Id})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.commands.RetireCharacter(ctx, f.owner, character.RetireCharacterSpec{CharacterId: hero.Id, ExpectedUpdatedAt: current.UpdatedAt}, commandMeta()); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.commands.DeleteCharacter(ctx, f.owner, character.DeleteCharacterSpec{CharacterId: hero.Id}, commandMeta()); err != nil {
+			t.Fatal(err)
+		}
+		assertPromotion(t, f)
+	})
+	t.Run("concurrent first approvals", func(t *testing.T) {
+		f := guestFixture(t)
+		first, second := submit(t, f), submit(t, f)
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		start, done := make(chan struct{}), make(chan error, 2)
+		for _, hero := range []character.CharacterView{first, second} {
+			go func(hero character.CharacterView) {
+				<-start
+				_, err := f.commands.DecideVerification(ctx, f.verifier, character.DecideVerificationSpec{CharacterId: hero.Id, ExpectedSubmittedAt: *hero.VerificationSubmittedAt, Verdict: member.VerificationVerdictApproved}, commandMeta())
+				done <- err
+			}(hero)
+		}
+		close(start)
+		for range 2 {
+			select {
+			case err := <-done:
+				if err != nil {
+					t.Fatal(err)
+				}
+			case <-ctx.Done():
+				t.Fatal(ctx.Err())
+			}
+		}
+		assertPromotion(t, f)
+	})
+	t.Run("downstream failure rolls back promotion", func(t *testing.T) {
+		f := guestFixture(t)
+		hero := submit(t, f)
+		if _, err := f.db.Pool.Exec(ctx, `CREATE FUNCTION reject_guest_notice() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN RAISE EXCEPTION 'injected notification failure'; END$$; CREATE TRIGGER reject_guest_notice BEFORE INSERT ON notifications FOR EACH ROW EXECUTE FUNCTION reject_guest_notice()`); err != nil {
+			t.Fatal(err)
+		}
+		before := f.snapshot(t)
+		_, err := f.commands.DecideVerification(ctx, f.verifier, character.DecideVerificationSpec{CharacterId: hero.Id, ExpectedSubmittedAt: *hero.VerificationSubmittedAt, Verdict: member.VerificationVerdictApproved}, commandMeta())
+		if err == nil || f.snapshot(t) != before {
+			t.Fatalf("failed notice committed verification or promotion: %v", err)
+		}
+	})
+}
+
+type pausedVerificationPromotion struct {
+	character.CharacterWriteRepository
+	arrived chan<- struct{}
+	resume  <-chan struct{}
+}
+
+func (p pausedVerificationPromotion) StoreDecideVerification(ctx context.Context, write character.DecideVerificationWrite) (member.VerificationView, error) {
+	// Both commands must hold their actor FK locks before either locks the owner.
+	select {
+	case p.arrived <- struct{}{}:
+	case <-ctx.Done():
+		return member.VerificationView{}, ctx.Err()
+	}
+	select {
+	case <-p.resume:
+		return p.CharacterWriteRepository.StoreDecideVerification(ctx, write)
+	case <-ctx.Done():
+		return member.VerificationView{}, ctx.Err()
+	}
+}
+
+func TestGuestVerifierConcurrentSelfApprovals(t *testing.T) {
+	f := newFrontendCharacterFixture(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if _, err := f.db.Pool.Exec(ctx, `UPDATE members SET roles=ARRAY['guest','verifier']::text[] WHERE public_id=$1::uuid`, f.owner.Claims().MemberID); err != nil {
+		t.Fatal(err)
+	}
+	var err error
+	f.owner, err = auth.NewAuthority(f.owner.Claims().MemberID, []auth.Role{auth.Role("guest"), auth.Verifier}, "active", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	heroes := []character.CharacterView{f.create(t), f.create(t)}
+	for i, hero := range heroes {
+		heroes[i], err = f.commands.SubmitForVerification(ctx, f.owner, character.SubmitForVerificationSpec{CharacterId: hero.Id, ExpectedUpdatedAt: hero.UpdatedAt}, commandMeta())
+		if err != nil || heroes[i].VerificationSubmittedAt == nil {
+			t.Fatalf("submission=%+v err=%v", heroes[i], err)
+		}
+	}
+	arrived, resume := make(chan struct{}, 2), make(chan struct{})
+	f.decorate = func(r character.ProductCommandRepos) character.ProductCommandRepos {
+		r.Character = pausedVerificationPromotion{r.Character, arrived, resume}
+		return r
+	}
+	done := make(chan error, 2)
+	for _, hero := range heroes {
+		go func(hero character.CharacterView) {
+			_, err := f.commands.DecideVerification(ctx, f.owner, character.DecideVerificationSpec{CharacterId: hero.Id, ExpectedSubmittedAt: *hero.VerificationSubmittedAt, Verdict: member.VerificationVerdictApproved}, commandMeta())
+			done <- err
+		}(hero)
+	}
+	for range 2 {
+		select {
+		case <-arrived:
+		case err := <-done:
+			t.Fatalf("approval ended before promotion barrier: %v", err)
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+	}
+	close(resume)
+	for range 2 {
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Fatal(err)
+			}
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+	}
+	var roles []string
+	var histories, active, assessments, receipts int
+	err = f.db.Pool.QueryRow(ctx, `SELECT roles,
+		(SELECT count(*) FROM role_changes WHERE member_id=m.id),
+		(SELECT count(*) FROM characters WHERE owner_id=m.id AND status='active'),
+		(SELECT count(*) FROM verifications v JOIN characters c ON c.id=v.subject_id WHERE v.subject_type='character' AND c.owner_id=m.id AND v.verdict='approved'),
+		(SELECT count(*) FROM idempotency_keys WHERE actor_id=m.id AND endpoint='graphql:decideVerification')
+		FROM members m WHERE public_id=$1::uuid`, f.owner.Claims().MemberID).Scan(&roles, &histories, &active, &assessments, &receipts)
+	if err != nil || !slices.Equal(roles, []string{"verifier", "player"}) || histories != 1 || active != 2 || assessments != 2 || receipts != 2 {
+		t.Fatalf("roles=%v histories=%d active=%d assessments=%d receipts=%d err=%v", roles, histories, active, assessments, receipts, err)
+	}
+}
+
+type pausedMemberRoleBatch struct {
+	member.MemberWriteRepository
+	arrived chan<- struct{}
+	resume  <-chan struct{}
+}
+
+func (p pausedMemberRoleBatch) StoreSetMemberRolesBatch(ctx context.Context, write member.SetMemberRolesBatchWrite) ([]member.MemberRoleBatchResultView, error) {
+	select {
+	case p.arrived <- struct{}{}:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+	select {
+	case <-p.resume:
+		return p.MemberWriteRepository.StoreSetMemberRolesBatch(ctx, write)
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+func TestGuestApprovalConcurrentMemberRoleBatch(t *testing.T) {
+	f := newFrontendCharacterFixture(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	// The batch must lock the owner before the verifier in UUID order.
+	if f.owner.Claims().MemberID > f.verifier.Claims().MemberID {
+		f.owner, f.verifier = f.verifier, f.owner
+	}
+	for _, who := range []struct {
+		target *auth.Authority
+		role   auth.Role
+	}{{&f.owner, auth.Role("guest")}, {&f.verifier, auth.Verifier}} {
+		id := who.target.Claims().MemberID
+		if _, err := f.db.Pool.Exec(ctx, `UPDATE members SET roles=$2::text[] WHERE public_id=$1::uuid`, id, []string{string(who.role)}); err != nil {
+			t.Fatal(err)
+		}
+		var err error
+		*who.target, err = auth.NewAuthority(id, []auth.Role{who.role}, "active", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	hero := f.create(t)
+	hero, err := f.commands.SubmitForVerification(ctx, f.owner, character.SubmitForVerificationSpec{CharacterId: hero.Id, ExpectedUpdatedAt: hero.UpdatedAt}, commandMeta())
+	if err != nil || hero.VerificationSubmittedAt == nil {
+		t.Fatalf("submission=%+v err=%v", hero, err)
+	}
+	arrived, resume := make(chan struct{}, 2), make(chan struct{})
+	f.decorate = func(r character.ProductCommandRepos) character.ProductCommandRepos {
+		r.Character = pausedVerificationPromotion{r.Character, arrived, resume}
+		return r
+	}
+	policy, err := auth.NewPoolPolicy(f.db.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner := db.NewRunner(f.db.Pool, func(tx pgx.Tx) member.ProductCommandRepos {
+		pg, _ := member.NewProductPostgres(tx)
+		store, _ := member.NewFromDBTX(tx, "")
+		replay, _ := idempotency.NewRepository(tx)
+		audit, _ := auth.NewOverrideRecorder(replay)
+		return member.ProductCommandRepos{Member: pausedMemberRoleBatch{pg, arrived, resume}, Policy: policy, Authority: store.ResolveAuthority, Replay: replay, Audit: audit}
+	})
+	members, err := member.NewProductCommands(runner, time.Now, uuid.NewString)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 2)
+	go func() {
+		_, err := f.commands.DecideVerification(ctx, f.verifier, character.DecideVerificationSpec{CharacterId: hero.Id, ExpectedSubmittedAt: *hero.VerificationSubmittedAt, Verdict: member.VerificationVerdictApproved}, commandMeta())
+		done <- err
+	}()
+	for step := range 2 {
+		select {
+		case <-arrived:
+		case err := <-done:
+			t.Fatalf("command ended before overlap barrier: %v", err)
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+		if step == 0 {
+			go func() {
+				_, err := members.SetMemberRolesBatch(ctx, f.admin, member.SetMemberRolesBatchSpec{Changes: []member.MemberRoleBatchFields{
+					{MemberId: f.owner.Claims().MemberID, Roles: []string{"guest", "archon"}},
+					{MemberId: f.verifier.Claims().MemberID, Roles: []string{"verifier", "archon"}},
+				}}, commandMeta())
+				done <- err
+			}()
+		}
+	}
+	close(resume)
+	for range 2 {
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Fatal(err)
+			}
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+	}
+	var roles, verifierRoles []string
+	var promotions, active, receipts int
+	err = f.db.Pool.QueryRow(ctx, `SELECT roles,
+		(SELECT roles FROM members WHERE public_id=$2::uuid),
+		(SELECT count(*) FROM role_changes WHERE member_id=m.id AND 'guest'=ANY(old_roles) AND NOT 'guest'=ANY(new_roles) AND 'player'=ANY(new_roles)),
+		(SELECT count(*) FROM characters WHERE owner_id=m.id AND status='active'),
+		(SELECT count(*) FROM idempotency_keys WHERE endpoint IN ('graphql:decideVerification','graphql:setMemberRolesBatch') AND completed_at IS NOT NULL)
+		FROM members m WHERE public_id=$1::uuid`, f.owner.Claims().MemberID, f.verifier.Claims().MemberID).Scan(&roles, &verifierRoles, &promotions, &active, &receipts)
+	if err != nil || !slices.Equal(roles, []string{"archon", "player"}) || !slices.Equal(verifierRoles, []string{"archon", "verifier"}) || promotions != 1 || active != 1 || receipts != 2 {
+		t.Fatalf("roles=%v verifier=%v promotions=%d active=%d receipts=%d err=%v", roles, verifierRoles, promotions, active, receipts, err)
+	}
 }
 
 func TestFrontendCharacterOwnerJourneyAndVerification(t *testing.T) {
@@ -357,7 +678,7 @@ func TestFrontendCharacterRetirementMultipleQuestsAtomicReplay(t *testing.T) {
 			if err := f.db.Pool.QueryRow(ctx, `SELECT p.status FROM quest_participants p JOIN characters c ON c.id=p.character_id WHERE c.public_id=$1`, invalid).Scan(&skipped); err != nil {
 				t.Fatal(err)
 			}
-			if withdrawn != 2 || notices != 1 || jobs != 2 || receipts != 2 || promoted != "signed_up" || skipped != "waitlisted" {
+			if withdrawn != 2 || notices != 1 || jobs != 0 || receipts != 2 || promoted != "signed_up" || skipped != "waitlisted" {
 				t.Fatalf("withdrawn=%d notices=%d jobs=%d receipts=%d promoted=%s skipped=%s", withdrawn, notices, jobs, receipts, promoted, skipped)
 			}
 			var filled int
@@ -513,6 +834,10 @@ func TestFrontendCharacterRetirementRechecksCurrentAuthority(t *testing.T) {
 		wantCode(t, err, apierr.Forbidden)
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
+	}
+	// The snapshot covers members, so undo the test's own revocation before comparing.
+	if _, err := f.db.Pool.Exec(ctx, `UPDATE members SET status='active' WHERE public_id=$1`, f.owner.Claims().MemberID); err != nil {
+		t.Fatal(err)
 	}
 	if f.snapshot(t) != before {
 		t.Fatal("revoked owner committed retirement")
@@ -676,5 +1001,104 @@ func TestFrontendCharacterImageURLAndRequiredDdb(t *testing.T) {
 	}
 	if _, err := f.db.Pool.Exec(ctx, `UPDATE characters SET image_url='http://x.example/a.png' WHERE public_id=$1`, hero.Id); err == nil {
 		t.Fatal("characters_image_url_check accepted a non-https URL")
+	}
+}
+
+func TestCharacterSummariesFilterItemsAndTotalByViewer(t *testing.T) {
+	f := newFrontendCharacterFixture(t)
+	ctx := context.Background()
+	hero := f.create(t)
+	seedDM := func(handle string) auth.Authority {
+		t.Helper()
+		id := uuid.NewString()
+		if _, err := f.db.Pool.Exec(ctx, `INSERT INTO members(public_id,discord_id,handle,display_name,roles)
+			VALUES($1,$2,$2,$2,ARRAY['dm'])`, id, handle); err != nil {
+			t.Fatal(err)
+		}
+		actor, err := auth.NewAuthorityWithHandle(id, []auth.Role{auth.DM}, "active", "approved", handle)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return actor
+	}
+	dm := seedDM("character-summary-dm")
+	readerDM := seedDM("character-summary-reader")
+	titles := []string{"Public SQL null", "Public JSON null", "Draft", "DM only", "Restricted", "Empty audience"}
+	ids := make([]string, len(titles))
+	for i, title := range titles {
+		ids[i] = uuid.NewString()
+		status, visibility := "published", "public"
+		var policy any
+		switch title {
+		case "Public JSON null":
+			policy = "null"
+		case "Draft":
+			status = "draft"
+		case "DM only":
+			visibility = "dm_only"
+		case "Restricted":
+			visibility = "restricted"
+		case "Empty audience":
+			policy = "[]"
+		}
+		if _, err := f.db.Pool.Exec(ctx, `INSERT INTO documents(public_id,kind,slug,title,status,visibility,policy,body,author_id)
+			SELECT $1::uuid,'summary',$7::text,$2,$3,$4,$5::jsonb,'Metadata-only summary body',id FROM members WHERE public_id=$6`, ids[i], title, status, visibility, policy, f.verifier.Claims().MemberID, ids[i]); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.db.Pool.Exec(ctx, `INSERT INTO document_links(source_id,character_target_id,relation)
+			SELECT d.id,c.id,'summarizes' FROM documents d,characters c WHERE d.public_id=$1 AND c.public_id=$2`, ids[i], hero.Id); err != nil {
+			t.Fatal(err)
+		}
+		if title == "Restricted" {
+			if _, err := f.db.Pool.Exec(ctx, `INSERT INTO document_readers(document_id,member_id)
+				SELECT d.id,m.id FROM documents d,members m WHERE d.public_id=$1 AND m.public_id=ANY($2::uuid[])`, ids[i], []string{readerDM.Claims().MemberID, f.owner.Claims().MemberID}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	reader, err := character.NewProductPostgres(f.db.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, viewer := range []struct {
+		name  string
+		actor auth.Authority
+		want  []string
+	}{
+		{"anonymous", auth.Authority{}, titles[:2]},
+		{"player with reader grant", f.owner, titles[:2]},
+		{"approved DM", dm, []string{titles[0], titles[1], titles[3]}},
+		{"approved DM with reader grant", readerDM, []string{titles[0], titles[1], titles[3], titles[4]}},
+		{"author", f.verifier, titles},
+		{"admin", f.admin, titles},
+	} {
+		t.Run(viewer.name, func(t *testing.T) {
+			for _, offset := range []int32{0, 100} {
+				page, err := reader.ReadCharacterSummaries(ctx, viewer.actor, character.CharacterSummariesSpec{CharacterId: hero.Id, Limit: 50, Offset: offset})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if page.Total != int32(len(viewer.want)) {
+					t.Fatalf("offset=%d total=%d want=%d", offset, page.Total, len(viewer.want))
+				}
+				var got []string
+				for _, item := range page.Items {
+					got = append(got, item.Title)
+					if item.EffectiveBody != nil {
+						t.Fatalf("metadata-only summary returned body=%q", *item.EffectiveBody)
+					}
+					if (item.Title == titles[0] || item.Title == titles[1]) && item.Policy != nil {
+						t.Fatalf("legacy policy=%v want nil", item.Policy)
+					}
+				}
+				want := viewer.want
+				if offset > 0 {
+					want = nil
+				}
+				if !slices.Equal(got, want) {
+					t.Fatalf("offset=%d titles=%v want=%v", offset, got, want)
+				}
+			}
+		})
 	}
 }

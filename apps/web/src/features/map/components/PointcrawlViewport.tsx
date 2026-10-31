@@ -16,8 +16,20 @@ import type { Pointcrawl } from '../adapters/mapAdapter.js';
 import { pluralize } from '../../../utils/format.js';
 import styles from '../pages/map.module.css';
 import { edgeDisplayLabel, isAuthoredEdgeLabel } from '../edgeLabel.js';
-import { MAP_PIN_RADIUS, MAP_PIN_TAIL, placeLabels } from '../labelLayout.js';
+import {
+  MAP_LABEL_DY,
+  MAP_PIN_RADIUS,
+  MAP_PIN_TAIL,
+  placeLabels,
+} from '../labelLayout.js';
 import { MapKey } from './MapKey.js';
+import { mapAssetHref } from '../assetHref.js';
+import { countPlaces, isHexMap, placeWords } from '../mapWords.js';
+import { Checkbox } from '../../../components/primitives/Checkbox.js';
+import { LockedHatchPattern, NodeStateCell } from './NodeStateSwatch.js';
+import { nodeStateLabel } from '../nodeState.js';
+
+export { mapAssetHref };
 
 export function graphBounds(nodes: readonly { x: number; y: number }[]) {
   let minX = nodes[0]?.x ?? 0,
@@ -45,7 +57,7 @@ export function fitGraphView(
 ) {
   const verticalScale =
     stretchVertically && size.width > 0 && size.height > 0
-      ? Math.max(1, (size.height / size.width) / (bounds.height / bounds.width))
+      ? Math.max(1, size.height / size.width / (bounds.height / bounds.width))
       : 1;
   const height = bounds.height * verticalScale;
   return {
@@ -53,6 +65,96 @@ export function fitGraphView(
     height,
     verticalScale,
   };
+}
+
+/** Click travel, in screen pixels, below which a press on the canvas is a click, not a pan. */
+const CLICK_SLOP = 4;
+/** Hover/selection ring radius around a pin, in screen pixels. */
+const MAP_RING_RADIUS = MAP_PIN_RADIUS + 7;
+
+/**
+ * Each place owns the area within its hover radius: the larger of the pin and the
+ * hexagon a regular grid with this place's nearest-neighbour spacing would give it
+ * (circumradius = spacing / sqrt 3). On a hex map that is the hex cell, so the
+ * nearest-place rule makes the ring follow the cursor from hex to hex.
+ *
+ * `uniform` (hex maps) gives every place one cell radius from the median
+ * nearest-neighbour spacing, so isolated tiles of a sparse grid are not oversized.
+ */
+export function hoverRadii(
+  nodes: readonly { id: string; x: number; y: number }[],
+  minimum: number,
+  uniform = false,
+): Map<string, number> {
+  const nearest = nodes.map((node) => {
+    let distance = Infinity;
+    for (const other of nodes)
+      if (other !== node)
+        distance = Math.min(distance, Math.hypot(other.x - node.x, other.y - node.y));
+    return distance;
+  });
+  const cell = (distance: number) =>
+    Number.isFinite(distance) ? Math.max(minimum, distance / Math.sqrt(3)) : minimum;
+  if (uniform) {
+    const finite = nearest.filter(Number.isFinite).sort((a, b) => a - b);
+    const middle = finite.length / 2;
+    const median = finite.length
+      ? finite.length % 2
+        ? finite[Math.floor(middle)]!
+        : (finite[middle - 1]! + finite[middle]!) / 2
+      : Infinity;
+    return new Map(nodes.map((node) => [node.id, cell(median)]));
+  }
+  return new Map(nodes.map((node, index) => [node.id, cell(nearest[index]!)]));
+}
+
+export function placeAt(
+  nodes: readonly { id: string; x: number; y: number }[],
+  radii: ReadonlyMap<string, number>,
+  point: { x: number; y: number },
+): string | null {
+  let best: string | null = null,
+    bestDistance = Infinity;
+  for (const node of nodes) {
+    const distance = Math.hypot(node.x - point.x, node.y - point.y);
+    if (distance <= (radii.get(node.id) ?? 0) && distance < bestDistance) {
+      best = node.id;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+/** Per-viewer choice to draw route lines; routes are hidden by default (owner decision). */
+export const MAP_ROUTES_STORAGE_KEY = 'chronicler:map:show-routes';
+function readShowRoutes(): boolean {
+  try {
+    return localStorage.getItem(MAP_ROUTES_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+function writeShowRoutes(value: boolean): void {
+  try {
+    localStorage.setItem(MAP_ROUTES_STORAGE_KEY, String(value));
+  } catch {
+    // Storage may be unavailable (private window, blocked site data); the toggle still works.
+  }
+}
+
+export { isHexMap };
+
+/** Round a map coordinate for display and for the add-location form. */
+export function roundCoordinate(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/** Flat-top hexagon vertices around the origin, matching the flat-top source maps. */
+export function flatTopHexagon(radius: number): string {
+  return Array.from({ length: 6 }, (_, corner) => {
+    const angle = (Math.PI / 3) * corner;
+    return `${(radius * Math.cos(angle)).toFixed(3)},${(radius * Math.sin(angle)).toFixed(3)}`;
+  }).join(' ');
 }
 
 export type MapViewportHandle = {
@@ -63,23 +165,25 @@ export function PointcrawlViewport({
   map,
   selectedId,
   onSelect,
+  onClear,
   actions,
   siblings,
+  onAddAt,
   ref,
 }: {
   map: Pointcrawl;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Clicking empty canvas clears the selection. */
+  onClear?: () => void;
   actions?: React.ReactNode;
   siblings?: SegmentedNavItem[];
+  /** Right-clicking an empty spot on an editable point map asks to add a location there. */
+  onAddAt?: (point: { x: number; y: number }) => void;
   ref?: Ref<MapViewportHandle>;
 }) {
   const marker = useId().replaceAll(':', '');
-  const assetHref = map.assetPath
-    ? /^(?:[a-z]+:|\/)/i.test(map.assetPath)
-      ? map.assetPath
-      : `/${map.assetPath}`
-    : null;
+  const assetHref = mapAssetHref(map.assetPath);
   const [assetFailed, setAssetFailed] = useState(false);
   const [assetSize, setAssetSize] = useState<{ width: number; height: number } | null>(
     null,
@@ -107,7 +211,10 @@ export function PointcrawlViewport({
   const [camera, setCamera] = useState({ zoom: 1, x: 0, y: 0 });
   const graph = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const graphView = fitGraphView(bounds, size, !assetHref || assetFailed);
+  const hexMap = isHexMap(map);
+  const words = placeWords(map);
+  // Hex maps keep their aspect ratio so the hexes tile.
+  const graphView = fitGraphView(bounds, size, (!assetHref || assetFailed) && !hexMap);
   useEffect(() => {
     const element = graph.current;
     if (!element) return;
@@ -129,6 +236,13 @@ export function PointcrawlViewport({
   );
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{ distance: number; zoom: number } | null>(null);
+  const press = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+  const [routesChoice, setShowRoutes] = useState(readShowRoutes);
+  // Hex-map routes are only hex adjacency, so a hex map never draws them.
+  const showRoutes = routesChoice && !hexMap;
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const byId = useMemo(
     () => new Map(map.nodes.map((node) => [node.id, node])),
     [map.nodes],
@@ -153,8 +267,7 @@ export function PointcrawlViewport({
   const viewY = graphView.y + (graphView.height - height) / 2 + camera.y;
   const viewHeight = size.height > 0 ? size.height / pixelsPerUnit : height;
   const viewBoxY = viewY - (viewHeight - height) / 2;
-  const mapY = (y: number) =>
-    graphView.y + (y - bounds.y) * graphView.verticalScale;
+  const mapY = (y: number) => graphView.y + (y - bounds.y) * graphView.verticalScale;
   const labels = useMemo(
     () =>
       new Map(
@@ -175,6 +288,50 @@ export function PointcrawlViewport({
       ),
     [map.nodes, pixelsPerUnit, viewX, viewBoxY, width, viewHeight, graphView, bounds],
   );
+  const points = useMemo(
+    () =>
+      map.nodes.map((node) => ({
+        id: node.id,
+        x: node.x,
+        y: graphView.y + (node.y - bounds.y) * graphView.verticalScale,
+      })),
+    [map.nodes, graphView.y, graphView.verticalScale, bounds.y],
+  );
+  const radii = useMemo(
+    // Hex cells keep their true size so they tile; other maps grow to the pin size.
+    () => hoverRadii(points, hexMap ? 0 : MAP_PIN_RADIUS / pixelsPerUnit, hexMap),
+    [points, pixelsPerUnit, hexMap],
+  );
+  const unit = 1 / pixelsPerUnit;
+  // Locked hexes are hatched; the stripes scale with the cell so they read at any zoom.
+  const hatchId = `${marker}-locked`;
+  const hatchSize = Math.max(1, (radii.values().next().value ?? 16) / 3);
+  const showArt = Boolean(assetHref && !assetFailed);
+  /** The place under a client point, using the viewBox's default xMidYMid meet fit. */
+  const svgPointAt = (svg: SVGSVGElement, clientX: number, clientY: number) => {
+    const rect = svg.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const scale = Math.min(rect.width / width, rect.height / viewHeight);
+    return {
+      x: viewX + (clientX - rect.left - (rect.width - width * scale) / 2) / scale,
+      y:
+        viewBoxY +
+        (clientY - rect.top - (rect.height - viewHeight * scale) / 2) / scale,
+    };
+  };
+  const placeUnder = (svg: SVGSVGElement, clientX: number, clientY: number) => {
+    const point = svgPointAt(svg, clientX, clientY);
+    return point ? placeAt(points, radii, point) : null;
+  };
+  /** Map coordinates (the x,y a location is stored with) under a client point. */
+  const mapPointAt = (svg: SVGSVGElement, clientX: number, clientY: number) => {
+    const point = svgPointAt(svg, clientX, clientY);
+    if (!point) return null;
+    return {
+      x: roundCoordinate(point.x),
+      y: roundCoordinate(bounds.y + (point.y - graphView.y) / graphView.verticalScale),
+    };
+  };
   const zoom = (factor: number) =>
     setCamera((value) => ({
       ...value,
@@ -207,35 +364,49 @@ export function PointcrawlViewport({
     element.addEventListener('wheel', wheel, { passive: false });
     return () => element.removeEventListener('wheel', wheel);
   }, []);
-  const keyboardSelect = (event: React.KeyboardEvent<SVGGElement>, index: number) => {
-    let next = index;
-    if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = map.nodes.length - 1;
-    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
-      next = (index + 1) % map.nodes.length;
-    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
-      next = (index - 1 + map.nodes.length) % map.nodes.length;
-    else if (event.key !== 'Enter' && event.key !== ' ') return;
+  // Places are plain Tab stops; arrow keys do not move between them (owner feedback).
+  const keyboardSelect = (event: React.KeyboardEvent<SVGGElement>, id: string) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    const node = map.nodes[next];
-    if (node) onSelect(node.id);
+    onSelect(id);
   };
+  // Keyboard focus shows the same ring and name as pointer hover.
+  const hoveredNode =
+    (hoveredId ? byId.get(hoveredId) : undefined) ??
+    (focusedId ? byId.get(focusedId) : undefined);
+  const selectedNode = selectedId ? byId.get(selectedId) : undefined;
+  const activeIds = new Set([hoveredNode?.id, selectedNode?.id]);
   const endPointer = (id: number) => {
     pointers.current.delete(id);
     drag.current = null;
     pinch.current = null;
   };
   return (
-    <section className={styles.viewport} aria-label="Pointcrawl viewport">
+    <section className={styles.viewport} aria-label="Map viewport">
       <PageToolbar
         className={styles.atlasToolbar}
         label="Map controls"
         segments={
           siblings ? <SegmentedNav items={siblings} label="Choose a map" /> : undefined
         }
-        count={`${pluralize(map.nodes.length, 'place')} · ${pluralize(map.edges.length, 'route')}`}
+        count={
+          showRoutes
+            ? `${countPlaces(map, map.nodes.length)} · ${pluralize(map.edges.length, 'route')}`
+            : countPlaces(map, map.nodes.length)
+        }
         actions={
           <>
+            {map.edges.length && !hexMap ? (
+              <Checkbox
+                className={styles.routesToggle}
+                label="Show routes"
+                checked={showRoutes}
+                onCheckedChange={(next) => {
+                  setShowRoutes(next);
+                  writeShowRoutes(next);
+                }}
+              />
+            ) : null}
             <PageToolbar.IconAction
               label="Zoom out"
               disabled={camera.zoom <= 0.5}
@@ -271,14 +442,16 @@ export function PointcrawlViewport({
             ref={graph}
             className={styles.graph}
             role="group"
-            aria-label={`${map.name} pointcrawl graph`}
+            aria-label={`${map.name} map`}
             viewBox={`${viewX} ${viewBoxY} ${width} ${viewHeight}`}
             onPointerDown={(event) => {
+              press.current = null;
               if (
                 event.target instanceof Element &&
                 event.target.closest('[data-node-id]')
               )
                 return;
+              press.current = { x: event.clientX, y: event.clientY, moved: false };
               pointers.current.set(event.pointerId, {
                 x: event.clientX,
                 y: event.clientY,
@@ -291,6 +464,7 @@ export function PointcrawlViewport({
                   zoom: camera.zoom,
                 };
                 drag.current = null;
+                if (press.current) press.current.moved = true;
               } else
                 drag.current = {
                   x: event.clientX,
@@ -300,6 +474,26 @@ export function PointcrawlViewport({
                 };
             }}
             onPointerMove={(event) => {
+              const pin =
+                event.target instanceof Element
+                  ? event.target.closest<SVGGElement>('[data-node-id]')
+                  : null;
+              setHoveredId(
+                pin?.dataset.nodeId ??
+                  placeUnder(event.currentTarget, event.clientX, event.clientY),
+              );
+              if (!hexMap)
+                setCursor(
+                  mapPointAt(event.currentTarget, event.clientX, event.clientY),
+                );
+              if (
+                press.current &&
+                Math.hypot(
+                  event.clientX - press.current.x,
+                  event.clientY - press.current.y,
+                ) > CLICK_SLOP
+              )
+                press.current.moved = true;
               if (!pointers.current.has(event.pointerId)) return;
               pointers.current.set(event.pointerId, {
                 x: event.clientX,
@@ -330,10 +524,40 @@ export function PointcrawlViewport({
             }}
             onPointerUp={(event) => endPointer(event.pointerId)}
             onPointerCancel={(event) => endPointer(event.pointerId)}
+            onPointerLeave={() => {
+              setHoveredId(null);
+              setCursor(null);
+            }}
+            onContextMenu={(event) => {
+              if (hexMap || !onAddAt) return;
+              if (
+                event.target instanceof Element &&
+                event.target.closest('[data-node-id]')
+              )
+                return;
+              if (placeUnder(event.currentTarget, event.clientX, event.clientY)) return;
+              const point = mapPointAt(event.currentTarget, event.clientX, event.clientY);
+              if (!point) return;
+              event.preventDefault();
+              onAddAt(point);
+            }}
+            onClick={(event) => {
+              const start = press.current;
+              press.current = null;
+              if (
+                !start ||
+                start.moved ||
+                (event.target instanceof Element &&
+                  event.target.closest('[data-node-id]'))
+              )
+                return;
+              const id = placeUnder(event.currentTarget, event.clientX, event.clientY);
+              if (id) onSelect(id);
+              else onClear?.();
+            }}
           >
             <title>
-              {map.name}. Use Tab to enter the graph, arrow keys to choose a location,
-              and Enter to select.
+              {map.name}. Use Tab to move between {words.many} and Enter to select one.
             </title>
             <defs>
               <marker
@@ -348,8 +572,9 @@ export function PointcrawlViewport({
               >
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" />
               </marker>
+              {hexMap ? <LockedHatchPattern id={hatchId} size={hatchSize} /> : null}
             </defs>
-            {assetHref && !assetFailed ? (
+            {assetHref && showArt ? (
               <image
                 href={assetHref}
                 x="0"
@@ -359,17 +584,35 @@ export function PointcrawlViewport({
                 preserveAspectRatio="xMinYMin meet"
               />
             ) : null}
-            {connectors.map(({ edge, points }) => (
+            {/* Painted hex art already shows the cells; outline them only on a bare grid. */}
+            {hexMap && !showArt ? (
+              <g className={styles.hexGrid} aria-hidden="true" pointerEvents="none">
+                {points.map((point) => (
+                  <polygon
+                    key={point.id}
+                    data-hex-cell={point.id}
+                    transform={`translate(${point.x} ${point.y})`}
+                    points={flatTopHexagon(radii.get(point.id) ?? 0)}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ))}
+              </g>
+            ) : null}
+            {(showRoutes ? connectors : []).map(({ edge, points }) => (
               <g key={edge.id} className={styles.edge} data-edge-kind={edge.kind}>
                 <polyline
-                  points={points.map((point) => `${point.x},${mapY(point.y)}`).join(' ')}
+                  points={points
+                    .map((point) => `${point.x},${mapY(point.y)}`)
+                    .join(' ')}
                   markerEnd={edge.directed ? `url(#${marker})` : undefined}
                   vectorEffect="non-scaling-stroke"
                 />
                 {edge.kind === 'pass' ? (
                   <polyline
                     className={styles.passInset}
-                    points={points.map((point) => `${point.x},${mapY(point.y)}`).join(' ')}
+                    points={points
+                      .map((point) => `${point.x},${mapY(point.y)}`)
+                      .join(' ')}
                     vectorEffect="non-scaling-stroke"
                     aria-hidden="true"
                   />
@@ -382,7 +625,10 @@ export function PointcrawlViewport({
                   <text
                     className={styles.edgeLabel}
                     x={((points[0]?.x ?? 0) + (points[1]?.x ?? 0)) / 2}
-                    y={mapY(((points[0]?.y ?? 0) + (points[1]?.y ?? 0)) / 2) - 7 / pixelsPerUnit}
+                    y={
+                      mapY(((points[0]?.y ?? 0) + (points[1]?.y ?? 0)) / 2) -
+                      7 / pixelsPerUnit
+                    }
                     fontSize={10 / pixelsPerUnit}
                     textAnchor="middle"
                   >
@@ -396,42 +642,57 @@ export function PointcrawlViewport({
               const dx = label?.dx ?? 0,
                 dy = label?.dy ?? 30,
                 labelWidth = label?.width ?? node.name.length * 7;
+              // The ring layer shows the full name of the hovered or selected place.
+              // Hex codes show only there, never as always-on labels.
+              const hidden = hexMap || label?.text === '' || activeIds.has(node.id);
               return (
                 <g
                   key={node.id}
                   role="button"
-                  aria-label={node.name}
-                  aria-pressed={node.id === selectedId}
-                  tabIndex={
-                    node.id === selectedId || (!selectedId && index === 0) ? 0 : -1
+                  aria-label={
+                    hexMap ? `${node.name}, ${nodeStateLabel(node.state)}` : node.name
                   }
+                  aria-pressed={node.id === selectedId}
+                  tabIndex={0}
                   data-node-id={node.id}
                   data-node-index={index}
+                  data-node-state={hexMap ? node.state : undefined}
                   className={styles.node}
                   transform={`translate(${node.x} ${mapY(node.y)})`}
                   onClick={() => onSelect(node.id)}
-                  onKeyDown={(event) => keyboardSelect(event, index)}
+                  onKeyDown={(event) => keyboardSelect(event, node.id)}
+                  onFocus={() => setFocusedId(node.id)}
+                  onBlur={() =>
+                    setFocusedId((current) => (current === node.id ? null : current))
+                  }
                 >
-                  <title>{node.name}</title>
-                  <circle
-                    r={MAP_PIN_RADIUS / pixelsPerUnit}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  <path
-                    className={styles.pinTail}
-                    d={`M ${-11 / pixelsPerUnit} ${11 / pixelsPerUnit} L 0 ${MAP_PIN_TAIL / pixelsPerUnit} L ${11 / pixelsPerUnit} ${11 / pixelsPerUnit}`}
-                  />
-                  <text
-                    className={styles.pinNumber}
-                    aria-hidden="true"
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fontSize={10 / pixelsPerUnit}
-                  >
-                    {String(index + 1).padStart(2, '0')}
-                  </text>
+                  <title>
+                    {hexMap ? `${node.name} (${nodeStateLabel(node.state)})` : node.name}
+                  </title>
+                  {/* A hex map is clicked by its whole cell; the ring marks the place. */}
+                  {hexMap ? (
+                    <>
+                      <NodeStateCell
+                        state={node.state}
+                        points={flatTopHexagon(radii.get(node.id) ?? 0)}
+                        hatchId={hatchId}
+                      />
+                      <polygon
+                        className={styles.hexTarget}
+                        points={flatTopHexagon(radii.get(node.id) ?? 0)}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <circle r={MAP_PIN_RADIUS * unit} vectorEffect="non-scaling-stroke" />
+                      <path
+                        className={styles.pinTail}
+                        d={`M ${-11 * unit} ${11 * unit} L 0 ${MAP_PIN_TAIL * unit} L ${11 * unit} ${11 * unit}`}
+                      />
+                    </>
+                  )}
                   <rect
-                    visibility={label?.text === '' ? 'hidden' : undefined}
+                    visibility={hidden ? 'hidden' : undefined}
                     className={styles.labelPlate}
                     x={(dx - labelWidth / 2 - 5) / pixelsPerUnit}
                     y={(dy - 14) / pixelsPerUnit}
@@ -442,6 +703,7 @@ export function PointcrawlViewport({
                   <text
                     className={styles.nodeLabel}
                     aria-hidden="true"
+                    visibility={hidden ? 'hidden' : undefined}
                     x={dx / pixelsPerUnit}
                     y={dy / pixelsPerUnit}
                     textLength={label?.width ? label.width / pixelsPerUnit : undefined}
@@ -454,15 +716,81 @@ export function PointcrawlViewport({
                 </g>
               );
             })}
+            <g className={styles.ringLayer} aria-hidden="true" pointerEvents="none">
+              {[
+                { node: selectedNode, kind: 'selected' },
+                ...(hoveredNode && hoveredNode !== selectedNode
+                  ? [{ node: hoveredNode, kind: 'hover' }]
+                  : []),
+              ].map(({ node, kind }) => {
+                if (!node) return null;
+                const labelWidth = node.name.length * 8;
+                // On hex maps the code sits just below the cell's bottom edge.
+                const labelDy = hexMap
+                  ? ((radii.get(node.id) ?? 0) * Math.sqrt(3)) / 2 + 18 * unit
+                  : MAP_LABEL_DY * unit;
+                return (
+                  <g
+                    key={kind}
+                    data-map-ring={kind}
+                    data-ring-node-id={node.id}
+                    transform={`translate(${node.x} ${mapY(node.y)})`}
+                  >
+                    {hexMap ? (
+                      <polygon
+                        className={`${styles.ring} ${styles.hexRing}`}
+                        points={flatTopHexagon(radii.get(node.id) ?? 0)}
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    ) : (
+                      <circle
+                        className={styles.ring}
+                        r={MAP_RING_RADIUS / pixelsPerUnit}
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    )}
+                    <rect
+                      className={styles.ringPlate}
+                      vectorEffect="non-scaling-stroke"
+                      x={(-labelWidth / 2 - 5) / pixelsPerUnit}
+                      y={labelDy - 14 * unit}
+                      width={(labelWidth + 10) / pixelsPerUnit}
+                      height={19 / pixelsPerUnit}
+                      rx={4 / pixelsPerUnit}
+                    />
+                    <text
+                      className={styles.ringLabel}
+                      data-map-place-number={node.id}
+                      y={labelDy}
+                      fontSize={12 / pixelsPerUnit}
+                      textAnchor="middle"
+                    >
+                      {node.name}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
           </svg>
           {!map.nodes.length ? (
-            <p className={styles.emptyCanvas}>No locations have been added yet.</p>
+            <p className={styles.emptyCanvas}>No {words.many} have been added yet.</p>
           ) : null}
-          {map.edges.length ? <MapKey edges={map.edges} /> : null}
+          {cursor && !hexMap ? (
+            <output
+              className={styles.cursorReadout}
+              aria-label="Cursor position on the map"
+              data-map-cursor="true"
+            >
+              x {cursor.x}, y {cursor.y}
+            </output>
+          ) : null}
+          {(showRoutes && map.edges.length) || hexMap ? (
+            <MapKey edges={showRoutes ? map.edges : []} hexStates={hexMap} />
+          ) : null}
         </div>
         <div className={styles.mapMetaRow}>
           <p className={styles.canvasHint}>
-            Select a pin to explore. Arrow keys move between places.
+            Click a {words.one} to explore it. Click empty map or press Escape to clear.
           </p>
         </div>
         {actions ? <div className={styles.canvasActions}>{actions}</div> : null}

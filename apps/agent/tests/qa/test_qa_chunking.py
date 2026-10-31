@@ -8,12 +8,10 @@ from pi.chronicler.qa.chunking import (
     ChunkingConfig,
     ChunkingError,
     chunk_document,
-    chunk_documents,
     public_body_hash,
 )
 from pi.chronicler.qa.contracts import PublicDocument
 from pi.chronicler.qa.retrieval import (
-    build_canonical_routes,
     canonical_route_for,
     is_eligible_public_document,
 )
@@ -67,18 +65,6 @@ def test_chunks_are_frozen_deterministic_bounded_and_hash_the_exact_body() -> No
     assert changed[0].chunk_id != first[0].chunk_id
 
 
-def test_chunk_documents_are_stable_even_when_source_order_changes() -> None:
-    documents = (_document("b"), _document("a"))
-    forward = chunk_documents(
-        list(documents), ChunkingConfig(max_chars=128, overlap_chars=16)
-    )
-    reverse = chunk_documents(
-        list(reversed(documents)), ChunkingConfig(max_chars=128, overlap_chars=16)
-    )
-    assert forward == reverse
-    assert [chunk.document_id for chunk in forward[:1]] == ["a"]
-
-
 def test_chunking_rejects_oversized_public_body_and_invalid_overlap() -> None:
     with pytest.raises(ChunkingError, match="exceeds"):
         chunk_document(_document(body="x" * 10), ChunkingConfig(max_body_bytes=9))
@@ -107,8 +93,3 @@ def test_routes_allow_only_supported_public_rule_and_codex_categories() -> None:
     assert canonical_route_for(unsupported) is None
     assert canonical_route_for(malicious_slug).path == "/rules/guides/..%2Fnot-a-route"
     assert not is_eligible_public_document(_document("empty", body=""))
-
-    routes = build_canonical_routes(
-        [unsupported, event, ruling, guide], public_origin="https://example.test/"
-    )
-    assert [route.document_id for route in routes] == ["event", "doc-1", "ruling"]

@@ -2,7 +2,6 @@ package idempotency
 
 import (
 	"context"
-	"errors"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 )
@@ -23,8 +22,4 @@ func Require(key string) error {
 		return ErrMissingKey
 	}
 	return nil
-}
-
-func IsConflict(err error) bool {
-	return errors.Is(err, ErrConflict)
 }

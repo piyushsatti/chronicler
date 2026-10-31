@@ -1,13 +1,15 @@
 import hashlib
 import json
 from collections.abc import Sequence
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
+import httpx
 import pytest
 
 from pi.chronicler.archive.source import ArchiveSource, SnapshotSource
 from pi.chronicler.qa.contracts import PublicDocument
+from pi.chronicler.qa.remote_source import AnonymousGraphqlSource
 
 
 class Projection:
@@ -77,32 +79,33 @@ def _snapshot(path: Path, count: int = 3) -> tuple[PublicDocument, ...]:
 
 
 @pytest.mark.asyncio
-async def test_partial_live_projection_uses_frozen_snapshot_for_both_reads(
+async def test_bootstrap_withdrawal_is_not_readable_or_indexable(
     tmp_path: Path,
 ) -> None:
     snapshot_path = tmp_path / "public.jsonl"
-    expected = _snapshot(snapshot_path)
+    expected = _snapshot(snapshot_path, count=2)
     snapshot = SnapshotSource(
         snapshot_path,
         expected_sha256=hashlib.sha256(snapshot_path.read_bytes()).hexdigest(),
-        expected_document_count=3,
+        expected_document_count=2,
     )
     public = PublicSource()
+    public.documents = {expected[0].document_id: expected[0]}
     source = ArchiveSource(
-        CountedProjection(("live-only",)),
+        CountedProjection((expected[0].document_id,)),
         public,
         snapshot,
-        3,
+        2,
         tmp_path / "promoted.json",
     )
 
-    assert await source.all_documents() == expected
-    assert await source.documents(("snapshot-1", "live-only")) == (expected[1],)
-    assert public.batches == []
+    assert await source.documents((expected[1].document_id,)) == ()
+    assert await source.all_documents() == (expected[0],)
+    assert source.using_bootstrap is True
 
 
 @pytest.mark.asyncio
-async def test_full_live_projection_promotes_and_never_falls_back(
+async def test_promoted_source_accepts_edits_and_withdrawals_after_restart(
     tmp_path: Path,
 ) -> None:
     snapshot_path = tmp_path / "public.jsonl"
@@ -118,28 +121,61 @@ async def test_full_live_projection_promotes_and_never_falls_back(
     assert documents == expected
     assert source.using_bootstrap is False
     assert marker.exists()
-    projection.identifiers = ("only-live",)
+    changed = replace(expected[0], public_body="Edited after promotion")
+    projection.identifiers = (changed.document_id,)
+    public.documents = {changed.document_id: changed}
     assert await source.documents(("snapshot-1",)) == ()
 
     restarted = ArchiveSource(projection, public, snapshot, 3, marker)
     assert restarted.using_bootstrap is False
-    with pytest.raises(RuntimeError, match="drifted"):
-        await restarted.all_documents()
+    assert await restarted.all_documents() == (changed,)
+    assert await restarted.documents((changed.document_id, "snapshot-1")) == (changed,)
+    projection.identifiers = ()
+    assert await restarted.all_documents() == ()
+    assert restarted.using_bootstrap is False
 
 
 @pytest.mark.asyncio
-async def test_live_count_alone_cannot_replace_frozen_identities(
+async def test_changed_live_corpus_can_promote_at_configured_minimum(
     tmp_path: Path,
 ) -> None:
     snapshot_path = tmp_path / "public.jsonl"
     expected = _snapshot(snapshot_path)
     snapshot = SnapshotSource(snapshot_path, expected_document_count=3)
-    projection = CountedProjection(("unrelated-0", "unrelated-1", "unrelated-2"))
+    current = (
+        replace(expected[0], public_body="Changed public text"),
+        replace(expected[1], document_id="new-document", slug="new-document"),
+    )
+    projection = CountedProjection(tuple(document.document_id for document in current))
     public = PublicSource()
+    public.documents = {document.document_id: document for document in current}
+    marker = tmp_path / "promoted.json"
+    source = ArchiveSource(projection, public, snapshot, 2, marker)
+
+    assert await source.all_documents() == current
+    assert source.using_bootstrap is False
+    assert marker.exists()
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_reads_current_projection_after_public_body_changes(
+    tmp_path: Path,
+) -> None:
+    snapshot_path = tmp_path / "public.jsonl"
+    expected = _snapshot(snapshot_path)
+    snapshot = SnapshotSource(snapshot_path, expected_document_count=3)
+    changed = replace(expected[0], public_body="Current anonymous body")
+    projection = CountedProjection((changed.document_id, "live-only"))
+    public = PublicSource()
+    public.documents = {
+        changed.document_id: changed,
+        "live-only": replace(changed, document_id="live-only", slug="live-only"),
+    }
     source = ArchiveSource(projection, public, snapshot, 3, tmp_path / "promoted.json")
 
-    assert await source.all_documents() == expected
-    assert public.batches == []
+    assert await source.documents((changed.document_id, "live-only")) == (changed,)
+    assert await source.all_documents() == (changed,)
+    assert source.using_bootstrap is True
 
 
 @pytest.mark.asyncio
@@ -152,9 +188,9 @@ async def test_live_promotion_requires_public_revalidation(tmp_path: Path) -> No
     public.documents = {expected[0].document_id: expected[0]}
     source = ArchiveSource(projection, public, snapshot, 3, tmp_path / "promoted.json")
 
-    assert await source.all_documents() == expected
+    assert await source.all_documents() == (expected[0],)
     assert source.using_bootstrap is True
-    assert await source.documents(("snapshot-1",)) == (expected[1],)
+    assert await source.documents(("snapshot-1",)) == ()
 
 
 @pytest.mark.asyncio
@@ -208,3 +244,45 @@ async def test_requested_document_must_still_be_a_projection_candidate() -> None
 
     assert [document.document_id for document in documents] == ["d2"]
     assert public.batches == [("d2",)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("count", (13, 24))
+async def test_requested_documents_are_batched_through_real_public_adapter(
+    count: int,
+) -> None:
+    identifiers = tuple(f"d{index}" for index in range(count))
+    batches: list[tuple[str, ...]] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        variables = json.loads(request.content)["variables"]
+        batch = tuple(variables.values())
+        batches.append(batch)
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    f"d{index}": {
+                        "id": document_id,
+                        "slug": document_id,
+                        "kind": "rule",
+                        "category": None,
+                        "status": "published",
+                        "visibility": "public",
+                        "title": document_id,
+                        "frontmatter": {},
+                        "effectiveBody": "Current anonymous body",
+                    }
+                    for index, document_id in enumerate(batch)
+                }
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        public = AnonymousGraphqlSource("https://example.test/graphql", client=client)
+        source = ArchiveSource(CountedProjection(identifiers), public)
+        documents = await source.documents((*identifiers, "not-eligible"))
+
+    assert tuple(document.document_id for document in documents) == identifiers
+    assert tuple(item for batch in batches for item in batch) == identifiers
+    assert all(1 <= len(batch) <= 4 for batch in batches)

@@ -214,5 +214,5 @@ func (StaticMemberStore) EnsureFromDiscord(_ context.Context, discordID, _, _ st
 	if discordID == "" {
 		return "", nil, nil, nil, apierr.New(apierr.Invalid, "discord id required")
 	}
-	return fmt.Sprintf("member-%s", discordID), []auth.Role{auth.Player}, nil, nil, nil
+	return fmt.Sprintf("member-%s", discordID), []auth.Role{auth.Guest}, nil, nil, nil
 }
