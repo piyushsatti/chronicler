@@ -39,7 +39,7 @@ jobs:
           cache-dependency-path: apps/api/go.sum
       # The container image has no Node. Without it Bun's node fallback runs
       # vitest and the discord sensor tests fail.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - uses: oven-sh/setup-bun@v2
