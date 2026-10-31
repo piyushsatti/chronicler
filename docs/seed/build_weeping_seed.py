@@ -475,6 +475,8 @@ def hexmap(author: dict, root: Path, region_id: str) -> list[dict]:
                 "name": "Lightfall Hexflower",
                 "atlas_code": "WEEPING-LF",
                 "map_kind": "pointcrawl",
+                # Migration 0006 marks hex maps only for rows that exist when it runs.
+                "grid": "hex",
                 "family": "campaign",
                 "asset_path": "maps/DRK/v1/hexmap-master.png",
             },
