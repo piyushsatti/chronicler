@@ -40,7 +40,7 @@ func main() {
 	workerDone := make(chan struct{})
 	go func() {
 		defer close(workerDone)
-		if err := workerrun.Run(ctx, cfg); err != nil {
+		if err := workerrun.RunWithPool(ctx, cfg, runtime.Pool); err != nil {
 			slog.Error("worker stopped", "error", err)
 			if ctx.Err() == nil {
 				// Fail the container so Docker restarts it.

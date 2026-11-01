@@ -33,7 +33,7 @@ Historical workstation release instructions are superseded. A workflow's existen
 
 ## Enforced by
 
-**Not fully enforced.** `deploy-api` / `build-and-push` tests and publishes API/worker images; it does not deploy, promote or roll back. Protection, restore-point, coordinated verification, credential and receipt gaps are recorded in [actions-releases](/docs/interfaces/actions-releases.md).
+**Not fully enforced.** `deploy-staging` and `deploy-production` call `deploy-release` for releases. Protection, restore-point, coordinated verification, credential and receipt gaps are recorded in [actions-releases](/docs/interfaces/actions-releases.md).
 
 ## Reopen triggers
 

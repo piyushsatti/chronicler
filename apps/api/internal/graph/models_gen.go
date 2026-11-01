@@ -1212,16 +1212,14 @@ type SearchResultType struct {
 }
 
 type SiteStatsType struct {
-	TotalMembers                 int                  `json:"totalMembers"`
-	MembersByRole                []*CountByKeyType    `json:"membersByRole"`
-	ActiveCharacters             int                  `json:"activeCharacters"`
-	PublishedDocumentsByKind     []*CountByKeyType    `json:"publishedDocumentsByKind"`
-	PublishedDocumentsByCategory []*CountByKeyType    `json:"publishedDocumentsByCategory"`
-	TotalMaps                    int                  `json:"totalMaps"`
-	TotalRegions                 int                  `json:"totalRegions"`
-	TotalQuests                  int                  `json:"totalQuests"`
-	TotalDms                     int                  `json:"totalDms"`
-	Activity                     *ActivitySummaryType `json:"activity"`
+	TotalMembers     int                  `json:"totalMembers"`
+	MembersByRole    []*CountByKeyType    `json:"membersByRole"`
+	ActiveCharacters int                  `json:"activeCharacters"`
+	TotalMaps        int                  `json:"totalMaps"`
+	TotalRegions     int                  `json:"totalRegions"`
+	TotalQuests      int                  `json:"totalQuests"`
+	TotalDms         int                  `json:"totalDms"`
+	Activity         *ActivitySummaryType `json:"activity"`
 }
 
 type SummaryAuthoringType struct {

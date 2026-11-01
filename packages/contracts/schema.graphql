@@ -1689,8 +1689,6 @@ type SiteStatsType {
   totalMembers: Int!
   membersByRole: [CountByKeyType!]!
   activeCharacters: Int!
-  publishedDocumentsByKind: [CountByKeyType!]!
-  publishedDocumentsByCategory: [CountByKeyType!]!
   totalMaps: Int!
   totalRegions: Int!
   totalQuests: Int!

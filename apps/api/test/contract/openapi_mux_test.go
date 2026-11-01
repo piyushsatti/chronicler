@@ -1,6 +1,7 @@
 package contract_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"sort"
@@ -141,7 +142,7 @@ func mountMuxOperations(t *testing.T) []string {
 	mux := httpserver.NewRecordingMux()
 	app.Mount(mux, app.HTTPDeps{
 		Resolver:  &graph.Resolver{},
-		SiteStats: func() site.Stats { return site.Stats{} },
+		SiteStats: func(context.Context) (site.Stats, error) { return site.Stats{}, nil },
 		MemberMe: func(id string) (member.Member, error) {
 			return member.Member{ID: id, Handle: "me", DisplayName: "Me", Status: member.StatusActive}, nil
 		},

@@ -113,8 +113,6 @@ func implicitListComplexity(c *ComplexityRoot) {
 	c.RegionActivityType.LiveQuests = hundred
 	c.RegionActivityType.OpenQuests = hundred
 	c.SiteStatsType.MembersByRole = func(child int) int { return listCost(child, 7) }
-	c.SiteStatsType.PublishedDocumentsByCategory = hundred
-	c.SiteStatsType.PublishedDocumentsByKind = func(child int) int { return listCost(child, 20) }
 	c.SummaryDerivedType.Dms = hundred
 	c.SummaryDerivedType.Players = hundred
 	c.SummaryDerivedType.PointcrawlNodes = hundred
