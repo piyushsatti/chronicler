@@ -2421,8 +2421,6 @@ export type SiteStatsType = {
   activeCharacters: Scalars['Int']['output'];
   activity: ActivitySummaryType;
   membersByRole: Array<CountByKeyType>;
-  publishedDocumentsByCategory: Array<CountByKeyType>;
-  publishedDocumentsByKind: Array<CountByKeyType>;
   totalDms: Scalars['Int']['output'];
   totalMaps: Scalars['Int']['output'];
   totalMembers: Scalars['Int']['output'];

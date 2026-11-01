@@ -1067,16 +1067,14 @@ func toActivitySummaryType(v member.ActivitySummaryView) *ActivitySummaryType {
 
 func toSiteStatsView(v site.SiteStatsView) *SiteStatsType {
 	return &SiteStatsType{
-		TotalMembers:                 int(v.TotalMembers),
-		MembersByRole:                toCountByKeyTypes(v.MembersByRole),
-		ActiveCharacters:             int(v.ActiveCharacters),
-		PublishedDocumentsByKind:     toCountByKeyTypes(v.PublishedDocumentsByKind),
-		PublishedDocumentsByCategory: toCountByKeyTypes(v.PublishedDocumentsByCategory),
-		TotalMaps:                    int(v.TotalMaps),
-		TotalRegions:                 int(v.TotalRegions),
-		TotalQuests:                  int(v.TotalQuests),
-		TotalDms:                     int(v.TotalDms),
-		Activity:                     toActivitySummaryType(v.Activity),
+		TotalMembers:     int(v.TotalMembers),
+		MembersByRole:    toCountByKeyTypes(v.MembersByRole),
+		ActiveCharacters: int(v.ActiveCharacters),
+		TotalMaps:        int(v.TotalMaps),
+		TotalRegions:     int(v.TotalRegions),
+		TotalQuests:      int(v.TotalQuests),
+		TotalDms:         int(v.TotalDms),
+		Activity:         toActivitySummaryType(v.Activity),
 	}
 }
 

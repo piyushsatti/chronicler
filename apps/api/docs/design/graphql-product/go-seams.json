@@ -8532,24 +8532,6 @@
           "owner": "SIT01"
         },
         {
-          "name": "PublishedDocumentsByCategory",
-          "wire_name": "publishedDocumentsByCategory",
-          "go_type": "[]site.CountByKeyView",
-          "wire_type": "[CountByKeyType!]!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SIT01"
-        },
-        {
-          "name": "PublishedDocumentsByKind",
-          "wire_name": "publishedDocumentsByKind",
-          "go_type": "[]site.CountByKeyView",
-          "wire_type": "[CountByKeyType!]!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SIT01"
-        },
-        {
           "name": "TotalDms",
           "wire_name": "totalDms",
           "go_type": "int32",

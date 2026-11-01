@@ -1095,16 +1095,14 @@ type ComplexityRoot struct {
 	}
 
 	SiteStatsType struct {
-		ActiveCharacters             func(childComplexity int) int
-		Activity                     func(childComplexity int) int
-		MembersByRole                func(childComplexity int) int
-		PublishedDocumentsByCategory func(childComplexity int) int
-		PublishedDocumentsByKind     func(childComplexity int) int
-		TotalDms                     func(childComplexity int) int
-		TotalMaps                    func(childComplexity int) int
-		TotalMembers                 func(childComplexity int) int
-		TotalQuests                  func(childComplexity int) int
-		TotalRegions                 func(childComplexity int) int
+		ActiveCharacters func(childComplexity int) int
+		Activity         func(childComplexity int) int
+		MembersByRole    func(childComplexity int) int
+		TotalDms         func(childComplexity int) int
+		TotalMaps        func(childComplexity int) int
+		TotalMembers     func(childComplexity int) int
+		TotalQuests      func(childComplexity int) int
+		TotalRegions     func(childComplexity int) int
 	}
 
 	SummaryAuthoringType struct {
@@ -7206,20 +7204,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.SiteStatsType.MembersByRole(childComplexity), true
 
-	case "SiteStatsType.publishedDocumentsByCategory":
-		if e.complexity.SiteStatsType.PublishedDocumentsByCategory == nil {
-			break
-		}
-
-		return e.complexity.SiteStatsType.PublishedDocumentsByCategory(childComplexity), true
-
-	case "SiteStatsType.publishedDocumentsByKind":
-		if e.complexity.SiteStatsType.PublishedDocumentsByKind == nil {
-			break
-		}
-
-		return e.complexity.SiteStatsType.PublishedDocumentsByKind(childComplexity), true
-
 	case "SiteStatsType.totalDms":
 		if e.complexity.SiteStatsType.TotalDms == nil {
 			break
@@ -9473,8 +9457,6 @@ type SiteStatsType {
   totalMembers: Int!
   membersByRole: [CountByKeyType!]!
   activeCharacters: Int!
-  publishedDocumentsByKind: [CountByKeyType!]!
-  publishedDocumentsByCategory: [CountByKeyType!]!
   totalMaps: Int!
   totalRegions: Int!
   totalQuests: Int!
@@ -25943,10 +25925,6 @@ func (ec *executionContext) fieldContext_HomeType_communityStats(_ context.Conte
 				return ec.fieldContext_SiteStatsType_membersByRole(ctx, field)
 			case "activeCharacters":
 				return ec.fieldContext_SiteStatsType_activeCharacters(ctx, field)
-			case "publishedDocumentsByKind":
-				return ec.fieldContext_SiteStatsType_publishedDocumentsByKind(ctx, field)
-			case "publishedDocumentsByCategory":
-				return ec.fieldContext_SiteStatsType_publishedDocumentsByCategory(ctx, field)
 			case "totalMaps":
 				return ec.fieldContext_SiteStatsType_totalMaps(ctx, field)
 			case "totalRegions":
@@ -42300,10 +42278,6 @@ func (ec *executionContext) fieldContext_Query_siteStats(_ context.Context, fiel
 				return ec.fieldContext_SiteStatsType_membersByRole(ctx, field)
 			case "activeCharacters":
 				return ec.fieldContext_SiteStatsType_activeCharacters(ctx, field)
-			case "publishedDocumentsByKind":
-				return ec.fieldContext_SiteStatsType_publishedDocumentsByKind(ctx, field)
-			case "publishedDocumentsByCategory":
-				return ec.fieldContext_SiteStatsType_publishedDocumentsByCategory(ctx, field)
 			case "totalMaps":
 				return ec.fieldContext_SiteStatsType_totalMaps(ctx, field)
 			case "totalRegions":
@@ -49557,106 +49531,6 @@ func (ec *executionContext) fieldContext_SiteStatsType_activeCharacters(_ contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _SiteStatsType_publishedDocumentsByKind(ctx context.Context, field graphql.CollectedField, obj *SiteStatsType) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SiteStatsType_publishedDocumentsByKind(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PublishedDocumentsByKind, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*CountByKeyType)
-	fc.Result = res
-	return ec.marshalNCountByKeyType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCountByKeyTypeᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_SiteStatsType_publishedDocumentsByKind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SiteStatsType",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "key":
-				return ec.fieldContext_CountByKeyType_key(ctx, field)
-			case "count":
-				return ec.fieldContext_CountByKeyType_count(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type CountByKeyType", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _SiteStatsType_publishedDocumentsByCategory(ctx context.Context, field graphql.CollectedField, obj *SiteStatsType) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SiteStatsType_publishedDocumentsByCategory(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PublishedDocumentsByCategory, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*CountByKeyType)
-	fc.Result = res
-	return ec.marshalNCountByKeyType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCountByKeyTypeᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_SiteStatsType_publishedDocumentsByCategory(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SiteStatsType",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "key":
-				return ec.fieldContext_CountByKeyType_key(ctx, field)
-			case "count":
-				return ec.fieldContext_CountByKeyType_count(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type CountByKeyType", field.Name)
 		},
 	}
 	return fc, nil
@@ -65840,16 +65714,6 @@ func (ec *executionContext) _SiteStatsType(ctx context.Context, sel ast.Selectio
 			}
 		case "activeCharacters":
 			out.Values[i] = ec._SiteStatsType_activeCharacters(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "publishedDocumentsByKind":
-			out.Values[i] = ec._SiteStatsType_publishedDocumentsByKind(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "publishedDocumentsByCategory":
-			out.Values[i] = ec._SiteStatsType_publishedDocumentsByCategory(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

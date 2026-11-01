@@ -21,6 +21,7 @@ import (
 
 type workerRuntime struct {
 	pool        *db.Pool
+	ownsPool    bool
 	store       jobs.Store
 	delivery    *delivery.Handler
 	maintenance *worker.MaintenanceHandler
@@ -28,17 +29,26 @@ type workerRuntime struct {
 
 // Run configures the loop and blocks until ctx is cancelled.
 func Run(ctx context.Context, cfg config.Config) error {
-	runtime, err := configureWorker(ctx, cfg)
+	return RunWithPool(ctx, cfg, nil)
+}
+
+// RunWithPool reuses the caller's pool, or opens one when pool is nil.
+func RunWithPool(ctx context.Context, cfg config.Config, pool *db.Pool) error {
+	runtime, err := configureWorker(ctx, cfg, pool)
 	if err != nil {
 		return err
 	}
 	return serveWorker(ctx, runtime)
 }
 
-func configureWorker(ctx context.Context, cfg config.Config) (*workerRuntime, error) {
+func configureWorker(ctx context.Context, cfg config.Config, pool *db.Pool) (*workerRuntime, error) {
 	runtime := &workerRuntime{store: &delivery.MemoryStore{}}
 	syncClient := delivery.DiscordSync(delivery.NoopSync{})
-	pool, err := db.Connect(ctx, cfg.DatabaseURL)
+	var err error
+	if pool == nil {
+		pool, err = db.Connect(ctx, cfg.DatabaseURL)
+		runtime.ownsPool = err == nil
+	}
 	if err == nil {
 		runtime.pool = pool
 		runtime.store = jobs.NewPostgresStore(pool.Pool)
@@ -117,7 +127,7 @@ func serveWorker(ctx context.Context, runtime *workerRuntime) error {
 		case <-ctx.Done():
 			slog.Info("worker shutting down")
 			<-sweepDone
-			if runtime.pool != nil {
+			if runtime.ownsPool {
 				runtime.pool.Close()
 			}
 			return nil
@@ -146,13 +156,15 @@ type workerLane interface {
 }
 
 func processWorkerLane(ctx context.Context, lane workerLane, name string) {
-	ok, err := lane.ProcessOne(ctx)
-	if err != nil {
-		slog.Error(name+" job failed", "error", err)
-		return
-	}
-	if !ok {
-		return
+	for i := 0; i < 25 && ctx.Err() == nil; i++ {
+		ok, err := lane.ProcessOne(ctx)
+		if err != nil {
+			slog.Error(name+" job failed", "error", err)
+			return
+		}
+		if !ok {
+			break
+		}
 	}
 }
 
