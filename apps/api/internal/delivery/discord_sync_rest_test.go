@@ -94,7 +94,10 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 	t.Helper()
 	f := &fakeDiscord{}
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		raw, _ := io.ReadAll(r.Body)
+		var raw []byte
+		if r.Body != nil { // the in-process transport passes client requests, whose Body may be nil
+			raw, _ = io.ReadAll(r.Body)
+		}
 		call := discordCall{Method: r.Method, Path: r.URL.Path}
 		_ = json.Unmarshal(raw, &call.Body)
 		f.mu.Lock()
@@ -103,6 +106,12 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 		f.mu.Unlock()
 		if r.Header.Get("Authorization") != "Bot tok" {
 			t.Errorf("authorization=%q", r.Header.Get("Authorization"))
+		}
+		// Discord's edge rejects a GET that carries a body with an HTML 400 or 502.
+		if r.Method == http.MethodGet && len(raw) > 0 {
+			t.Errorf("GET %s sent body %q", r.URL.Path, raw)
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 		if fail != nil && fail(call) {
 			if status == 0 {
