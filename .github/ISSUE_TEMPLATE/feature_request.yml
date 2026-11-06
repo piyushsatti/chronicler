@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest something new or a change
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where?
+      options:
+        - Website
+        - Discord bot
+        - Both
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like to do?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does it matter to you?
