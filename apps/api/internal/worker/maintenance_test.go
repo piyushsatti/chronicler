@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"reflect"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
+	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 	"github.com/piyushsatti/chronicler/apps/api/internal/worker"
 )
 
@@ -136,6 +138,27 @@ func TestMaintenanceBusyAndSafeFailureDisposition(t *testing.T) {
 				t.Fatalf("job=%+v", job)
 			}
 		})
+	}
+}
+
+func TestMaintenanceParksMissingTimeAnchorOnce(t *testing.T) {
+	now := time.Now()
+	failure := fmt.Errorf("%w: %w", spatial.ErrTimeAnchorUncovered, apierr.New(apierr.Invalid, spatial.ErrTimeAnchorUncovered.Error()))
+	for _, attempts := range []int{0, jobs.MaxAttempts - 1} {
+		store := &jobs.MemoryStore{Now: func() time.Time { return now }}
+		if err := store.Enqueue(context.Background(), jobs.Job{Key: "time", Kind: "gametime_fill", Lane: worker.LaneMaintenance, Attempts: attempts}); err != nil {
+			t.Fatal(err)
+		}
+		h := testMaintenance(t, store, func(ctx context.Context, _ string, receipt jobs.Receipt, callback func(context.Context, jobs.ExecutionScope) error) (bool, error) {
+			return true, callback(ctx, jobs.ExecutionScope{Receipt: receipt})
+		}, func(context.Context, jobs.ExecutionScope, product.Date, int32) (int32, error) { return 0, failure }, func() time.Time { return now })
+		if ok, err := h.ProcessOne(context.Background()); err != nil || !ok {
+			t.Fatalf("attempts=%d processed=%v error=%v", attempts, ok, err)
+		}
+		job := store.Jobs[0]
+		if job.State != jobs.RepairRequired || job.ErrorMessage != worker.TimeAnchorUncoveredCode || job.SafeErrorCode != worker.TimeAnchorUncoveredCode {
+			t.Fatalf("attempts=%d job=%+v", attempts, job)
+		}
 	}
 }
 
