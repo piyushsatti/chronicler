@@ -358,5 +358,12 @@ export const routes: readonly FeatureRoute[] = [
   redirectRoute('/admin/world-clock', '/admin/world'),
   redirectRoute('/admin/catalogs', '/admin/content'),
   redirectRoute('/admin/ingestion', '/admin/data-health'),
-  redirectRoute('/verify', '/admin/review'),
+  {
+    path: '/verify',
+    element: lazyElement(() =>
+      import('./pages/AdminReviewPage.js').then((module) => ({
+        default: module.VerifyPage,
+      })),
+    ),
+  },
 ];

@@ -66,3 +66,17 @@ export function AdminReviewPage(): React.JSX.Element {
     </AdminWorkspaceShell>
   );
 }
+
+/** Same queues as Admin → Review, with no other admin section. */
+export function VerifyPage(): React.JSX.Element {
+  return (
+    <AdminWorkspaceShell
+      page="verify"
+      title="Verify"
+      lede="Approve records, or send the owner a note about what to change."
+      authority="verifier"
+    >
+      <ReviewQueues />
+    </AdminWorkspaceShell>
+  );
+}
