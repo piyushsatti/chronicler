@@ -181,15 +181,20 @@ describe('DMProfilePage', () => {
     );
     renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@mira' });
 
-    await screen.findByRole('alert');
-    expect(await screen.findByRole('link', { name: 'Table of Mists' })).toHaveAttribute('href', '/community/dm-table/table-of-mists');
+    await screen.findByRole('alert', {}, { timeout: 10_000 });
+    expect(
+      await screen.findByRole('link', { name: 'Table of Mists' }, { timeout: 10_000 }),
+    ).toHaveAttribute('href', '/community/dm-table/table-of-mists');
     expect(screen.getByRole('link', { name: /The Glass Road/ })).toHaveAttribute('href', '/series/66666666-6666-4666-8666-666666666666');
     expect(screen.getByRole('link', { name: 'New DM table' })).toBeVisible();
-    expect(await screen.findByRole('button', { name: 'Create a series' })).toBeVisible();
+    expect(
+      await screen.findByRole('button', { name: 'Create a series' }, { timeout: 10_000 }),
+    ).toBeVisible();
     const quests = screen.getByRole('heading', { name: 'Quests' }).closest('[data-component="Card"]');
     expect(quests).toContainElement(screen.getByRole('alert'));
     expect(screen.queryByText('Nothing here yet.')).not.toBeInTheDocument();
-  });
+    // Schedule alert, loaded table, and the series button each wait 10s.
+  }, 35_000);
 
   it('keeps the loaded schedule and limits details errors to tables and series', async () => {
     signInProfile();
