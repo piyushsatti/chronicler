@@ -1619,6 +1619,11 @@ export type ProfileDmDetailsQueryVariables = Exact<{
 
 export type ProfileDmDetailsQuery = { questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> }, dmStats: { sessionCount: number } | null, documents: { total: number, items: Array<{ id: string, slug: string, title: string, status: string, authorId: string, canEditBody: boolean, canEditMetadata: boolean }> } };
 
+export type ProfileDmTierQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ProfileDmTierQuery = { myUnlocks: { dmTier: string } };
+
 export type ProfileSetMyAvailabilityMutationVariables = Exact<{
   slots: Array<AvailabilitySlotInput> | AvailabilitySlotInput;
   meta: CommandMeta;

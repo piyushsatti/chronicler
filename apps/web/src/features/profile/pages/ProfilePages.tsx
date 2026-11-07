@@ -29,6 +29,7 @@ import { ProfileOwnerActions } from '../components/ProfileOwnerActions.js';
 import { useDmTableDetailPage } from '../hooks/useDmTableDetailPage.js';
 import { useProfileBody } from '../hooks/useProfileBody.js';
 import { useProfileDmDetails } from '../hooks/useProfileDmDetails.js';
+import { useProfileDmTier } from '../hooks/useProfileDmTier.js';
 import styles from './profile.module.css';
 
 function Sessions({ items, emptyMessage = 'No sessions are scheduled yet.', action }: { items: DmTableSessionView[]; emptyMessage?: string; action?: React.ReactNode }) {
@@ -301,6 +302,7 @@ function ProfileView({
   const showDmInformation = role === 'dm' || profile.member.roles.includes('dm');
   const dmDetails = useProfileDmDetails(profile.member.id, showDmInformation);
   const owner = me.data?.id === profile.member.id;
+  const dmTier = useProfileDmTier(role === 'dm' && owner);
   const roles = me.data?.roles ?? [];
   const canDm = roles.includes('dm') || roles.includes('admin');
   const liveDm = useLiveDm(owner && canDm);
@@ -374,6 +376,7 @@ function ProfileView({
               actions={owner ? <Button variant="secondary" aria-expanded={editing} onClick={() => setEdit(editing ? '' : 'profile')}>{editing ? 'Close editor' : 'Edit profile'}</Button> : null}
               meta={<>
                 {profile.member.roles.filter((value) => value === 'guest' || value === 'dm' || value === 'player' || value === 'admin').map((value) => <Chip key={value} size="sm" tone="line">{roleLabel(value)}</Chip>)}
+                {dmTier ? <Chip size="sm" tone="line">{dmTier}</Chip> : null}
                 {profile.dmProfile && page.member.isDm ? <Chip size="sm" tone={profile.dmProfile.acceptingPlayers ? 'accent' : 'line'}>{profile.dmProfile.acceptingPlayers ? 'Accepting players' : 'Not accepting players'}</Chip> : null}
                 {profile.availability.map((slot, index) => <Chip key={`${slot.day}-${slot.startTime}-${index}`} size="sm" tone="neutral">{weekdayLabel(slot.day, { plural: true })} {clockLabel(slot.startTime)}–{clockLabel(slot.endTime)}</Chip>)}
               </>}
