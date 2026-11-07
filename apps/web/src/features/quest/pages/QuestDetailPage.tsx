@@ -118,6 +118,16 @@ export function QuestDetailPage(): React.JSX.Element {
     .filter(({ participant }) => participant.status === 'waitlisted');
   const hasSchedule = !isSentinelDate(quest.scheduledAt);
   const hasUpdated = !isSentinelDate(quest.updatedAt);
+  // MemberMe has not returned yet. null === dmId would flash the signup card.
+  const memberPending =
+    detail.isAuthenticated && detail.memberId === null && !detail.charactersError;
+  const dmHoldsSeat = quest.participants.some(
+    (participant) =>
+      participant.memberId === quest.dmId &&
+      (participant.status === 'signed_up' || participant.status === 'waitlisted'),
+  );
+  const hideParticipation =
+    memberPending || (detail.memberId === quest.dmId && !dmHoldsSeat);
   const dmHandleLabel = handleLabel(quest.dmHandle);
 
   const facts: Array<{ key: string; value: React.ReactNode }> = [
@@ -363,20 +373,22 @@ export function QuestDetailPage(): React.JSX.Element {
                 </>
               }
             />
-            <QuestParticipation
-              key={quest.id}
-              quest={quest}
-              authenticated={detail.isAuthenticated}
-              guest={detail.isGuest}
-              memberId={detail.memberId}
-              characters={detail.characters.data ?? []}
-              loading={detail.charactersLoading}
-              error={detail.charactersError}
-              retry={detail.retryCharacters}
-              pending={commands.pending}
-              execute={commands.execute}
-              commandError={commands.error}
-            />
+            {hideParticipation ? null : (
+              <QuestParticipation
+                key={quest.id}
+                quest={quest}
+                authenticated={detail.isAuthenticated}
+                guest={detail.isGuest}
+                memberId={detail.memberId}
+                characters={detail.characters.data ?? []}
+                loading={detail.charactersLoading}
+                error={detail.charactersError}
+                retry={detail.retryCharacters}
+                pending={commands.pending}
+                execute={commands.execute}
+                commandError={commands.error}
+              />
+            )}
           </div>
         </Card>
         {dmLabel ? (

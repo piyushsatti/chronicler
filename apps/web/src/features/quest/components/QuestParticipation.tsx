@@ -105,7 +105,7 @@ export function QuestParticipation({
           </Button>
         </div>
       ))}
-      {guest ? (
+      {memberId === quest.dmId ? null : guest ? (
         <p>
           Have your first character approved to unlock quest signup.{' '}
           <Link to="/characters">Your characters</Link>
