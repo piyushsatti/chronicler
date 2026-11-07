@@ -154,6 +154,8 @@ type AdminCharacterDirectoryEntryType {
   verificationStatus: String!
   verificationSubmittedAt: DateTime
   ddbUrl: String
+  "Mirror time of the last successful D&D Beyond sync. Older than verificationSubmittedAt means that sync failed and the sheet is stale."
+  ddbSyncedAt: DateTime
   updatedAt: DateTime!
 }
 

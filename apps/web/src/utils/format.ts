@@ -301,6 +301,20 @@ export function verificationLabel(value: string | null | undefined): string {
   return VERIFICATION_LABELS[(value ?? '').trim().toLowerCase()] ?? 'Not submitted';
 }
 
+/** A pending submission whose D&D Beyond mirror is missing or older than the request. */
+export function ddbSubmissionStale(
+  submittedAt: string | null | undefined,
+  syncedAt: string | null | undefined,
+): boolean {
+  if (!submittedAt) return false;
+  const submitted = Date.parse(submittedAt);
+  if (Number.isNaN(submitted)) return true;
+  if (!syncedAt) return true;
+  const synced = Date.parse(syncedAt);
+  if (Number.isNaN(synced)) return true;
+  return synced < submitted;
+}
+
 const WEEKDAYS = [
   'Monday',
   'Tuesday',

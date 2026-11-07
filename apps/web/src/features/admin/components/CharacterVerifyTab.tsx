@@ -5,7 +5,7 @@ import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { personLabels } from '../../../utils/format.js';
+import { ddbSubmissionStale, personLabels } from '../../../utils/format.js';
 import { isSafeDdbUrl } from '../../../utils/url.js';
 import type { useCharacterVerifyTab } from '../hooks/useCharacterVerifyTab.js';
 
@@ -60,6 +60,9 @@ export function CharacterVerifyTab({
       <ul className="stack">
         {queue.data.map((row, index) => {
           const ddbUrl = isSafeDdbUrl(row.ddbUrl) ? row.ddbUrl : null;
+          const sheetStale =
+            row.verificationSubmittedAt != null &&
+            ddbSubmissionStale(row.verificationSubmittedAt, row.ddbSyncedAt);
           return (
             <li key={row.id} className="card stack">
               <Link className="type-title" to={`/characters/${row.shortCode}`}>
@@ -78,6 +81,13 @@ export function CharacterVerifyTab({
                   'No D&D Beyond link.'
                 )}
               </p>
+              {row.verificationSubmittedAt ? (
+                <p role="status" className="type-caption">
+                  {sheetStale
+                    ? 'D&D Beyond sync failed for this submission. The saved sheet may be out of date.'
+                    : 'D&D Beyond sheet was synced for this submission.'}
+                </p>
+              ) : null}
               <div className="row">
                 <Button
                   type="button"

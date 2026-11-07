@@ -1038,6 +1038,7 @@ func toAdminCharacterDirectoryEntryType(v character.AdminCharacterDirectoryEntry
 		VerificationStatus:      string(v.VerificationStatus),
 		VerificationSubmittedAt: v.VerificationSubmittedAt,
 		DdbURL:                  v.DdbUrl,
+		DdbSyncedAt:             v.DdbSyncedAt,
 		UpdatedAt:               v.UpdatedAt,
 	}
 }

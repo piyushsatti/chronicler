@@ -38,6 +38,7 @@ import {
   isSentinelDate,
   statusLabel,
   verificationLabel,
+  ddbSubmissionStale,
 } from '../../../utils/format.js';
 import {
   useCharacterConnections,
@@ -444,6 +445,12 @@ function readyRegions(
         <div className={styles.ownerLineRow}>
           <CharacterOwnerLine ownerId={character.ownerId} />
         </div>
+        {(character.verificationStatus ?? '').toUpperCase() === 'PENDING' &&
+        ddbSubmissionStale(character.verificationSubmittedAt, character.ddbMirror?.syncedAt ?? null) ? (
+          <p role="status" className="type-caption" data-el="character.staleSheet">
+            D&D Beyond sync failed for this submission. The saved sheet may be out of date.
+          </p>
+        ) : null}
         <CharacterStats character={character} />
         <Tabs
             aria-label="Character sections"

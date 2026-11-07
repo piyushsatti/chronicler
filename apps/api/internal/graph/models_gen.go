@@ -42,7 +42,9 @@ type AdminCharacterDirectoryEntryType struct {
 	VerificationStatus      string     `json:"verificationStatus"`
 	VerificationSubmittedAt *time.Time `json:"verificationSubmittedAt,omitempty"`
 	DdbURL                  *string    `json:"ddbUrl,omitempty"`
-	UpdatedAt               time.Time  `json:"updatedAt"`
+	// Mirror time of the last successful D&D Beyond sync. Older than verificationSubmittedAt means that sync failed and the sheet is stale.
+	DdbSyncedAt *time.Time `json:"ddbSyncedAt,omitempty"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
 }
 
 type AdminCharacterDirectoryFiltersInput struct {

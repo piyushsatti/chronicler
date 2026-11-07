@@ -312,6 +312,7 @@ func mapPendingCharacterDirectory(row dbgen.CharacterProductPendingVerificationD
 		return AdminCharacterDirectoryEntryView{}, err
 	}
 	return AdminCharacterDirectoryEntryView{
+		DdbSyncedAt:             characterTimePointer(row.DdbSyncedAt),
 		DdbUrl:                  characterTextPointer(row.DdbUrl),
 		GuildId:                 characterUUIDPointer(row.GuildID),
 		Id:                      db.UUIDString(row.ID),

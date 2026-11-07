@@ -1963,11 +1963,12 @@ SELECT c.public_id AS id, c.name, owner.public_id AS owner_id,
        region.public_id AS region_id, region.name AS region_name,
        guild.public_id AS guild_id,
        'PENDING'::text AS verification_status,
-       c.verification_submitted_at, c.ddb_url, c.updated_at
+       c.verification_submitted_at, c.ddb_url, ddb.synced_at AS ddb_synced_at, c.updated_at
 FROM characters c
 JOIN members owner ON owner.id = c.owner_id
 LEFT JOIN documents guild ON guild.id = c.guild_document_id
 LEFT JOIN regions region ON region.id = c.region_id
+LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
 LEFT JOIN LATERAL (
     SELECT verification.created_at
     FROM verifications verification
@@ -2002,6 +2003,7 @@ type CharacterProductPendingVerificationDirectoryRow struct {
 	VerificationStatus      string             `json:"verification_status"`
 	VerificationSubmittedAt pgtype.Timestamptz `json:"verification_submitted_at"`
 	DdbUrl                  pgtype.Text        `json:"ddb_url"`
+	DdbSyncedAt             pgtype.Timestamptz `json:"ddb_synced_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 }
 
@@ -2029,6 +2031,7 @@ func (q *Queries) CharacterProductPendingVerificationDirectory(ctx context.Conte
 			&i.VerificationStatus,
 			&i.VerificationSubmittedAt,
 			&i.DdbUrl,
+			&i.DdbSyncedAt,
 			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
