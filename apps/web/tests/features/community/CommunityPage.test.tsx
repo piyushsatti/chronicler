@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { graphql, HttpResponse } from 'msw';
+import { ToastHost } from '../../../src/chrome/ToastHost.js';
 import { CommunityPage } from '../../../src/features/community/pages/CommunityPage.js';
 import { renderWithProviders } from '../../test-utils.js';
 import { server } from '../../../src/mocks/server.js';
@@ -9,6 +10,10 @@ import roster from '../../fixtures/wire/community/characters-good.json';
 import directory from '../../fixtures/wire/community/directory-good.json';
 import { signInProfile } from '../profile/profileAuth.js';
 import { queryKeys } from '../../../src/api/queryKeys.js';
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('CommunityPage', () => {
   it('renders declared weekly availability and one page heading', async () => {
@@ -41,6 +46,53 @@ describe('CommunityPage', () => {
       screen.queryByRole('button', { name: 'Mark yourself free' }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText('Looking to play')).not.toBeInTheDocument();
+  });
+
+  it('replaces the free-day popup and dismisses it on its own', async () => {
+    renderWithProviders(
+      <>
+        <ToastHost />
+        <CommunityPage />
+      </>,
+    );
+    const grid = await screen.findByRole('list', { name: "Who's free this week" });
+    vi.useFakeTimers();
+    fireEvent.click(within(grid).getByRole('listitem', { name: 'Mon: 0' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Mon: no availability listed');
+    fireEvent.click(within(grid).getByRole('listitem', { name: 'Sat: 1' }));
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByRole('status')).toHaveTextContent('Sat: Alex');
+    act(() => vi.advanceTimersByTime(11_999));
+    expect(screen.getByRole('status')).toHaveTextContent('Sat: Alex');
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByRole('status')).toBeNull();
+    fireEvent.click(within(grid).getByRole('listitem', { name: 'Mon: 0' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Mon: no availability listed');
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('restarts the free-day timer when the same day is clicked again', async () => {
+    renderWithProviders(
+      <>
+        <ToastHost />
+        <CommunityPage />
+      </>,
+    );
+    const grid = await screen.findByRole('list', { name: "Who's free this week" });
+    vi.useFakeTimers();
+    const saturday = within(grid).getByRole('listitem', { name: 'Sat: 1' });
+    fireEvent.click(saturday);
+    expect(screen.getByRole('status')).toHaveTextContent('Sat: Alex');
+    act(() => vi.advanceTimersByTime(11_000));
+    expect(screen.getByRole('status')).toHaveTextContent('Sat: Alex');
+    fireEvent.click(saturday);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByRole('status')).toHaveTextContent('Sat: Alex');
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(screen.getByRole('status')).toHaveTextContent('Sat: Alex');
+    act(() => vi.advanceTimersByTime(11_000));
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('switches to the public character roster without authentication', async () => {

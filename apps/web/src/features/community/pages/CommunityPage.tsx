@@ -315,6 +315,7 @@ export function CommunityPage(): React.JSX.Element {
                                 ? `${day}: ${free.map((member) => label(member)).join(', ')}`
                                 : `${day}: no availability listed`,
                               'info',
+                              { id: 'community-free-day', durationMs: 12_000 },
                             );
                           }}
                           renderCell={(cell) => (
