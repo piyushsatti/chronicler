@@ -24,7 +24,9 @@ it('shows only real totals as stat tiles and an action in each empty subsection'
   const stats = screen.getByLabelText('Your DM stats');
   expect(stats).toHaveTextContent('Quests posted0');
   expect(stats).toHaveTextContent('Sessions run3');
-  expect(stats).toHaveTextContent('DM tables0');
+  expect(stats).not.toHaveTextContent('DM tables');
+  expect(screen.queryByRole('heading', { name: 'Your DM tables' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Your page' })).toHaveAttribute('href', '/me');
   expect(screen.getByRole('complementary', { name: 'DM tools' })).toBeVisible();
   for (const name of ['Upcoming quests', 'Past quests']) {

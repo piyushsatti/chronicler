@@ -334,8 +334,6 @@ export const routes: readonly FeatureRoute[] = [
   editorRoute('/rules/guides/:id/edit', 'guide', 'edit'),
   editorRoute('/rules/rulings/new', 'ruling', 'new'),
   editorRoute('/rules/rulings/:id/edit', 'ruling', 'edit'),
-  editorRoute('/editor/dm-table', 'dm-table', 'new'),
-  editorRoute('/editor/dm-table/:id/edit', 'dm-table', 'edit'),
   editorRoute('/editor/hall-of-fame', 'hall-of-fame', 'new'),
   editorRoute('/editor/hall-of-fame/:id/edit', 'hall-of-fame', 'edit'),
 ];

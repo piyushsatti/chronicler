@@ -45,6 +45,9 @@ describe('route registry order', () => {
     expect(registered).not.toContain('/rules/:slug');
     expect(registered).not.toContain('/chronicles/:slug');
     expect(registered).not.toContain('/documents/:slug');
+    expect(registered).not.toContain('/community/dm-table/:slug');
+    expect(registered).not.toContain('/editor/dm-table');
+    expect(registered).not.toContain('/editor/dm-table/:id/edit');
   });
 });
 

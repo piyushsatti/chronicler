@@ -16,8 +16,8 @@ const empty = { dmStats: { sessionCount: 3 }, quests: { items: [], total: 0 }, d
 const request = { token: 'test-session', assertCurrent: () => undefined };
 
 describe.each([
-  { operation: 'DmDashboard', load: async () => (await loadDmDashboard(memberId, 25, 50, request)).series },
-  { operation: 'ProfileDmDetails', load: async () => (await loadProfileDmDetails(memberId, 20)).questArcs.items },
+  { operation: 'DmDashboard', load: async () => (await loadDmDashboard(memberId, 25, request)).series },
+  { operation: 'ProfileDmDetails', load: async () => (await loadProfileDmDetails(memberId)).questArcs.items },
 ])('$operation series pagination', ({ operation, load }) => {
   it.each([0, 2])('makes only the initial request when it contains all %i arcs', async (total) => {
     const initial = vi.fn<GraphQLResponseResolver>(() => HttpResponse.json({ data: { ...empty, questArcs: { total, items: arcs.slice(0, total) } } }));

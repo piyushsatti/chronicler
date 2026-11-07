@@ -87,105 +87,21 @@ function DmInformation({
   const schedule = state.schedule.data;
   if (
     state.details.isSuccess && state.schedule.isSuccess && details && schedule &&
-    details.documents.total === 0 && details.questArcs.total === 0 && schedule.total === 0
+    details.questArcs.total === 0 && schedule.total === 0
   ) {
     return canCreate ? (
       <Card className="stack" pad={4}>
-        <h2 className="type-heading">Tables, series and quests</h2>
+        <h2 className="type-heading">Series and quests</h2>
         <p className="type-caption">Nothing here yet.</p>
-        {canCreate ? <div className={styles.chips}>
-          <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">New DM table</Link>
+        <div className={styles.chips}>
           <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />
           {canCreateQuest ? <Link className="btn btn--secondary btn--sm" to="/quests/new">Post a quest</Link> : null}
-        </div> : null}
+        </div>
       </Card>
     ) : <p className="type-caption">Nothing here yet.</p>;
   }
   return (
     <div className="stack" data-gap="4">
-      <Card className="stack" pad={4}>
-        <div className={styles.cardHead}>
-          <h2 className="type-heading">DM tables</h2>
-          {canCreate && state.details.data?.documents.items.length ? (
-            <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">
-              New DM table
-            </Link>
-          ) : null}
-        </div>
-        {state.details.isError ? (
-          <StatePanel variant="inline" status="error" error={toAppError(state.details.error, 'profile:tables')} />
-        ) : state.details.isPending ? (
-          <StatePanel variant="inline" status="loading" />
-        ) : state.details.data ? (
-          <>
-            {state.details.data.documents.items.length ? (
-              <CardGrid>
-                {state.details.data.documents.items.map((table) => (
-                  <Card key={table.id} className="stack" pad={4}>
-                    <Link
-                      className={`type-title ${styles.titleLink}`}
-                      to={`/community/dm-table/${table.slug}`}
-                    >
-                      {table.title}
-                    </Link>
-                    <Chip size="sm" tone="status" className={styles.pinEnd}>
-                      {statusLabel(table.status)}
-                    </Chip>
-                    {table.canEditBody || table.canEditMetadata ? (
-                      <Link
-                        className="type-link"
-                        to={`/editor/dm-table/${table.id}/edit`}
-                      >
-                        Edit {table.title}
-                      </Link>
-                    ) : null}
-                  </Card>
-                ))}
-              </CardGrid>
-            ) : (
-              <EmptyState
-                message={
-                  canCreate
-                    ? 'You have not published a DM table yet.'
-                    : 'No DM tables to show yet.'
-                }
-                action={
-                  canCreate ? (
-                    <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">
-                      New DM table
-                    </Link>
-                  ) : <Link className="type-link" to="/dms">Browse DMs</Link>
-                }
-              />
-            )}
-            {state.details.data.documents.total > state.pageSize ? (
-              <nav className="row" data-wrap="1" aria-label="DM table pages">
-                <Button
-                  variant="ghost"
-                  disabled={state.page === 1 || state.details.isFetching}
-                  onClick={() => state.setPage(state.page - 1)}
-                >
-                  Previous tables
-                </Button>
-                <span className="type-caption">
-                  Page {state.page} ·{' '}
-                  {pluralize(state.details.data.documents.total, 'table')}
-                </span>
-                <Button
-                  variant="ghost"
-                  disabled={
-                    state.page * state.pageSize >= state.details.data.documents.total ||
-                    state.details.isFetching
-                  }
-                  onClick={() => state.setPage(state.page + 1)}
-                >
-                  Next tables
-                </Button>
-              </nav>
-            ) : null}
-          </>
-        ) : null}
-      </Card>
       <Card className="stack" pad={4}>
         <div className={styles.cardHead}>
           <h2 className="type-heading">Series</h2>

@@ -536,12 +536,10 @@ export type DmDashboardQueryVariables = Exact<{
   memberId: string;
   questLimit: number;
   questOffset: number;
-  tableLimit: number;
-  tableOffset: number;
 }>;
 
 
-export type DmDashboardQuery = { dmStats: { sessionCount: number } | null, questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> }, quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, briefDocument: { title: string } | null }> }, documents: { total: number, items: Array<{ id: string, slug: string, title: string, status: string, authorId: string, canEditMetadata: boolean, canEditBody: boolean }> } };
+export type DmDashboardQuery = { dmStats: { sessionCount: number } | null, questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> }, quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, briefDocument: { title: string } | null }> } };
 
 export type PendingCharacterVerificationsQueryVariables = Exact<{
   limit?: number;
@@ -1617,12 +1615,10 @@ export type ProfileActivityQuery = { memberActivityStats: { questsPlayed: number
 
 export type ProfileDmDetailsQueryVariables = Exact<{
   memberId: string;
-  limit: number;
-  offset: number;
 }>;
 
 
-export type ProfileDmDetailsQuery = { questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> }, dmStats: { sessionCount: number } | null, documents: { total: number, items: Array<{ id: string, slug: string, title: string, status: string, authorId: string, canEditBody: boolean, canEditMetadata: boolean }> } };
+export type ProfileDmDetailsQuery = { questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> }, dmStats: { sessionCount: number } | null };
 
 export type ProfileDmTierQueryVariables = Exact<{ [key: string]: never; }>;
 

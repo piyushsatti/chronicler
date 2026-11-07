@@ -29,31 +29,16 @@ const schema = z.object({
       }),
     ),
   }),
-  documents: z.object({
-    total: z.number().int().nonnegative(),
-    items: z.array(
-      z.object({
-        id: z.string().uuid(),
-        slug: z.string(),
-        title: z.string(),
-        status: z.string(),
-        authorId: z.string().uuid(),
-        canEditMetadata: z.boolean(),
-        canEditBody: z.boolean(),
-      }),
-    ),
-  }),
 });
 export async function loadDmDashboard(
   memberId: string,
   questOffset: number,
-  tableOffset: number,
   request: AdminReadRequest,
   questScope: 'page' | 'all' = 'page',
 ) {
   const data = await adminRead<DmDashboardQuery>(
     QUERY,
-    { memberId, questLimit: 25, questOffset, tableLimit: 25, tableOffset },
+    { memberId, questLimit: 25, questOffset },
     request,
   );
   const parsed = schema.safeParse(data);
@@ -63,7 +48,7 @@ export async function loadDmDashboard(
     while (quests.length < parsed.data.quests.total) {
       const next = await adminRead<DmDashboardQuery>(
         QUERY,
-        { memberId, questLimit: 25, questOffset: quests.length, tableLimit: 25, tableOffset },
+        { memberId, questLimit: 25, questOffset: quests.length },
         request,
       );
       const page = schema.shape.quests.safeParse(next.quests);

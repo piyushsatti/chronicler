@@ -78,7 +78,7 @@ describe('canonical result destinations', () => {
     ['rule', 'Guide', null, '/rules/guides/an%20entry'],
     ['summary', null, null, '/chronicles/an%20entry'],
     ['community', null, null, '/community/entries/an%20entry'],
-    ['community', 'dm_table', null, '/community/dm-table/an%20entry'],
+    ['community', 'dm_table', null, null],
     ['quest_brief', null, 'Q-12', '/quests/Q-12'],
     ['quest_brief', null, null, null],
   ])(

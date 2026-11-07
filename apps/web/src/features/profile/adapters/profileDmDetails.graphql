@@ -1,25 +1,9 @@
-query ProfileDmDetails($memberId: ID!, $limit: Int!, $offset: Int!) {
+query ProfileDmDetails($memberId: ID!) {
   questArcs(limit: 50, offset: 0) {
     total
     items { id name createdBy questCount }
   }
   dmStats(memberId: $memberId) {
     sessionCount
-  }
-  documents(
-    filters: { kind: "community", category: "dm_table", createdBy: $memberId }
-    limit: $limit
-    offset: $offset
-  ) {
-    items {
-      id
-      slug
-      title
-      status
-      authorId
-      canEditBody
-      canEditMetadata
-    }
-    total
   }
 }
