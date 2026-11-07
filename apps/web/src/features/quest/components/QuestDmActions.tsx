@@ -85,14 +85,12 @@ export function QuestDmActions({
   const preplay = quest.machineStatus === 'open' || quest.machineStatus === 'full';
   const unlimited = quest.signupType === 'dm_pick';
   const seatsLeft = Math.max(0, quest.slotsMax - quest.filledCount);
-  // Participants arrive in Last Game Played order.
-  const fillByLastPlayed =
-    quest.signupType === 'last_game_played'
-      ? quest.participants
-          .filter((participant) => participant.status === 'waitlisted')
-          .slice(0, seatsLeft)
-          .map((participant) => participant.characterId)
-      : [];
+  const pickLimit =
+    quest.signupType === 'last_game_played' ? Math.min(2, seatsLeft) : seatsLeft;
+  const canFillByLastPlayed =
+    quest.signupType === 'last_game_played' &&
+    seatsLeft > 0 &&
+    quest.participants.some((participant) => participant.status === 'waitlisted');
   const input = closeInput(rows);
   const validRows =
     rows.length === roster.length &&
@@ -137,6 +135,7 @@ export function QuestDmActions({
                   kind: 'select',
                   questId: quest.id,
                   characterIds: selected,
+                  fillByLastGamePlayed: false,
                 }).then((success) => {
                   if (success) setSelected([]);
                 });
@@ -149,7 +148,7 @@ export function QuestDmActions({
                   : `${seatsLeft} seats available. `}
                 Current character eligibility is checked when you save.
                 {quest.signupType === 'last_game_played'
-                  ? ' The list is ordered for you: new players first, then the players who have waited longest since their last played game.'
+                  ? ' You can reserve two players. The list is ordered for you: new players first, then the players who have waited longest since their last played game.'
                   : ''}
               </p>
               {quest.participants
@@ -176,12 +175,12 @@ export function QuestDmActions({
                     pending ||
                     selected.length === 0 ||
                     selected.length > 100 ||
-                    (!unlimited && selected.length > seatsLeft)
+                    (!unlimited && selected.length > pickLimit)
                   }
                 >
                   Confirm selection
                 </Button>
-                {fillByLastPlayed.length > 0 ? (
+                {canFillByLastPlayed ? (
                   <Button
                     type="button"
                     variant="secondary"
@@ -190,7 +189,8 @@ export function QuestDmActions({
                       void execute({
                         kind: 'select',
                         questId: quest.id,
-                        characterIds: fillByLastPlayed,
+                        characterIds: [],
+                        fillByLastGamePlayed: true,
                       });
                     }}
                   >

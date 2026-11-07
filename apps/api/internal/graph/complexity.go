@@ -126,7 +126,13 @@ func mutationListComplexity(c *ComplexityRoot) {
 	c.Mutation.AttestQuestParticipation = func(child int, _ string, entries []*ParticipationAttestationInput, _ CommandMeta) int {
 		return listCost(child, len(entries))
 	}
-	c.Mutation.SelectQuestParticipants = func(child int, _ string, ids []string, _ CommandMeta) int { return listCost(child, len(ids)) }
+	c.Mutation.SelectQuestParticipants = func(child int, _ string, ids []string, fill bool, _ CommandMeta) int {
+		n := len(ids)
+		if fill {
+			n = 100
+		}
+		return listCost(child, n)
+	}
 	c.Mutation.SetMemberRolesBatch = func(child int, changes []*MemberRoleBatchInput, _ CommandMeta) int {
 		return listCost(child, len(changes))
 	}

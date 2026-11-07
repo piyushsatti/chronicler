@@ -701,7 +701,10 @@ func (s ProductCommands) SelectQuestParticipants(ctx context.Context, actor auth
 	if err := commandPublicID(&questID); err != nil {
 		return nil, err
 	}
-	if len(spec.CharacterIds) > 100 {
+	if spec.FillByLastGamePlayed && len(spec.CharacterIds) > 0 {
+		return nil, apierr.New(apierr.Invalid, "last game played fill does not take characters")
+	}
+	if !spec.FillByLastGamePlayed && len(spec.CharacterIds) > 100 {
 		return nil, apierr.New(apierr.Invalid, "at most 100 participants may be selected")
 	}
 	ids := make([]string, 0, len(spec.CharacterIds))
@@ -731,6 +734,13 @@ func selectQuestParticipants(ctx context.Context, repos ProductCommandRepos, fre
 	if product.MissingDependency(repos.Characters) {
 		return nil, apierr.New(apierr.Internal, "character admission reader required")
 	}
+	if spec.FillByLastGamePlayed {
+		var err error
+		ids, err = repos.Quest.WaitlistedCharacterIDs(ctx, questID)
+		if err != nil {
+			return nil, err
+		}
+	}
 	admissions, err := repos.Characters.LockAdmissions(ctx, ids)
 	if err != nil {
 		return nil, err
@@ -746,7 +756,7 @@ func selectQuestParticipants(ctx context.Context, repos ProductCommandRepos, fre
 		return nil, err
 	}
 	locked.Candidates = admissions
-	result, err := repos.Quest.StoreSelectQuestParticipants(ctx, SelectQuestParticipantsWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: ids, AsOf: at}, Locked: locked, DMPicked: true})
+	result, err := repos.Quest.StoreSelectQuestParticipants(ctx, SelectQuestParticipantsWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: ids, AsOf: at, FillByLastGamePlayed: spec.FillByLastGamePlayed}, Locked: locked, DMPicked: !spec.FillByLastGamePlayed})
 	if err != nil || len(result) == 0 {
 		return result, err
 	}
@@ -817,6 +827,7 @@ func applyQuestRosterCorrection(ctx context.Context, repos ProductCommandRepos, 
 	}
 	view, skipped, err := repos.Quest.StoreCorrectQuestRoster(ctx, CorrectQuestRosterWrite{
 		At: at, ValidatedInput: spec, Quest: locked.Before, Roster: locked.Roster, Candidates: admissions,
+		Staff: fresh.Claims().Has(auth.Admin) || fresh.IsPlatformOwner(),
 	})
 	if err != nil || skipped {
 		return view, err

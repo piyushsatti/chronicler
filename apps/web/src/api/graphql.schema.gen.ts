@@ -1252,6 +1252,7 @@ export type MutationRevokeLieutenantArgs = {
 
 export type MutationSelectQuestParticipantsArgs = {
   characterIds: Array<Scalars['ID']['input']>;
+  fillByLastGamePlayed?: Scalars['Boolean']['input'];
   meta: CommandMeta;
   questId: Scalars['ID']['input'];
 };

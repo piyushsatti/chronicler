@@ -1284,6 +1284,8 @@ extend type Mutation {
   selectQuestParticipants(
     questId: ID!
     characterIds: [ID!]!
+    # Empty characterIds. The server seats the open last_game_played slots in seat order.
+    fillByLastGamePlayed: Boolean! = false
     meta: CommandMeta!
   ): [QuestParticipantType!]!
   attestQuestParticipation(

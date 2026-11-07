@@ -1052,7 +1052,7 @@ func (r *mutationResolver) RemoveQuestParticipant(ctx context.Context, questID s
 }
 
 // SelectQuestParticipants is the resolver for the selectQuestParticipants field.
-func (r *mutationResolver) SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, meta CommandMeta) ([]*QuestParticipantType, error) {
+func (r *mutationResolver) SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, fillByLastGamePlayed bool, meta CommandMeta) ([]*QuestParticipantType, error) {
 	if r.Services.QuestCommands == nil {
 		return nil, fmt.Errorf("quest commands unavailable")
 	}
@@ -1061,8 +1061,9 @@ func (r *mutationResolver) SelectQuestParticipants(ctx context.Context, questID 
 		return nil, err
 	}
 	views, err := r.Services.QuestCommands.SelectQuestParticipants(ctx, actor, quest.SelectQuestParticipantsSpec{
-		QuestId:      questID,
-		CharacterIds: characterIds,
+		QuestId:              questID,
+		CharacterIds:         characterIds,
+		FillByLastGamePlayed: fillByLastGamePlayed,
 	}, commandMeta)
 	if err != nil {
 		return nil, err

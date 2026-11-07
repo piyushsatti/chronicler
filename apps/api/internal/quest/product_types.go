@@ -311,9 +311,10 @@ type RestoreQuestSpec struct {
 }
 
 type SelectQuestParticipantsSpec struct {
-	QuestId      string
-	CharacterIds []string
-	AsOf         time.Time
+	QuestId              string
+	CharacterIds         []string
+	AsOf                 time.Time
+	FillByLastGamePlayed bool
 }
 
 type SetQuestHexesSpec struct {
@@ -871,6 +872,7 @@ type CorrectQuestRosterWrite struct {
 	Quest          *QuestView
 	Roster         []QuestParticipantView
 	Candidates     []character.Admission
+	Staff          bool
 }
 
 type ArcQuestsKey struct {

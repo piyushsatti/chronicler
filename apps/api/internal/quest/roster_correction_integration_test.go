@@ -14,7 +14,8 @@ import (
 // Discord revision in the same transaction, and that a second remove of an already
 // withdrawn player does not.
 func TestRosterCorrectionSyncsDiscord(t *testing.T) {
-	f := bumpQuest(t, lastGamePlayedSignup, 1)
+	// The quest DM may add on a DM Pick quest. Last-game adds are staff-only.
+	f := bumpQuest(t, dmPickSignup, 1)
 	character := bumpPlayer(t, f)
 	ctx := context.Background()
 	added, err := f.commands.AddQuestParticipant(ctx, f.actor, CorrectQuestRosterSpec{QuestId: f.questID, CharacterId: character}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
@@ -39,7 +40,8 @@ func TestRosterCorrectionSyncsDiscord(t *testing.T) {
 // TestRemoveDeletedCharacterFreesSeat checks that staff can withdraw a soft-deleted
 // character who still holds the only seat, so a later add is accepted.
 func TestRemoveDeletedCharacterFreesSeat(t *testing.T) {
-	f := bumpQuest(t, lastGamePlayedSignup, 1)
+	// The quest DM may add on a DM Pick quest. Last-game adds are staff-only.
+	f := bumpQuest(t, dmPickSignup, 1)
 	character := bumpPlayer(t, f)
 	ctx := context.Background()
 	if got := bumpSignup(t, f, character).Status; got != "waitlisted" {
