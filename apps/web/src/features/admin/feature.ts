@@ -90,6 +90,16 @@ export const graphql: FeatureGraphql = {
     }),
   PendingDmProfiles: () =>
     HttpResponse.json({ data: { pendingDmProfileVerifications: goodDmQueue } }),
+  AdminCommunityStats: () =>
+    HttpResponse.json({
+      data: {
+        adminCommunityStats: {
+          totalCharacters: 2,
+          charactersByClass: [{ key: 'Ranger', count: 1 }],
+          questHexes: [],
+        },
+      },
+    }),
   AdminOperations: () =>
     HttpResponse.json({
       data: {

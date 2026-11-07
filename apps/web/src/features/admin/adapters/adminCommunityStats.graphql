@@ -1,0 +1,15 @@
+query AdminCommunityStats {
+  adminCommunityStats {
+    totalCharacters
+    charactersByClass {
+      key
+      count
+    }
+    questHexes {
+      id
+      name
+      mapName
+      questCount
+    }
+  }
+}

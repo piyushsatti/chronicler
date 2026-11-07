@@ -56,6 +56,13 @@ type AdminCharacterDirectoryType struct {
 	Total int                                 `json:"total"`
 }
 
+type AdminCommunityStatsType struct {
+	TotalCharacters int `json:"totalCharacters"`
+	// Class catalog name. Empty when the character has no class pick.
+	CharactersByClass []*CountByKeyType         `json:"charactersByClass"`
+	QuestHexes        []*AdminQuestHexCountType `json:"questHexes"`
+}
+
 type AdminDeliveryConfigType struct {
 	PublicOrigin            string  `json:"publicOrigin"`
 	PublicOriginHealthy     *bool   `json:"publicOriginHealthy,omitempty"`
@@ -103,6 +110,13 @@ type AdminOperationsType struct {
 	DeliveryTotal         int                        `json:"deliveryTotal"`
 	Deliveries            []*AdminDeliveryJobType    `json:"deliveries"`
 	ActiveAlerts          []*AdminHealthAlertType    `json:"activeAlerts"`
+}
+
+type AdminQuestHexCountType struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	MapName    string `json:"mapName"`
+	QuestCount int    `json:"questCount"`
 }
 
 type AnnouncementRoleInput struct {

@@ -98,6 +98,8 @@ func implicitListComplexity(c *ComplexityRoot) {
 	hundred := func(child int) int { return listCost(child, 100) }
 	availability := func(child int) int { return listCost(child, 28) }
 	c.AdminOperationsType.ScheduledWork = func(child int) int { return listCost(child, 2) }
+	c.AdminCommunityStatsType.CharactersByClass = hundred
+	c.AdminCommunityStatsType.QuestHexes = hundred
 	c.CharacterType.Proficiencies = hundred
 	c.DiscordSettingsType.VoiceChannels = hundred
 	c.GameCalendarType.MonthGrid = func(child int) int { return listCost(child, 366) }

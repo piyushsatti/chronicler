@@ -1532,6 +1532,7 @@ extend type Query {
     limit: Int! = 25
     offset: Int! = 0
   ): AdminOperationsType!
+  adminCommunityStats: AdminCommunityStatsType!
   searchableKinds: [SearchKindType!]!
   siteStats: SiteStatsType!
   discordDeliveryMode: String!
@@ -1605,6 +1606,20 @@ type AdminOperationsType {
   deliveryTotal: Int!
   deliveries: [AdminDeliveryJobType!]!
   activeAlerts(limit: Int! = 50, offset: Int! = 0): [AdminHealthAlertType!]!
+}
+
+type AdminQuestHexCountType {
+  id: ID!
+  name: String!
+  mapName: String!
+  questCount: Int!
+}
+
+type AdminCommunityStatsType {
+  totalCharacters: Int!
+  "Class catalog name. Empty when the character has no class pick."
+  charactersByClass: [CountByKeyType!]!
+  questHexes: [AdminQuestHexCountType!]!
 }
 
 type CategoryCountType {

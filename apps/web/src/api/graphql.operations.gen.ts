@@ -396,6 +396,11 @@ export type AdminCharactersQueryVariables = Exact<{
 
 export type AdminCharactersQuery = { adminCharacterDirectory: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerHandle: string, ownerDisplayName: string, status: string, verificationStatus: string }> } };
 
+export type AdminCommunityStatsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AdminCommunityStatsQuery = { adminCommunityStats: { totalCharacters: number, charactersByClass: Array<{ key: string, count: number }>, questHexes: Array<{ id: string, name: string, mapName: string, questCount: number }> } };
+
 export type AdminCreationCatalogQueryVariables = Exact<{
   limit?: number;
   offset?: number;

@@ -98,6 +98,12 @@ type ComplexityRoot struct {
 		Total func(childComplexity int) int
 	}
 
+	AdminCommunityStatsType struct {
+		CharactersByClass func(childComplexity int) int
+		QuestHexes        func(childComplexity int) int
+		TotalCharacters   func(childComplexity int) int
+	}
+
 	AdminDeliveryConfigType struct {
 		AnnouncementRoleHealthy func(childComplexity int) int
 		AnnouncementRoleID      func(childComplexity int) int
@@ -145,6 +151,13 @@ type ComplexityRoot struct {
 		PendingDeliveryCount  func(childComplexity int) int
 		ScheduledWork         func(childComplexity int) int
 		TerminalDeliveryCount func(childComplexity int) int
+	}
+
+	AdminQuestHexCountType struct {
+		ID         func(childComplexity int) int
+		MapName    func(childComplexity int) int
+		Name       func(childComplexity int) int
+		QuestCount func(childComplexity int) int
 	}
 
 	ArchonAssignmentType struct {
@@ -820,6 +833,7 @@ type ComplexityRoot struct {
 
 	Query struct {
 		AdminCharacterDirectory       func(childComplexity int, filters *AdminCharacterDirectoryFiltersInput, limit int, offset int) int
+		AdminCommunityStats           func(childComplexity int) int
 		AdminOperations               func(childComplexity int, deliveryState *string, limit int, offset int) int
 		ArchonAssignments             func(childComplexity int, regionID *string, memberID *string, limit int, offset int) int
 		AuditBody                     func(childComplexity int, body string) int
@@ -1385,6 +1399,7 @@ type QueryResolver interface {
 	Search(ctx context.Context, query string, kinds []string, limit int, offset int) (*SearchResultType, error)
 	Home(ctx context.Context) (*HomeType, error)
 	AdminOperations(ctx context.Context, deliveryState *string, limit int, offset int) (*AdminOperationsType, error)
+	AdminCommunityStats(ctx context.Context) (*AdminCommunityStatsType, error)
 	SearchableKinds(ctx context.Context) ([]*SearchKindType, error)
 	SiteStats(ctx context.Context) (*SiteStatsType, error)
 	DiscordDeliveryMode(ctx context.Context) (string, error)
@@ -1608,6 +1623,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.AdminCharacterDirectoryType.Total(childComplexity), true
+
+	case "AdminCommunityStatsType.charactersByClass":
+		if e.complexity.AdminCommunityStatsType.CharactersByClass == nil {
+			break
+		}
+
+		return e.complexity.AdminCommunityStatsType.CharactersByClass(childComplexity), true
+
+	case "AdminCommunityStatsType.questHexes":
+		if e.complexity.AdminCommunityStatsType.QuestHexes == nil {
+			break
+		}
+
+		return e.complexity.AdminCommunityStatsType.QuestHexes(childComplexity), true
+
+	case "AdminCommunityStatsType.totalCharacters":
+		if e.complexity.AdminCommunityStatsType.TotalCharacters == nil {
+			break
+		}
+
+		return e.complexity.AdminCommunityStatsType.TotalCharacters(childComplexity), true
 
 	case "AdminDeliveryConfigType.announcementRoleHealthy":
 		if e.complexity.AdminDeliveryConfigType.AnnouncementRoleHealthy == nil {
@@ -1872,6 +1908,34 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.AdminOperationsType.TerminalDeliveryCount(childComplexity), true
+
+	case "AdminQuestHexCountType.id":
+		if e.complexity.AdminQuestHexCountType.ID == nil {
+			break
+		}
+
+		return e.complexity.AdminQuestHexCountType.ID(childComplexity), true
+
+	case "AdminQuestHexCountType.mapName":
+		if e.complexity.AdminQuestHexCountType.MapName == nil {
+			break
+		}
+
+		return e.complexity.AdminQuestHexCountType.MapName(childComplexity), true
+
+	case "AdminQuestHexCountType.name":
+		if e.complexity.AdminQuestHexCountType.Name == nil {
+			break
+		}
+
+		return e.complexity.AdminQuestHexCountType.Name(childComplexity), true
+
+	case "AdminQuestHexCountType.questCount":
+		if e.complexity.AdminQuestHexCountType.QuestCount == nil {
+			break
+		}
+
+		return e.complexity.AdminQuestHexCountType.QuestCount(childComplexity), true
 
 	case "ArchonAssignmentType.grantedAt":
 		if e.complexity.ArchonAssignmentType.GrantedAt == nil {
@@ -5421,6 +5485,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.AdminCharacterDirectory(childComplexity, args["filters"].(*AdminCharacterDirectoryFiltersInput), args["limit"].(int), args["offset"].(int)), true
+
+	case "Query.adminCommunityStats":
+		if e.complexity.Query.AdminCommunityStats == nil {
+			break
+		}
+
+		return e.complexity.Query.AdminCommunityStats(childComplexity), true
 
 	case "Query.adminOperations":
 		if e.complexity.Query.AdminOperations == nil {
@@ -9309,6 +9380,7 @@ scalar Time
     limit: Int! = 25
     offset: Int! = 0
   ): AdminOperationsType!
+  adminCommunityStats: AdminCommunityStatsType!
   searchableKinds: [SearchKindType!]!
   siteStats: SiteStatsType!
   discordDeliveryMode: String!
@@ -9381,6 +9453,20 @@ type AdminOperationsType {
   deliveryTotal: Int!
   deliveries: [AdminDeliveryJobType!]!
   activeAlerts(limit: Int! = 50, offset: Int! = 0): [AdminHealthAlertType!]!
+}
+
+type AdminQuestHexCountType {
+  id: ID!
+  name: String!
+  mapName: String!
+  questCount: Int!
+}
+
+type AdminCommunityStatsType {
+  totalCharacters: Int!
+  "Class catalog name. Empty when the character has no class pick."
+  charactersByClass: [CountByKeyType!]!
+  questHexes: [AdminQuestHexCountType!]!
 }
 
 type CategoryCountType {
@@ -13665,6 +13751,154 @@ func (ec *executionContext) fieldContext_AdminCharacterDirectoryType_total(_ con
 	return fc, nil
 }
 
+func (ec *executionContext) _AdminCommunityStatsType_totalCharacters(ctx context.Context, field graphql.CollectedField, obj *AdminCommunityStatsType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AdminCommunityStatsType_totalCharacters(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TotalCharacters, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AdminCommunityStatsType_totalCharacters(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AdminCommunityStatsType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AdminCommunityStatsType_charactersByClass(ctx context.Context, field graphql.CollectedField, obj *AdminCommunityStatsType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AdminCommunityStatsType_charactersByClass(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CharactersByClass, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*CountByKeyType)
+	fc.Result = res
+	return ec.marshalNCountByKeyType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCountByKeyTypeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AdminCommunityStatsType_charactersByClass(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AdminCommunityStatsType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "key":
+				return ec.fieldContext_CountByKeyType_key(ctx, field)
+			case "count":
+				return ec.fieldContext_CountByKeyType_count(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CountByKeyType", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AdminCommunityStatsType_questHexes(ctx context.Context, field graphql.CollectedField, obj *AdminCommunityStatsType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AdminCommunityStatsType_questHexes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.QuestHexes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*AdminQuestHexCountType)
+	fc.Result = res
+	return ec.marshalNAdminQuestHexCountType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐAdminQuestHexCountTypeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AdminCommunityStatsType_questHexes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AdminCommunityStatsType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_AdminQuestHexCountType_id(ctx, field)
+			case "name":
+				return ec.fieldContext_AdminQuestHexCountType_name(ctx, field)
+			case "mapName":
+				return ec.fieldContext_AdminQuestHexCountType_mapName(ctx, field)
+			case "questCount":
+				return ec.fieldContext_AdminQuestHexCountType_questCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type AdminQuestHexCountType", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _AdminDeliveryConfigType_publicOrigin(ctx context.Context, field graphql.CollectedField, obj *AdminDeliveryConfigType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AdminDeliveryConfigType_publicOrigin(ctx, field)
 	if err != nil {
@@ -15338,6 +15572,182 @@ func (ec *executionContext) fieldContext_AdminOperationsType_activeAlerts(ctx co
 	if fc.Args, err = ec.field_AdminOperationsType_activeAlerts_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AdminQuestHexCountType_id(ctx context.Context, field graphql.CollectedField, obj *AdminQuestHexCountType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AdminQuestHexCountType_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AdminQuestHexCountType_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AdminQuestHexCountType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AdminQuestHexCountType_name(ctx context.Context, field graphql.CollectedField, obj *AdminQuestHexCountType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AdminQuestHexCountType_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AdminQuestHexCountType_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AdminQuestHexCountType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AdminQuestHexCountType_mapName(ctx context.Context, field graphql.CollectedField, obj *AdminQuestHexCountType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AdminQuestHexCountType_mapName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MapName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AdminQuestHexCountType_mapName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AdminQuestHexCountType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AdminQuestHexCountType_questCount(ctx context.Context, field graphql.CollectedField, obj *AdminQuestHexCountType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AdminQuestHexCountType_questCount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.QuestCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AdminQuestHexCountType_questCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AdminQuestHexCountType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
 	}
 	return fc, nil
 }
@@ -42190,6 +42600,58 @@ func (ec *executionContext) fieldContext_Query_adminOperations(ctx context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_adminCommunityStats(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_adminCommunityStats(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().AdminCommunityStats(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*AdminCommunityStatsType)
+	fc.Result = res
+	return ec.marshalNAdminCommunityStatsType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐAdminCommunityStatsType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_adminCommunityStats(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "totalCharacters":
+				return ec.fieldContext_AdminCommunityStatsType_totalCharacters(ctx, field)
+			case "charactersByClass":
+				return ec.fieldContext_AdminCommunityStatsType_charactersByClass(ctx, field)
+			case "questHexes":
+				return ec.fieldContext_AdminCommunityStatsType_questHexes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type AdminCommunityStatsType", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_searchableKinds(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_searchableKinds(ctx, field)
 	if err != nil {
@@ -57030,6 +57492,55 @@ func (ec *executionContext) _AdminCharacterDirectoryType(ctx context.Context, se
 	return out
 }
 
+var adminCommunityStatsTypeImplementors = []string{"AdminCommunityStatsType"}
+
+func (ec *executionContext) _AdminCommunityStatsType(ctx context.Context, sel ast.SelectionSet, obj *AdminCommunityStatsType) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, adminCommunityStatsTypeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AdminCommunityStatsType")
+		case "totalCharacters":
+			out.Values[i] = ec._AdminCommunityStatsType_totalCharacters(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "charactersByClass":
+			out.Values[i] = ec._AdminCommunityStatsType_charactersByClass(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "questHexes":
+			out.Values[i] = ec._AdminCommunityStatsType_questHexes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var adminDeliveryConfigTypeImplementors = []string{"AdminDeliveryConfigType"}
 
 func (ec *executionContext) _AdminDeliveryConfigType(ctx context.Context, sel ast.SelectionSet, obj *AdminDeliveryConfigType) graphql.Marshaler {
@@ -57317,6 +57828,60 @@ func (ec *executionContext) _AdminOperationsType(ctx context.Context, sel ast.Se
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var adminQuestHexCountTypeImplementors = []string{"AdminQuestHexCountType"}
+
+func (ec *executionContext) _AdminQuestHexCountType(ctx context.Context, sel ast.SelectionSet, obj *AdminQuestHexCountType) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, adminQuestHexCountTypeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AdminQuestHexCountType")
+		case "id":
+			out.Values[i] = ec._AdminQuestHexCountType_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._AdminQuestHexCountType_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "mapName":
+			out.Values[i] = ec._AdminQuestHexCountType_mapName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "questCount":
+			out.Values[i] = ec._AdminQuestHexCountType_questCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -63751,6 +64316,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "adminCommunityStats":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_adminCommunityStats(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "searchableKinds":
 			field := field
 
@@ -67019,6 +67606,20 @@ func (ec *executionContext) marshalNAdminCharacterDirectoryType2ᚖgithubᚗcom�
 	return ec._AdminCharacterDirectoryType(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNAdminCommunityStatsType2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐAdminCommunityStatsType(ctx context.Context, sel ast.SelectionSet, v AdminCommunityStatsType) graphql.Marshaler {
+	return ec._AdminCommunityStatsType(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAdminCommunityStatsType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐAdminCommunityStatsType(ctx context.Context, sel ast.SelectionSet, v *AdminCommunityStatsType) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._AdminCommunityStatsType(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNAdminDeliveryConfigType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐAdminDeliveryConfigType(ctx context.Context, sel ast.SelectionSet, v *AdminDeliveryConfigType) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -67149,6 +67750,60 @@ func (ec *executionContext) marshalNAdminOperationsType2ᚖgithubᚗcomᚋpiyush
 		return graphql.Null
 	}
 	return ec._AdminOperationsType(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNAdminQuestHexCountType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐAdminQuestHexCountTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []*AdminQuestHexCountType) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNAdminQuestHexCountType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐAdminQuestHexCountType(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNAdminQuestHexCountType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐAdminQuestHexCountType(ctx context.Context, sel ast.SelectionSet, v *AdminQuestHexCountType) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._AdminQuestHexCountType(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNAnnouncementRoleInput2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐAnnouncementRoleInput(ctx context.Context, v any) (AnnouncementRoleInput, error) {

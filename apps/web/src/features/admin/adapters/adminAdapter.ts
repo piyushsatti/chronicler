@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type {
   AdminBackstoriesQuery,
   AdminCharactersQuery,
+  AdminCommunityStatsQuery,
   AdminCreationCatalogQuery,
   AdminDiscordSettingsQuery,
   AdminGameCalendarQuery,
@@ -48,6 +49,7 @@ import {
 import type { AdapterResult } from '../../../errors/types.js';
 import PENDING_DM_PROFILES from './pendingDmProfiles.graphql?raw';
 import ADMIN_OPS from './adminOperations.graphql?raw';
+import ADMIN_COMMUNITY_STATS from './adminCommunityStats.graphql?raw';
 import ADMIN_CHARS from './adminCharacters.graphql?raw';
 import PENDING_CHAR_VERIFICATIONS from './pendingCharacterVerifications.graphql?raw';
 import ADMIN_MEMBERS from './adminMembers.graphql?raw';
@@ -331,6 +333,35 @@ export async function loadCharVerifyQueue(
   } catch (error) {
     throw toAppError(error, 'admin:loadCharVerifyQueue');
   }
+}
+
+const communityStatsSchema = z.object({
+  totalCharacters: z.number().int().nonnegative(),
+  charactersByClass: z.array(
+    z.object({
+      key: z.string(),
+      count: z.number().int().nonnegative(),
+    }),
+  ),
+  questHexes: z.array(
+    z.object({
+      id: z.string().min(1),
+      name: z.string().min(1),
+      mapName: z.string().min(1),
+      questCount: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
+export type AdminCommunityStatsView = z.infer<typeof communityStatsSchema>;
+
+export async function loadAdminCommunityStats(
+  request: AdminReadRequest,
+): Promise<AdminCommunityStatsView> {
+  const data = await adminRead<AdminCommunityStatsQuery>(ADMIN_COMMUNITY_STATS, undefined, request);
+  const result = communityStatsSchema.safeParse(data.adminCommunityStats);
+  if (!result.success) throw toAppError({ failure: 'InvalidWire' }, 'admin:community-stats');
+  return result.data;
 }
 
 export async function loadAdminOperations(

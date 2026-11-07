@@ -1078,6 +1078,18 @@ func toSiteStatsView(v site.SiteStatsView) *SiteStatsType {
 	}
 }
 
+func toAdminCommunityStats(v site.AdminCommunityStats) *AdminCommunityStatsType {
+	classes := make([]*CountByKeyType, len(v.Classes))
+	for i, row := range v.Classes {
+		classes[i] = &CountByKeyType{Key: row.Name, Count: int(row.Count)}
+	}
+	hexes := make([]*AdminQuestHexCountType, len(v.QuestHexes))
+	for i, row := range v.QuestHexes {
+		hexes[i] = &AdminQuestHexCountType{ID: row.ID, Name: row.Name, MapName: row.MapName, QuestCount: int(row.QuestCount)}
+	}
+	return &AdminCommunityStatsType{TotalCharacters: int(v.TotalCharacters), CharactersByClass: classes, QuestHexes: hexes}
+}
+
 func toSiteStatsFromSnapshot(snapshot site.CommunityStatsSnapshot) *SiteStatsType {
 	return toSiteStatsView(site.SiteStatsView{
 		TotalMembers:     snapshot.TotalMembers,
