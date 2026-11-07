@@ -85,6 +85,14 @@ export function QuestDmActions({
   const preplay = quest.machineStatus === 'open' || quest.machineStatus === 'full';
   const unlimited = quest.signupType === 'dm_pick';
   const seatsLeft = Math.max(0, quest.slotsMax - quest.filledCount);
+  // Participants arrive in Last Game Played order.
+  const fillByLastPlayed =
+    quest.signupType === 'last_game_played'
+      ? quest.participants
+          .filter((participant) => participant.status === 'waitlisted')
+          .slice(0, seatsLeft)
+          .map((participant) => participant.characterId)
+      : [];
   const input = closeInput(rows);
   const validRows =
     rows.length === roster.length &&
@@ -164,6 +172,22 @@ export function QuestDmActions({
                 >
                   Confirm selection
                 </Button>
+                {fillByLastPlayed.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={pending}
+                    onClick={() => {
+                      void execute({
+                        kind: 'select',
+                        questId: quest.id,
+                        characterIds: fillByLastPlayed,
+                      });
+                    }}
+                  >
+                    Add by Last Game Played
+                  </Button>
+                ) : null}
               </div>
             </form>
           ) : null}
