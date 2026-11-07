@@ -23,9 +23,6 @@ export function useCharacterVerifyTab() {
     {},
     (page, request) => loadCharVerifyQueue(page, request),
   );
-  const [changeRequestId, setChangeRequestId] = useState<string | null>(null);
-  const [changeRequestNote, setChangeRequestNote] = useState('');
-  const [noteError, setNoteError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
     message: string;
@@ -47,12 +44,8 @@ export function useCharacterVerifyTab() {
       if (!authority.isCurrent()) return;
       setFeedback({
         type: 'success',
-        message: vars.approve
-          ? 'Character approved.'
-          : 'Change request recorded and returned to the owner.',
+        message: vars.approve ? 'Character approved.' : 'Character rejected.',
       });
-      setChangeRequestId(null);
-      setChangeRequestNote('');
       await queryClient.invalidateQueries({ queryKey: queryKeys.pendingCharacters });
     },
     onError: (error, vars) => {
@@ -69,7 +62,7 @@ export function useCharacterVerifyTab() {
               ? 'This character changed while you were reviewing it. Refresh the queue and try again.'
               : vars.approve
                 ? 'Could not approve this character. Please try again.'
-                : 'Could not request changes for this character. Please try again.',
+                : 'Could not reject this character. Please try again.',
       });
     },
   });
@@ -77,12 +70,6 @@ export function useCharacterVerifyTab() {
   return {
     pagination,
     queue: panelState(queue, 'admin:CharacterVerifyTab'),
-    changeRequestId,
-    setChangeRequestId,
-    changeRequestNote,
-    setChangeRequestNote,
-    noteError,
-    setNoteError,
     feedback,
     decide: panelState(decide, 'admin:CharacterVerifyTab'),
   };
