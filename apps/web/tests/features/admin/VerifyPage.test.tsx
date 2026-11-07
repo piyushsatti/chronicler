@@ -46,7 +46,7 @@ describe('VerifyPage', () => {
       let decided = false;
       let queueReads = 0;
       let sent: Record<string, unknown> | undefined;
-      const note = approve ? null : 'Please revise the backstory.';
+      const note = null;
       server.use(
         graphql.query('PendingCharacterVerifications', () => {
           queueReads++;
@@ -76,21 +76,15 @@ describe('VerifyPage', () => {
       expect(
         await screen.findByRole('link', { name: 'Pending Hero' }),
       ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', {
+          name: 'What does the owner need to change?',
+        }),
+      ).not.toBeInTheDocument();
       if (approve) await user.click(screen.getByRole('button', { name: 'Approve' }));
-      else {
-        await user.click(screen.getByRole('button', { name: 'Request changes' }));
-        await user.type(
-          screen.getByRole('textbox', {
-            name: 'What does the owner need to change?',
-          }),
-          note ?? '',
-        );
-        await user.click(screen.getByRole('button', { name: 'Send change request' }));
-      }
+      else await user.click(screen.getByRole('button', { name: 'Reject' }));
       expect(await screen.findByRole('status')).toHaveTextContent(
-        approve
-          ? 'Character approved.'
-          : 'Change request recorded and returned to the owner.',
+        approve ? 'Character approved.' : 'Character rejected.',
       );
       await waitFor(() => {
         expect(

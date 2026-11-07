@@ -15,17 +15,7 @@ export function CharacterVerifyTab({
   view: ReturnType<typeof useCharacterVerifyTab>;
 }): React.JSX.Element {
   const { formatDate } = useDateFormatter();
-  const {
-    queue,
-    changeRequestId,
-    setChangeRequestId,
-    changeRequestNote,
-    setChangeRequestNote,
-    noteError,
-    setNoteError,
-    feedback,
-    decide,
-  } = view;
+  const { queue, feedback, decide } = view;
 
   if (queue.isError) {
     return <AdminReadFailure error={queue.error} retry={queue.retry} />;
@@ -94,15 +84,16 @@ export function CharacterVerifyTab({
                   variant="secondary"
                   size="sm"
                   disabled={decide.isPending || row.verificationSubmittedAt === null}
-                  onClick={() => {
-                    setChangeRequestId((current) =>
-                      current === row.id ? null : row.id,
-                    );
-                    setChangeRequestNote('');
-                    setNoteError(null);
-                  }}
+                  onClick={() =>
+                    decide.mutate({
+                      characterId: row.id,
+                      approve: false,
+                      note: null,
+                      expectedSubmissionAt: row.verificationSubmittedAt,
+                    })
+                  }
                 >
-                  Request changes
+                  Reject
                 </Button>
                 <Button
                   type="button"
@@ -120,56 +111,6 @@ export function CharacterVerifyTab({
                   Approve
                 </Button>
               </div>
-              {changeRequestId === row.id ? (
-                <form
-                  className="stack"
-                  data-testid={`change-request-form-${row.id}`}
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const note = changeRequestNote.trim();
-                    if (!note) {
-                      setNoteError(
-                        'Add a note describing the changes the owner needs to make.',
-                      );
-                      return;
-                    }
-                    setNoteError(null);
-                    decide.mutate({
-                      characterId: row.id,
-                      approve: false,
-                      note,
-                      expectedSubmissionAt: row.verificationSubmittedAt,
-                    });
-                  }}
-                >
-                  <label className="stack">
-                    <span className="type-label">
-                      What does the owner need to change?
-                    </span>
-                    <textarea
-                      disabled={
-                        decide.isPending || row.verificationSubmittedAt === null
-                      }
-                      className="field-input"
-                      rows={2}
-                      value={changeRequestNote}
-                      onChange={(event) => setChangeRequestNote(event.target.value)}
-                    />
-                  </label>
-                  {noteError ? (
-                    <p className="type-caption" role="alert">
-                      {noteError}
-                    </p>
-                  ) : null}
-                  <Button
-                    type="submit"
-                    variant="secondary"
-                    disabled={decide.isPending || row.verificationSubmittedAt === null}
-                  >
-                    Send change request
-                  </Button>
-                </form>
-              ) : null}
             </li>
           );
         })}
