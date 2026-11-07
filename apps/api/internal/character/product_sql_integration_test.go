@@ -541,6 +541,110 @@ func TestCharacterProductCatalogDowntimeAndLifecycleSQL(t *testing.T) {
 	}
 }
 
+func TestCharacterProductRetireDropsOpenVerification(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	fixture := dbtest.NewProductFixture(t)
+	var ownerID, reviewerID string
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO members (discord_id, handle, display_name) VALUES ('cha03-retire-owner', 'cha03_retire_owner', 'Retire Owner') RETURNING public_id::text`).Scan(&ownerID); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO members (discord_id, handle, display_name) VALUES ('cha03-retire-reviewer', 'cha03_retire_reviewer', 'Retire Reviewer') RETURNING public_id::text`).Scan(&reviewerID); err != nil {
+		t.Fatal(err)
+	}
+	insert := func(code, name, status string, submitted *time.Time) (string, time.Time) {
+		t.Helper()
+		var id string
+		var updated time.Time
+		if err := fixture.Pool.QueryRow(ctx, `INSERT INTO characters (short_code, name, owner_id, status, verification_submitted_at) SELECT $2, $3, id, $4, $5 FROM members WHERE public_id = $1::uuid RETURNING public_id::text, updated_at`, ownerID, code, name, status, submitted).Scan(&id, &updated); err != nil {
+			t.Fatal(err)
+		}
+		return id, updated
+	}
+	retire := func(characterID string, expected time.Time) {
+		t.Helper()
+		query, args := characterProductQuery(t, "CharacterProductRetire", map[string]any{
+			"character_id": characterID, "expected_updated_at": expected, "at": time.Now().UTC(),
+		})
+		var id, status string
+		if err := fixture.Pool.QueryRow(ctx, query, args...).Scan(&id, &status, new(time.Time)); err != nil {
+			t.Fatal(err)
+		}
+		if id != characterID || status != "retired" {
+			t.Fatalf("retire %s returned id=%s status=%s", characterID, id, status)
+		}
+	}
+	submittedAt := func(characterID string) sql.NullTime {
+		t.Helper()
+		var at sql.NullTime
+		if err := fixture.Pool.QueryRow(ctx, `SELECT verification_submitted_at FROM characters WHERE public_id = $1::uuid`, characterID).Scan(&at); err != nil {
+			t.Fatal(err)
+		}
+		return at
+	}
+	queued := func() map[string]struct{} {
+		t.Helper()
+		query, args := characterProductQuery(t, "CharacterProductPendingVerificationDirectory", map[string]any{"row_limit": int32(20), "row_offset": int32(0)})
+		rows, err := fixture.Pool.Query(ctx, "SELECT id FROM ("+query+") AS pending_rows", args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		ids := map[string]struct{}{}
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				t.Fatal(err)
+			}
+			ids[id] = struct{}{}
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatal(err)
+		}
+		return ids
+	}
+
+	base := time.Now().UTC().Truncate(time.Microsecond).Add(-time.Hour)
+	openAt := base
+	openID, openUpdated := insert("C-RETIRE-OPEN", "Open Request", "pending_approval", &openAt)
+	plainID, plainUpdated := insert("C-RETIRE-NONE", "No Request", "active", nil)
+	approvedAt := base.Add(time.Minute)
+	approvedID, approvedUpdated := insert("C-RETIRE-APPROVED", "Approved Request", "active", &approvedAt)
+	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO verifications (subject_type, subject_id, verdict, decided_by, created_at) VALUES ('character', (SELECT id FROM characters WHERE public_id = $1::uuid), 'approved', (SELECT id FROM members WHERE public_id = $2::uuid), $3)`, approvedID, reviewerID, approvedAt.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := queued()[openID]; !ok {
+		t.Fatal("open approval request missing from review queue")
+	}
+	if _, ok := queued()[approvedID]; ok {
+		t.Fatal("approved request is in the review queue")
+	}
+
+	retire(openID, openUpdated)
+	retire(plainID, plainUpdated)
+	retire(approvedID, approvedUpdated)
+
+	if _, ok := queued()[openID]; ok {
+		t.Fatal("retired character stayed in the review queue")
+	}
+	if got := submittedAt(openID); got.Valid {
+		t.Fatalf("open submission = %s, want cleared", got.Time)
+	}
+	if got := submittedAt(plainID); got.Valid {
+		t.Fatalf("character with no request gained submission %s", got.Time)
+	}
+	if got := submittedAt(approvedID); !got.Valid || !got.Time.Equal(approvedAt) {
+		t.Fatalf("approved submission = %+v, want %s", got, approvedAt)
+	}
+	var decisions int32
+	if err := fixture.Pool.QueryRow(ctx, `SELECT count(*)::int FROM verifications verification JOIN characters character ON character.id = verification.subject_id WHERE character.public_id = $1::uuid`, approvedID).Scan(&decisions); err != nil {
+		t.Fatal(err)
+	}
+	if decisions != 1 {
+		t.Fatalf("approved verification rows = %d, want 1", decisions)
+	}
+}
+
 func TestCharacterProductPendingVerificationUsesCurrentSubmission(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()

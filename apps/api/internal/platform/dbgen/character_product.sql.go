@@ -2090,7 +2090,21 @@ func (q *Queries) CharacterProductRestore(ctx context.Context, arg CharacterProd
 
 const characterProductRetire = `-- name: CharacterProductRetire :one
 UPDATE characters
-SET status = 'retired', updated_at = $1::timestamptz
+SET status = 'retired',
+    updated_at = $1::timestamptz,
+    -- An open submission is the review-queue row. A verdict at or after it is already resolved.
+    verification_submitted_at = CASE
+        WHEN verification_submitted_at IS NOT NULL
+             AND NOT EXISTS (
+                 SELECT 1
+                 FROM verifications verification
+                 WHERE verification.subject_type = 'character'
+                   AND verification.subject_id = characters.id
+                   AND verification.created_at >= characters.verification_submitted_at
+             )
+        THEN NULL
+        ELSE verification_submitted_at
+    END
 WHERE public_id = $2::uuid
   AND deleted_at IS NULL
   AND status NOT IN ('dead', 'retired')
