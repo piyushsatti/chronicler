@@ -342,7 +342,7 @@ SELECT input.ordinality::integer AS input_index, input.quest_id::uuid AS quest_i
        c.public_id AS character_public_id, c.name AS character_name,
        m.handle AS member_handle, m.display_name AS member_display_name,
        m.avatar_url AS member_avatar_url, qp.status, qp.manual,
-       qp.created_at, qp.updated_at
+       qp.created_at, qp.updated_at, last_game.last_played_at::timestamptz AS last_played_at
 FROM unnest(@quest_ids::uuid[]) WITH ORDINALITY AS input(quest_id, ordinality)
 LEFT JOIN unnest(@statuses::text[]) WITH ORDINALITY AS status_input(status, ordinality)
   ON status_input.ordinality = input.ordinality

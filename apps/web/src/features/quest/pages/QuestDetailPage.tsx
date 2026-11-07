@@ -39,6 +39,14 @@ const DECLARATION: PageDeclaration = {
 };
 
 const BACK = { to: '/quests', label: 'Quests' } as const;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Days since a last_game_played waitlist player's last played quest. No instant means new. */
+function lastPlayedAge(lastPlayedAt: string | null | undefined, now = Date.now()): string {
+  const then = lastPlayedAt ? Date.parse(lastPlayedAt) : Number.NaN;
+  if (!Number.isFinite(then)) return 'New';
+  return pluralize(Math.max(0, Math.floor((now - then) / DAY_MS)), 'day');
+}
 
 /** First plain sentence-ish chunk of the brief, for the header lede. */
 function briefLede(body: string | null): string | null {
@@ -243,21 +251,30 @@ export function QuestDetailPage(): React.JSX.Element {
             </p>
           ) : null}
           <ul className={styles.roster}>
-            {waiting.map(({ participant, label }) => (
-              <li key={participant.characterId} className={styles.rosterRow}>
-                <Avatar name={participant.characterName} size="sm" />
-                <div className="stack" data-gap="1">
-                  <span className="type-title">{participant.characterName}</span>
-                  <span className={`type-caption ${styles.playerIdentity}`}>
-                    {'Played by '}
-                    {label}
-                  </span>
-                </div>
-                <Chip size="sm" tone="line">
-                  {statusLabel(participant.status)}
-                </Chip>
-              </li>
-            ))}
+            {waiting.map(({ participant, label }) => {
+              const age =
+                quest.signupType === 'last_game_played'
+                  ? lastPlayedAge(participant.lastPlayedAt)
+                  : null;
+              return (
+                <li key={participant.characterId} className={styles.rosterRow}>
+                  <Avatar name={participant.characterName} size="sm" />
+                  <div className="stack" data-gap="1">
+                    <span className="row" data-gap="2" data-align="baseline">
+                      <span className="type-title">{participant.characterName}</span>
+                      {age ? <span className="type-caption">{age}</span> : null}
+                    </span>
+                    <span className={`type-caption ${styles.playerIdentity}`}>
+                      {'Played by '}
+                      {label}
+                    </span>
+                  </div>
+                  <Chip size="sm" tone="line">
+                    {statusLabel(participant.status)}
+                  </Chip>
+                </li>
+              );
+            })}
           </ul>
           </>
         )}

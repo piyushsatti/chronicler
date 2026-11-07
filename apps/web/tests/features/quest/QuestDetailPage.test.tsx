@@ -597,6 +597,61 @@ describe('QuestDetailPage', () => {
     },
   );
 
+  it.each([
+    ['last_game_played', true],
+    ['dm_pick', false],
+  ] as const)(
+    'shows days since last played on the waitlist for %s',
+    async (signupType, shown) => {
+      const lastPlayedAt = new Date(Date.now() - (5 * 86_400_000 + 3_600_000)).toISOString();
+      server.use(
+        graphql.query('Quest', () =>
+          HttpResponse.json({
+            data: {
+              quest: {
+                ...detailGood,
+                signupType,
+                participants: [
+                  { ...detailGood.participants[0], lastPlayedAt },
+                  {
+                    ...detailGood.participants[0],
+                    characterId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+                    characterName: 'Rook Vale',
+                    memberId: '22222222-2222-4222-8222-222222222222',
+                    status: 'waitlisted',
+                    lastPlayedAt: null,
+                  },
+                  {
+                    ...detailGood.participants[0],
+                    characterId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+                    characterName: 'Nyx Ash',
+                    memberId: '33333333-3333-4333-8333-333333333333',
+                    status: 'waitlisted',
+                    lastPlayedAt,
+                  },
+                ],
+              },
+            },
+          }),
+        ),
+      );
+      renderWithProviders(
+        <Routes>
+          <Route path="/quests/:code" element={<QuestDetailPage />} />
+        </Routes>,
+        { route: '/quests/Q-101' },
+      );
+      await userEvent.click(await screen.findByRole('tab', { name: 'Cast' }));
+      const waitlist = screen.getByRole('region', { name: 'Waitlist' });
+      const roster = screen.getByRole('region', { name: 'Roster' });
+      for (const label of ['New', '5 days']) {
+        if (shown) expect(within(waitlist).getByText(label)).toBeInTheDocument();
+        else expect(within(waitlist).queryByText(label)).not.toBeInTheDocument();
+        expect(within(roster).queryByText(label)).not.toBeInTheDocument();
+      }
+    },
+  );
+
   it('shows the DM house rules from their profile in the Table Rules tab', async () => {
     server.use(
       graphql.query('MemberProfile', ({ variables }) =>

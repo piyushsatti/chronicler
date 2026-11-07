@@ -1023,17 +1023,18 @@ type QuestListResult struct {
 }
 
 type QuestParticipantType struct {
-	QuestID           string    `json:"questId"`
-	MemberID          string    `json:"memberId"`
-	CharacterID       string    `json:"characterId"`
-	Status            string    `json:"status"`
-	Manual            bool      `json:"manual"`
-	CreatedAt         time.Time `json:"createdAt"`
-	UpdatedAt         time.Time `json:"updatedAt"`
-	CharacterName     string    `json:"characterName"`
-	MemberHandle      string    `json:"memberHandle"`
-	MemberDisplayName string    `json:"memberDisplayName"`
-	MemberAvatarURL   *string   `json:"memberAvatarUrl,omitempty"`
+	QuestID           string     `json:"questId"`
+	MemberID          string     `json:"memberId"`
+	CharacterID       string     `json:"characterId"`
+	Status            string     `json:"status"`
+	Manual            bool       `json:"manual"`
+	CreatedAt         time.Time  `json:"createdAt"`
+	UpdatedAt         time.Time  `json:"updatedAt"`
+	CharacterName     string     `json:"characterName"`
+	MemberHandle      string     `json:"memberHandle"`
+	MemberDisplayName string     `json:"memberDisplayName"`
+	MemberAvatarURL   *string    `json:"memberAvatarUrl,omitempty"`
+	LastPlayedAt      *time.Time `json:"lastPlayedAt,omitempty"`
 }
 
 type QuestPcxpAwardInput struct {

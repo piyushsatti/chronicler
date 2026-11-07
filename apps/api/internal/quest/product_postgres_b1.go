@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -231,6 +232,14 @@ func (p *ProductPostgres) ReadBatchParticipants(ctx context.Context, _ auth.Auth
 	return out, nil
 }
 
+func playedAt(value pgtype.Timestamptz) *time.Time {
+	if !value.Valid {
+		return nil
+	}
+	played := value.Time
+	return &played
+}
+
 func groupQuestBatchParticipants(rows []dbgen.ProductQuestBatchParticipantsRow, positions []int) map[int][]QuestParticipantView {
 	grouped := make(map[int][]QuestParticipantView, len(positions))
 	for _, row := range rows {
@@ -244,7 +253,7 @@ func groupQuestBatchParticipants(rows []dbgen.ProductQuestBatchParticipantsRow, 
 			CharacterId: db.UUIDString(row.CharacterPublicID), CharacterName: row.CharacterName.String,
 			MemberHandle: row.MemberHandle.String, MemberDisplayName: row.MemberDisplayName.String,
 			MemberAvatarUrl: textPtr(row.MemberAvatarUrl), Status: row.Status.String, Manual: row.Manual.Bool,
-			CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
+			CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time, LastPlayedAt: playedAt(row.LastPlayedAt),
 		})
 	}
 	return grouped

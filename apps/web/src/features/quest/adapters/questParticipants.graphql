@@ -8,6 +8,7 @@ query QuestParticipants($questId: ID!, $offset: Int! = 0) {
       memberDisplayName
       memberAvatarUrl
       status
+      lastPlayedAt
     }
   }
 }

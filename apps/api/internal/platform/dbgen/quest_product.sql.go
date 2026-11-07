@@ -29,7 +29,7 @@ SELECT input.ordinality::integer AS input_index, input.quest_id::uuid AS quest_i
        c.public_id AS character_public_id, c.name AS character_name,
        m.handle AS member_handle, m.display_name AS member_display_name,
        m.avatar_url AS member_avatar_url, qp.status, qp.manual,
-       qp.created_at, qp.updated_at
+       qp.created_at, qp.updated_at, last_game.last_played_at::timestamptz AS last_played_at
 FROM unnest($1::uuid[]) WITH ORDINALITY AS input(quest_id, ordinality)
 LEFT JOIN unnest($2::text[]) WITH ORDINALITY AS status_input(status, ordinality)
   ON status_input.ordinality = input.ordinality
@@ -71,6 +71,7 @@ type ProductQuestBatchParticipantsRow struct {
 	Manual            pgtype.Bool        `json:"manual"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	LastPlayedAt      pgtype.Timestamptz `json:"last_played_at"`
 }
 
 // Last Game Played quests list new players first, then the longest wait since a played game.
@@ -99,6 +100,7 @@ func (q *Queries) ProductQuestBatchParticipants(ctx context.Context, arg Product
 			&i.Manual,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LastPlayedAt,
 		); err != nil {
 			return nil, err
 		}

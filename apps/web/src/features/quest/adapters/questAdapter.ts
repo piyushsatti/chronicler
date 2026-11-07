@@ -100,6 +100,8 @@ export type QuestParticipantView = {
   memberHandle: string;
   memberDisplayName?: string;
   status: string;
+  /** Last played instant for a last_game_played quest; null when this player has never played. */
+  lastPlayedAt?: string | null;
 };
 
 export type QuestDetailView = Omit<QuestBoardItemView, 'participants'> & {
@@ -296,6 +298,7 @@ export function parseQuestDetail(
         memberHandle: p.memberHandle,
         memberDisplayName: p.memberDisplayName,
         status: p.status,
+        lastPlayedAt: p.lastPlayedAt ?? null,
       })),
       durationHours: parsed.data.durationHours,
       genres: parsed.data.genres,

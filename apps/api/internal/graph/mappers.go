@@ -422,6 +422,7 @@ func toQuestParticipantFromQuest(v quest.QuestParticipantView) *QuestParticipant
 		MemberHandle:      v.MemberHandle,
 		MemberDisplayName: v.MemberDisplayName,
 		MemberAvatarURL:   v.MemberAvatarUrl,
+		LastPlayedAt:      v.LastPlayedAt,
 	}
 }
 

@@ -154,6 +154,7 @@ type QuestParticipantView struct {
 	CharacterId       string
 	CharacterName     string
 	CreatedAt         time.Time
+	LastPlayedAt      *time.Time
 	Manual            bool
 	MemberAvatarUrl   *string
 	MemberDisplayName string
