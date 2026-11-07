@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 python3 scripts/docs-lint.py
+python3 scripts/ci_runner_test.py
 
 bunx prettier --check \
   prettier.config.js \

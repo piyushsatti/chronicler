@@ -16,8 +16,8 @@ on:
 jobs:
   agent:
     # Self-hosted Triton runners (no GitHub minutes), fresh container per job.
-    # Dependabot PRs stay on GitHub-hosted runners.
-    runs-on: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && 'ubuntu-latest' || 'triton' }}
+    # Fork and Dependabot pull requests run on GitHub-hosted runners.
+    runs-on: ${{ (github.event.pull_request.head.repo.fork || github.event.pull_request.user.login == 'dependabot[bot]') && 'ubuntu-latest' || 'triton' }}
     container:
       image: buildpack-deps:noble
     steps:
