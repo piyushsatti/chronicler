@@ -694,6 +694,8 @@ class AgentHarness:
         context: str,
         *,
         allow_passage_reads: bool = True,
+        # Owner decision 2026-11-07: two search-and-read rounds is the cost
+        # control. None keeps tool choice required until the context budget stops.
         research_rounds: int | None = 2,
         model_identity: str = "unknown",
         build_sha: str = "unknown",
