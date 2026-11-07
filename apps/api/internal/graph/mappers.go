@@ -1885,6 +1885,7 @@ func toQuestPointcrawlLinkType(v quest.QuestHexView) *QuestPointcrawlLinkType {
 		QuestID:          v.QuestId,
 		PointcrawlNodeID: v.HexId,
 		Role:             v.Role,
+		Name:             v.Name,
 	}
 }
 

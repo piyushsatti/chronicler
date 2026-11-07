@@ -6919,6 +6919,15 @@
           "resolver_args": [],
           "kind": "OBJECT",
           "owner": "QUE01"
+        },
+        {
+          "name": "Name",
+          "wire_name": "name",
+          "go_type": "string",
+          "wire_type": "String!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "QUE01"
         }
       ],
       "enum_values": [],

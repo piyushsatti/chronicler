@@ -266,6 +266,7 @@ WITH requested AS (
 ), ranked AS (
     SELECT r.key_ordinal, r.parent_id, r.row_limit, r.row_offset,
            q.public_id::text AS quest_id, n.public_id::text AS node_id, qpn.role,
+           n.name AS node_name,
            row_number() OVER (PARTITION BY r.key_ordinal ORDER BY n.public_id, qpn.role) AS rn
     FROM requested r
     JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
@@ -273,12 +274,12 @@ WITH requested AS (
     JOIN pointcrawl_nodes n ON n.id = qpn.node_id
     WHERE r.role_filter IS NULL OR qpn.role = r.role_filter
 )
-SELECT key_ordinal, parent_id, true AS parent_exists, quest_id, node_id, role
+SELECT key_ordinal, parent_id, true AS parent_exists, quest_id, node_id, role, node_name
 FROM ranked
 WHERE rn > row_offset AND rn <= row_offset + row_limit
 UNION ALL
 SELECT r.key_ordinal, r.parent_id, (q.id IS NOT NULL) AS parent_exists,
-       NULL::text, NULL::text, NULL::text
+       NULL::text, NULL::text, NULL::text, NULL::text
 FROM requested r
 LEFT JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
 WHERE NOT EXISTS (
@@ -315,9 +316,9 @@ func (p *ProductPostgres) readBatchPointcrawlLinks(ctx context.Context, _ auth.A
 			keyOrdinal            int32
 			parentID              pgtype.UUID
 			parentExistsFlag      bool
-			questID, nodeID, role pgtype.Text
+			questID, nodeID, role, nodeName pgtype.Text
 		)
-		if err := rows.Scan(&keyOrdinal, &parentID, &parentExistsFlag, &questID, &nodeID, &role); err != nil {
+		if err := rows.Scan(&keyOrdinal, &parentID, &parentExistsFlag, &questID, &nodeID, &role, &nodeName); err != nil {
 			return nil, err
 		}
 		idx := int(keyOrdinal) - 1
@@ -332,6 +333,7 @@ func (p *ProductPostgres) readBatchPointcrawlLinks(ctx context.Context, _ auth.A
 			QuestId: questID.String,
 			HexId:   nodeID.String,
 			Role:    role.String,
+			Name:    nodeName.String,
 		})
 	}
 	if err := rows.Err(); err != nil {

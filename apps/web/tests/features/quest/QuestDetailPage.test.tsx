@@ -186,6 +186,52 @@ describe('QuestDetailPage', () => {
     expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument();
   });
 
+  it('lists linked places in quest details and omits the row when none are linked', async () => {
+    const hex = '12121212-1212-4121-8121-121212121212';
+    const stair = '34343434-3434-4343-8343-343434343434';
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: {
+            quest: {
+              ...detailGood,
+              pointcrawlLinks: [
+                { pointcrawlNodeId: hex, role: 'expected', name: 'LFR7008' },
+                { pointcrawlNodeId: stair, role: 'visited', name: 'Salt Stair' },
+                { pointcrawlNodeId: hex, role: 'visited', name: 'LFR7008' },
+                { pointcrawlNodeId: '56565656-5656-4565-8565-565656565656', role: 'expected', name: '   ' },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+    const listed = renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    const details = await screen.findByRole('region', { name: 'Quest details' });
+    expect(within(details).getByText('Places').nextElementSibling).toHaveTextContent(
+      /^LFR7008, Salt Stair$/,
+    );
+    listed.unmount();
+
+    server.use(
+      graphql.query('Quest', () => HttpResponse.json({ data: { quest: detailGood } })),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    const empty = await screen.findByRole('region', { name: 'Quest details' });
+    expect(within(empty).queryByText('Place')).not.toBeInTheDocument();
+    expect(within(empty).queryByText('Places')).not.toBeInTheDocument();
+  });
+
   it('shows the quest kinds and signup type in the details', async () => {
     server.use(
       graphql.query('Quest', () =>

@@ -1390,6 +1390,7 @@ type QuestPointcrawlLinkType {
   questId: ID!
   pointcrawlNodeId: ID!
   role: String!
+  name: String!
 }
 
 type QuestParticipantType {

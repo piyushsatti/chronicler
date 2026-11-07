@@ -113,7 +113,11 @@ export type QuestDetailView = Omit<QuestBoardItemView, 'participants'> & {
   dmId: string;
   updatedAt: string;
   arc: { id: string; name: string } | null;
-  pointcrawlLinks: Array<{ pointcrawlNodeId: string; role: 'expected' | 'visited' }>;
+  pointcrawlLinks: Array<{
+    pointcrawlNodeId: string;
+    role: 'expected' | 'visited';
+    name: string;
+  }>;
   /** Player note from the quest post; blank notes are absent. */
   additionalInfo: string | null;
 };

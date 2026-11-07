@@ -49,6 +49,7 @@ query Quest($id: ID, $shortCode: String) {
     pointcrawlLinks(limit: 100) {
       pointcrawlNodeId
       role
+      name
     }
   }
 }

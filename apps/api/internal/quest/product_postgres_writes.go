@@ -1030,7 +1030,7 @@ func (p *ProductPostgres) StoreSetQuestHexes(ctx context.Context, write SetQuest
 	}
 	out := make([]QuestHexView, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, QuestHexView{HexId: row.NodeID, QuestId: row.QuestID, Role: row.Role})
+		out = append(out, QuestHexView{HexId: row.NodeID, QuestId: row.QuestID, Role: row.Role, Name: row.NodeName})
 	}
 	return out, nil
 }

@@ -129,6 +129,13 @@ export function QuestDetailPage(): React.JSX.Element {
   const hideParticipation =
     memberPending || (detail.memberId === quest.dmId && !dmHoldsSeat);
   const dmHandleLabel = handleLabel(quest.dmHandle);
+  const seenPlaces = new Set<string>();
+  const placeNames = quest.pointcrawlLinks.flatMap((link) => {
+    const name = link.name.trim();
+    if (!name || seenPlaces.has(link.pointcrawlNodeId)) return [];
+    seenPlaces.add(link.pointcrawlNodeId);
+    return [name];
+  });
 
   const facts: Array<{ key: string; value: React.ReactNode }> = [
     { key: 'Status', value: statusLabel(quest.status) },
@@ -157,6 +164,14 @@ export function QuestDetailPage(): React.JSX.Element {
       value: `${quest.filledCount} of ${pluralize(quest.slotsMax, 'seat')} filled`,
     },
     ...(quest.regionName ? [{ key: 'Region', value: quest.regionName }] : []),
+    ...(placeNames.length
+      ? [
+          {
+            key: placeNames.length > 1 ? 'Places' : 'Place',
+            value: placeNames.join(', '),
+          },
+        ]
+      : []),
     ...(quest.arc
       ? [
           {

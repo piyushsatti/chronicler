@@ -494,7 +494,7 @@ JOIN regions r ON r.id = input.region_id
 RETURNING quest_id, region_id;
 
 -- name: ProductQuestReadPointcrawlLinks :many
-SELECT n.public_id::text AS node_id, q.public_id::text AS quest_id, qpn.role
+SELECT n.public_id::text AS node_id, q.public_id::text AS quest_id, qpn.role, n.name AS node_name
 FROM quest_pointcrawl_nodes qpn
 JOIN quests q ON q.id = qpn.quest_id
 JOIN pointcrawl_nodes n ON n.id = qpn.node_id
