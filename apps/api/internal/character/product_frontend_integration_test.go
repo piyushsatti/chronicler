@@ -485,12 +485,17 @@ func TestFrontendCharacterOwnerJourneyAndVerification(t *testing.T) {
 		t.Fatal("invalid creation persisted state")
 	}
 	profile := character.UpdateCharacterProfileSpec{CharacterId: hero.Id, Input: character.UpdateCharacterProfileFields{Description: product.Optional[string]{Set: true, Value: str("Edited")}, BackgroundText: product.Optional[string]{Set: true, Value: nil}}}
-	_, err = f.commands.UpdateCharacterProfile(ctx, f.admin, profile, commandMeta())
-	wantCode(t, err, apierr.Forbidden)
+	edited, err := f.commands.UpdateCharacterProfile(ctx, f.admin, profile, commandMeta())
+	if err != nil || edited.BackgroundText != nil || edited.Description == nil || *edited.Description != "Edited" {
+		t.Fatalf("admin profile=%+v err=%v", edited, err)
+	}
 	f.configuredOwner = f.admin.Claims().MemberID
-	_, err = f.commands.UpdateCharacterProfile(ctx, f.admin, profile, commandMeta())
-	wantCode(t, err, apierr.Forbidden)
+	if _, err = f.commands.UpdateCharacterProfile(ctx, f.admin, profile, commandMeta()); err != nil {
+		t.Fatalf("platform owner profile err=%v", err)
+	}
 	f.configuredOwner = ""
+	_, err = f.commands.UpdateCharacterProfile(ctx, f.verifier, profile, commandMeta())
+	wantCode(t, err, apierr.Forbidden)
 	hero, err = f.commands.UpdateCharacterProfile(ctx, f.owner, profile, commandMeta())
 	if err != nil || hero.BackgroundText != nil || hero.Description == nil || *hero.Description != "Edited" {
 		t.Fatalf("profile=%+v err=%v", hero, err)

@@ -431,13 +431,29 @@ func testPolicyAuthorizationContrasts(t *testing.T) {
 		policyExpect(t, p, player, req, Decision{Allowed: true})
 	})
 	t.Run("all literal character operations refuse staff bypass", func(t *testing.T) {
-		for _, op := range []Operation{"Mutation.adjustPcxp", "Mutation.deleteCharacter", "Mutation.deleteCharacterLog", "Mutation.logCharacterEvent", "Mutation.restoreCharacter", "Mutation.retireCharacter", "Mutation.setCharacterGuild", "Mutation.submitForVerification", "Mutation.syncCharacterDdb", "Mutation.updateCharacterProfile", "Mutation.upsertDowntimeProject", "Mutation.signupForQuest", "Mutation.withdrawFromQuest"} {
+		for _, op := range []Operation{"Mutation.adjustPcxp", "Mutation.deleteCharacter", "Mutation.deleteCharacterLog", "Mutation.logCharacterEvent", "Mutation.restoreCharacter", "Mutation.retireCharacter", "Mutation.setCharacterGuild", "Mutation.submitForVerification", "Mutation.syncCharacterDdb", "Mutation.upsertDowntimeProject", "Mutation.signupForQuest", "Mutation.withdrawFromQuest"} {
 			req, e := ForCharacter(op, CharacterFacts{policySubject, policyActor})
 			req = policyMustRequest(t, req, e)
 			policyExpect(t, p, player, req, Decision{Allowed: true})
 			for _, actor := range []Authority{admin, owner, policyAuthority(t, policyOther, []Role{Role("verifier")}, false, false), policyAuthority(t, policyOther, []Role{DM}, true, false)} {
 				policyExpect(t, p, actor, req, Decision{RuleCode: "OWNERSHIP"})
 			}
+		}
+	})
+	t.Run("profile edits admit admin and platform owner only", func(t *testing.T) {
+		req, e := ForCharacter("Mutation.updateCharacterProfile", CharacterFacts{policySubject, policyActor})
+		req = policyMustRequest(t, req, e)
+		policyExpect(t, p, player, req, Decision{Allowed: true})
+		policyExpect(t, p, admin, req, Decision{true, true, "OWNERSHIP"})
+		policyExpect(t, p, owner, req, Decision{true, true, "OWNERSHIP"})
+		dmAdmin := policyAuthority(t, policyOther, []Role{DM, Admin}, true, false)
+		policyExpect(t, p, dmAdmin, req, Decision{true, true, "OWNERSHIP"})
+		for _, actor := range []Authority{
+			policyAuthority(t, policyOther, []Role{Verifier}, false, false),
+			policyAuthority(t, policyOther, []Role{DM}, true, false),
+			policyAuthority(t, policyOther, []Role{Player}, false, false),
+		} {
+			policyExpect(t, p, actor, req, Decision{RuleCode: "OWNERSHIP"})
 		}
 	})
 	t.Run("arc creation approved DM and retained authorship", func(t *testing.T) {

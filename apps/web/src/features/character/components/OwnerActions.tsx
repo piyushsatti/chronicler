@@ -8,8 +8,10 @@ import { DDB_URL_HINT } from '../ddbUrl.js';
 
 export function OwnerActions({
   character,
+  profileOnly = false,
 }: {
   character: CharacterViewModel;
+  profileOnly?: boolean;
 }): React.JSX.Element {
   const actions = useOwnerActions({ character });
   const imageId = useId();
@@ -77,59 +79,63 @@ export function OwnerActions({
       >
         Save profile
       </Button>
-      <div className="stack">
-        <label className="type-label" htmlFor={ddbId}>
-          D&amp;D Beyond URL
-        </label>
-        <input
-          id={ddbId}
-          className="field-input"
-          type="url"
-          inputMode="url"
-          aria-invalid={ddbError ? true : undefined}
-          aria-describedby={ddbError ? `${ddbId}-error` : undefined}
-          data-state={ddbError ? 'error' : undefined}
-          disabled={actions.pending}
-          value={actions.ddbUrl}
-          onChange={(e) => actions.setDdbUrl(e.target.value)}
-          onBlur={() => setDdbTouched(true)}
-          placeholder={DDB_URL_HINT}
-        />
-        {ddbError ? (
-          <p id={`${ddbId}-error`} role="alert" className="type-caption field-error">
-            {ddbError}
+      {profileOnly ? null : (
+        <>
+          <div className="stack">
+            <label className="type-label" htmlFor={ddbId}>
+              D&amp;D Beyond URL
+            </label>
+            <input
+              id={ddbId}
+              className="field-input"
+              type="url"
+              inputMode="url"
+              aria-invalid={ddbError ? true : undefined}
+              aria-describedby={ddbError ? `${ddbId}-error` : undefined}
+              data-state={ddbError ? 'error' : undefined}
+              disabled={actions.pending}
+              value={actions.ddbUrl}
+              onChange={(e) => actions.setDdbUrl(e.target.value)}
+              onBlur={() => setDdbTouched(true)}
+              placeholder={DDB_URL_HINT}
+            />
+            {ddbError ? (
+              <p id={`${ddbId}-error`} role="alert" className="type-caption field-error">
+                {ddbError}
+              </p>
+            ) : null}
+          </div>
+          <div className="row" data-wrap="1">
+            <Button
+              type="button"
+              disabled={
+                actions.pending || !actions.ddbUrl.trim() || Boolean(actions.ddbUrlError)
+              }
+              onClick={actions.syncDdb}
+            >
+              Sync D&amp;D Beyond
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={
+                actions.pending ||
+                character.status !== 'pending_approval' ||
+                character.verificationStatus?.toUpperCase() === 'PENDING'
+              }
+              onClick={actions.submitForVerification}
+            >
+              {character.verificationStatus?.toUpperCase() === 'REJECTED'
+                ? 'Resubmit for verification'
+                : 'Submit for verification'}
+            </Button>
+          </div>
+          <p className="type-caption">
+            Save profile keeps your description and image. Synchronization separately updates
+            the D&amp;D Beyond mirror and its URL.
           </p>
-        ) : null}
-      </div>
-      <div className="row" data-wrap="1">
-        <Button
-          type="button"
-          disabled={
-            actions.pending || !actions.ddbUrl.trim() || Boolean(actions.ddbUrlError)
-          }
-          onClick={actions.syncDdb}
-        >
-          Sync D&amp;D Beyond
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={
-            actions.pending ||
-            character.status !== 'pending_approval' ||
-            character.verificationStatus?.toUpperCase() === 'PENDING'
-          }
-          onClick={actions.submitForVerification}
-        >
-          {character.verificationStatus?.toUpperCase() === 'REJECTED'
-            ? 'Resubmit for verification'
-            : 'Submit for verification'}
-        </Button>
-      </div>
-      <p className="type-caption">
-        Save profile keeps your description and image. Synchronization separately
-        updates the D&amp;D Beyond mirror and its URL.
-      </p>
+        </>
+      )}
       {actions.message ? (
         <p role="status" className="type-caption">
           {actions.message}
@@ -143,20 +149,28 @@ export function OwnerActions({
           </Button>
         </>
       ) : null}
-      <section className="stack" aria-labelledby="retire-character-heading">
-        <h3 id="retire-character-heading" className="type-title">Retire character</h3>
-        <p className="type-caption">Retirement is separate from profile edits and requires confirmation.</p>
-        <Button
-          type="button"
-          variant="danger"
-          disabled={actions.pending || character.status === 'retired' || character.status === 'dead'}
-          onClick={() => {
-            if (window.confirm(`Retire ${character.name}?`)) actions.retire();
-          }}
-        >
-          Retire
-        </Button>
-      </section>
+      {profileOnly ? null : (
+        <section className="stack" aria-labelledby="retire-character-heading">
+          <h3 id="retire-character-heading" className="type-title">
+            Retire character
+          </h3>
+          <p className="type-caption">
+            Retirement is separate from profile edits and requires confirmation.
+          </p>
+          <Button
+            type="button"
+            variant="danger"
+            disabled={
+              actions.pending || character.status === 'retired' || character.status === 'dead'
+            }
+            onClick={() => {
+              if (window.confirm(`Retire ${character.name}?`)) actions.retire();
+            }}
+          >
+            Retire
+          </Button>
+        </section>
+      )}
     </section>
   );
 }
