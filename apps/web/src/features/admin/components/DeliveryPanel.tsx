@@ -10,6 +10,7 @@ import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
+import { DISCORD_GENERIC_REASON } from '../../../utils/discordDelivery.js';
 import { humanizeKey, isSentinelDate, labelFor, pluralize } from '../../../utils/format.js';
 import type { AdminOperationsView } from '../hooks/useAdminOperations.js';
 import styles from './adminOps.module.css';
@@ -30,6 +31,9 @@ function HealthChip({
 
 /** States that no longer retry on their own; an admin may redrive them. */
 const REDRIVABLE_STATES = new Set(['dead', 'repair_required']);
+
+/** A delivery that already failed, even when it has no safe error code. */
+const FAILED_DELIVERY_STATES = new Set(['dead', 'repair_required', 'retry_wait']);
 
 const DELIVERY_STATES: Record<string, string> = {
   queued: 'Queued',
@@ -131,6 +135,11 @@ export function DeliveryPanel({
                       ? `Last ran ${formatDateTime(work.lastStartedAt)}`
                       : 'Has not run yet'}
                   </span>
+                  {work.safeErrorCode ? (
+                    <span role="status" className="type-caption">
+                      {work.safeErrorCode}
+                    </span>
+                  ) : null}
                 </div>
                 <Chip tone="line" size="sm">
                   {work.outcome ? humanizeKey(work.outcome) : 'No result yet'}
@@ -212,9 +221,10 @@ export function DeliveryPanel({
                           : ''}
                         Updated {formatDateTime(delivery.updatedAt)}.
                       </span>
-                      {delivery.safeError ? (
+                      {delivery.state !== 'succeeded' &&
+                      (delivery.safeError || FAILED_DELIVERY_STATES.has(delivery.state)) ? (
                         <span role="status" className="type-caption">
-                          {delivery.safeError}
+                          {delivery.safeError || DISCORD_GENERIC_REASON}
                         </span>
                       ) : null}
                     </div>

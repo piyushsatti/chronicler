@@ -69,6 +69,13 @@ WHERE key = sqlc.arg(setting_key)::text
 RETURNING key, payload, updated_at;
 -- name: SiteJobClock :one
 SELECT clock_timestamp()::timestamptz AS now;
+-- Latest row per kind on the maintenance lane (worker.EnqueueDailyMaintenance).
+-- expectedSlot is updated_at: the payload slot is not a GraphQL DateTime.
+-- name: SiteAdminMaintenanceJobs :many
+SELECT DISTINCT ON (kind) kind, state, safe_error_code, updated_at
+FROM background_jobs
+WHERE lane = 'maintenance'
+ORDER BY kind, updated_at DESC, id DESC;
 -- name: SiteAdminDeliveryCounts :one
 SELECT count(*) FILTER (WHERE state IN ('queued', 'running', 'retry_wait', 'repair_required'))::integer AS pending_count,
        count(*) FILTER (WHERE state IN ('dead', 'succeeded', 'cancelled'))::integer AS terminal_count,
@@ -78,7 +85,7 @@ WHERE kind = 'quest_discord_delivery'
   AND (sqlc.narg(delivery_state)::text IS NULL OR state = sqlc.narg(delivery_state));
 -- name: SiteAdminDeliveryJobs :many
 WITH matching AS (
-    SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.safe_error_code, b.next_run_at,
+    SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.safe_error_code, b.error_message, b.next_run_at,
            b.created_at, b.updated_at, b.payload
     FROM background_jobs b
     WHERE b.kind = 'quest_discord_delivery'
@@ -108,7 +115,7 @@ WITH matching AS (
 )
 SELECT (SELECT count(*) FROM matching)::bigint AS total,
        projected.public_id, projected.state, projected.attempts, projected.redrive_count, projected.safe_error_code,
-       projected.next_run_at, projected.created_at, projected.updated_at, projected.quest_public_id, projected.quest_short_code,
+       projected.error_message, projected.next_run_at, projected.created_at, projected.updated_at, projected.quest_public_id, projected.quest_short_code,
        projected.quest_title, projected.discord_desired_revision, projected.discord_applied_revision, projected.discord_message_id,
        projected.event_url, COALESCE(projected.admin_override, false)::boolean AS admin_override
 FROM (SELECT 1) marker LEFT JOIN projected ON true

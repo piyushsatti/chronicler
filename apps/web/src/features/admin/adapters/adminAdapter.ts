@@ -41,7 +41,10 @@ import {
 } from './adminRequest.js';
 import { adminPage, type AdminPage, type AdminPageRequest } from './adminPage.js';
 import { toAppError } from '../../../errors/toAppError.js';
-import { discordSafeErrorReason } from '../../../utils/discordDelivery.js';
+import {
+  DISCORD_GENERIC_REASON,
+  discordSafeErrorReason,
+} from '../../../utils/discordDelivery.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import PENDING_DM_PROFILES from './pendingDmProfiles.graphql?raw';
 import ADMIN_OPS from './adminOperations.graphql?raw';
@@ -156,7 +159,12 @@ const adminOpsSchema = z.object({
       lastStartedAt: z.string().nullable(),
       lastFinishedAt: z.string().nullable(),
       jobId: z.string().nullable(),
-      safeErrorCode: z.string().nullable(),
+      // Known Discord codes become the same sentence a delivery row shows.
+      // Any other code is kept so the page still shows it.
+      safeErrorCode: z
+        .string()
+        .nullable()
+        .transform((code) => discordSafeErrorReason(code) ?? code),
     }),
   ),
   deliveries: z.array(
@@ -174,11 +182,14 @@ const adminOpsSchema = z.object({
       failureStreak: z.number().int(),
       maxAttempts: z.number().int(),
       nextAttemptAt: z.string().nullable(),
-      // The API sends the job's safe error code; known codes become a sentence.
+      // The API sends a safe error code. Known codes become a sentence;
+      // any other code becomes the generic sentence, never the raw text.
       safeError: z
         .string()
         .nullable()
-        .transform((code) => discordSafeErrorReason(code) ?? code),
+        .transform((code) =>
+          code ? (discordSafeErrorReason(code) ?? DISCORD_GENERIC_REASON) : null,
+        ),
       redriveCount: z.number().int(),
       createdAt: z.string(),
       updatedAt: z.string(),
