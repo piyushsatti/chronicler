@@ -24,7 +24,7 @@ func TestQuestRosterAndDeliveryPreserveEditorVersion(t *testing.T) {
 	}
 	owner := questCharacterActor(t, f, f.characterID)
 	joined, err := f.commands.SignupForQuest(ctx, owner, SignupForQuestSpec{QuestId: f.questID, CharacterId: f.characterID}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
-	if err != nil || joined.Status != "signed_up" {
+	if err != nil || joined.Status != "waitlisted" {
 		t.Fatalf("signup=%+v err=%v", joined, err)
 	}
 	queries := dbgen.New(f.fixture.Pool)

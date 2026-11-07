@@ -88,7 +88,7 @@ export const graphql: FeatureGraphql = {
         signupForQuest: {
           questId: goodQuestDetail.id,
           characterId: '00000000-0000-4000-8000-000000000002',
-          status: 'signed_up',
+          status: 'waitlisted',
         },
       },
     }),

@@ -714,14 +714,14 @@ func (p *ProductPostgres) LockSignupForQuest(ctx context.Context, spec SignupFor
 }
 
 func (p *ProductPostgres) StoreSignupForQuest(ctx context.Context, write SignupForQuestWrite) (QuestParticipantView, string, error) {
-	status, previous, err := validateQuestSignup(write)
+	previous, err := validateQuestSignup(write)
 	if err != nil {
 		return QuestParticipantView{}, "", err
 	}
-	return p.storeQuestSignup(ctx, write, status, previous)
+	return p.storeQuestSignup(ctx, write, previous)
 }
 
-func (p *ProductPostgres) storeQuestSignup(ctx context.Context, write SignupForQuestWrite, status string, previous *QuestParticipantView) (QuestParticipantView, string, error) {
+func (p *ProductPostgres) storeQuestSignup(ctx context.Context, write SignupForQuestWrite, previous *QuestParticipantView) (QuestParticipantView, string, error) {
 	questID, err := questUUID(write.ValidatedInput.QuestId)
 	if err != nil {
 		return QuestParticipantView{}, "", err
@@ -742,35 +742,14 @@ func (p *ProductPostgres) storeQuestSignup(ctx context.Context, write SignupForQ
 		return QuestParticipantView{}, "", err
 	}
 	at := pgtype.Timestamptz{Time: write.At.UTC(), Valid: true}
-	participantStatus := "signed_up"
-	if lockedRow.FilledCount >= lockedRow.SlotsMax || status == "full" {
-		participantStatus = "waitlisted"
-	}
+	participantStatus := placeQuestSignup()
 	if err := p.insertOrRejoinQuestParticipant(ctx, dbgen.ProductQuestInsertParticipantParams{
 		QuestID: lockedRow.ID, MemberID: memberID, CharacterID: character.ID,
 		Status: participantStatus, Manual: false, At: at,
 	}, previous != nil); err != nil {
 		return QuestParticipantView{}, "", err
 	}
-	var bumpedCharacterID string
-	if participantStatus == "signed_up" {
-		if _, err := p.queries().ProductQuestIncrementCapacity(ctx, dbgen.ProductQuestIncrementCapacityParams{
-			Delta: 1, QuestID: lockedRow.ID,
-		}); err != nil {
-			return QuestParticipantView{}, "", err
-		}
-	} else if lockedRow.SignupType.Valid && lockedRow.SignupType.String == lastGamePlayedSignup {
-		// Bump on signup: a higher-priority newcomer takes the lowest-priority seat. dm_pick
-		// and unset signup types keep first-come seating.
-		bumpedCharacterID, err = p.bumpLowestSeat(ctx, lockedRow.PublicID, lockedRow.ID, write.ValidatedInput.CharacterId, at)
-		if err != nil {
-			return QuestParticipantView{}, "", err
-		}
-		if bumpedCharacterID != "" {
-			participantStatus = "signed_up"
-		}
-	}
-	// Signups never touch Discord: no desired-revision bump, no delivery job.
+	// Signup never takes a seat, never bumps one, and never touches Discord.
 	return QuestParticipantView{
 		QuestId:     write.ValidatedInput.QuestId,
 		MemberId:    db.UUIDString(character.OwnerPublicID),
@@ -778,7 +757,7 @@ func (p *ProductPostgres) storeQuestSignup(ctx context.Context, write SignupForQ
 		Status:      participantStatus,
 		CreatedAt:   write.At.UTC(),
 		UpdatedAt:   write.At.UTC(),
-	}, bumpedCharacterID, nil
+	}, "", nil
 }
 
 func (p *ProductPostgres) insertOrRejoinQuestParticipant(ctx context.Context, params dbgen.ProductQuestInsertParticipantParams, rejoining bool) error {
@@ -792,28 +771,28 @@ func (p *ProductPostgres) insertOrRejoinQuestParticipant(ctx context.Context, pa
 	return err
 }
 
-func validateQuestSignup(write SignupForQuestWrite) (string, *QuestParticipantView, error) {
+func validateQuestSignup(write SignupForQuestWrite) (*QuestParticipantView, error) {
 	if !write.Locked.Exists || write.Locked.Before == nil {
-		return "", nil, apierr.New(apierr.NotFound, "quest not found")
+		return nil, apierr.New(apierr.NotFound, "quest not found")
 	}
 	if write.Locked.Character == nil || write.Locked.Character.OwnerID != write.ActorID {
-		return "", nil, apierr.New(apierr.Forbidden, "character owner required")
+		return nil, apierr.New(apierr.Forbidden, "character owner required")
 	}
 	if write.Locked.OwnerID != "" && write.ActorID == write.Locked.OwnerID {
-		return "", nil, apierr.New(apierr.Forbidden, "quest dm cannot sign up")
+		return nil, apierr.New(apierr.Forbidden, "quest dm cannot sign up")
 	}
 	if !eligibleQuestCharacter(*write.Locked.Character) {
-		return "", nil, apierr.New(apierr.Conflict, "active approved character required")
+		return nil, apierr.New(apierr.Conflict, "active approved character required")
 	}
 	previous := questParticipant(write.Locked.Roster, write.ValidatedInput.CharacterId)
 	if previous != nil && previous.Status != "withdrawn" {
-		return "", nil, apierr.New(apierr.Conflict, "already signed up for this quest")
+		return nil, apierr.New(apierr.Conflict, "already signed up for this quest")
 	}
 	status := write.Locked.Before.Status
 	if status != "open" && status != "full" {
-		return "", nil, apierr.New(apierr.Conflict, "quest not accepting signups")
+		return nil, apierr.New(apierr.Conflict, "quest not accepting signups")
 	}
-	return status, previous, nil
+	return previous, nil
 }
 
 func (p *ProductPostgres) LockWithdrawFromQuest(ctx context.Context, spec WithdrawFromQuestSpec) (WithdrawFromQuestState, error) {
