@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { graphql, http, HttpResponse } from 'msw';
-import { screen, within, waitFor } from '@testing-library/react';
+import { fireEvent, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import profile from '../../fixtures/wire/profile/member-profile-good.json';
 import character from '../../fixtures/wire/character/good.json';
@@ -32,6 +32,48 @@ describe('DMProfilePage', () => {
     expect(await screen.findByText('Guest', { exact: true })).toBeVisible();
     await userEvent.click(await screen.findByRole('button', { name: 'Edit profile' }));
     expect(screen.getByRole('button', { name: 'Save availability' })).toBeVisible();
+  });
+
+  it('renders each DM profile section as markdown and loads that text into the editor', async () => {
+    signInProfile();
+    const dmProfile = {
+      ...profile.dmProfile,
+      tagline: 'A **bold** tagline',
+      philosophy: 'Bring a _lantern_.',
+      houseRules: '- Phones away',
+    };
+    server.use(
+      graphql.query('MemberProfile', () =>
+        HttpResponse.json({ data: { memberProfile: { ...profile, dmProfile } } }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route path="/dms/:shortCode" element={<DMProfilePage />} />
+      </Routes>,
+      { route: '/dms/@mira' },
+    );
+    const about = await screen.findByRole('tabpanel', { name: 'About' });
+    expect(within(about).getByText('bold').tagName).toBe('STRONG');
+    expect(within(about).getByText('lantern').tagName).toBe('EM');
+    expect(within(about).getByRole('listitem')).toHaveTextContent('Phones away');
+    expect(within(about).queryByText('A **bold** tagline')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Edit profile' }));
+    const tagline = screen.getByRole('group', { name: 'Tagline' });
+    const philosophy = screen.getByRole('group', { name: 'Philosophy' });
+    const rules = screen.getByRole('group', { name: 'House rules' });
+    expect(within(tagline).getByText('A **bold** tagline')).toBeVisible();
+    expect(within(philosophy).getByText('Bring a _lantern_.')).toBeVisible();
+    expect(within(rules).getByText('Phones away')).toBeVisible();
+    fireEvent.mouseDown(within(rules).getByText('Phones away'));
+    expect(screen.getByRole('textbox', { name: 'House rules' })).toHaveValue('- Phones away');
+    for (const section of [tagline, philosophy, rules]) {
+      expect(section.className).toContain('dmEditor');
+    }
+    expect(
+      readFileSync(join(process.cwd(), 'src/features/profile/pages/profile.module.css'), 'utf8'),
+    ).toContain('min-block-size: 12rem');
   });
 
   it('renders the DM name and accepting status without a handle line', async () => {

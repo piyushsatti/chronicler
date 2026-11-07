@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { isCancelledError, useQuery, useQueryClient } from '@tanstack/react-query';
-import { auditBody, type BodySpanAudit } from '../adapters/bodyAudit.js';
-import type { BodyAudit } from '../bodyAuditCopy.js';
+import { auditBody } from '../adapters/bodyAudit.js';
+import type { BodySpanAudit } from '../../../components/interactive/markdown-editor/types.js';
+import type { BodyAudit } from '../../../components/interactive/markdown-editor/bodyAuditCopy.js';
 
 /** Typing pauses this long before the body is audited. */
 export const BODY_AUDIT_DEBOUNCE_MS = 300;

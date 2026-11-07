@@ -8,7 +8,7 @@ import {
   leSerialize,
   leStrip,
   leTypeClass,
-} from '../../../src/features/editor/LiveEditor.js';
+} from '../../../src/components/interactive/markdown-editor/LiveEditor.js';
 
 describe('LiveEditor serializers', () => {
   it('round-trips newlines', () => {

@@ -5,7 +5,7 @@ import {
   parseDocumentLoad,
   parseQuestLoad,
 } from '../../../src/features/editor/adapters/editorLoad.js';
-import { leDeserialize, leSerialize } from '../../../src/features/editor/LiveEditor.js';
+import { leDeserialize, leSerialize } from '../../../src/components/interactive/markdown-editor/LiveEditor.js';
 import { server } from '../../../src/mocks/server.js';
 import { schemaForType } from '../../../src/features/editor/editorSchemas.js';
 import { schemaErrors } from '../../../src/features/editor/editorValidation.js';

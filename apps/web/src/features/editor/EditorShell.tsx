@@ -6,9 +6,10 @@ import { Card } from '../../components/primitives/Card.js';
 import { Modal } from '../../components/primitives/Modal.js';
 import { SegmentedControl } from '../../components/primitives/SegmentedControl.js';
 import { ContentRenderer } from '../../components/foundation/ContentRenderer.js';
-import { LiveEditor } from './LiveEditor.js';
-import { MemberPicker } from './HideMenu.js';
-import type { BodyAudit, PreviewViewer } from './bodyAuditCopy.js';
+import { LiveEditor } from '../../components/interactive/markdown-editor/LiveEditor.js';
+import { MemberPicker } from '../../components/interactive/markdown-editor/HideMenu.js';
+import type { BodyAudit, PreviewViewer } from '../../components/interactive/markdown-editor/bodyAuditCopy.js';
+import markdown from '../../components/interactive/markdown-editor/markdown-editor.module.css';
 import { PropertiesPanel } from './PropertiesPanel.js';
 import { schemaForType, type SchemaAccess } from './editorSchemas.js';
 import styles from './editor.module.css';
@@ -16,7 +17,7 @@ import { EDITOR_BACK_LABELS } from './editorConstants.js';
 import type { EditorMeta as LoadMeta } from './adapters/editorLoad.js';
 import type { EditorFieldOptions, EditorPreview, EditorTypeKey } from './types.js';
 import { StatePanel } from '../../components/foundation/StatePanel.js';
-import type { EntityLinkIndex } from './types.js';
+import type { EntityLinkIndex } from '../../components/interactive/markdown-editor/types.js';
 import { documentHref } from '../../utils/documentHref.js';
 import { relativeDate } from '../../utils/relativeDate.js';
 import type { EditorMode } from './types.js';
@@ -647,7 +648,7 @@ export function EditorShell({
               </div>
             ) : (
               <div className="stack">
-                <div className={`row ${styles.toolbar}`} data-wrap="1">
+                <div className={`row ${markdown.toolbar}`} data-wrap="1">
                   {historyTools}
                   {actions}
                 </div>
@@ -660,7 +661,7 @@ export function EditorShell({
             label: 'Preview',
             panel: (
               <div className="stack">
-                <div className={`row ${styles.toolbar}`} data-wrap="1">
+                <div className={`row ${markdown.toolbar}`} data-wrap="1">
                   {historyTools}
                   {actions}
                 </div>

@@ -10,7 +10,7 @@ import {
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LiveEditor } from '../../../src/features/editor/LiveEditor.js';
+import { LiveEditor } from '../../../src/components/interactive/markdown-editor/LiveEditor.js';
 import { createTestQueryClient } from '../../../src/providers.js';
 
 const loadAudienceMembers = vi.hoisted(() => vi.fn());
