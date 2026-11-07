@@ -284,7 +284,7 @@ export function QuestDetailPage(): React.JSX.Element {
           ))}
         </dl>
       </Card>
-      {quest.hookText || quest.tags.length > 0 ? (
+      {quest.hookText || quest.additionalInfo || quest.tags.length > 0 ? (
         <div className={styles.cardGrid}>
           {quest.hookText ? (
             <Card as="section" pad={5} aria-label="Quest description">
@@ -292,16 +292,21 @@ export function QuestDetailPage(): React.JSX.Element {
               <ContentRenderer body={quest.hookText} />
             </Card>
           ) : null}
-          {quest.tags.length > 0 ? (
+          {quest.additionalInfo || quest.tags.length > 0 ? (
             <Card as="section" pad={5} className="stack" aria-label="Additional information">
               <h2 className="type-title">Additional information</h2>
-              <div className="row" data-wrap="1" data-gap="2">
-                {quest.tags.map((label) => (
-                  <Chip key={label} size="sm" tone="line">
-                    {label}
-                  </Chip>
-                ))}
-              </div>
+              {quest.additionalInfo ? (
+                <p className={styles.note}>{quest.additionalInfo}</p>
+              ) : null}
+              {quest.tags.length > 0 ? (
+                <div className="row" data-wrap="1" data-gap="2">
+                  {quest.tags.map((label) => (
+                    <Chip key={label} size="sm" tone="line">
+                      {label}
+                    </Chip>
+                  ))}
+                </div>
+              ) : null}
             </Card>
           ) : null}
         </div>

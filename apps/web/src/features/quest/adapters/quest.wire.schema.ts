@@ -42,6 +42,12 @@ const questBoardItemWireSchema = z.object({
       slug: z.string(),
       title: z.string(),
       effectiveBody: z.string().nullable().optional(),
+      // Quest extra information lives on the brief as frontmatter.additional_info.
+      frontmatter: z
+        .object({
+          additional_info: z.string().nullish(),
+        })
+        .nullish(),
     })
     .nullable()
     .optional(),
