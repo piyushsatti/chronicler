@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"errors"
+	"math"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/pressly/goose/v3"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/app"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/config"
@@ -57,10 +59,15 @@ func TestProductFixtureFoundation(t *testing.T) {
 	if err := first.server.admin.QueryRow(ctx, `SELECT datallowconn, (SELECT count(*) FROM pg_stat_activity WHERE datname=$1) FROM pg_database WHERE datname=$1`, productTemplateDatabase).Scan(&templateAllowsConnections, &templateConnections); err != nil || templateAllowsConnections || templateConnections != 0 {
 		t.Fatalf("migrated template allows connections=%v active=%d err=%v", templateAllowsConnections, templateConnections, err)
 	}
+	migrations, err := goose.CollectMigrations("../../db/migrations", 0, math.MaxInt64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := migrations[len(migrations)-1].Version
 	for _, fixture := range []*productFixture{first, second} {
 		var version int64
-		if err := fixture.pool.QueryRow(ctx, `SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 2 {
-			t.Fatalf("product migration version=%d err=%v", version, err)
+		if err := fixture.pool.QueryRow(ctx, `SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != want {
+			t.Fatalf("product migration version=%d want=%d err=%v", version, want, err)
 		}
 		rows, err := fixture.pool.Query(ctx, `SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'goose_db_version' ORDER BY tablename`)
 		if err != nil {
