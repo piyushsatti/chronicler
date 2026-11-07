@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { graphql, HttpResponse, delay } from 'msw';
+import { graphql, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useNavigate } from 'react-router-dom';
 import { server } from '../../../src/mocks/server.js';
@@ -343,9 +343,13 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
   });
 
   it('shows genre failure while regions are still loading without static suggestions', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     server.use(
       graphql.query('EditorRegions', async () => {
-        await delay(100);
+        await pending;
         return HttpResponse.json({ data: { regions: [] } });
       }),
       graphql.query('QuestGenreOptions', () =>
@@ -356,10 +360,51 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
       () => useEditorPage({ typeKey: 'quest', mode: 'edit' }),
       editorHarness(),
     );
+    try {
+      await waitFor(() => {
+        if (result.current.status !== 'ready') throw new Error('Expected ready');
+        expect(result.current.view.options.genres.status).toBe('error');
+        expect(result.current.view.options.regions.status).toBe('loading');
+      });
+    } finally {
+      release();
+    }
+  });
+
+  it('releases held regions when the loading check throws', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      graphql.query('EditorRegions', async () => {
+        await pending;
+        return HttpResponse.json({ data: { regions: [] } });
+      }),
+      graphql.query('QuestGenreOptions', () =>
+        HttpResponse.json({ data: { questGenreOptions: [42 as unknown as string] } }),
+      ),
+    );
+    const { result } = renderHook(
+      () => useEditorPage({ typeKey: 'quest', mode: 'edit' }),
+      editorHarness(),
+    );
+    try {
+      await waitFor(() => {
+        if (result.current.status !== 'ready') throw new Error('Expected ready');
+        expect(result.current.view.options.genres.status).toBe('error');
+        expect(result.current.view.options.regions.status).toBe('loading');
+      });
+      // A thrown check must still release the hold, or regions stay loading.
+      throw new Error('checked');
+    } catch (error) {
+      expect(error).toMatchObject({ message: 'checked' });
+    } finally {
+      release();
+    }
     await waitFor(() => {
       if (result.current.status !== 'ready') throw new Error('Expected ready');
-      expect(result.current.view.options.genres.status).toBe('error');
-      expect(result.current.view.options.regions.status).toBe('loading');
+      expect(result.current.view.options.regions.status).toBe('empty');
     });
   });
 
