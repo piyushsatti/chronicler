@@ -25,6 +25,7 @@ const ACCOUNT_SECTIONS = [
   { label: 'Summaries', to: '/me/summaries' },
   { label: 'Notes', to: '/me/notes' },
   { label: 'Settings', to: '/me/settings' },
+  { label: 'Personalize', to: '/me/personalize' },
 ] as const;
 
 export type MeShellState = { me: MemberViewModel; data: MemberHub };
@@ -42,7 +43,6 @@ function ProfileHero({ me, avatarUrl }: { me: MemberViewModel; avatarUrl?: strin
         </div>
         <p className={styles.secondaryLinks}>
           <Link className="type-link" to={profilePath}>View public profile</Link>
-          <Link className="type-link" to="/me/personalize">Personalize</Link>
         </p>
       </div>
       <div className={styles.actions} data-el="me.actions">

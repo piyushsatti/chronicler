@@ -51,6 +51,7 @@ describe('MePage', () => {
       'Summaries',
       'Notes',
       'Settings',
+      'Personalize',
     ]);
     expect(within(tabs).getByRole('link', { name: 'Overview' })).toHaveAttribute(
       'aria-current',
@@ -76,10 +77,11 @@ describe('MePage', () => {
       'href',
       '/me/settings',
     );
-    expect(screen.getByRole('link', { name: 'Personalize' })).toHaveAttribute(
+    expect(within(tabs).getByRole('link', { name: 'Personalize' })).toHaveAttribute(
       'href',
       '/me/personalize',
     );
+    expect(screen.getAllByRole('link', { name: 'Personalize' })).toHaveLength(1);
     const since = screen.getByRole('region', { name: 'Since you joined' });
     expect(since).toHaveTextContent('1Summaries written');
     expect(since).toHaveTextContent('Joined');
