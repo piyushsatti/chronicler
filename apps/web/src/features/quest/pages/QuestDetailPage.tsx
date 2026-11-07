@@ -179,8 +179,14 @@ export function QuestDetailPage(): React.JSX.Element {
           </Card.Eyebrow>
         </div>
         {seated.length === 0 ? (
-          <EmptyState kind="no-characters" message="No one has signed up yet." />
-        ) : (
+          <EmptyState
+            kind="no-characters"
+            message={
+              waiting.length > 0 ? 'No one has a seat yet.' : 'No one has signed up yet.'
+            }
+          />
+        ) : null}
+        {seated.length > 0 || seatsOpen > 0 ? (
           <ul className={styles.roster}>
             {seated.map(({ participant, label }) => (
               <li key={participant.characterId} className={styles.rosterRow}>
@@ -205,7 +211,7 @@ export function QuestDetailPage(): React.JSX.Element {
               </li>
             ) : null}
           </ul>
-        )}
+        ) : null}
       </Card>
       <Card as="section" pad={4} aria-label="Waitlist">
         <div className={styles.cardHead}>
