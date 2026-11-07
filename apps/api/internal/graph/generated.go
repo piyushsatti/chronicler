@@ -689,7 +689,7 @@ type ComplexityRoot struct {
 		RetireCharacter                    func(childComplexity int, characterID string, expectedUpdatedAt time.Time, meta CommandMeta) int
 		RevokeArchon                       func(childComplexity int, memberID string, regionID string, meta CommandMeta) int
 		RevokeLieutenant                   func(childComplexity int, memberID string, npcDocumentID string, meta CommandMeta) int
-		SelectQuestParticipants            func(childComplexity int, questID string, characterIds []string, meta CommandMeta) int
+		SelectQuestParticipants            func(childComplexity int, questID string, characterIds []string, fillByLastGamePlayed bool, meta CommandMeta) int
 		SetCharacterGuild                  func(childComplexity int, characterID string, guildID *string, meta CommandMeta) int
 		SetDocumentVisibility              func(childComplexity int, id string, expectedRevision int, input DocumentAudienceInput, meta CommandMeta) int
 		SetMemberRoles                     func(childComplexity int, memberID string, roles []string, note *string, meta CommandMeta) int
@@ -1313,7 +1313,7 @@ type MutationResolver interface {
 	WithdrawFromQuest(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error)
 	AddQuestParticipant(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error)
 	RemoveQuestParticipant(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error)
-	SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, meta CommandMeta) ([]*QuestParticipantType, error)
+	SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, fillByLastGamePlayed bool, meta CommandMeta) ([]*QuestParticipantType, error)
 	AttestQuestParticipation(ctx context.Context, questID string, entries []*ParticipationAttestationInput, meta CommandMeta) ([]*QuestParticipantType, error)
 	SyncQuestDiscord(ctx context.Context, questID string, meta CommandMeta) (*DeliveryReceipt, error)
 	PublishQuestPlayerList(ctx context.Context, questID string, meta CommandMeta) (*DeliveryReceipt, error)
@@ -4590,7 +4590,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SelectQuestParticipants(childComplexity, args["questId"].(string), args["characterIds"].([]string), args["meta"].(CommandMeta)), true
+		return e.complexity.Mutation.SelectQuestParticipants(childComplexity, args["questId"].(string), args["characterIds"].([]string), args["fillByLastGamePlayed"].(bool), args["meta"].(CommandMeta)), true
 
 	case "Mutation.setCharacterGuild":
 		if e.complexity.Mutation.SetCharacterGuild == nil {
@@ -9195,6 +9195,8 @@ extend type Mutation {
   selectQuestParticipants(
     questId: ID!
     characterIds: [ID!]!
+    # Empty characterIds. The server seats the open last_game_played slots in seat order.
+    fillByLastGamePlayed: Boolean! = false
     meta: CommandMeta!
   ): [QuestParticipantType!]!
   attestQuestParticipation(
@@ -10730,11 +10732,16 @@ func (ec *executionContext) field_Mutation_selectQuestParticipants_args(ctx cont
 		return nil, err
 	}
 	args["characterIds"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "fillByLastGamePlayed", ec.unmarshalNBoolean2bool)
 	if err != nil {
 		return nil, err
 	}
-	args["meta"] = arg2
+	args["fillByLastGamePlayed"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
+	if err != nil {
+		return nil, err
+	}
+	args["meta"] = arg3
 	return args, nil
 }
 
@@ -34274,7 +34281,7 @@ func (ec *executionContext) _Mutation_selectQuestParticipants(ctx context.Contex
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SelectQuestParticipants(rctx, fc.Args["questId"].(string), fc.Args["characterIds"].([]string), fc.Args["meta"].(CommandMeta))
+		return ec.resolvers.Mutation().SelectQuestParticipants(rctx, fc.Args["questId"].(string), fc.Args["characterIds"].([]string), fc.Args["fillByLastGamePlayed"].(bool), fc.Args["meta"].(CommandMeta))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

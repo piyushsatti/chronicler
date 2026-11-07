@@ -1816,6 +1816,7 @@ export type QuestRosterCharactersQuery = { characters: { items: Array<{ id: stri
 export type QuestSelectParticipantsMutationVariables = Exact<{
   questId: string;
   characterIds: Array<string> | string;
+  fillByLastGamePlayed?: boolean;
   meta: CommandMeta;
 }>;
 

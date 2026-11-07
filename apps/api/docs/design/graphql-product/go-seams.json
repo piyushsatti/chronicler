@@ -10484,6 +10484,14 @@
           "go_type": "time.Time",
           "internal": true,
           "meaning": "one injected UTC clock sample for all display projection/filter/count SQL in owning query task"
+        },
+        {
+          "name": "FillByLastGamePlayed",
+          "wire_name": "fillByLastGamePlayed",
+          "go_type": "bool",
+          "sdl_type": "Boolean!",
+          "default": "false",
+          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
         }
       ],
       "owner": "QUE01"
@@ -21431,7 +21439,8 @@
         "StoreUpsertQuestSummary(ctx context.Context, write quest.UpsertQuestSummaryWrite) (document.DocumentView, error)",
         "LockWithdrawFromQuest(ctx context.Context, spec quest.WithdrawFromQuestSpec) (quest.WithdrawFromQuestState, error)",
         "StoreWithdrawFromQuest(ctx context.Context, write quest.WithdrawFromQuestWrite) (quest.QuestParticipantView, error)",
-        "StoreCorrectQuestRoster(ctx context.Context, write quest.CorrectQuestRosterWrite) (quest.QuestParticipantView, bool, error)"
+        "StoreCorrectQuestRoster(ctx context.Context, write quest.CorrectQuestRosterWrite) (quest.QuestParticipantView, bool, error)",
+        "WaitlistedCharacterIDs(ctx context.Context, questID string) ([]string, error)"
       ],
       "owner": "QUE02",
       "provider": "QUE04"

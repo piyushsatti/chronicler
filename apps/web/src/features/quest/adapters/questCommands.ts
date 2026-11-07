@@ -27,7 +27,7 @@ export type Reward = { characterId: string; pcxp: number; note?: string };
 export type QuestCommand =
   | { kind: 'signup' | 'withdraw' | 'rosterAdd' | 'rosterRemove'; questId: string; characterId: string }
   | { kind: 'transition'; questId: string; to: 'played' | 'cancelled' }
-  | { kind: 'select'; questId: string; characterIds: string[] }
+  | { kind: 'select'; questId: string; characterIds: string[]; fillByLastGamePlayed: boolean }
   | { kind: 'publishPlayerList'; questId: string }
   | { kind: 'attest'; questId: string; entries: Attendance[] }
   | { kind: 'close'; questId: string; attendance: Attendance[]; rewards: Reward[] };
@@ -96,6 +96,7 @@ export async function executeQuestCommand(
         const data = await graphqlRequest<QuestSelectParticipantsMutation>(SELECT, {
           questId,
           characterIds: command.characterIds,
+          fillByLastGamePlayed: command.fillByLastGamePlayed,
           meta,
         });
         z.array(participant).parse(data.selectQuestParticipants);

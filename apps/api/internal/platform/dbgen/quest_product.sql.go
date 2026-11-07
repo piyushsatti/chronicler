@@ -404,6 +404,21 @@ func (q *Queries) ProductQuestClosureRoster(ctx context.Context, questID pgtype.
 	return items, nil
 }
 
+const productQuestCountDMPicked = `-- name: ProductQuestCountDMPicked :one
+SELECT count(*)::integer AS total
+FROM quest_participants qp
+JOIN quests q ON q.id = qp.quest_id
+WHERE q.public_id = $1::uuid AND qp.dm_picked
+`
+
+// Rows the DM hand-picked, including a pick who later withdrew. Rejoin clears the flag.
+func (q *Queries) ProductQuestCountDMPicked(ctx context.Context, questID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, productQuestCountDMPicked, questID)
+	var total int32
+	err := row.Scan(&total)
+	return total, err
+}
+
 const productQuestCountParticipants = `-- name: ProductQuestCountParticipants :one
 SELECT count(*)::bigint AS total
 FROM quest_participants qp

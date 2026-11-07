@@ -443,6 +443,13 @@ UPDATE quest_participants SET status = @status::text, manual = false, dm_picked 
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint AND status = 'withdrawn'
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
 
+-- name: ProductQuestCountDMPicked :one
+-- Rows the DM hand-picked, including a pick who later withdrew. Rejoin clears the flag.
+SELECT count(*)::integer AS total
+FROM quest_participants qp
+JOIN quests q ON q.id = qp.quest_id
+WHERE q.public_id = @quest_id::uuid AND qp.dm_picked;
+
 -- name: ProductQuestSeatPriority :many
 -- Seated and waitlisted participants in Last Game Played seat order: players who have never
 -- played another quest first, then the oldest last played game, then the earlier signup.

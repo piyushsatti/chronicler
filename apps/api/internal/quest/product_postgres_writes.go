@@ -863,7 +863,7 @@ func (p *ProductPostgres) StoreWithdrawFromQuest(ctx context.Context, write With
 
 func (p *ProductPostgres) StoreCorrectQuestRoster(ctx context.Context, write CorrectQuestRosterWrite) (QuestParticipantView, bool, error) {
 	previous := questParticipant(write.Roster, write.ValidatedInput.CharacterId)
-	plan, err := planRosterCorrection(write.ValidatedInput.Action, write.Quest, rosterAdmission(write.Candidates, write.ValidatedInput.CharacterId), previous)
+	plan, err := planRosterCorrection(write.ValidatedInput.Action, write.Quest, rosterAdmission(write.Candidates, write.ValidatedInput.CharacterId), previous, write.Staff)
 	if err != nil {
 		return QuestParticipantView{}, false, err
 	}
@@ -1003,7 +1003,10 @@ func (p *ProductPostgres) StoreSelectQuestParticipants(ctx context.Context, writ
 	if !write.Locked.Exists {
 		return nil, apierr.New(apierr.NotFound, "quest not found")
 	}
-	ids := write.ValidatedInput.CharacterIds
+	ids, dmPicked, err := p.selectionTargets(ctx, write)
+	if err != nil {
+		return nil, err
+	}
 	if err := validateQuestSelection(write.Locked, ids); err != nil {
 		return nil, err
 	}
@@ -1021,6 +1024,9 @@ func (p *ProductPostgres) StoreSelectQuestParticipants(ctx context.Context, writ
 	if selectionExceedsSeatCap(textPtr(lockedRow.SignupType), lockedRow.SlotsMax, lockedRow.FilledCount, int32(len(ids))) {
 		return nil, apierr.New(apierr.Conflict, "quest capacity exceeded")
 	}
+	if err := p.guardLastGamePlayedPicks(ctx, questID, textPtr(lockedRow.SignupType), dmPicked, len(ids)); err != nil {
+		return nil, err
+	}
 	at := pgtype.Timestamptz{Time: write.At.UTC(), Valid: true}
 	if _, err := p.queries().ProductQuestIncrementCapacity(ctx, dbgen.ProductQuestIncrementCapacityParams{Delta: int32(len(ids)), QuestID: lockedRow.ID}); err != nil {
 		return nil, err
@@ -1029,7 +1035,7 @@ func (p *ProductPostgres) StoreSelectQuestParticipants(ctx context.Context, writ
 	for _, id := range ids {
 		characterIDs = append(characterIDs, mustUUID(id))
 	}
-	rows, err := p.queries().ProductQuestPromoteParticipants(ctx, dbgen.ProductQuestPromoteParticipantsParams{QuestID: questID, CharacterIds: characterIDs, At: at, DmPicked: write.DMPicked})
+	rows, err := p.queries().ProductQuestPromoteParticipants(ctx, dbgen.ProductQuestPromoteParticipantsParams{QuestID: questID, CharacterIds: characterIDs, At: at, DmPicked: dmPicked})
 	if err != nil {
 		return nil, err
 	}
@@ -1046,6 +1052,31 @@ func (p *ProductPostgres) StoreSelectQuestParticipants(ctx context.Context, writ
 		result = append(result, selected[id])
 	}
 	return result, nil
+}
+
+func (p *ProductPostgres) selectionTargets(ctx context.Context, write SelectQuestParticipantsWrite) ([]string, bool, error) {
+	if !write.ValidatedInput.FillByLastGamePlayed {
+		return write.ValidatedInput.CharacterIds, write.DMPicked, nil
+	}
+	chosen, err := p.lastGamePlayedFill(ctx, write)
+	if err != nil {
+		return nil, false, err
+	}
+	return chosen, false, nil
+}
+
+func (p *ProductPostgres) guardLastGamePlayedPicks(ctx context.Context, questID pgtype.UUID, signup *string, dmPicked bool, adding int) error {
+	if !dmPicked || signup == nil || *signup != lastGamePlayedSignup {
+		return nil
+	}
+	picked, err := p.queries().ProductQuestCountDMPicked(ctx, questID)
+	if err != nil {
+		return err
+	}
+	if lastGamePlayedDMPickBlocked(signup, int(picked), adding) {
+		return apierr.New(apierr.Conflict, "a last game played quest allows two DM picks")
+	}
+	return nil
 }
 
 func (p *ProductPostgres) LockAttestQuestParticipation(ctx context.Context, spec AttestQuestParticipationSpec) (AttestQuestParticipationState, error) {

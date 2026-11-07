@@ -14,13 +14,13 @@ type rosterCorrection struct {
 // planRosterCorrection seats a character or removes one. Removing a seated
 // character frees the seat and does not promote the waitlist; that fill stays
 // on the player's own withdrawal.
-func planRosterCorrection(action string, quest *QuestView, admission *character.Admission, previous *QuestParticipantView) (rosterCorrection, error) {
+func planRosterCorrection(action string, quest *QuestView, admission *character.Admission, previous *QuestParticipantView, staff bool) (rosterCorrection, error) {
 	if quest == nil || (quest.Status != "open" && quest.Status != "full") {
 		return rosterCorrection{}, apierr.New(apierr.Conflict, "quest is not accepting roster changes")
 	}
 	switch action {
 	case "add":
-		return planRosterAdd(quest, admission, previous)
+		return planRosterAdd(quest, admission, previous, staff)
 	case "remove":
 		return planRosterRemove(previous)
 	default:
@@ -28,7 +28,7 @@ func planRosterCorrection(action string, quest *QuestView, admission *character.
 	}
 }
 
-func planRosterAdd(quest *QuestView, admission *character.Admission, previous *QuestParticipantView) (rosterCorrection, error) {
+func planRosterAdd(quest *QuestView, admission *character.Admission, previous *QuestParticipantView, staff bool) (rosterCorrection, error) {
 	if admission == nil {
 		return rosterCorrection{}, apierr.New(apierr.NotFound, "character not found")
 	}
@@ -37,6 +37,9 @@ func planRosterAdd(quest *QuestView, admission *character.Admission, previous *Q
 	}
 	if !eligibleQuestCharacter(*admission) {
 		return rosterCorrection{}, apierr.New(apierr.Conflict, "active approved character required")
+	}
+	if !staff && quest.SignupType != nil && *quest.SignupType == lastGamePlayedSignup {
+		return rosterCorrection{}, apierr.New(apierr.Conflict, "use your two picks and the fill")
 	}
 	if previous != nil && previous.Status != "withdrawn" && previous.Status != "waitlisted" {
 		if previous.Status == "signed_up" {

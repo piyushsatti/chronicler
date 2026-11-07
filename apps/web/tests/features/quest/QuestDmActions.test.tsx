@@ -141,7 +141,7 @@ describe('QuestDmActions waitlist selection', () => {
       lastPlayedAt,
     });
     const open = quest('last_game_played');
-    const sent: string[][] = [];
+    const sent: QuestCommand[] = [];
     renderWithProviders(
       <QuestDmActions
         quest={{
@@ -176,21 +176,34 @@ describe('QuestDmActions waitlist selection', () => {
         }}
         pending={false}
         execute={async (command: QuestCommand) => {
-          if (command.kind === 'select') sent.push(command.characterIds);
+          if (command.kind === 'select') sent.push(command);
           return true;
         }}
         error={null}
       />,
     );
 
+    await user.click(screen.getByRole('checkbox', { name: /Zara Never/ }));
     await user.click(screen.getByRole('checkbox', { name: /Adam Long/ }));
     await user.click(screen.getByRole('checkbox', { name: /Mia Recent/ }));
+    expect(screen.getByRole('button', { name: 'Confirm selection' })).toBeDisabled();
+    await user.click(screen.getByRole('checkbox', { name: /Zara Never/ }));
     expect(screen.getByRole('button', { name: 'Confirm selection' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Confirm selection' }));
-    expect(sent[0]).toEqual([adam, mia]);
+    expect(sent[0]).toEqual({
+      kind: 'select',
+      questId: open.id,
+      characterIds: [adam, mia],
+      fillByLastGamePlayed: false,
+    });
 
     await user.click(screen.getByRole('button', { name: 'Add by Last Game Played' }));
-    expect(sent[1]).toEqual([zara, quinn, adam]);
+    expect(sent[1]).toEqual({
+      kind: 'select',
+      questId: open.id,
+      characterIds: [],
+      fillByLastGamePlayed: true,
+    });
   });
 
   it('publishes the seated players for Last Game Played and DM pick', async () => {

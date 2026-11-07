@@ -60,6 +60,45 @@ func selectionExceedsSeatCap(signupType *string, slotsMax, filledCount, adding i
 	return adding > slotsMax-filledCount
 }
 
+// lastGamePlayedDMPickCap is how many waitlisted characters the DM may hand-pick
+// on a last_game_played quest. Every other seat is filled by last-game priority.
+const lastGamePlayedDMPickCap = 2
+
+// lastGamePlayedDMPickBlocked reports a hand-pick that would pass the two-pick cap.
+// alreadyPicked counts dm_picked rows. DM Pick and every other signup type are uncapped here.
+func lastGamePlayedDMPickBlocked(signupType *string, alreadyPicked, adding int) bool {
+	if signupType == nil || *signupType != lastGamePlayedSignup {
+		return false
+	}
+	return alreadyPicked+adding > lastGamePlayedDMPickCap
+}
+
+// fillLastGamePlayedSeats seats up to open characters from ordered, which is the
+// seat-priority query order. A waitlisted character absent from requested joined after
+// that set was locked. Someone requested but not admitted, or not eligible, is skipped.
+func fillLastGamePlayedSeats(ordered []QuestParticipantView, open int, requested map[string]struct{}, admitted map[string]character.Admission) ([]string, bool) {
+	for _, entry := range ordered {
+		if _, ok := requested[entry.CharacterId]; !ok {
+			return nil, true
+		}
+	}
+	if open <= 0 {
+		return []string{}, false
+	}
+	ids := make([]string, 0, open)
+	for _, entry := range ordered {
+		admission, ok := admitted[entry.CharacterId]
+		if !ok || !eligibleQuestCharacter(admission) {
+			continue
+		}
+		ids = append(ids, entry.CharacterId)
+		if len(ids) == open {
+			break
+		}
+	}
+	return ids, false
+}
+
 func validateQuestSelection(locked SelectQuestParticipantsState, ids []string) error {
 	if locked.Before == nil || locked.Before.Status != "open" && locked.Before.Status != "full" {
 		return apierr.New(apierr.Conflict, "quest is not accepting participant selection")
