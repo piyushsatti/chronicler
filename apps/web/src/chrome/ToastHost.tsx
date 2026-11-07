@@ -1,10 +1,25 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext.js';
 import { currentAccessIdentity } from '../auth/useCurrentAccess.js';
 import { Toast } from '../components/primitives/Toast.js';
 import { useMe } from '../hooks/useMe.js';
 import { useAppDispatch, useAppSelector } from '../store/hooks.js';
-import { clearToasts, dismissToast } from '../store/toastsSlice.js';
+import { clearToasts, dismissToast, type Toast as ToastItem } from '../store/toastsSlice.js';
+
+function ToastNotice({ toast }: { toast: ToastItem }): React.JSX.Element {
+  const dispatch = useAppDispatch();
+  const { id, tone, message, durationMs, revision } = toast;
+  useEffect(() => {
+    if (!durationMs) return;
+    const timer = setTimeout(() => dispatch(dismissToast(id)), durationMs);
+    return () => clearTimeout(timer);
+  }, [dispatch, id, message, durationMs, revision]);
+  return (
+    <Toast tone={tone} onDismiss={() => dispatch(dismissToast(id))}>
+      {message}
+    </Toast>
+  );
+}
 
 /** Live host bound to Redux toasts slice. */
 export function ToastHost(): React.JSX.Element | null {
@@ -44,9 +59,7 @@ export function ToastHost(): React.JSX.Element | null {
   return (
     <div className="pr-toast__stack" data-el="toast.host" aria-live="polite">
       {items.map((t) => (
-        <Toast key={t.id} tone={t.tone} onDismiss={() => dispatch(dismissToast(t.id))}>
-          {t.message}
-        </Toast>
+        <ToastNotice key={t.id} toast={t} />
       ))}
     </div>
   );
