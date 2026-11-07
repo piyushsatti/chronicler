@@ -42,6 +42,10 @@ flowchart LR
   Archive -->|"anonymous GraphQL"| API
 ```
 
+## Research limit
+
+The answer harness defaults to two research rounds. That cap is a cost control: each round is one search and one read, then tools are dropped and the model must return a cited answer or the public unsupported reply. A question still inside the context budget stops there. Passing `research_rounds=None` is the uncapped path; the worker and evaluation entrypoints leave the default in place. Crossing the context budget (default 16384 tokens, with a completion reserve) still returns the split-the-question reply and does not send an oversized request.
+
 ## Failure modes
 
 | Outcome                                                          | Worker publishes                             | Discord sees   |
