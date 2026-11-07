@@ -58,6 +58,16 @@ extend type Mutation {
     characterId: ID!
     meta: CommandMeta!
   ): QuestParticipantType!
+  addQuestParticipant(
+    questId: ID!
+    characterId: ID!
+    meta: CommandMeta!
+  ): QuestParticipantType!
+  removeQuestParticipant(
+    questId: ID!
+    characterId: ID!
+    meta: CommandMeta!
+  ): QuestParticipantType!
   selectQuestParticipants(
     questId: ID!
     characterIds: [ID!]!

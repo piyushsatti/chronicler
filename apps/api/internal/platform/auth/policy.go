@@ -389,6 +389,7 @@ const (
 
 var operationRules = map[Operation]policyRule{
 	"Mutation.acknowledgeSuppressedNotifications": ruleSelf,
+	"Mutation.addQuestParticipant":                ruleQuest,
 	"Mutation.adjustPcxp":                         ruleCharacter,
 	"Mutation.assignArchon":                       ruleAdmin,
 	"Mutation.assignLieutenant":                   ruleLieutenantWrite,
@@ -416,6 +417,7 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.publishDocument":                    ruleDocumentWrite,
 	"Mutation.redriveDiscordDelivery":             ruleAdmin,
 	"Mutation.removeQuestFromArc":                 ruleQuest,
+	"Mutation.removeQuestParticipant":             ruleQuest,
 	"Mutation.restoreCharacter":                   ruleCharacter,
 	"Mutation.restoreDocument":                    ruleDocumentWrite,
 	"Mutation.restoreQuest":                       ruleQuest,

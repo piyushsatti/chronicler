@@ -1,0 +1,6 @@
+mutation QuestRemoveParticipant($questId: ID!, $characterId: ID!, $meta: CommandMeta!) {
+  removeQuestParticipant(questId: $questId, characterId: $characterId, meta: $meta) {
+    characterId
+    status
+  }
+}

@@ -713,6 +713,10 @@ FROM characters c
 JOIN members owner ON owner.id = c.owner_id
 WHERE c.public_id = @character_id::uuid AND c.deleted_at IS NULL;
 
+-- name: ProductQuestCharacterID :one
+-- Removal addresses a soft-deleted character who still holds a seat.
+SELECT c.id FROM characters c WHERE c.public_id = @character_id::uuid;
+
 -- name: ProductQuestMemberPublicID :one
 SELECT public_id FROM members WHERE id = @member_id::bigint;
 

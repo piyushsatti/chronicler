@@ -912,6 +912,7 @@ export type Mutation = {
    */
   _contractLayoutStub: Scalars['Boolean']['output'];
   acknowledgeSuppressedNotifications: NotificationWriteReceipt;
+  addQuestParticipant: QuestParticipantType;
   adjustPcxp: ProgressionEntryType;
   assignArchon: ArchonAssignmentType;
   assignLieutenant: LieutenantAssignmentType;
@@ -939,6 +940,7 @@ export type Mutation = {
   publishDocument: DocumentType;
   redriveDiscordDelivery: DeliveryReceipt;
   removeQuestFromArc: QuestType;
+  removeQuestParticipant: QuestParticipantType;
   restoreCharacter: CharacterType;
   restoreDocument: DocumentType;
   restoreQuest: QuestType;
@@ -993,6 +995,13 @@ export type Mutation = {
 export type MutationAcknowledgeSuppressedNotificationsArgs = {
   limit?: Scalars['Int']['input'];
   meta: CommandMeta;
+};
+
+
+export type MutationAddQuestParticipantArgs = {
+  characterId: Scalars['ID']['input'];
+  meta: CommandMeta;
+  questId: Scalars['ID']['input'];
 };
 
 
@@ -1177,6 +1186,13 @@ export type MutationRedriveDiscordDeliveryArgs = {
 
 
 export type MutationRemoveQuestFromArcArgs = {
+  meta: CommandMeta;
+  questId: Scalars['ID']['input'];
+};
+
+
+export type MutationRemoveQuestParticipantArgs = {
+  characterId: Scalars['ID']['input'];
   meta: CommandMeta;
   questId: Scalars['ID']['input'];
 };

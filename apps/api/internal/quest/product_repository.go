@@ -73,6 +73,7 @@ type QuestWriteRepository interface {
 	StoreUpsertQuestSummary(ctx context.Context, write UpsertQuestSummaryWrite) (document.DocumentView, error)
 	LockWithdrawFromQuest(ctx context.Context, spec WithdrawFromQuestSpec) (WithdrawFromQuestState, error)
 	StoreWithdrawFromQuest(ctx context.Context, write WithdrawFromQuestWrite) (QuestParticipantView, error)
+	StoreCorrectQuestRoster(ctx context.Context, write CorrectQuestRosterWrite) (QuestParticipantView, bool, error)
 }
 
 type ProductBatchRepository interface {

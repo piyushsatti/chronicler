@@ -362,6 +362,13 @@ type WithdrawFromQuestSpec struct {
 	AsOf        time.Time
 }
 
+type CorrectQuestRosterSpec struct {
+	QuestId     string
+	CharacterId string
+	Action      string
+	AsOf        time.Time
+}
+
 type DmSessionHistorySpec struct {
 	MemberId string
 	Limit    int32
@@ -836,6 +843,14 @@ type WithdrawFromQuestWrite struct {
 	DecisionID     *string
 	RevisionID     *string
 	EventKey       *string
+}
+
+type CorrectQuestRosterWrite struct {
+	At             time.Time
+	ValidatedInput CorrectQuestRosterSpec
+	Quest          *QuestView
+	Roster         []QuestParticipantView
+	Candidates     []character.Admission
 }
 
 type ArcQuestsKey struct {

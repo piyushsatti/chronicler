@@ -1669,6 +1669,15 @@ export type MyCharactersQueryVariables = Exact<{
 
 export type MyCharactersQuery = { myCharacters: { total: number, items: Array<{ id: string, status: string, name: string, shortCode: string }> } };
 
+export type QuestAddParticipantMutationVariables = Exact<{
+  questId: string;
+  characterId: string;
+  meta: CommandMeta;
+}>;
+
+
+export type QuestAddParticipantMutation = { addQuestParticipant: { characterId: string, status: string } };
+
 export type QuestSetArcMutationVariables = Exact<{
   id: string;
   input: QuestEditInput;
@@ -1779,6 +1788,22 @@ export type QuestRegionsQueryVariables = Exact<{
 
 
 export type QuestRegionsQuery = { regions: Array<{ id: string, name: string }> };
+
+export type QuestRemoveParticipantMutationVariables = Exact<{
+  questId: string;
+  characterId: string;
+  meta: CommandMeta;
+}>;
+
+
+export type QuestRemoveParticipantMutation = { removeQuestParticipant: { characterId: string, status: string } };
+
+export type QuestRosterCharactersQueryVariables = Exact<{
+  namePrefix: string;
+}>;
+
+
+export type QuestRosterCharactersQuery = { characters: { items: Array<{ id: string, name: string, ownerId: string, status: string, shortCode: string }> } };
 
 export type QuestSelectParticipantsMutationVariables = Exact<{
   questId: string;

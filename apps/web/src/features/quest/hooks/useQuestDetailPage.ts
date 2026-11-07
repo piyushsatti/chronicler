@@ -36,6 +36,7 @@ export function useQuestDetailPage(code: string) {
     charactersLoading,
     charactersError,
     canManage,
+    admin: Boolean(me.data && isAdmin(me.data.roles)),
     isAuthenticated: auth.isAuthenticated,
     // A guest who also holds player is a player (D47).
     isGuest: (me.data?.roles.includes('guest') && !me.data.roles.includes('player')) ?? false,
