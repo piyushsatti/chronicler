@@ -10,6 +10,9 @@ import (
 // players who have never played come first, then the player whose last played game is oldest.
 const lastGamePlayedSignup = "last_game_played"
 
+// dmPickSignup is the signup type where the DM seats waitlisted characters with no seat cap.
+const dmPickSignup = "dm_pick"
+
 // waitlistBySeatPriority returns the roster's waitlisted entries in Last Game Played seat order.
 func (p *ProductPostgres) waitlistBySeatPriority(ctx context.Context, questID string, roster []QuestParticipantView) ([]QuestParticipantView, error) {
 	id, err := questUUID(questID)

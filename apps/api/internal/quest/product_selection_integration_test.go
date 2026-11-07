@@ -116,6 +116,26 @@ func TestFrontendQuestSelectionRejectsInvalidOrIneligibleSetAtomically(t *testin
 	}
 }
 
+func TestDMPickSelectionSeatsPastCapacity(t *testing.T) {
+	f, ids := questSelectionFixture(t)
+	ctx := context.Background()
+	if _, err := f.fixture.Pool.Exec(ctx, `UPDATE quests SET signup_type='dm_pick', slots_max=1 WHERE public_id=$1`, f.questID); err != nil {
+		t.Fatal(err)
+	}
+	selected, err := f.commands.SelectQuestParticipants(ctx, f.actor, SelectQuestParticipantsSpec{QuestId: f.questID, CharacterIds: ids}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+	if err != nil || len(selected) != 2 || selected[0].Status != "signed_up" || selected[1].Status != "signed_up" {
+		t.Fatalf("selection=%+v err=%v", selected, err)
+	}
+	var filled, slots int
+	var status string
+	if err := f.fixture.Pool.QueryRow(ctx, `SELECT filled_count, slots_max, status FROM quests WHERE public_id=$1`, f.questID).Scan(&filled, &slots, &status); err != nil {
+		t.Fatal(err)
+	}
+	if filled != 2 || slots != 1 || status != "full" {
+		t.Fatalf("filled=%d slots=%d status=%s, want 2/1 full", filled, slots, status)
+	}
+}
+
 func TestFrontendQuestSelectionLocksCharactersBeforeQuestAndUsesCurrentFacts(t *testing.T) {
 	f, ids := questSelectionFixture(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)

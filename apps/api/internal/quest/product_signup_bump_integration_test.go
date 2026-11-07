@@ -159,6 +159,33 @@ func markSeated(t *testing.T, f questCloseFixture, character string) {
 	}
 }
 
+// TestDMPickWithdrawalOverCapDoesNotPromote checks that withdrawing one seated player from a
+// DM Pick quest that is still over slots_max leaves the waitlist where it is.
+func TestDMPickWithdrawalOverCapDoesNotPromote(t *testing.T) {
+	f := bumpQuest(t, "dm_pick", 1)
+	seated := []string{bumpPlayer(t, f), bumpPlayer(t, f), bumpPlayer(t, f)}
+	waiter := bumpPlayer(t, f)
+	for _, character := range seated {
+		if got := bumpSignup(t, f, character).Status; got != "waitlisted" {
+			t.Fatalf("signup=%s want waitlisted", got)
+		}
+		markSeated(t, f, character)
+	}
+	if got := bumpSignup(t, f, waiter).Status; got != "waitlisted" {
+		t.Fatalf("waiter signup=%s want waitlisted", got)
+	}
+	if _, err := f.commands.WithdrawFromQuest(context.Background(), questCharacterActor(t, f, seated[0]), WithdrawFromQuestSpec{QuestId: f.questID, CharacterId: seated[0]}, product.CommandMeta{IdempotencyKey: uuid.NewString()}); err != nil {
+		t.Fatal(err)
+	}
+	if got := bumpStatus(t, f, waiter); got != "waitlisted" {
+		t.Fatalf("waiter status=%s want waitlisted", got)
+	}
+	if got := bumpStatus(t, f, seated[0]); got != "withdrawn" {
+		t.Fatalf("withdrawn status=%s want withdrawn", got)
+	}
+	bumpCapacity(t, f, 2, "full")
+}
+
 // TestLastGamePlayedWithdrawalPromotesHighestPriorityWaiter checks that a seat freed by a
 // withdrawal goes to the highest-priority waitlisted player on a Last Game Played quest, and
 // to the first waitlisted signup on a dm_pick quest.

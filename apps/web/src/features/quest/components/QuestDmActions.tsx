@@ -83,6 +83,8 @@ export function QuestDmActions({
   );
   const [confirm, setConfirm] = useState<'played' | 'close' | null>(null);
   const preplay = quest.machineStatus === 'open' || quest.machineStatus === 'full';
+  const unlimited = quest.signupType === 'dm_pick';
+  const seatsLeft = Math.max(0, quest.slotsMax - quest.filledCount);
   const input = closeInput(rows);
   const validRows =
     rows.length === roster.length &&
@@ -125,7 +127,9 @@ export function QuestDmActions({
             >
               <h3 className="type-title">Select waitlisted characters</h3>
               <p className="type-caption">
-                {Math.max(0, quest.slotsMax - quest.filledCount)} seats available.
+                {unlimited
+                  ? 'Seat any waitlisted characters. There is no seat cap. '
+                  : `${seatsLeft} seats available. `}
                 Current character eligibility is checked when you save.
                 {quest.signupType === 'last_game_played'
                   ? ' The list is ordered for you: new players first, then the players who have waited longest since their last played game.'
@@ -155,7 +159,7 @@ export function QuestDmActions({
                     pending ||
                     selected.length === 0 ||
                     selected.length > 100 ||
-                    selected.length > quest.slotsMax - quest.filledCount
+                    (!unlimited && selected.length > seatsLeft)
                   }
                 >
                   Confirm selection

@@ -915,7 +915,7 @@ func (p *ProductPostgres) StoreSelectQuestParticipants(ctx context.Context, writ
 	if err != nil {
 		return nil, err
 	}
-	if int32(len(ids)) > lockedRow.SlotsMax-lockedRow.FilledCount {
+	if selectionExceedsSeatCap(textPtr(lockedRow.SignupType), lockedRow.SlotsMax, lockedRow.FilledCount, int32(len(ids))) {
 		return nil, apierr.New(apierr.Conflict, "quest capacity exceeded")
 	}
 	at := pgtype.Timestamptz{Time: write.At.UTC(), Valid: true}

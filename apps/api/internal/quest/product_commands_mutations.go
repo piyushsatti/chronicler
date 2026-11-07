@@ -307,7 +307,7 @@ func updateQuest(ctx context.Context, repos ProductCommandRepos, fresh auth.Auth
 	if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
 		return QuestView{}, err
 	}
-	if spec.Input.SlotsMax.Set && spec.Input.SlotsMax.Value != nil && locked.Before != nil && *spec.Input.SlotsMax.Value < locked.Before.FilledCount {
+	if locked.Before != nil && questEditExceedsSeatCap(spec.Input, *locked.Before) {
 		return QuestView{}, apierr.New(apierr.Invalid, "quest capacity exceeded")
 	}
 	if spec.Input.ArcId.Set {
@@ -330,6 +330,23 @@ func updateQuest(ctx context.Context, repos ProductCommandRepos, fresh auth.Auth
 		return QuestView{}, err
 	}
 	return result, nil
+}
+
+// questEditExceedsSeatCap reports whether the signup type and seat count about to be
+// saved would put a capped quest over its filled count. DM Pick may stay over slots_max.
+func questEditExceedsSeatCap(input QuestEditFields, before QuestView) bool {
+	signup := before.SignupType
+	if input.SignupType.Set {
+		signup = input.SignupType.Value
+	}
+	slots := before.SlotsMax
+	if input.SlotsMax.Set && input.SlotsMax.Value != nil {
+		slots = *input.SlotsMax.Value
+	}
+	if signup != nil && *signup == dmPickSignup {
+		return false
+	}
+	return before.FilledCount > slots
 }
 
 func editQuestBrief(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, input QuestEditFields, locked UpdateQuestState) ([]notification.Event, error) {
