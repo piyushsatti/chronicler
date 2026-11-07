@@ -228,19 +228,17 @@ function SeeAll({ label }: { label: string }): React.JSX.Element {
 function DmWork({ view }: { view: ReturnType<typeof useDmDashboard> }): React.JSX.Element | null {
   const { query } = view;
   if (query.isError) return <StatePanel variant="inline" status="error" error={query.error} onRetry={view.retry} retryLabel="Retry DM work" />;
-  if (query.isLoading || !query.data) return <Skeleton height="8rem" aria-label="Loading your tables, series and quests" />;
+  if (query.isLoading || !query.data) return <Skeleton height="8rem" aria-label="Loading your series and quests" />;
   const { data } = query;
   const upcoming = data.quests.items.filter((quest) => !['played', 'closed', 'cancelled'].includes(quest.status));
-  const hasHostedWork = data.documents.total + data.series.length + upcoming.length > 0;
+  const hasHostedWork = data.series.length + upcoming.length > 0;
   return (
-    <Card className="stack" as="section" aria-label="Your tables, series and quests">
-      <div className={styles.sectionHead}><h2 className="type-heading">Your tables, series and quests</h2></div>
+    <Card className="stack" as="section" aria-label="Your series and quests">
+      <div className={styles.sectionHead}><h2 className="type-heading">Your series and quests</h2></div>
       {hasHostedWork ? <CardGrid as="ul" gap={3} aria-label="Your hosted work" className={styles.hostedGrid}>
-        <li><div className="card stack"><h3 className="type-title">DM tables</h3><p className="type-caption">{pluralize(data.documents.total, 'table')}</p>{data.documents.items.slice(0, 3).map((table) => <Link className="type-link" key={table.id} to={`/community/dm-table/${table.slug}`}>{table.title}</Link>)}{data.documents.total > 3 ? <SeeAll label="See all DM tables" /> : null}{data.documents.total === 0 ? <Link className="type-link" to="/editor/dm-table">New DM table</Link> : null}</div></li>
         <li><div className="card stack"><h3 className="type-title">Series</h3><p className="type-caption">{pluralize(data.series.length, 'series')}</p>{data.series.slice(0, 3).map((series) => <Link className="type-link" key={series.id} to={`/series/${encodeURIComponent(series.id)}`}>{series.name}</Link>)}{data.series.length > 3 ? <SeeAll label="See all series" /> : null}<SeriesCreateAction label="Create a series" variant="ghost" size="sm" showAuthorityError={false} /></div></li>
         <li><div className="card stack"><h3 className="type-title">Quests to run</h3><p className="type-caption">{pluralize(upcoming.length, 'quest')}</p>{upcoming.slice(0, 3).map((quest) => <Link className="type-link" key={quest.id} to={`/quests/${quest.shortCode}`}>{quest.briefDocument?.title ?? 'Untitled quest'}</Link>)}{upcoming.length > 3 ? <SeeAll label="See all quests to run" /> : null}{upcoming.length === 0 && view.canCreateQuest ? <Link className="type-link" to="/quests/new">Post a quest</Link> : null}</div></li>
       </CardGrid> : <div className={styles.dmActions}>
-        <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">New DM table</Link>
         <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />
         {view.canCreateQuest ? <Link className="btn btn--primary btn--sm" to="/quests/new">Post a quest</Link> : null}
       </div>}
@@ -253,7 +251,7 @@ function DmOverview({ data, notes, recent }: { data: MemberHub; notes: ReturnTyp
   const adminAccess = useCurrentAccess('admin');
   const noSignups = data.upcoming.status === 'ready' && data.upcoming.data.length === 0;
   const noRecent = recent.status === 'ready' && recent.entries.length === 0;
-  const noDmWork = view.query.isSuccess && view.query.data !== undefined && view.query.data.documents.total === 0 && view.query.data.series.length === 0 && view.query.data.quests.total === 0;
+  const noDmWork = view.query.isSuccess && view.query.data !== undefined && view.query.data.series.length === 0 && view.query.data.quests.total === 0;
   const noCharacters = data.roster.status === 'ready' && data.roster.data.length === 0;
   const nothingHere = noSignups && noDmWork && noCharacters && notes.status === 'empty' && noRecent;
   return (
@@ -265,8 +263,8 @@ function DmOverview({ data, notes, recent }: { data: MemberHub; notes: ReturnTyp
       <div className={styles.overview}>
         {nothingHere ? (
           <Card className="stack" as="section" aria-label="Your campaign activity">
-            <div className={styles.sectionHead}><div><p className="type-label">Your tables, series and quests</p><h2 className="type-heading">Nothing here yet</h2><p className="type-caption">Your hosted work will appear here.</p></div><Link className="btn btn--secondary btn--sm" to="/dm">DM dashboard</Link></div>
-            <div className={styles.dmActions}><Link className="btn btn--secondary btn--sm" to="/editor/dm-table">New DM table</Link><SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />{view.canCreateQuest ? <Link className="btn btn--primary btn--sm" to="/quests/new">Post a quest</Link> : null}<Link className="btn btn--ghost btn--sm" to="/me/notes">Private notes</Link></div>
+            <div className={styles.sectionHead}><div><p className="type-label">Your series and quests</p><h2 className="type-heading">Nothing here yet</h2><p className="type-caption">Your hosted work will appear here.</p></div><Link className="btn btn--secondary btn--sm" to="/dm">DM dashboard</Link></div>
+            <div className={styles.dmActions}><SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />{view.canCreateQuest ? <Link className="btn btn--primary btn--sm" to="/quests/new">Post a quest</Link> : null}<Link className="btn btn--ghost btn--sm" to="/me/notes">Private notes</Link></div>
           </Card>
         ) : <div className={styles.dashboardMain}>
           <DmWork view={view} />

@@ -162,14 +162,8 @@ describe('Retained admin pagination and persisted readback', () => {
       'href',
       '/quests/new',
     );
-    expect(screen.getByRole('link', { name: 'New DM table' })).toHaveAttribute(
-      'href',
-      '/editor/dm-table',
-    );
-    expect(screen.getByRole('link', { name: 'Edit table' })).toHaveAttribute(
-      'href',
-      `/editor/dm-table/${uuid(2)}/edit`,
-    );
+    expect(screen.queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Your DM tables' })).not.toBeInTheDocument();
     const questCard = () => {
       const card = screen
         .getByRole('heading', { name: 'Your quests' })
@@ -181,35 +175,16 @@ describe('Retained admin pagination and persisted readback', () => {
     expect(
       await screen.findByRole('link', { name: 'Later quest' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'First table' })).toHaveAttribute(
-      'href',
-      '/community/dm-table/first-table',
-    );
     expect(calls.at(-1)).toMatchObject({
       memberId: goodMe.id,
       questOffset: 25,
-      tableOffset: 0,
     });
+    expect(calls.at(-1)).not.toHaveProperty('tableOffset');
     expect(
       within(questCard()).getByRole('link', {
         name: 'Manage participation, attendance and summary',
       }),
     ).toHaveAttribute('href', '/quests/Q-26');
-    const tableCard = screen
-      .getByRole('heading', { name: 'Your DM tables' })
-      .closest('.card');
-    if (!(tableCard instanceof HTMLElement)) throw new Error('Expected table card');
-    await userEvent.click(within(tableCard).getByRole('button', { name: 'Next' }));
-    expect(await screen.findByRole('link', { name: 'Second table' })).toHaveAttribute(
-      'href',
-      '/community/dm-table/second-table',
-    );
-    expect(screen.queryByRole('link', { name: 'Edit table' })).not.toBeInTheDocument();
-    expect(calls.at(-1)).toMatchObject({
-      memberId: goodMe.id,
-      questOffset: 25,
-      tableOffset: 25,
-    });
     await userEvent.click(
       within(questCard()).getByRole('button', { name: 'Previous' }),
     );
@@ -217,11 +192,9 @@ describe('Retained admin pagination and persisted readback', () => {
       'href',
       '/quests/Q-1',
     );
-    expect(screen.getByRole('link', { name: 'Second table' })).toBeInTheDocument();
     expect(calls.at(-1)).toMatchObject({
       memberId: goodMe.id,
       questOffset: 0,
-      tableOffset: 25,
     });
   });
 
@@ -319,7 +292,7 @@ describe('Retained admin pagination and persisted readback', () => {
     renderWithProviders(<DMDashboardPage />, { route: '/dm' });
     expect(await screen.findByText('You have no upcoming quests yet.')).toBeVisible();
     expect(screen.getByText('You have no past quests yet.')).toBeVisible();
-    expect(screen.getByRole('link', { name: 'New DM table' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
     await waitFor(() => expect(profileReads).toBeGreaterThan(0));
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: 'Post a quest' })).toBeNull(),

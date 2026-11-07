@@ -214,9 +214,8 @@ describe('notification retry and completion feedback', () => {
     expect(
       screen.getByText('This quest brief has no single current quest destination.'),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('This document has no supported reader.'),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText('This document has no supported reader.')).toHaveLength(2);
+    expect(screen.queryByRole('link', { name: 'Document 6' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Document 8' })).not.toBeInTheDocument();
   });
 

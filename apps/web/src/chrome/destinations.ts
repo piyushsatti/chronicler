@@ -65,7 +65,7 @@ export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
     label: 'Community',
     href: '/community',
     matches: (pathname) =>
-      matchesPath(pathname, ['/community', '/players', '/dms', '/characters', '/editor/dm-table']),
+      matchesPath(pathname, ['/community', '/players', '/dms', '/characters']),
   },
 ];
 

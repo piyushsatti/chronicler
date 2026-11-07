@@ -182,11 +182,9 @@ describe('DMProfilePage', () => {
     renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@mira' });
 
     await screen.findByRole('alert', {}, { timeout: 10_000 });
-    expect(
-      await screen.findByRole('link', { name: 'Table of Mists' }, { timeout: 10_000 }),
-    ).toHaveAttribute('href', '/community/dm-table/table-of-mists');
+    expect(screen.queryByRole('link', { name: 'Table of Mists' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /The Glass Road/ })).toHaveAttribute('href', '/series/66666666-6666-4666-8666-666666666666');
-    expect(screen.getByRole('link', { name: 'New DM table' })).toBeVisible();
     expect(
       await screen.findByRole('button', { name: 'Create a series' }, { timeout: 10_000 }),
     ).toBeVisible();
@@ -212,7 +210,7 @@ describe('DMProfilePage', () => {
 
     await screen.findAllByRole('alert');
     expect(await screen.findByRole('link', { name: 'Next adventure' })).toHaveAttribute('href', '/quests/next-adventure');
-    for (const title of ['DM tables', 'Series']) {
+    for (const title of ['Series']) {
       const section = screen.getByRole('heading', { name: title }).closest('[data-component="Card"]');
       expect(section).not.toBeNull();
       expect(section?.querySelector('[role="alert"]')).toBeVisible();
@@ -269,7 +267,8 @@ describe('DMProfilePage', () => {
     const quietLine = await within(panel).findByText('Nothing here yet.');
     expect(quietLine).toBeVisible();
     expect(within(panel).getAllByText('Nothing here yet.')).toHaveLength(1);
-    expect(within(panel).queryByRole('heading', { name: 'Tables, series and quests' })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole('heading', { name: 'Series and quests' })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole('heading', { name: 'DM tables' })).not.toBeInTheDocument();
     expect(quietLine.closest('[data-component="Card"]')).toBeNull();
     expect(within(panel).queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
     expect(within(panel).queryByRole('link', { name: 'Create a series' })).not.toBeInTheDocument();
@@ -292,9 +291,9 @@ describe('DMProfilePage', () => {
     );
     renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@mira' });
 
-    expect(await screen.findByRole('heading', { name: 'Tables, series and quests' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Series and quests' })).toBeVisible();
     expect(screen.getAllByText('Nothing here yet.')).toHaveLength(1);
-    expect(screen.getByRole('link', { name: 'New DM table' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Create a series' })).toBeVisible();
     expect(await screen.findByRole('link', { name: 'Post a quest' })).toBeVisible();
     expect(screen.queryByRole('heading', { name: 'DM tables' })).not.toBeInTheDocument();

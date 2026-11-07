@@ -53,6 +53,17 @@ export function CommunityEntryPage(): React.JSX.Element {
   const authorProfile = useMemberProfile(page.status === 'ready' ? page.view.author?.handle ?? '' : '');
   const related = useCommunityEntryRelated(page.status === 'ready' ? page.view.authorId : '');
 
+  if (page.status === 'ready' && page.view.category === 'dm_table') {
+    const regions: PageRegionRenderers = {
+      body: () => <EntryFailure error={toAppError({ failure: 'NotFound' }, 'community:entry')} />,
+    };
+    return (
+      <PageShell title="Community post" back={BACK}>
+        <PageHost declaration={DECLARATION} regions={regions} />
+      </PageShell>
+    );
+  }
+
   if (page.status !== 'ready') {
     const regions: PageRegionRenderers = {
       body: () =>
@@ -81,7 +92,7 @@ export function CommunityEntryPage(): React.JSX.Element {
     </Link>
   ) : null;
   const when = [view.publishedAt, view.updatedAt].find((value) => value && !isSentinelDate(value));
-  const otherPosts = related.data?.filter((post) => post.id !== view.id) ?? [];
+  const otherPosts = related.data?.filter((post) => post.id !== view.id && post.category !== 'dm_table') ?? [];
   const rail = (
     <div className="stack" data-gap="4">
       {author && authorName ? (

@@ -85,12 +85,4 @@ export const routes: readonly FeatureRoute[] = [
       })),
     ),
   },
-  {
-    path: '/community/dm-table/:slug',
-    element: lazyElement(() =>
-      import('./pages/ProfilePages.js').then((module) => ({
-        default: module.DmTableDetailPage,
-      })),
-    ),
-  },
 ];
