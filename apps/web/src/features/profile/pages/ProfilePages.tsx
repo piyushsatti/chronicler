@@ -336,7 +336,7 @@ function ProfileView({
       {profile.dmProfile || hasActivity ? <Card className="stack" pad={4}>
         <h2 className="type-heading">About</h2>
         {profile.dmProfile?.tagline ? (
-          <p className="type-body">{profile.dmProfile.tagline}</p>
+          <ContentRenderer body={profile.dmProfile.tagline} />
         ) : owner && canDm ? (
           <EmptyState message="You have not written a bio yet." action={<Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Edit profile</Button>} />
         ) : !profile.dmProfile?.philosophy &&
@@ -345,10 +345,10 @@ function ProfileView({
           <EmptyState message={`${name} hasn’t written a bio yet.`} />
         ) : null}
         {profile.dmProfile ? <>
-          {profile.dmProfile.philosophy ? <p className="type-narrative">{profile.dmProfile.philosophy}</p> : null}
+          {profile.dmProfile.philosophy ? <ContentRenderer body={profile.dmProfile.philosophy} /> : null}
           {profile.dmProfile.houseRules ? <>
             <h3 className="type-title">House rules</h3>
-            <p className="type-narrative">{profile.dmProfile.houseRules}</p>
+            <ContentRenderer body={profile.dmProfile.houseRules} />
           </> : null}
         </> : null}
         {hasActivity ? <p className="type-caption">

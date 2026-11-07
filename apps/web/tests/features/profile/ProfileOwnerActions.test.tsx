@@ -1,6 +1,6 @@
 import { beforeEach, describe, it, expect } from 'vitest';
 import { graphql, HttpResponse } from 'msw';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProfileOwnerActions } from '../../../src/features/profile/components/ProfileOwnerActions.js';
 import { parseMemberProfile } from '../../../src/features/profile/adapters/memberProfileAdapter.js';
@@ -13,6 +13,10 @@ function profile() {
   const parsed = parseMemberProfile(wire);
   if (!parsed.ok || !parsed.data) throw Error('Bad fixture');
   return parsed.data;
+}
+function setTagline(value: string) {
+  fireEvent.mouseDown(within(screen.getByRole('group', { name: 'Tagline' })).getByText('Horror & heists'));
+  fireEvent.change(screen.getByRole('textbox', { name: 'Tagline' }), { target: { value } });
 }
 describe('Profile owner writes', () => {
   it('keeps the selected weekday value when saving availability', async () => {
@@ -130,7 +134,7 @@ describe('Profile owner writes', () => {
     const view = renderWithProviders(
       <ProfileOwnerActions profile={profile()} canAvailability canDm />,
     );
-    await user.clear(screen.getByRole('textbox', { name: 'Tagline' }));
+    setTagline('');
     await user.click(screen.getByRole('button', { name: 'Save DM profile' }));
     await screen.findByText(/DM profile saved as draft/);
     expect(attempts[0]?.input).toEqual({
@@ -156,6 +160,81 @@ describe('Profile owner writes', () => {
     await user.click(screen.getByRole('button', { name: 'Resubmit DM profile' }));
     await screen.findByText('Submitted for verification.');
     expect(submitted).toMatchObject({ expectedRevision: 2 });
+  });
+  it('keeps the end of a full section when typing into an earlier line', async () => {
+    const ending = 'bring snacks.';
+    const first = 'Hello';
+    const philosophy = `${first}\n${'x'.repeat(4000 - first.length - 1 - ending.length)}${ending}`;
+    expect(philosophy).toHaveLength(4000);
+    let input: unknown;
+    server.use(
+      graphql.mutation('ProfileUpdateMyDmProfile', ({ variables }) => {
+        input = variables.input;
+        return HttpResponse.json({
+          data: {
+            updateMyDmProfile: {
+              memberId: wire.member.id,
+              status: 'draft',
+              reviewRevision: 2,
+            },
+          },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    const current = profile();
+    renderWithProviders(
+      <ProfileOwnerActions
+        profile={{
+          ...current,
+          dmProfile: current.dmProfile ? { ...current.dmProfile, philosophy } : null,
+        }}
+        canAvailability
+        canDm
+      />,
+    );
+    fireEvent.mouseDown(
+      within(screen.getByRole('group', { name: 'Philosophy' })).getByText(first),
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'Philosophy' }), {
+      target: { value: `Please ${first}` },
+    });
+    await user.click(screen.getByRole('button', { name: 'Save DM profile' }));
+    await screen.findByText(/DM profile saved as draft/);
+    expect(input).toMatchObject({ philosophy });
+  });
+  it('saves house rules with their stored newlines when the editor is opened and not edited', async () => {
+    const houseRules = 'No phones.\r\nBe kind.';
+    let input: unknown;
+    server.use(
+      graphql.mutation('ProfileUpdateMyDmProfile', ({ variables }) => {
+        input = variables.input;
+        return HttpResponse.json({
+          data: {
+            updateMyDmProfile: {
+              memberId: wire.member.id,
+              status: 'draft',
+              reviewRevision: 2,
+            },
+          },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    const current = profile();
+    renderWithProviders(
+      <ProfileOwnerActions
+        profile={{
+          ...current,
+          dmProfile: current.dmProfile ? { ...current.dmProfile, houseRules } : null,
+        }}
+        canAvailability
+        canDm
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Save DM profile' }));
+    await screen.findByText(/DM profile saved as draft/);
+    expect(input).toMatchObject({ houseRules });
   });
   it('replaces availability with an empty set and isolates a failed save from profile writes', async () => {
     let slots: unknown;
@@ -261,8 +340,7 @@ describe('Profile owner writes', () => {
       screen.getByRole('textbox', { name: 'Avatar URL' }),
       'https://example.test/local.png',
     );
-    await user.clear(screen.getByRole('textbox', { name: 'Tagline' }));
-    await user.type(screen.getByRole('textbox', { name: 'Tagline' }), 'Local tagline');
+    setTagline('Local tagline');
     await user.click(screen.getByRole('button', { name: 'Save profile' }));
     await screen.findByRole('alert');
     await user.click(screen.getByRole('button', { name: 'Reload profile' }));
@@ -270,9 +348,12 @@ describe('Profile owner writes', () => {
     expect(screen.getByRole('textbox', { name: 'Avatar URL' })).toHaveValue(
       'https://example.test/current.png',
     );
-    expect(screen.getByRole('textbox', { name: 'Tagline' })).toHaveValue(
-      'Persisted current tagline',
-    );
+    expect(
+      within(screen.getByRole('group', { name: 'Tagline' })).getByText(
+        'Persisted current tagline',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText('Local tagline')).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Availability note 1' })).toHaveValue(
       'Persisted note',
     );

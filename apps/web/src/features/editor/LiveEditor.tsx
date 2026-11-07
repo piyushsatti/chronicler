@@ -108,6 +108,8 @@ export type LiveEditorProps = {
   toolbarEnd?: React.ReactNode;
   placeholder?: string;
   compact?: boolean;
+  /** Accessible name of the writing area. Document editors keep "Document body". */
+  label?: string;
   entityIndex?: EntityLinkIndex;
   /**
    * The server's audit of the body (`auditBody`). The blocks editor badges the
@@ -308,11 +310,12 @@ function BlocksLiveEditor({
   toolbarEnd,
   placeholder,
   compact,
+  label,
   entityIndex,
   audit,
   focusLine,
 }: Required<
-  Pick<LiveEditorProps, 'value' | 'onChange' | 'toolbar' | 'placeholder' | 'compact'>
+  Pick<LiveEditorProps, 'value' | 'onChange' | 'toolbar' | 'placeholder' | 'compact' | 'label'>
 > &
   Pick<LiveEditorProps, 'toolbarStart' | 'toolbarEnd' | 'audit' | 'focusLine'> & {
     entityIndex: EntityLinkIndex;
@@ -895,7 +898,7 @@ function BlocksLiveEditor({
   const inputFor = (i: number, mono: boolean): React.JSX.Element => (
     <textarea
       ref={setInputRef}
-      aria-label="Document body"
+      aria-label={label}
       aria-describedby={auditFor(i, i).describedBy}
       className={`le-input ${mono ? 'le-mono type-code' : leTypeClass(lines[i])}`}
       rows={1}
@@ -1154,6 +1157,7 @@ export function LiveEditor({
   toolbarEnd,
   placeholder = DEFAULT_PLACEHOLDER,
   compact = false,
+  label = 'Document body',
   entityIndex = [],
   audit = null,
   focusLine = null,
@@ -1167,6 +1171,7 @@ export function LiveEditor({
       toolbarEnd={toolbarEnd}
       placeholder={placeholder}
       compact={compact}
+      label={label}
       entityIndex={entityIndex}
       audit={audit}
       focusLine={focusLine}

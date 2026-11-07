@@ -105,6 +105,20 @@
   align-self: flex-start;
 }
 
+/* Same writing height as the document editor. The page-level `.le-doc` gutter
+   is 40vh and its toolbar sticks, which is for one editor that owns the page.
+   Three sections would stack that empty space and cover each other. */
+.dmEditor :global(.le-doc.le-doc) {
+  margin-inline: 0;
+  max-inline-size: none;
+  min-block-size: 12rem;
+  padding: var(--sp-2) var(--sp-1) var(--sp-5);
+}
+
+.dmEditor :global(.le-toolbar.le-toolbar) {
+  position: static;
+}
+
 .body :global(.card.stack) {
   gap: var(--sp-3);
 }

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { LiveEditor } from '../../editor/LiveEditor.js';
 import type { MemberProfileView } from '../adapters/memberProfileAdapter.js';
 import { useProfileActions } from '../hooks/useProfileActions.js';
 import { Select } from '../../../components/primitives/Select.js';
@@ -17,6 +18,11 @@ const DAYS = [
   'SUNDAY',
 ];
 type DmText = 'tagline' | 'philosophy' | 'houseRules';
+const DM_FIELDS: { field: DmText; label: string; limit: number }[] = [
+  { field: 'tagline', label: 'Tagline', limit: 200 },
+  { field: 'philosophy', label: 'Philosophy', limit: 4000 },
+  { field: 'houseRules', label: 'House rules', limit: 4000 },
+];
 function dmDraft(profile: MemberProfileView) {
   return {
     tagline: profile.dmProfile?.tagline ?? '',
@@ -53,8 +59,13 @@ export function ProfileOwnerActions({
   const [avatarDirty, setAvatarDirty] = useState(false);
   const [slots, setSlots] = useState(profile.availability);
   const [dm, setDm] = useState(() => dmDraft(profile));
-  const updateDm = (field: DmText, value: string) => {
-    setDm((current) => ({ ...current, [field]: value }));
+  const updateDm = (field: DmText, value: string, limit: number) => {
+    setDm((current) => {
+      const previous = current[field];
+      // Over the cap, or the same text with `\r` removed, is not an edit.
+      if (value.length > limit || value === previous.replaceAll('\r', '')) return current;
+      return { ...current, [field]: value };
+    });
   };
   const changeSlot = (
     index: number,
@@ -260,33 +271,19 @@ export function ProfileOwnerActions({
               });
             }}
           >
-            {(['tagline', 'philosophy', 'houseRules'] satisfies DmText[]).map(
-              (field) => (
-                <label className="stack" key={field}>
-                  <span className="type-label">
-                    {field === 'houseRules'
-                      ? 'House rules'
-                      : field === 'tagline'
-                        ? 'Tagline'
-                        : 'Philosophy'}
-                  </span>
-                  <textarea
-                    className="field-input"
-                    aria-label={
-                      field === 'houseRules'
-                        ? 'House rules'
-                        : field === 'tagline'
-                          ? 'Tagline'
-                          : 'Philosophy'
-                    }
-                    maxLength={field === 'tagline' ? 200 : 4000}
-                    disabled={actions.pending}
+            <fieldset className="stack field-group" disabled={actions.pending}>
+              {DM_FIELDS.map(({ field, label, limit }) => (
+                <div className={`stack ${styles.dmEditor}`} role="group" aria-label={label} key={field}>
+                  <span className="type-label">{label}</span>
+                  <LiveEditor
+                    label={label}
+                    placeholder="Write in Markdown."
                     value={dm[field]}
-                    onChange={(event) => updateDm(field, event.target.value)}
+                    onChange={(value) => updateDm(field, value, limit)}
                   />
-                </label>
-              ),
-            )}
+                </div>
+              ))}
+            </fieldset>
             <Checkbox
               label="Accepting players"
               checked={dm.acceptingPlayers}
