@@ -128,3 +128,25 @@
   display: flex;
   flex-direction: column;
 }
+
+/* Day, start, and end share one row. The fieldset shrinks to the form so the
+   row wraps once three fields no longer fit, instead of scrolling sideways. */
+.window {
+  min-inline-size: 0;
+}
+
+.times {
+  min-inline-size: 0;
+}
+
+.times > * {
+  flex: 1 1 10rem;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.times :global(.field-input),
+.times :global(.select) {
+  inline-size: 100%;
+  min-inline-size: 0;
+}
