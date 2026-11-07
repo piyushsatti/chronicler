@@ -16,7 +16,7 @@ import { EditorWorkspace } from '../../../src/features/editor/EditorWorkspace.js
 import { EditorRoute } from '../../../src/features/editor/EditorRoute.js';
 import { draftStorageKey } from '../../../src/features/editor/hooks/useEditorDraft.js';
 import type { EditorLoadResult } from '../../../src/features/editor/adapters/editorLoad.js';
-import type { BodySpanAudit } from '../../../src/features/editor/adapters/bodyAudit.js';
+import type { BodySpanAudit } from '../../../src/components/interactive/markdown-editor/types.js';
 import { editorHarness, seedEditorSession } from './editor-test-utils.js';
 import { seriesAuthority } from '../../seriesAuthority.js';
 import goodMe from '../../fixtures/wire/me/good.json';

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import { LiveEditor } from '../../editor/LiveEditor.js';
+import { LiveEditor } from '../../../components/interactive/markdown-editor/LiveEditor.js';
 import type { MemberProfileView } from '../adapters/memberProfileAdapter.js';
 import { useProfileActions } from '../hooks/useProfileActions.js';
 import { Select } from '../../../components/primitives/Select.js';

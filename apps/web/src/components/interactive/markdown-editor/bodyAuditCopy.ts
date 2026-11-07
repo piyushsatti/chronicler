@@ -1,4 +1,4 @@
-import type { BodySpanAudit, BodySpanKind } from './adapters/bodyAudit.js';
+import type { BodySpanAudit, BodySpanKind } from './types.js';
 
 /**
  * User copy for the server's body audit (`auditBody`). Everything here reads

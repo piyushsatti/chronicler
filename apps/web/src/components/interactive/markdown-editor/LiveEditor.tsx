@@ -8,12 +8,11 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Button } from '../../components/primitives/Button.js';
-import { useScrollEdges } from '../../components/primitives/useScrollEdges.js';
-import type { EntityLinkIndex } from './types.js';
+import { Button } from '../../primitives/Button.js';
+import { useScrollEdges } from '../../primitives/useScrollEdges.js';
+import type { BodySpanAudit, EntityLinkIndex } from './types.js';
 import { HideMenu, type HidePlan } from './HideMenu.js';
 import { hideLines, type HideMarker } from './hideMarkers.js';
-import type { BodySpanAudit } from './adapters/bodyAudit.js';
 import {
   auditBadgeIcon,
   auditBadgeLabel,
@@ -22,7 +21,7 @@ import {
   LIST_NESTED_WARNING,
   type BodyAudit,
 } from './bodyAuditCopy.js';
-import styles from './editor.module.css';
+import styles from './markdown-editor.module.css';
 
 /** Shown in an empty document; says what the editor does with typed text. */
 const DEFAULT_PLACEHOLDER = 'Start writing. Type [[ to link a Codex entry.';

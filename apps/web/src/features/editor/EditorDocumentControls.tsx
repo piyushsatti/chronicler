@@ -3,6 +3,7 @@ import { Modal } from '../../components/primitives/Modal.js';
 import { Card } from '../../components/primitives/Card.js';
 import { formatInstant, personLabels } from '../../utils/format.js';
 import styles from './editor.module.css';
+import markdown from '../../components/interactive/markdown-editor/markdown-editor.module.css';
 import { Button } from '../../components/primitives/Button.js';
 import { ContentRenderer } from '../../components/foundation/ContentRenderer.js';
 import { StatePanel } from '../../components/foundation/StatePanel.js';
@@ -156,7 +157,7 @@ export function EditorDocumentControls({
               className={`stack ${styles.fields}`}
               disabled={view.lifecycleDisabled}
             >
-              <legend className={styles.srLegend}>Visibility</legend>
+              <legend className={markdown.srLegend}>Visibility</legend>
               <div className="field">
                 <span className="field-label">Visibility</span>
                 <SegmentedControl
@@ -222,7 +223,7 @@ export function EditorDocumentControls({
                   onChange={(event) => view.audience.setSearch(event.target.value)}
                 />
               </label>
-              <ul className={`stack ${styles.items}`} data-gap="2" aria-label="Selected readers">
+              <ul className={`stack ${markdown.items}`} data-gap="2" aria-label="Selected readers">
                 {view.audience.selected.map((reader) => (
                   <li key={reader.id}>
                     {reader.label}{' '}
@@ -244,7 +245,7 @@ export function EditorDocumentControls({
                 />
               ) : null}
               {view.audience.loading ? <StatePanel status="loading" /> : null}
-              <ul className={`stack ${styles.items}`} data-gap="2" aria-label="Matching members">
+              <ul className={`stack ${markdown.items}`} data-gap="2" aria-label="Matching members">
                 {view.audience.matches.map((member, index) => (
                   <li key={member.memberId}>
                     {memberNames[index]}{' '}
