@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/piyushsatti/chronicler/apps/api/internal/delivery"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
@@ -193,7 +194,7 @@ func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, actor auth.Au
 	if len(rows) > 0 {
 		total = int32(rows[0].Total)
 	}
-	alertCount, err := p.queries().SiteActiveAlertCount(ctx)
+	alertCount, scheduled, err := p.adminAlertsAndScheduledWork(ctx)
 	if err != nil {
 		return AdminOperationsView{}, err
 	}
@@ -205,7 +206,7 @@ func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, actor auth.Au
 		DeliveryTotal:         total,
 		PendingDeliveryCount:  counts.PendingCount,
 		TerminalDeliveryCount: counts.TerminalCount,
-		ScheduledWork:         []ScheduledWorkStatusView{},
+		ScheduledWork:         scheduled,
 	}, nil
 }
 
@@ -377,6 +378,27 @@ func (p *ProductPostgres) lockSiteSetting(ctx context.Context, key string, initi
 	}, nil
 }
 
+func (p *ProductPostgres) adminAlertsAndScheduledWork(ctx context.Context) (int32, []ScheduledWorkStatusView, error) {
+	alertCount, err := p.queries().SiteActiveAlertCount(ctx)
+	if err != nil {
+		return 0, nil, err
+	}
+	rows, err := p.queries().SiteAdminMaintenanceJobs(ctx)
+	if err != nil {
+		return 0, nil, err
+	}
+	scheduled := make([]ScheduledWorkStatusView, 0, len(rows))
+	for _, row := range rows {
+		view := ScheduledWorkStatusView{Kind: row.Kind, Outcome: row.State, ExpectedSlot: row.UpdatedAt.Time}
+		if row.SafeErrorCode.Valid && row.SafeErrorCode.String != "" {
+			code := row.SafeErrorCode.String
+			view.SafeErrorCode = &code
+		}
+		scheduled = append(scheduled, view)
+	}
+	return alertCount, scheduled, nil
+}
+
 func mapAdminDeliveryJob(row dbgen.SiteAdminDeliveryJobsRow) AdminDeliveryJobView {
 	state := ""
 	if row.State.Valid {
@@ -395,8 +417,10 @@ func mapAdminDeliveryJob(row dbgen.SiteAdminDeliveryJobsRow) AdminDeliveryJobVie
 	if row.NextRunAt.Valid {
 		job.NextAttemptAt = row.NextRunAt.Time
 	}
-	if row.SafeErrorCode.Valid {
+	if row.SafeErrorCode.Valid && row.SafeErrorCode.String != "" {
 		job.SafeError = &row.SafeErrorCode.String
+	} else if code := delivery.SafeCodeForErrorText(row.ErrorMessage.String); code != "" {
+		job.SafeError = &code
 	}
 	if row.QuestPublicID.Valid {
 		id := db.UUIDString(row.QuestPublicID)
