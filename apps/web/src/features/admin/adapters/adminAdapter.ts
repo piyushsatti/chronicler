@@ -125,6 +125,7 @@ const charPendingSchema = z.object({
         ownerDisplayName: z.string(),
         ddbUrl: z.string().nullable().optional(),
         verificationSubmittedAt: z.string().nullable().optional(),
+        ddbSyncedAt: z.string().nullable().optional(),
       }),
     )
     .optional()
@@ -231,6 +232,7 @@ export type CharVerifyRow = {
   ownerDisplayName: string;
   ddbUrl: string | null;
   verificationSubmittedAt: string | null;
+  ddbSyncedAt: string | null;
 };
 
 export type AdminOpsView = z.infer<typeof adminOpsSchema>;
@@ -277,6 +279,7 @@ export function parseCharPending(wire: unknown): AdapterResult<CharVerifyRow[]> 
       ownerDisplayName: i.ownerDisplayName,
       ddbUrl: i.ddbUrl ?? null,
       verificationSubmittedAt: i.verificationSubmittedAt ?? null,
+      ddbSyncedAt: i.ddbSyncedAt ?? null,
     })),
   };
 }

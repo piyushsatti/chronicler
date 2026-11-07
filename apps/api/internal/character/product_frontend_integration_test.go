@@ -91,7 +91,18 @@ func newFrontendCharacterFixture(t *testing.T) *frontendCharacterFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Submission sync uses this client. Nil stays a fast failure instead of calling D&D Beyond.
+	f.commands.Ddb = fixtureDdbSource{current: &f.ddb}
 	return f
+}
+
+type fixtureDdbSource struct{ current *character.DdbClient }
+
+func (s fixtureDdbSource) Fetch(ctx context.Context, rawURL string) (character.DdbSnapshot, character.DdbProvenance, error) {
+	if s.current == nil || *s.current == nil {
+		return character.DdbSnapshot{}, character.DdbProvenance{}, character.DdbError{Code: character.DdbErrorUnavailable}
+	}
+	return (*s.current).Fetch(ctx, rawURL)
 }
 
 func commandMeta() product.CommandMeta { return product.CommandMeta{IdempotencyKey: uuid.NewString()} }

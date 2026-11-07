@@ -25,6 +25,40 @@ describe('VerifyPage', () => {
     await screen.findByRole('button', { name: /^DM profiles/ });
     // Character tab is default and shows the pending character.
     expect(screen.getByText('Pending Hero')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'D&D Beyond sync failed for this submission. The saved sheet may be out of date.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a fresh D&D Beyond sync on the review row', async () => {
+    server.use(
+      graphql.query('PendingCharacterVerifications', () =>
+        HttpResponse.json({
+          data: {
+            pendingCharacterVerifications: {
+              total: 1,
+              items: [
+                {
+                  ...pending.items[0],
+                  ddbSyncedAt: pending.items[0].verificationSubmittedAt,
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(<VerifyPage />);
+    expect(
+      await screen.findByText('D&D Beyond sheet was synced for this submission.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        'D&D Beyond sync failed for this submission. The saved sheet may be out of date.',
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it('shows controlled error', async () => {

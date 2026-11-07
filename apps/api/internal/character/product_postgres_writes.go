@@ -116,6 +116,9 @@ func (p *ProductPostgres) StoreCreateCharacter(ctx context.Context, write Create
 		}
 		return CharacterView{}, err
 	}
+	if err := p.storeSubmissionMirror(ctx, id, write.DdbPayload, write.At); err != nil {
+		return CharacterView{}, err
+	}
 	if len(in.CatalogPickIds) > 0 {
 		picks := make([]pgtype.UUID, 0, len(in.CatalogPickIds))
 		for _, pick := range in.CatalogPickIds {
@@ -269,6 +272,14 @@ func (p *ProductPostgres) StoreRetireCharacter(ctx context.Context, write Retire
 	return p.reloadCharacter(ctx, write.Input.CharacterId)
 }
 
+func (p *ProductPostgres) storeSubmissionMirror(ctx context.Context, characterID pgtype.UUID, payload []byte, at time.Time) error {
+	if len(payload) == 0 {
+		return nil
+	}
+	// Same timestamp as verification_submitted_at, so only a missed sync is older than the request.
+	return p.queries().CharacterProductUpsertDdbMirror(ctx, dbgen.CharacterProductUpsertDdbMirrorParams{Payload: payload, At: pgTime(at), CharacterID: characterID})
+}
+
 func (p *ProductPostgres) LockSubmitForVerification(ctx context.Context, spec SubmitForVerificationSpec) (SubmitForVerificationState, error) {
 	var state SubmitForVerificationState
 	return state, p.lockCharacterMutation(ctx, spec.CharacterId, &state)
@@ -280,6 +291,9 @@ func (p *ProductPostgres) StoreSubmitForVerification(ctx context.Context, write 
 	}
 	characterID, err := characterProductID(write.Input.CharacterId)
 	if err != nil {
+		return CharacterView{}, err
+	}
+	if err := p.storeSubmissionMirror(ctx, characterID, write.DdbPayload, write.At); err != nil {
 		return CharacterView{}, err
 	}
 	_, err = p.queries().CharacterProductSubmitForVerification(ctx, dbgen.CharacterProductSubmitForVerificationParams{

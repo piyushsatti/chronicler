@@ -27,6 +27,8 @@ export type ActivitySummaryType = {
 };
 
 export type AdminCharacterDirectoryEntryType = {
+  /** Mirror time of the last successful D&D Beyond sync. Older than verificationSubmittedAt means that sync failed and the sheet is stale. */
+  ddbSyncedAt?: Maybe<Scalars['DateTime']['output']>;
   ddbUrl?: Maybe<Scalars['String']['output']>;
   guildId?: Maybe<Scalars['ID']['output']>;
   id: Scalars['ID']['output'];

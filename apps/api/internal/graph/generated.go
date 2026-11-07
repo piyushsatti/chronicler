@@ -76,6 +76,7 @@ type ComplexityRoot struct {
 	}
 
 	AdminCharacterDirectoryEntryType struct {
+		DdbSyncedAt             func(childComplexity int) int
 		DdbURL                  func(childComplexity int) int
 		GuildID                 func(childComplexity int) int
 		ID                      func(childComplexity int) int
@@ -1511,6 +1512,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ActivitySummaryType.VoiceMinutes(childComplexity), true
+
+	case "AdminCharacterDirectoryEntryType.ddbSyncedAt":
+		if e.complexity.AdminCharacterDirectoryEntryType.DdbSyncedAt == nil {
+			break
+		}
+
+		return e.complexity.AdminCharacterDirectoryEntryType.DdbSyncedAt(childComplexity), true
 
 	case "AdminCharacterDirectoryEntryType.ddbUrl":
 		if e.complexity.AdminCharacterDirectoryEntryType.DdbURL == nil {
@@ -8064,6 +8072,8 @@ extend type Mutation {
   verificationStatus: String!
   verificationSubmittedAt: DateTime
   ddbUrl: String
+  "Mirror time of the last successful D&D Beyond sync. Older than verificationSubmittedAt means that sync failed and the sheet is stale."
+  ddbSyncedAt: DateTime
   updatedAt: DateTime!
 }
 
@@ -13708,6 +13718,47 @@ func (ec *executionContext) fieldContext_AdminCharacterDirectoryEntryType_ddbUrl
 	return fc, nil
 }
 
+func (ec *executionContext) _AdminCharacterDirectoryEntryType_ddbSyncedAt(ctx context.Context, field graphql.CollectedField, obj *AdminCharacterDirectoryEntryType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AdminCharacterDirectoryEntryType_ddbSyncedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DdbSyncedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalODateTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AdminCharacterDirectoryEntryType_ddbSyncedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AdminCharacterDirectoryEntryType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type DateTime does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _AdminCharacterDirectoryEntryType_updatedAt(ctx context.Context, field graphql.CollectedField, obj *AdminCharacterDirectoryEntryType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AdminCharacterDirectoryEntryType_updatedAt(ctx, field)
 	if err != nil {
@@ -13819,6 +13870,8 @@ func (ec *executionContext) fieldContext_AdminCharacterDirectoryType_items(_ con
 				return ec.fieldContext_AdminCharacterDirectoryEntryType_verificationSubmittedAt(ctx, field)
 			case "ddbUrl":
 				return ec.fieldContext_AdminCharacterDirectoryEntryType_ddbUrl(ctx, field)
+			case "ddbSyncedAt":
+				return ec.fieldContext_AdminCharacterDirectoryEntryType_ddbSyncedAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_AdminCharacterDirectoryEntryType_updatedAt(ctx, field)
 			}
@@ -57821,6 +57874,8 @@ func (ec *executionContext) _AdminCharacterDirectoryEntryType(ctx context.Contex
 			out.Values[i] = ec._AdminCharacterDirectoryEntryType_verificationSubmittedAt(ctx, field, obj)
 		case "ddbUrl":
 			out.Values[i] = ec._AdminCharacterDirectoryEntryType_ddbUrl(ctx, field, obj)
+		case "ddbSyncedAt":
+			out.Values[i] = ec._AdminCharacterDirectoryEntryType_ddbSyncedAt(ctx, field, obj)
 		case "updatedAt":
 			out.Values[i] = ec._AdminCharacterDirectoryEntryType_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

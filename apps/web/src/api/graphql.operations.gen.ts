@@ -549,7 +549,7 @@ export type PendingCharacterVerificationsQueryVariables = Exact<{
 }>;
 
 
-export type PendingCharacterVerificationsQuery = { pendingCharacterVerifications: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerHandle: string, ownerDisplayName: string, ddbUrl: string | null, verificationSubmittedAt: string | null }> } };
+export type PendingCharacterVerificationsQuery = { pendingCharacterVerifications: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerHandle: string, ownerDisplayName: string, ddbUrl: string | null, verificationSubmittedAt: string | null, ddbSyncedAt: string | null }> } };
 
 export type PendingDmProfilesQueryVariables = Exact<{
   limit: number;
