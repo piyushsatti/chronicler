@@ -799,6 +799,9 @@ func validateQuestSignup(write SignupForQuestWrite) (string, *QuestParticipantVi
 	if write.Locked.Character == nil || write.Locked.Character.OwnerID != write.ActorID {
 		return "", nil, apierr.New(apierr.Forbidden, "character owner required")
 	}
+	if write.Locked.OwnerID != "" && write.ActorID == write.Locked.OwnerID {
+		return "", nil, apierr.New(apierr.Forbidden, "quest dm cannot sign up")
+	}
 	if !eligibleQuestCharacter(*write.Locked.Character) {
 		return "", nil, apierr.New(apierr.Conflict, "active approved character required")
 	}

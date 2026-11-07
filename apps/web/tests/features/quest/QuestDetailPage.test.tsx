@@ -30,7 +30,7 @@ describe('QuestDetailPage', () => {
   it('uses the guest role from MemberMe to explain the signup requirement', async () => {
     seedToken();
     server.use(graphql.query('MemberMe', () => HttpResponse.json({
-      data: { memberMe: { ...goodMe, roles: ['guest'] } },
+      data: { memberMe: { ...goodMe, id: '11111111-1111-4111-8111-111111111111', roles: ['guest'] } },
     })));
     renderWithProviders(
       <Routes><Route path="/quests/:code" element={<QuestDetailPage />} /></Routes>,
@@ -130,6 +130,17 @@ describe('QuestDetailPage', () => {
   it('surfaces pending Discord as async status while keeping signup available', async () => {
     seedToken();
     server.use(
+      graphql.query('MemberMe', () =>
+        HttpResponse.json({
+          data: {
+            memberMe: {
+              ...goodMe,
+              id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+              roles: ['player', 'admin'],
+            },
+          },
+        }),
+      ),
       graphql.query('Quest', () =>
         HttpResponse.json({
           data: {
@@ -256,6 +267,11 @@ describe('QuestDetailPage', () => {
   it('shows signup empty-state when authenticated with no characters', async () => {
     seedToken();
     server.use(
+      graphql.query('MemberMe', () =>
+        HttpResponse.json({
+          data: { memberMe: { ...goodMe, id: '11111111-1111-4111-8111-111111111111', roles: ['player'] } },
+        }),
+      ),
       graphql.query('MyCharacters', () =>
         HttpResponse.json({ data: { myCharacters: { items: [], total: 0 } } }),
       ),
@@ -284,7 +300,15 @@ describe('QuestDetailPage', () => {
       graphql.query('MemberMe', () =>
         failMe
           ? HttpResponse.json({ errors: [{ message: 'boom' }] }, { status: 500 })
-          : undefined,
+          : HttpResponse.json({
+              data: {
+                memberMe: {
+                  ...goodMe,
+                  id: '11111111-1111-4111-8111-111111111111',
+                  roles: ['player'],
+                },
+              },
+            }),
       ),
       graphql.query('MyCharacters', () =>
         HttpResponse.json({ data: { myCharacters: { items: [], total: 0 } } }),
@@ -531,6 +555,101 @@ describe('QuestDetailPage', () => {
     expect(
       await within(rules).findByText(/hasn’t published any table rules/),
     ).toBeInTheDocument();
+  });
+
+  it('hides the signup panel from the DM who owns the quest', async () => {
+    seedToken();
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    expect(await screen.findByRole('link', { name: 'Edit quest' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Your participation' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument();
+  });
+
+  it('keeps withdraw for a DM who already holds seats and skips signup', async () => {
+    seedToken();
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: {
+            quest: {
+              ...detailGood,
+              participants: [
+                { ...detailGood.participants[0], memberId: detailGood.dmId },
+                {
+                  ...detailGood.participants[0],
+                  memberId: detailGood.dmId,
+                  characterId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+                  characterName: 'Rook Vale',
+                },
+              ],
+            },
+          },
+        }),
+      ),
+      graphql.query('MyCharacters', () =>
+        HttpResponse.json({
+          data: {
+            myCharacters: {
+              total: 1,
+              items: [
+                {
+                  id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+                  name: 'Spare',
+                  shortCode: 'C-9',
+                  status: 'active',
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    const card = await screen.findByRole('region', { name: 'Your participation' });
+    expect(card).toHaveAttribute('id', 'participation');
+    expect(within(card).getByRole('button', { name: 'Withdraw Lyra Storm' })).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Withdraw Rook Vale' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Your character/ })).not.toBeInTheDocument();
+  });
+
+  it('renders no signup panel while the signed-in member is still loading', async () => {
+    seedToken();
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      graphql.query('MemberMe', async () => {
+        await gate;
+        return HttpResponse.json({ data: { memberMe: goodMe } });
+      }),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Siege of Kraghold' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Your participation' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Loading your characters…')).not.toBeInTheDocument();
+    expect(screen.queryByText('Your sign-up')).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByRole('link', { name: 'Edit quest' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Your participation' })).not.toBeInTheDocument();
   });
 
   it('offers Edit and Cancel quest to the owner and confirms cancellation', async () => {

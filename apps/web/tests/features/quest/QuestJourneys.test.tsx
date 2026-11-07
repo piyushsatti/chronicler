@@ -43,6 +43,11 @@ describe('retained Quest journeys', () => {
     const user = userEvent.setup();
     const inputs: unknown[] = [];
     server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: { quest: { ...detail, dmId: '11111111-1111-4111-8111-111111111111' } },
+        }),
+      ),
       graphql.query('MyCharacters', () =>
         HttpResponse.json({
           data: {
