@@ -2228,6 +2228,7 @@ export type QuestParticipantType = {
   characterId: Scalars['ID']['output'];
   characterName: Scalars['String']['output'];
   createdAt: Scalars['DateTime']['output'];
+  lastPlayedAt?: Maybe<Scalars['DateTime']['output']>;
   manual: Scalars['Boolean']['output'];
   memberAvatarUrl?: Maybe<Scalars['String']['output']>;
   memberDisplayName: Scalars['String']['output'];

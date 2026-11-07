@@ -39,7 +39,7 @@ func TestQuestParticipantsOrderByLastGamePlayed(t *testing.T) {
 	played(recent, 3)
 	played(longAgo, 90)
 	reader, _ := NewProductPostgres(f.fixture.Pool)
-	order := func(signupType string) []string {
+	order := func(signupType string) ([]string, map[string]*time.Time) {
 		if _, err := f.fixture.Pool.Exec(ctx, `UPDATE quests SET signup_type=$2 WHERE public_id=$1::uuid`, f.questID, signupType); err != nil {
 			t.Fatal(err)
 		}
@@ -48,16 +48,28 @@ func TestQuestParticipantsOrderByLastGamePlayed(t *testing.T) {
 			t.Fatalf("pages=%+v err=%v", pages, err)
 		}
 		var ids []string
+		lastPlayed := map[string]*time.Time{}
 		for _, item := range pages[0].Value.Items {
 			ids = append(ids, item.CharacterId)
+			lastPlayed[item.CharacterId] = item.LastPlayedAt
 		}
-		return ids
+		return ids, lastPlayed
 	}
-	if got, want := order("last_game_played"), []string{never, longAgo, recent}; !slices.Equal(got, want) {
+	got, lastPlayed := order("last_game_played")
+	if want := []string{never, longAgo, recent}; !slices.Equal(got, want) {
 		t.Fatalf("last_game_played order=%v want %v", got, want)
 	}
-	if got, want := order("dm_pick"), []string{recent, never, longAgo}; !slices.Equal(got, want) {
+	if lastPlayed[never] != nil || lastPlayed[longAgo] == nil || lastPlayed[recent] == nil || !lastPlayed[longAgo].Before(*lastPlayed[recent]) {
+		t.Fatalf("last played never=%v longAgo=%v recent=%v", lastPlayed[never], lastPlayed[longAgo], lastPlayed[recent])
+	}
+	got, lastPlayed = order("dm_pick")
+	if want := []string{recent, never, longAgo}; !slices.Equal(got, want) {
 		t.Fatalf("dm_pick order=%v want %v", got, want)
+	}
+	for id, at := range lastPlayed {
+		if at != nil {
+			t.Fatalf("dm_pick loaded last played for %s: %v", id, at)
+		}
 	}
 }
 

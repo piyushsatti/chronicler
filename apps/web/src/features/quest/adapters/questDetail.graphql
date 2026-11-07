@@ -45,6 +45,7 @@ query Quest($id: ID, $shortCode: String) {
       memberHandle
       memberDisplayName
       status
+      lastPlayedAt
     }
     pointcrawlLinks(limit: 100) {
       pointcrawlNodeId

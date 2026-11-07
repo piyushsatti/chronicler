@@ -960,6 +960,7 @@ type ComplexityRoot struct {
 		CharacterID       func(childComplexity int) int
 		CharacterName     func(childComplexity int) int
 		CreatedAt         func(childComplexity int) int
+		LastPlayedAt      func(childComplexity int) int
 		Manual            func(childComplexity int) int
 		MemberAvatarURL   func(childComplexity int) int
 		MemberDisplayName func(childComplexity int) int
@@ -6538,6 +6539,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.QuestParticipantType.CreatedAt(childComplexity), true
 
+	case "QuestParticipantType.lastPlayedAt":
+		if e.complexity.QuestParticipantType.LastPlayedAt == nil {
+			break
+		}
+
+		return e.complexity.QuestParticipantType.LastPlayedAt(childComplexity), true
+
 	case "QuestParticipantType.manual":
 		if e.complexity.QuestParticipantType.Manual == nil {
 			break
@@ -9255,6 +9263,8 @@ type QuestParticipantType {
   memberHandle: String!
   memberDisplayName: String!
   memberAvatarUrl: String
+  # Loaded only for last_game_played. Null there means this player has never played.
+  lastPlayedAt: DateTime
 }
 
 type QuestStateCountType {
@@ -33823,6 +33833,8 @@ func (ec *executionContext) fieldContext_Mutation_signupForQuest(ctx context.Con
 				return ec.fieldContext_QuestParticipantType_memberDisplayName(ctx, field)
 			case "memberAvatarUrl":
 				return ec.fieldContext_QuestParticipantType_memberAvatarUrl(ctx, field)
+			case "lastPlayedAt":
+				return ec.fieldContext_QuestParticipantType_lastPlayedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type QuestParticipantType", field.Name)
 		},
@@ -33902,6 +33914,8 @@ func (ec *executionContext) fieldContext_Mutation_withdrawFromQuest(ctx context.
 				return ec.fieldContext_QuestParticipantType_memberDisplayName(ctx, field)
 			case "memberAvatarUrl":
 				return ec.fieldContext_QuestParticipantType_memberAvatarUrl(ctx, field)
+			case "lastPlayedAt":
+				return ec.fieldContext_QuestParticipantType_lastPlayedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type QuestParticipantType", field.Name)
 		},
@@ -33981,6 +33995,8 @@ func (ec *executionContext) fieldContext_Mutation_selectQuestParticipants(ctx co
 				return ec.fieldContext_QuestParticipantType_memberDisplayName(ctx, field)
 			case "memberAvatarUrl":
 				return ec.fieldContext_QuestParticipantType_memberAvatarUrl(ctx, field)
+			case "lastPlayedAt":
+				return ec.fieldContext_QuestParticipantType_lastPlayedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type QuestParticipantType", field.Name)
 		},
@@ -34060,6 +34076,8 @@ func (ec *executionContext) fieldContext_Mutation_attestQuestParticipation(ctx c
 				return ec.fieldContext_QuestParticipantType_memberDisplayName(ctx, field)
 			case "memberAvatarUrl":
 				return ec.fieldContext_QuestParticipantType_memberAvatarUrl(ctx, field)
+			case "lastPlayedAt":
+				return ec.fieldContext_QuestParticipantType_lastPlayedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type QuestParticipantType", field.Name)
 		},
@@ -37221,6 +37239,8 @@ func (ec *executionContext) fieldContext_ParticipationPage_items(_ context.Conte
 				return ec.fieldContext_QuestParticipantType_memberDisplayName(ctx, field)
 			case "memberAvatarUrl":
 				return ec.fieldContext_QuestParticipantType_memberAvatarUrl(ctx, field)
+			case "lastPlayedAt":
+				return ec.fieldContext_QuestParticipantType_lastPlayedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type QuestParticipantType", field.Name)
 		},
@@ -45546,6 +45566,47 @@ func (ec *executionContext) fieldContext_QuestParticipantType_memberAvatarUrl(_ 
 	return fc, nil
 }
 
+func (ec *executionContext) _QuestParticipantType_lastPlayedAt(ctx context.Context, field graphql.CollectedField, obj *QuestParticipantType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_QuestParticipantType_lastPlayedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastPlayedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalODateTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_QuestParticipantType_lastPlayedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QuestParticipantType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type DateTime does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _QuestPointcrawlLinkType_questId(ctx context.Context, field graphql.CollectedField, obj *QuestPointcrawlLinkType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_QuestPointcrawlLinkType_questId(ctx, field)
 	if err != nil {
@@ -47254,6 +47315,8 @@ func (ec *executionContext) fieldContext_QuestType_participants(ctx context.Cont
 				return ec.fieldContext_QuestParticipantType_memberDisplayName(ctx, field)
 			case "memberAvatarUrl":
 				return ec.fieldContext_QuestParticipantType_memberAvatarUrl(ctx, field)
+			case "lastPlayedAt":
+				return ec.fieldContext_QuestParticipantType_lastPlayedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type QuestParticipantType", field.Name)
 		},
@@ -65127,6 +65190,8 @@ func (ec *executionContext) _QuestParticipantType(ctx context.Context, sel ast.S
 			}
 		case "memberAvatarUrl":
 			out.Values[i] = ec._QuestParticipantType_memberAvatarUrl(ctx, field, obj)
+		case "lastPlayedAt":
+			out.Values[i] = ec._QuestParticipantType_lastPlayedAt(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

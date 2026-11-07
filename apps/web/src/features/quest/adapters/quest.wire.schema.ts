@@ -16,6 +16,7 @@ export const questParticipantWireSchema = z.object({
   memberDisplayName: z.string().optional(),
   memberAvatarUrl: z.string().nullable().optional(),
   status: z.string(),
+  lastPlayedAt: z.string().nullable().optional(),
 });
 
 const questBoardItemWireSchema = z.object({

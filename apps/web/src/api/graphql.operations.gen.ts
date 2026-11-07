@@ -1723,7 +1723,7 @@ export type QuestQueryVariables = Exact<{
 }>;
 
 
-export type QuestQuery = { quest: { id: string, shortCode: string, status: string, dmId: string, updatedAt: string, arcId: string | null, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, signupType: string | null, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, regions: Array<string>, arc: { id: string, name: string } | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null, frontmatter: unknown } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, status: string }>, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string, name: string }> } | null };
+export type QuestQuery = { quest: { id: string, shortCode: string, status: string, dmId: string, updatedAt: string, arcId: string | null, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, signupType: string | null, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, regions: Array<string>, arc: { id: string, name: string } | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null, frontmatter: unknown } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, status: string, lastPlayedAt: string | null }>, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string, name: string }> } | null };
 
 export type QuestListQueryVariables = Exact<{
   filters: QuestFiltersInput;
@@ -1762,7 +1762,7 @@ export type QuestParticipantsQueryVariables = Exact<{
 }>;
 
 
-export type QuestParticipantsQuery = { quest: { participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, memberAvatarUrl: string | null, status: string }> } | null };
+export type QuestParticipantsQuery = { quest: { participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, memberAvatarUrl: string | null, status: string, lastPlayedAt: string | null }> } | null };
 
 export type QuestSetPointcrawlLinksMutationVariables = Exact<{
   questId: string;

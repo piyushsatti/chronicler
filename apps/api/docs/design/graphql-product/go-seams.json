@@ -6968,6 +6968,15 @@
           "owner": "QUE01"
         },
         {
+          "name": "LastPlayedAt",
+          "wire_name": "lastPlayedAt",
+          "go_type": "*time.Time",
+          "wire_type": "DateTime",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "QUE01"
+        },
+        {
           "name": "Manual",
           "wire_name": "manual",
           "go_type": "bool",
