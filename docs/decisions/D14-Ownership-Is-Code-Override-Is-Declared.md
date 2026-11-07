@@ -1,6 +1,6 @@
 # D14: Ownership Is Code; Override Is Declared
 
-**Status:** decided; amended 2026-09-16  
+**Status:** decided; amended 2026-09-16; amended 2026-11-07  
 **Kind:** boundary  
 **Owner:** global (`docs/decisions/`)  
 **Interface:** [live-authority](/docs/interfaces/live-authority.md)
@@ -17,6 +17,8 @@ Operation declarations name the required permission and who may act without owni
 
 **September 16 amendment:** every player-character mutation is literally owner-only, including profile/guild/status, progression and logs, verification submission, downtime and D&D Beyond sync. Platform owner, admin, verifier and other staff have no mutation bypass. Separately authorized admin/verifier decisions may append an assessment and change approval/lifecycle state; they do not edit player-authored fields or initiate sync.
 
+**November 7 amendment:** profile fields written by `updateCharacterProfile` — the same fields the owner edits on the character page — may also be edited by an admin (the `admin` role) or the platform owner ([D29](/docs/decisions/D29-Owner-And-Admin-Bypass-Identity-Predicates.md)). Verifiers and other DMs do not receive this grant. Every other player-character mutation stays owner-only: guild and status, progression and logs, verification submission, retirement, downtime, and D&D Beyond sync. This reverses the September 16 amendment for those profile fields only.
+
 Per-row read audience applies to the document family: documents, revisions and links. Quests and characters remain public records; this does not expose a quest brief, linked document or protected body. Document reads follow [scoped-body](/docs/interfaces/scoped-body.md). This ruling adds neither region ownership nor an NPC editing grant from lieutenant assignment.
 
 ## Alternatives rejected
@@ -28,7 +30,7 @@ Per-row read audience applies to the document family: documents, revisions and l
 
 ## Consequences
 
-Ownership, capability, audience and application validity remain distinct. One declared authority surface replaces repeated call-site interpretations. The September amendment supersedes July's general bypass language for player-character mutations only.
+Ownership, capability, audience and application validity remain distinct. One declared authority surface replaces repeated call-site interpretations. The September amendment supersedes July's general bypass language for player-character mutations only. The November 7 amendment restores admin and platform-owner bypass for profile fields only.
 
 ## Enforced by
 

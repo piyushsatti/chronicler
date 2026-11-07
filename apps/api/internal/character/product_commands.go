@@ -292,10 +292,11 @@ func admitOwnedCharacterCommand(ctx context.Context, repos ProductCommandRepos, 
 	if err != nil {
 		return admission, err
 	}
-	if ownerID != fresh.Claims().MemberID {
+	operation := auth.Operation("Mutation." + opName)
+	if ownerID != fresh.Claims().MemberID && !staffMayEditCharacterProfile(fresh, operation) {
 		return admission, apierr.New(apierr.Forbidden, "character owner required")
 	}
-	request, err := auth.ForCharacter(auth.Operation("Mutation."+opName), auth.CharacterFacts{ID: characterID, OwnerID: ownerID})
+	request, err := auth.ForCharacter(operation, auth.CharacterFacts{ID: characterID, OwnerID: ownerID})
 	if err != nil {
 		return admission, err
 	}
@@ -317,12 +318,16 @@ func admitOwnedCharacterCommand(ctx context.Context, repos ProductCommandRepos, 
 	return characterCommandAdmission{fresh: fresh, request: request, decision: decision, claim: claim, ownerID: ownerID}, nil
 }
 
+func staffMayEditCharacterProfile(actor auth.Authority, operation auth.Operation) bool {
+	return operation == "Mutation.updateCharacterProfile" && (actor.Claims().Has(auth.Admin) || actor.IsPlatformOwner())
+}
+
 func admitCharacterWrite(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation auth.Operation, characterID, ownerID string) error {
 	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
 	if err != nil {
 		return err
 	}
-	if fresh.Claims().MemberID != actor.Claims().MemberID || fresh.Claims().MemberID != ownerID {
+	if fresh.Claims().MemberID != actor.Claims().MemberID || (fresh.Claims().MemberID != ownerID && !staffMayEditCharacterProfile(fresh, operation)) {
 		return apierr.New(apierr.Forbidden, "character owner required")
 	}
 	request, err := auth.ForCharacter(operation, auth.CharacterFacts{ID: characterID, OwnerID: ownerID})

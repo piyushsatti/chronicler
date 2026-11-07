@@ -9,30 +9,73 @@ import { CharacterPage } from '../../../src/features/character/pages/CharacterPa
 import { renderWithProviders } from '../../test-utils.js';
 import { signInCharacter, characterActor } from './characterAuth.js';
 
+function renderCharacter() {
+  renderWithProviders(
+    <Routes>
+      <Route path="/characters/:code" element={<CharacterPage />} />
+    </Routes>,
+    { route: '/characters/C-101' },
+  );
+}
+
 describe('Character owner admission', () => {
-  it('does not offer mutations to an admin who owns another character', async () => {
+  it('lets an admin edit the profile and shows the saved text', async () => {
     signInCharacter({
       ...characterActor,
       id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
       roles: ['admin'],
     });
-    renderWithProviders(
-      <Routes>
-        <Route path="/characters/:code" element={<CharacterPage />} />
-      </Routes>,
-      { route: '/characters/C-101' },
+    let description = wire.description;
+    server.use(
+      graphql.query('Character', () =>
+        HttpResponse.json({ data: { character: { ...wire, imageUrl: null, description } } }),
+      ),
+      graphql.mutation('UpdateCharacterProfile', async ({ variables }) => {
+        const input = variables.input as { description?: string | null };
+        if (typeof input.description === 'string') description = input.description;
+        return HttpResponse.json({
+          data: {
+            updateCharacterProfile: {
+              id: wire.id,
+              description,
+              imageUrl: null,
+              updatedAt: wire.updatedAt,
+            },
+          },
+        });
+      }),
     );
+    renderCharacter();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Edit' }));
+    expect(screen.getByRole('heading', { name: 'Edit character' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Retire character' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sync D&D Beyond' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Submit for verification' })).not.toBeInTheDocument();
+    const field = screen.getByRole('textbox', { name: 'Description' });
+    await user.clear(field);
+    await user.type(field, 'Corrected by admin.');
+    await user.click(screen.getByRole('button', { name: 'Save profile' }));
+    expect(await screen.findByText('Profile saved.')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Overview' }));
+    expect(await screen.findByText('Corrected by admin.')).toBeVisible();
+  });
+  it.each([
+    ['verifier', ['verifier']],
+    ['another DM', ['dm']],
+  ])('does not offer profile edits to %s', async (_label, roles) => {
+    signInCharacter({
+      ...characterActor,
+      id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      roles,
+    });
+    renderCharacter();
     await screen.findByRole('heading', { name: 'Lyra Storm' });
     expect(screen.queryByRole('tab', { name: 'Edit' })).not.toBeInTheDocument();
   });
   it('offers mutations when the live member UUID matches the immutable owner', async () => {
     signInCharacter();
-    renderWithProviders(
-      <Routes>
-        <Route path="/characters/:code" element={<CharacterPage />} />
-      </Routes>,
-      { route: '/characters/C-101' },
-    );
+    renderCharacter();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Edit' }));
     expect(await screen.findByRole('heading', { name: 'Edit character' })).toBeInTheDocument();
@@ -72,12 +115,7 @@ describe('Character owner admission', () => {
         }),
       ),
     );
-    renderWithProviders(
-      <Routes>
-        <Route path="/characters/:code" element={<CharacterPage />} />
-      </Routes>,
-      { route: '/characters/C-101' },
-    );
+    renderCharacter();
     expect(await screen.findByText(/D&D Beyond last synced/)).toBeVisible();
     expect(screen.getByText('Class and level').nextElementSibling).toHaveTextContent('Wizard');
     expect(screen.getByText('Species').nextElementSibling).toHaveTextContent('Elf');
