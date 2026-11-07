@@ -8,6 +8,7 @@ import type {
   QuestAttestParticipationMutation,
   QuestAddParticipantMutation,
   QuestRemoveParticipantMutation,
+  PublishQuestPlayerListMutation,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -16,6 +17,7 @@ import WITHDRAW from './questWithdraw.graphql?raw';
 import TRANSITION from './questTransition.graphql?raw';
 import CLOSE from './questClose.graphql?raw';
 import SELECT from './questSelect.graphql?raw';
+import PUBLISH from './questPublish.graphql?raw';
 import ATTEST from './questAttest.graphql?raw';
 import ADD from './questAddParticipant.graphql?raw';
 import REMOVE from './questRemoveParticipant.graphql?raw';
@@ -26,6 +28,7 @@ export type QuestCommand =
   | { kind: 'signup' | 'withdraw' | 'rosterAdd' | 'rosterRemove'; questId: string; characterId: string }
   | { kind: 'transition'; questId: string; to: 'played' | 'cancelled' }
   | { kind: 'select'; questId: string; characterIds: string[] }
+  | { kind: 'publishPlayerList'; questId: string }
   | { kind: 'attest'; questId: string; entries: Attendance[] }
   | { kind: 'close'; questId: string; attendance: Attendance[]; rewards: Reward[] };
 
@@ -97,6 +100,18 @@ export async function executeQuestCommand(
         });
         z.array(participant).parse(data.selectQuestParticipants);
         return 'Selected characters have a seat.';
+      }
+      case 'publishPlayerList': {
+        const data = await graphqlRequest<PublishQuestPlayerListMutation>(PUBLISH, {
+          questId,
+          meta,
+        });
+        const receipt = z
+          .object({ jobId: z.string().uuid(), deliveryStatus: z.string() })
+          .parse(data.publishQuestPlayerList);
+        return receipt.deliveryStatus === 'applied'
+          ? 'That player list is already in the quest thread.'
+          : 'Player list queued in the quest thread.';
       }
       case 'attest': {
         const data = await graphqlRequest<QuestAttestParticipationMutation>(ATTEST, {

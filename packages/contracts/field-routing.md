@@ -175,7 +175,7 @@ The original `mounted-http-013` through `mounted-http-017`, `mounted-http-025` t
 
 ## Complete root inventory
 
-The following166 roots are the accepted business API. Introspection fields are excluded. Each keeps the SDL argument/default/result contract.
+The following 167 roots are the accepted business API. Introspection fields are excluded. Each keeps the SDL argument/default/result contract.
 
 | Operation                                   | Source                          |
 | ------------------------------------------- | ------------------------------- |
@@ -211,6 +211,7 @@ The following166 roots are the accepted business API. Introspection fields are e
 | Mutation.logCharacterEvent                  | character-operations.graphql    |
 | Mutation.markNotificationsRead              | notification-operations.graphql |
 | Mutation.publishDocument                    | document-operations.graphql     |
+| Mutation.publishQuestPlayerList             | quest-operations.graphql        |
 | Mutation.redriveDiscordDelivery             | site-operations.graphql         |
 | Mutation.removeQuestFromArc                 | quest-operations.graphql        |
 | Mutation.removeQuestParticipant             | quest/operations.graphql        |

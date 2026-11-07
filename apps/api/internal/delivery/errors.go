@@ -9,8 +9,12 @@ import (
 	"strings"
 )
 
-// ErrBadPayload marks a discord job body that is not QuestDiscordPayload.
+// ErrBadPayload marks a discord job body the worker cannot run.
 var ErrBadPayload = errors.New("invalid quest discord job payload")
+
+// ErrPlayerListTooLong is a roster Discord will not accept in one message.
+// Retrying cannot shrink it.
+var ErrPlayerListTooLong = errors.New("player list exceeds discord message limit")
 
 // ErrDiscordForbidden marks a Discord 403: the bot lacks a permission or
 // channel access. Retrying cannot fix it, so the job is parked for repair.

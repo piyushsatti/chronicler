@@ -181,7 +181,13 @@ func (s *PostgresStore) Complete(ctx context.Context, r Receipt, op string, stat
 	return err
 }
 func (s *PostgresStore) Succeed(ctx context.Context, r Receipt) error {
-	return s.Complete(ctx, r, "succeed", Succeeded, []byte(`{}`), 0, "")
+	return s.SucceedWith(ctx, r, []byte(`{}`))
+}
+func (s *PostgresStore) SucceedWith(ctx context.Context, r Receipt, payload []byte) error {
+	if len(payload) == 0 {
+		payload = []byte(`{}`)
+	}
+	return s.Complete(ctx, r, "succeed", Succeeded, payload, 0, "")
 }
 func (s *PostgresStore) Retry(ctx context.Context, r Receipt, after time.Duration, reason string) error {
 	return s.Complete(ctx, r, "retry", RetryWait, nil, after, reason)

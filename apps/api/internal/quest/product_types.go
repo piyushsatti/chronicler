@@ -333,6 +333,11 @@ type SyncQuestDiscordSpec struct {
 	AsOf    time.Time
 }
 
+type PublishQuestPlayerListSpec struct {
+	QuestId string
+	AsOf    time.Time
+}
+
 type TransitionQuestStatusSpec struct {
 	Id   string
 	To   string
@@ -610,6 +615,14 @@ type SyncQuestDiscordState struct {
 	AllowedHexes []spatial.PointcrawlAdmission
 }
 
+type PublishQuestPlayerListState struct {
+	Exists    bool
+	SubjectID string
+	OwnerID   string
+	Status    string
+	ThreadID  string
+}
+
 type TransitionQuestStatusState struct {
 	Exists       bool
 	SubjectID    string
@@ -783,6 +796,13 @@ type SyncQuestDiscordWrite struct {
 	DecisionID     *string
 	RevisionID     *string
 	EventKey       *string
+}
+
+type PublishQuestPlayerListWrite struct {
+	ActorID        string
+	At             time.Time
+	ValidatedInput PublishQuestPlayerListSpec
+	Locked         PublishQuestPlayerListState
 }
 
 type TransitionQuestStatusWrite struct {

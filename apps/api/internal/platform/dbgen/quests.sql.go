@@ -618,6 +618,25 @@ func (q *Queries) QuestDiscordRevisions(ctx context.Context, publicID pgtype.UUI
 	return i, err
 }
 
+const questPlayerListTarget = `-- name: QuestPlayerListTarget :one
+SELECT q.discord_thread_id, q.status, q.deleted_at
+FROM quests q
+WHERE q.public_id = $1::uuid
+`
+
+type QuestPlayerListTargetRow struct {
+	DiscordThreadID pgtype.Text        `json:"discord_thread_id"`
+	Status          string             `json:"status"`
+	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+}
+
+func (q *Queries) QuestPlayerListTarget(ctx context.Context, publicID pgtype.UUID) (QuestPlayerListTargetRow, error) {
+	row := q.db.QueryRow(ctx, questPlayerListTarget, publicID)
+	var i QuestPlayerListTargetRow
+	err := row.Scan(&i.DiscordThreadID, &i.Status, &i.DeletedAt)
+	return i, err
+}
+
 const saveQuestStatus = `-- name: SaveQuestStatus :exec
 UPDATE quests
 SET status = $1, updated_at = now()

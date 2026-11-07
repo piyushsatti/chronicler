@@ -11,6 +11,23 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const backgroundJobByKey = `-- name: BackgroundJobByKey :one
+SELECT public_id, state, completion_payload FROM background_jobs WHERE job_key = $1::text
+`
+
+type BackgroundJobByKeyRow struct {
+	PublicID          pgtype.UUID `json:"public_id"`
+	State             string      `json:"state"`
+	CompletionPayload []byte      `json:"completion_payload"`
+}
+
+func (q *Queries) BackgroundJobByKey(ctx context.Context, jobKey string) (BackgroundJobByKeyRow, error) {
+	row := q.db.QueryRow(ctx, backgroundJobByKey, jobKey)
+	var i BackgroundJobByKeyRow
+	err := row.Scan(&i.PublicID, &i.State, &i.CompletionPayload)
+	return i, err
+}
+
 const enqueueJob = `-- name: EnqueueJob :exec
 INSERT INTO background_jobs (job_key,kind,lane,state,payload,next_run_at)
 VALUES ($1,$2,$3,'queued',$4,clock_timestamp())
@@ -28,6 +45,33 @@ type EnqueueJobParams struct {
 
 func (q *Queries) EnqueueJob(ctx context.Context, arg EnqueueJobParams) error {
 	_, err := q.db.Exec(ctx, enqueueJob,
+		arg.JobKey,
+		arg.Kind,
+		arg.Lane,
+		arg.Payload,
+	)
+	return err
+}
+
+const enqueuePlayerListJob = `-- name: EnqueuePlayerListJob :exec
+INSERT INTO background_jobs (job_key,kind,lane,state,payload,next_run_at)
+VALUES ($1,$2,$3,'queued',$4,clock_timestamp())
+ON CONFLICT(job_key) DO UPDATE SET state='queued',payload=EXCLUDED.payload,attempts=0,error_message=NULL,safe_error_code=NULL,
+ next_run_at=clock_timestamp(),updated_at=clock_timestamp(),completion_operation=NULL,completion_payload=NULL
+WHERE background_jobs.state<>'running'
+ AND (background_jobs.state<>'succeeded' OR COALESCE(background_jobs.completion_payload->>'message_id','')='')
+`
+
+type EnqueuePlayerListJobParams struct {
+	JobKey  string `json:"job_key"`
+	Kind    string `json:"kind"`
+	Lane    string `json:"lane"`
+	Payload []byte `json:"payload"`
+}
+
+// Requeue a succeeded roster that never stored a message id.
+func (q *Queries) EnqueuePlayerListJob(ctx context.Context, arg EnqueuePlayerListJobParams) error {
+	_, err := q.db.Exec(ctx, enqueuePlayerListJob,
 		arg.JobKey,
 		arg.Kind,
 		arg.Lane,

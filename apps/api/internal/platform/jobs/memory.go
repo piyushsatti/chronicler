@@ -104,8 +104,14 @@ func (m *MemoryStore) mutate(ctx context.Context, r Receipt, fn func(*Job, int64
 	return ErrMissing
 }
 func (m *MemoryStore) Succeed(ctx context.Context, r Receipt) error {
+	return m.SucceedWith(ctx, r, []byte(`{}`))
+}
+func (m *MemoryStore) SucceedWith(ctx context.Context, r Receipt, payload []byte) error {
+	if len(payload) == 0 {
+		payload = []byte(`{}`)
+	}
 	return m.mutate(ctx, r, func(j *Job, t int64, n time.Time) error {
-		return j.Finish(t, n, "succeed", Succeeded, []byte(`{}`), 0, "")
+		return j.Finish(t, n, "succeed", Succeeded, payload, 0, "")
 	})
 }
 func (m *MemoryStore) Fail(ctx context.Context, r Receipt, state State, reason string) error {

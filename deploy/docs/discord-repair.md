@@ -30,12 +30,16 @@ channel.
 | ---------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Quest announce channel | View Channel, Send Messages                                                                                    | Posting the announcement. Editing the bot's own post needs nothing more.                                                                                   |
 | Quest announce channel | Create Public Threads                                                                                          | Opening the discussion thread on the first post. This step is best effort: a refusal is logged, the delivery still succeeds and the thread is not retried. |
+| Quest announce channel | Send Messages in Threads                                                                                       | Posting the seated player list into the quest thread.                                                                                                      |
+| Quest announce channel | Read Message History                                                                                           | Listing recent thread messages so a retry adopts an existing roster post instead of creating a second one.                                                 |
 | Guild                  | Create Events                                                                                                  | Creating an EXTERNAL scheduled event when the quest has no voice channel.                                                                                  |
 | Quest voice channel    | Create Events, View Channel, Connect                                                                           | Creating a VOICE scheduled event when the quest has a voice channel.                                                                                       |
 | Quest role or bot role | The role allows "Allow anyone to @mention this role", or the bot has "Mention @everyone, @here, and All Roles" | Pinging the quest announcement role. Without either, the post goes out but the role is not notified.                                                       |
 
-The worker posts plain message content without embeds and never writes inside
-the thread, so it does not need Embed Links or Send Messages in Threads.
+The worker posts plain message content without embeds, so it does not need
+Embed Links. It writes the seated player list in the quest thread and reads
+recent messages there, so the announce channel needs Send Messages in Threads
+and Read Message History.
 
 Updating or terminating the bot's own events requires either Create Events or
 Manage Events. VOICE events also require View Channel and Connect on the voice

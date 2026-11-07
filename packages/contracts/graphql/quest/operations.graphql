@@ -79,6 +79,7 @@ extend type Mutation {
     meta: CommandMeta!
   ): [QuestParticipantType!]!
   syncQuestDiscord(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
+  publishQuestPlayerList(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
   deleteQuest(questId: ID!, meta: CommandMeta!): CommandReceipt!
   restoreQuest(questId: ID!, meta: CommandMeta!): QuestType!
   setQuestPointcrawlLinks(

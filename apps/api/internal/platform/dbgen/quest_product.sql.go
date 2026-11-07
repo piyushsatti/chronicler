@@ -2404,6 +2404,35 @@ func (q *Queries) ProductQuestSeatPriority(ctx context.Context, questID pgtype.U
 	return items, nil
 }
 
+const productQuestSeatedDiscordIDs = `-- name: ProductQuestSeatedDiscordIDs :many
+SELECT DISTINCT m.discord_id
+FROM quests q
+JOIN quest_participants qp ON qp.quest_id = q.id AND qp.status = 'signed_up'
+JOIN members m ON m.id = qp.member_id
+WHERE q.public_id = $1::uuid
+ORDER BY m.discord_id
+`
+
+func (q *Queries) ProductQuestSeatedDiscordIDs(ctx context.Context, publicID pgtype.UUID) ([]string, error) {
+	rows, err := q.db.Query(ctx, productQuestSeatedDiscordIDs, publicID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var discord_id string
+		if err := rows.Scan(&discord_id); err != nil {
+			return nil, err
+		}
+		items = append(items, discord_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const productQuestSetDeleted = `-- name: ProductQuestSetDeleted :one
 UPDATE quests q SET deleted_at = $1::timestamptz,
     deleted_by = $2::bigint, updated_at = $3::timestamptz

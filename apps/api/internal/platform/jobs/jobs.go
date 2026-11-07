@@ -49,6 +49,8 @@ type Store interface {
 	ClaimOne(ctx context.Context, lane string) (Job, error)
 	Renew(ctx context.Context, receipt Receipt) (Lease, error)
 	Succeed(ctx context.Context, receipt Receipt) error
+	// SucceedWith is Succeed with the completion payload the worker stored.
+	SucceedWith(ctx context.Context, receipt Receipt, payload []byte) error
 	Retry(ctx context.Context, receipt Receipt, after time.Duration, reason string) error
 	Fail(ctx context.Context, receipt Receipt, state State, reason string) error
 	// FailWithCode is Fail that also records a safe error code for operators.
@@ -65,6 +67,19 @@ type QuestDiscordPayload struct {
 
 func QuestDiscordKey(publicID string) string {
 	return "quest-discord:" + publicID
+}
+
+// QuestPlayerListPayload is one publish of the seated roster. Fingerprint is
+// the sorted Discord ids joined with commas. DiscordIDs are the mentions.
+// A succeeded job for the same fingerprint is not queued again.
+type QuestPlayerListPayload struct {
+	PublicID    string   `json:"public_id"`
+	Fingerprint string   `json:"fingerprint"`
+	DiscordIDs  []string `json:"discord_ids"`
+}
+
+func QuestPlayerListKey(publicID, fingerprint string) string {
+	return "quest-player-list:" + publicID + ":" + fingerprint
 }
 
 const MaxAttempts = 8

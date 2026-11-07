@@ -1110,6 +1110,25 @@ func (r *mutationResolver) SyncQuestDiscord(ctx context.Context, questID string,
 	return toDeliveryReceipt(receipt), nil
 }
 
+// PublishQuestPlayerList is the resolver for the publishQuestPlayerList field.
+func (r *mutationResolver) PublishQuestPlayerList(ctx context.Context, questID string, meta CommandMeta) (*DeliveryReceipt, error) {
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.QuestCommands.PublishQuestPlayerList(ctx, actor, quest.PublishQuestPlayerListSpec{
+		QuestId: questID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDeliveryReceipt(receipt), nil
+}
+
 // DeleteQuest is the resolver for the deleteQuest field.
 func (r *mutationResolver) DeleteQuest(ctx context.Context, questID string, meta CommandMeta) (*CommandReceipt, error) {
 	if r.Services.QuestCommands == nil {
