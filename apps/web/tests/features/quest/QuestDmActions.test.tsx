@@ -192,4 +192,27 @@ describe('QuestDmActions waitlist selection', () => {
     await user.click(screen.getByRole('button', { name: 'Add by Last Game Played' }));
     expect(sent[1]).toEqual([zara, quinn, adam]);
   });
+
+  it('publishes the seated players for Last Game Played and DM pick', async () => {
+    const user = userEvent.setup();
+    for (const signupType of ['last_game_played', 'dm_pick'] as const) {
+      const sent: QuestCommand[] = [];
+      const view = renderWithProviders(
+        <QuestDmActions
+          quest={quest(signupType)}
+          pending={false}
+          execute={async (command) => {
+            sent.push(command);
+            return true;
+          }}
+          error={null}
+        />,
+      );
+      await user.click(screen.getByRole('button', { name: 'Publish player list' }));
+      expect(sent).toEqual([
+        { kind: 'publishPlayerList', questId: quest(signupType).id },
+      ]);
+      view.unmount();
+    }
+  });
 });

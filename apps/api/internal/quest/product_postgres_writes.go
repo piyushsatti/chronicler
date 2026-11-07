@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf16"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -1222,6 +1223,103 @@ func (p *ProductPostgres) StoreSyncQuestDiscord(ctx context.Context, write SyncQ
 		AppliedRevision: bumped.DiscordAppliedRevision,
 		DeliveryStatus:  "queued",
 	}, nil
+}
+
+func (p *ProductPostgres) LockPublishQuestPlayerList(ctx context.Context, spec PublishQuestPlayerListSpec) (PublishQuestPlayerListState, error) {
+	locked, err := p.lockLiveQuest(ctx, spec.QuestId, spec.AsOf)
+	if err != nil {
+		return PublishQuestPlayerListState{}, err
+	}
+	state := PublishQuestPlayerListState{Exists: locked.Exists, SubjectID: locked.SubjectID, OwnerID: locked.OwnerID}
+	if !locked.Exists {
+		return state, nil
+	}
+	state.Status = locked.Row.Status
+	if locked.Row.DiscordThreadID.Valid {
+		state.ThreadID = locked.Row.DiscordThreadID.String
+	}
+	return state, nil
+}
+
+func (p *ProductPostgres) StorePublishQuestPlayerList(ctx context.Context, write PublishQuestPlayerListWrite) (DeliveryReceipt, error) {
+	if !write.Locked.Exists {
+		return DeliveryReceipt{}, apierr.New(apierr.NotFound, "quest not found")
+	}
+	if write.Locked.Status != "open" && write.Locked.Status != "full" {
+		return DeliveryReceipt{}, apierr.New(apierr.Conflict, "quest is not open for a player list")
+	}
+	if write.Locked.ThreadID == "" {
+		return DeliveryReceipt{}, apierr.New(apierr.Conflict, "quest discord thread is not ready")
+	}
+	questID, err := questUUID(write.ValidatedInput.QuestId)
+	if err != nil {
+		return DeliveryReceipt{}, err
+	}
+	ids, err := seatedDiscordIDs(ctx, p, questID)
+	if err != nil {
+		return DeliveryReceipt{}, err
+	}
+	fingerprint := strings.Join(ids, ",")
+	if err := p.enqueueQuestPlayerList(ctx, write.ValidatedInput.QuestId, fingerprint, ids); err != nil {
+		return DeliveryReceipt{}, err
+	}
+	row, err := p.queries().BackgroundJobByKey(ctx, jobs.QuestPlayerListKey(write.ValidatedInput.QuestId, fingerprint))
+	if err != nil {
+		return DeliveryReceipt{}, err
+	}
+	return DeliveryReceipt{
+		JobId:          db.UUIDString(row.PublicID),
+		DeliveryStatus: playerListDeliveryStatus(row.State, row.CompletionPayload),
+	}, nil
+}
+
+func playerListDeliveryStatus(state string, payload []byte) string {
+	var body struct {
+		MessageID string `json:"message_id"`
+	}
+	if state == string(jobs.Succeeded) && json.Unmarshal(payload, &body) == nil && body.MessageID != "" {
+		return "applied"
+	}
+	return "queued"
+}
+
+func seatedDiscordIDs(ctx context.Context, p *ProductPostgres, questID pgtype.UUID) ([]string, error) {
+	ids, err := p.queries().ProductQuestSeatedDiscordIDs(ctx, questID)
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return nil, apierr.New(apierr.Conflict, "player list is empty")
+	}
+	if len(ids) > 100 {
+		return nil, apierr.New(apierr.Conflict, "player list is too long to publish")
+	}
+	mentions := make([]string, len(ids))
+	for i, id := range ids {
+		if !delivery.ValidSnowflake(id) {
+			return nil, apierr.New(apierr.Conflict, "player is missing a discord id")
+		}
+		mentions[i] = "<@" + id + ">"
+	}
+	if len(utf16.Encode([]rune("Players: "+strings.Join(mentions, " ")))) > delivery.DiscordMessageLimit {
+		return nil, apierr.New(apierr.Conflict, "player list is too long to publish")
+	}
+	return ids, nil
+}
+
+func (p *ProductPostgres) enqueueQuestPlayerList(ctx context.Context, publicID, fingerprint string, discordIDs []string) error {
+	payload, err := json.Marshal(jobs.QuestPlayerListPayload{
+		PublicID: publicID, Fingerprint: fingerprint, DiscordIDs: discordIDs,
+	})
+	if err != nil {
+		return err
+	}
+	return p.queries().EnqueuePlayerListJob(ctx, dbgen.EnqueuePlayerListJobParams{
+		JobKey:  jobs.QuestPlayerListKey(publicID, fingerprint),
+		Kind:    delivery.KindQuestPlayerList,
+		Lane:    delivery.LaneDiscord,
+		Payload: payload,
+	})
 }
 
 func (p *ProductPostgres) LockUpsertQuestSummary(ctx context.Context, spec UpsertQuestSummarySpec) (UpsertQuestSummaryState, error) {

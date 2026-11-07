@@ -21421,6 +21421,8 @@
         "StoreSignupForQuest(ctx context.Context, write quest.SignupForQuestWrite) (quest.QuestParticipantView, string, error)",
         "LockSyncQuestDiscord(ctx context.Context, spec quest.SyncQuestDiscordSpec) (quest.SyncQuestDiscordState, error)",
         "StoreSyncQuestDiscord(ctx context.Context, write quest.SyncQuestDiscordWrite) (quest.DeliveryReceipt, error)",
+        "LockPublishQuestPlayerList(ctx context.Context, spec quest.PublishQuestPlayerListSpec) (quest.PublishQuestPlayerListState, error)",
+        "StorePublishQuestPlayerList(ctx context.Context, write quest.PublishQuestPlayerListWrite) (quest.DeliveryReceipt, error)",
         "LockTransitionQuestStatus(ctx context.Context, spec quest.TransitionQuestStatusSpec) (quest.TransitionQuestStatusState, error)",
         "StoreTransitionQuestStatus(ctx context.Context, write quest.TransitionQuestStatusWrite) (quest.QuestView, error)",
         "LockUpdateQuest(ctx context.Context, spec quest.UpdateQuestSpec) (quest.UpdateQuestState, error)",

@@ -677,6 +677,7 @@ type ComplexityRoot struct {
 		LogCharacterEvent                  func(childComplexity int, characterID string, body string, questID *string, meta CommandMeta) int
 		MarkNotificationsRead              func(childComplexity int, ids []string, meta CommandMeta) int
 		PublishDocument                    func(childComplexity int, id string, expectedRevision int, meta CommandMeta) int
+		PublishQuestPlayerList             func(childComplexity int, questID string, meta CommandMeta) int
 		RedriveDiscordDelivery             func(childComplexity int, jobID string, reason string, meta CommandMeta) int
 		RemoveQuestFromArc                 func(childComplexity int, questID string, meta CommandMeta) int
 		RemoveQuestParticipant             func(childComplexity int, questID string, characterID string, meta CommandMeta) int
@@ -1314,6 +1315,7 @@ type MutationResolver interface {
 	SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, meta CommandMeta) ([]*QuestParticipantType, error)
 	AttestQuestParticipation(ctx context.Context, questID string, entries []*ParticipationAttestationInput, meta CommandMeta) ([]*QuestParticipantType, error)
 	SyncQuestDiscord(ctx context.Context, questID string, meta CommandMeta) (*DeliveryReceipt, error)
+	PublishQuestPlayerList(ctx context.Context, questID string, meta CommandMeta) (*DeliveryReceipt, error)
 	DeleteQuest(ctx context.Context, questID string, meta CommandMeta) (*CommandReceipt, error)
 	RestoreQuest(ctx context.Context, questID string, meta CommandMeta) (*QuestType, error)
 	SetQuestPointcrawlLinks(ctx context.Context, questID string, links []*QuestPointcrawlLinkInput, meta CommandMeta) ([]*QuestPointcrawlLinkType, error)
@@ -4437,6 +4439,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.PublishDocument(childComplexity, args["id"].(string), args["expectedRevision"].(int), args["meta"].(CommandMeta)), true
+
+	case "Mutation.publishQuestPlayerList":
+		if e.complexity.Mutation.PublishQuestPlayerList == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_publishQuestPlayerList_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PublishQuestPlayerList(childComplexity, args["questId"].(string), args["meta"].(CommandMeta)), true
 
 	case "Mutation.redriveDiscordDelivery":
 		if e.complexity.Mutation.RedriveDiscordDelivery == nil {
@@ -9179,6 +9193,7 @@ extend type Mutation {
     meta: CommandMeta!
   ): [QuestParticipantType!]!
   syncQuestDiscord(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
+  publishQuestPlayerList(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
   deleteQuest(questId: ID!, meta: CommandMeta!): CommandReceipt!
   restoreQuest(questId: ID!, meta: CommandMeta!): QuestType!
   setQuestPointcrawlLinks(
@@ -10488,6 +10503,22 @@ func (ec *executionContext) field_Mutation_publishDocument_args(ctx context.Cont
 		return nil, err
 	}
 	args["meta"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_publishQuestPlayerList_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "questId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["questId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
+	if err != nil {
+		return nil, err
+	}
+	args["meta"] = arg1
 	return args, nil
 }
 
@@ -34397,6 +34428,71 @@ func (ec *executionContext) fieldContext_Mutation_syncQuestDiscord(ctx context.C
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_syncQuestDiscord_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_publishQuestPlayerList(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_publishQuestPlayerList(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PublishQuestPlayerList(rctx, fc.Args["questId"].(string), fc.Args["meta"].(CommandMeta))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*DeliveryReceipt)
+	fc.Result = res
+	return ec.marshalNDeliveryReceipt2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐDeliveryReceipt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_publishQuestPlayerList(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "jobId":
+				return ec.fieldContext_DeliveryReceipt_jobId(ctx, field)
+			case "desiredRevision":
+				return ec.fieldContext_DeliveryReceipt_desiredRevision(ctx, field)
+			case "appliedRevision":
+				return ec.fieldContext_DeliveryReceipt_appliedRevision(ctx, field)
+			case "deliveryStatus":
+				return ec.fieldContext_DeliveryReceipt_deliveryStatus(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DeliveryReceipt", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_publishQuestPlayerList_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -62364,6 +62460,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "syncQuestDiscord":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_syncQuestDiscord(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "publishQuestPlayerList":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_publishQuestPlayerList(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

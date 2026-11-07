@@ -722,3 +722,12 @@ SELECT public_id FROM members WHERE id = @member_id::bigint;
 
 -- name: ProductQuestArcInternalID :one
 SELECT arc.id FROM quest_arcs arc WHERE arc.public_id = @arc_id::uuid;
+
+-- name: ProductQuestSeatedDiscordIDs :many
+SELECT DISTINCT m.discord_id
+FROM quests q
+JOIN quest_participants qp ON qp.quest_id = q.id AND qp.status = 'signed_up'
+JOIN members m ON m.id = qp.member_id
+WHERE q.public_id = sqlc.arg(public_id)::uuid
+ORDER BY m.discord_id;
+

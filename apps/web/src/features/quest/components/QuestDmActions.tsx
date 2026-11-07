@@ -116,6 +116,15 @@ export function QuestDmActions({
             >
               Mark played
             </Button>
+            <Button
+              variant="secondary"
+              disabled={pending || quest.filledCount < 1}
+              onClick={() => {
+                void execute({ kind: 'publishPlayerList', questId: quest.id });
+              }}
+            >
+              Publish player list
+            </Button>
           </div>
           {quest.participants.some(
             (participant) => participant.status === 'waitlisted',

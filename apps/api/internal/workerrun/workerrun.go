@@ -59,7 +59,7 @@ func configureWorker(ctx context.Context, cfg config.Config, pool *db.Pool) (*wo
 			Token: os.Getenv("DISCORD_BOT_TOKEN"), GuildID: os.Getenv("GUILD_ID"),
 			FallbackChannelID: os.Getenv("DISCORD_ANNOUNCE_CHANNEL_ID"),
 			FallbackOrigin:    firstOrigin(cfg.CORSOrigins),
-			Settings:          applier, Quests: applier,
+			Settings:          applier, Quests: applier, Players: applier,
 			HTTP: &http.Client{Timeout: 30 * time.Second}, Apply: applier,
 			DryRun: envTruthy("DISCORD_DELIVERY_DRY_RUN"),
 		}

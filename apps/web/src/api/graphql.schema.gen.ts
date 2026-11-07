@@ -938,6 +938,7 @@ export type Mutation = {
   logCharacterEvent: CharacterLogType;
   markNotificationsRead: NotificationWriteReceipt;
   publishDocument: DocumentType;
+  publishQuestPlayerList: DeliveryReceipt;
   redriveDiscordDelivery: DeliveryReceipt;
   removeQuestFromArc: QuestType;
   removeQuestParticipant: QuestParticipantType;
@@ -1175,6 +1176,12 @@ export type MutationPublishDocumentArgs = {
   expectedRevision: Scalars['Int']['input'];
   id: Scalars['ID']['input'];
   meta: CommandMeta;
+};
+
+
+export type MutationPublishQuestPlayerListArgs = {
+  meta: CommandMeta;
+  questId: Scalars['ID']['input'];
 };
 
 

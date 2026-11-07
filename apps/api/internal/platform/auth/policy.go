@@ -415,6 +415,7 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.logCharacterEvent":                  ruleCharacter,
 	"Mutation.markNotificationsRead":              ruleSelf,
 	"Mutation.publishDocument":                    ruleDocumentWrite,
+	"Mutation.publishQuestPlayerList":             ruleQuest,
 	"Mutation.redriveDiscordDelivery":             ruleAdmin,
 	"Mutation.removeQuestFromArc":                 ruleQuest,
 	"Mutation.removeQuestParticipant":             ruleQuest,

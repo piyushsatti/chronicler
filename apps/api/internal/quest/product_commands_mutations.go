@@ -981,6 +981,34 @@ func (s ProductCommands) SyncQuestDiscord(ctx context.Context, actor auth.Author
 	})
 }
 
+func (s ProductCommands) PublishQuestPlayerList(ctx context.Context, actor auth.Authority, spec PublishQuestPlayerListSpec, meta product.CommandMeta) (DeliveryReceipt, error) {
+	questID := strings.TrimSpace(spec.QuestId)
+	if err := commandPublicID(&questID); err != nil {
+		return DeliveryReceipt{}, err
+	}
+	spec.QuestId = questID
+	request, preview, err := s.questDMRequest(ctx, actor, "Mutation.publishQuestPlayerList", questID)
+	if err != nil {
+		return DeliveryReceipt{}, err
+	}
+	return runQuestCommand(ctx, s, actor, "publishQuestPlayerList", request, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DeliveryReceipt, error) {
+		locked, err := repos.Quest.LockPublishQuestPlayerList(ctx, PublishQuestPlayerListSpec{QuestId: questID, AsOf: at})
+		if err != nil {
+			return DeliveryReceipt{}, err
+		}
+		if !locked.Exists {
+			return DeliveryReceipt{}, apierr.New(apierr.NotFound, "quest not found")
+		}
+		if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
+			return DeliveryReceipt{}, err
+		}
+		return repos.Quest.StorePublishQuestPlayerList(ctx, PublishQuestPlayerListWrite{
+			ActorID: fresh.Claims().MemberID, At: at,
+			ValidatedInput: PublishQuestPlayerListSpec{QuestId: questID, AsOf: at}, Locked: locked,
+		})
+	})
+}
+
 func (s ProductCommands) UpsertQuestSummary(ctx context.Context, actor auth.Authority, spec UpsertQuestSummarySpec, meta product.CommandMeta) (document.DocumentView, error) {
 	spec, questIDs, facts, subject, err := prepareQuestSummary(spec)
 	if err != nil {

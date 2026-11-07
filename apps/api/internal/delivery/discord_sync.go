@@ -65,6 +65,7 @@ type RESTSync struct {
 	FallbackOrigin string
 	Settings       SettingsReader
 	Quests         QuestStore
+	Players        PlayerListStore
 	HTTP           *http.Client
 	Apply          RevisionApplier
 	// DryRun applies the revision without calling Discord. Opt-in only;

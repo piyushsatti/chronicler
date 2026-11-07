@@ -1782,6 +1782,14 @@ export type QuestSetPointcrawlLinksMutationVariables = Exact<{
 
 export type QuestSetPointcrawlLinksMutation = { setQuestPointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string }> };
 
+export type PublishQuestPlayerListMutationVariables = Exact<{
+  questId: string;
+  meta: CommandMeta;
+}>;
+
+
+export type PublishQuestPlayerListMutation = { publishQuestPlayerList: { jobId: string, deliveryStatus: string } };
+
 export type QuestRegionsQueryVariables = Exact<{
   limit: number;
 }>;
