@@ -185,6 +185,33 @@ describe('QuestDetailPage', () => {
     expect(signup.nextElementSibling).toHaveTextContent('DM pick');
   });
 
+  it('shows the quest post extra information under Additional information', async () => {
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: {
+            quest: {
+              ...detailGood,
+              briefDocument: {
+                ...detailGood.briefDocument,
+                frontmatter: { additional_info: 'Bring a backup character.' },
+              },
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    const extra = await screen.findByRole('region', { name: 'Additional information' });
+    expect(within(extra).getByText('Bring a backup character.')).toBeInTheDocument();
+    expect(within(extra).getByText('lightfall')).toBeInTheDocument();
+  });
+
   it('shows the quest tags under Additional information', async () => {
     renderWithProviders(
       <Routes>
@@ -199,7 +226,18 @@ describe('QuestDetailPage', () => {
   it('omits Additional information for an untagged quest', async () => {
     server.use(
       graphql.query('Quest', () =>
-        HttpResponse.json({ data: { quest: { ...detailGood, tags: [] } } }),
+        HttpResponse.json({
+          data: {
+            quest: {
+              ...detailGood,
+              tags: [],
+              briefDocument: {
+                ...detailGood.briefDocument,
+                frontmatter: { additional_info: '   ' },
+              },
+            },
+          },
+        }),
       ),
     );
     renderWithProviders(

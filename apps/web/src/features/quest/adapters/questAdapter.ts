@@ -114,6 +114,8 @@ export type QuestDetailView = Omit<QuestBoardItemView, 'participants'> & {
   updatedAt: string;
   arc: { id: string; name: string } | null;
   pointcrawlLinks: Array<{ pointcrawlNodeId: string; role: 'expected' | 'visited' }>;
+  /** Player note from the quest post; blank notes are absent. */
+  additionalInfo: string | null;
 };
 
 export type QuestBoardCardPropsView = {
@@ -299,6 +301,8 @@ export function parseQuestDetail(
       updatedAt: parsed.data.updatedAt,
       arc: parsed.data.arc,
       pointcrawlLinks: parsed.data.pointcrawlLinks,
+      additionalInfo:
+        parsed.data.briefDocument?.frontmatter?.additional_info?.trim() || null,
     },
   };
 }
