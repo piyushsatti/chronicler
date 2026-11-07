@@ -62,7 +62,7 @@ function useAdminCommunityStats() {
     queryFn: ({ signal }) =>
       authority.read((request) => loadAdminCommunityStats(request), signal),
   });
-  return panelState(query, 'admin:community-stats');
+  return { ...panelState(query, 'admin:community-stats'), retry: () => void query.refetch() };
 }
 
 export function useAdminTodayPage() {

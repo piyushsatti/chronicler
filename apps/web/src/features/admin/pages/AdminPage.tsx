@@ -130,7 +130,7 @@ function CommunityStatsCard({
     data?: AdminCommunityStatsView;
     isError: boolean;
     error?: AppError;
-    refetch: () => unknown;
+    retry: () => void;
   };
 }): React.JSX.Element {
   return (
@@ -146,7 +146,7 @@ function CommunityStatsCard({
           status="error"
           variant="inline"
           error={stats.error}
-          onRetry={() => void stats.refetch()}
+          onRetry={stats.retry}
         />
       ) : stats.data ? (
         <CommunityStatsBody stats={stats.data} />
