@@ -313,9 +313,9 @@ func (p *ProductPostgres) readBatchPointcrawlLinks(ctx context.Context, _ auth.A
 	parentExists := make([]bool, len(keys))
 	for rows.Next() {
 		var (
-			keyOrdinal            int32
-			parentID              pgtype.UUID
-			parentExistsFlag      bool
+			keyOrdinal                      int32
+			parentID                        pgtype.UUID
+			parentExistsFlag                bool
 			questID, nodeID, role, nodeName pgtype.Text
 		)
 		if err := rows.Scan(&keyOrdinal, &parentID, &parentExistsFlag, &questID, &nodeID, &role, &nodeName); err != nil {

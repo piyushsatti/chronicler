@@ -51,6 +51,15 @@ func admitLockedQuestCharacter(ctx context.Context, repos ProductCommandRepos, a
 	return nil
 }
 
+// selectionExceedsSeatCap reports whether seating `adding` more characters would pass the
+// quest's open seats. DM Pick has no seat cap; every other signup type, including an unset one, does.
+func selectionExceedsSeatCap(signupType *string, slotsMax, filledCount, adding int32) bool {
+	if signupType != nil && *signupType == dmPickSignup {
+		return false
+	}
+	return adding > slotsMax-filledCount
+}
+
 func validateQuestSelection(locked SelectQuestParticipantsState, ids []string) error {
 	if locked.Before == nil || locked.Before.Status != "open" && locked.Before.Status != "full" {
 		return apierr.New(apierr.Conflict, "quest is not accepting participant selection")

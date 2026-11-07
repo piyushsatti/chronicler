@@ -81,6 +81,50 @@ func TestUpdateQuestRejectsCapacityBelowSignupCountAtomically(t *testing.T) {
 	}
 }
 
+func TestUpdateQuestDMPickOverCap(t *testing.T) {
+	t.Run("rejects leaving dm pick", func(t *testing.T) {
+		f := newQuestCloseFixture(t)
+		setQuestPreplay(t, f, false)
+		ctx := context.Background()
+		var original time.Time
+		if err := f.fixture.Pool.QueryRow(ctx, `UPDATE quests SET signup_type='dm_pick', slots_max=1, filled_count=3 WHERE public_id=$1 RETURNING updated_at`, f.questID).Scan(&original); err != nil {
+			t.Fatal(err)
+		}
+		lastGame := "last_game_played"
+		_, err := f.commands.UpdateQuest(ctx, f.actor, UpdateQuestSpec{Id: f.questID, Input: QuestEditFields{
+			ExpectedUpdatedAt: original, SignupType: product.Optional[string]{Set: true, Value: &lastGame},
+		}}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+		assertQuestCloseCode(t, err, apierr.Invalid)
+		if err.Error() != "INVALID: quest capacity exceeded" {
+			t.Fatalf("error=%v", err)
+		}
+		var signup string
+		var slots, filled int
+		if err := f.fixture.Pool.QueryRow(ctx, `SELECT signup_type, slots_max, filled_count FROM quests WHERE public_id=$1`, f.questID).Scan(&signup, &slots, &filled); err != nil {
+			t.Fatal(err)
+		}
+		if signup != "dm_pick" || slots != 1 || filled != 3 {
+			t.Fatalf("quest=%s %d/%d, want dm_pick 3/1", signup, filled, slots)
+		}
+	})
+	t.Run("allows a higher cap still under filled", func(t *testing.T) {
+		f := newQuestCloseFixture(t)
+		setQuestPreplay(t, f, false)
+		ctx := context.Background()
+		var original time.Time
+		if err := f.fixture.Pool.QueryRow(ctx, `UPDATE quests SET signup_type='dm_pick', slots_max=1, filled_count=4 WHERE public_id=$1 RETURNING updated_at`, f.questID).Scan(&original); err != nil {
+			t.Fatal(err)
+		}
+		slots := int32(3)
+		edited, err := f.commands.UpdateQuest(ctx, f.actor, UpdateQuestSpec{Id: f.questID, Input: QuestEditFields{
+			ExpectedUpdatedAt: original, SlotsMax: product.Optional[int32]{Set: true, Value: &slots},
+		}}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+		if err != nil || edited.SlotsMax != 3 || edited.FilledCount != 4 || edited.SignupType == nil || *edited.SignupType != "dm_pick" {
+			t.Fatalf("edited=%+v err=%v", edited, err)
+		}
+	})
+}
+
 func TestUpdateQuestPreservesOmittedAndNullCapacity(t *testing.T) {
 	f := newQuestCloseFixture(t)
 	setQuestPreplay(t, f, false)

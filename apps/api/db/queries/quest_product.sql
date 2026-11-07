@@ -475,6 +475,8 @@ RETURNING q.public_id AS quest_id, c.public_id AS character_id, owner.public_id 
 SELECT q.id, q.public_id, q.status, q.slots_max, q.filled_count
 FROM quests q WHERE q.id = @quest_id::bigint FOR UPDATE OF q;
 -- name: ProductQuestIncrementCapacity :one
+-- DM Pick may pass slots_max, including a later withdrawal that decrements while still over it.
+-- Every other signup type, including an unset one, stays inside the cap.
 UPDATE quests q SET filled_count = q.filled_count + @delta::integer,
        status = CASE
            WHEN q.status = 'open' AND q.filled_count + @delta::integer >= q.slots_max THEN 'full'
@@ -482,7 +484,8 @@ UPDATE quests q SET filled_count = q.filled_count + @delta::integer,
            ELSE q.status
        END
 WHERE q.id = @quest_id::bigint
-  AND q.filled_count + @delta::integer BETWEEN 0 AND q.slots_max
+  AND q.filled_count + @delta::integer >= 0
+  AND (q.filled_count + @delta::integer <= q.slots_max OR q.signup_type = 'dm_pick')
 RETURNING q.id, q.public_id, q.status, q.slots_max, q.filled_count, q.updated_at;
 -- name: ProductQuestReplaceRegions :exec
 DELETE FROM quest_regions WHERE quest_id = @quest_id::bigint;

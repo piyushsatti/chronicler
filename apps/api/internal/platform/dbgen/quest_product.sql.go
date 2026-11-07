@@ -782,7 +782,8 @@ UPDATE quests q SET filled_count = q.filled_count + $1::integer,
            ELSE q.status
        END
 WHERE q.id = $2::bigint
-  AND q.filled_count + $1::integer BETWEEN 0 AND q.slots_max
+  AND q.filled_count + $1::integer >= 0
+  AND (q.filled_count + $1::integer <= q.slots_max OR q.signup_type = 'dm_pick')
 RETURNING q.id, q.public_id, q.status, q.slots_max, q.filled_count, q.updated_at
 `
 
@@ -800,6 +801,8 @@ type ProductQuestIncrementCapacityRow struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+// DM Pick may pass slots_max, including a later withdrawal that decrements while still over it.
+// Every other signup type, including an unset one, stays inside the cap.
 func (q *Queries) ProductQuestIncrementCapacity(ctx context.Context, arg ProductQuestIncrementCapacityParams) (ProductQuestIncrementCapacityRow, error) {
 	row := q.db.QueryRow(ctx, productQuestIncrementCapacity, arg.Delta, arg.QuestID)
 	var i ProductQuestIncrementCapacityRow
