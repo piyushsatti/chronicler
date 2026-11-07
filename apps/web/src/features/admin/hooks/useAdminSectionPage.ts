@@ -1,6 +1,7 @@
+import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
-import { loadCharVerifyQueue } from '../adapters/adminAdapter.js';
-import { useAdminAuthority } from './useAdminAuthority.js';
+import { loadAdminCommunityStats, loadCharVerifyQueue } from '../adapters/adminAdapter.js';
+import { panelState, useAdminAuthority } from './useAdminAuthority.js';
 import { useAdminPage } from './useAdminPage.js';
 import { useAdminOperations } from './useAdminOperations.js';
 import { useBackstoriesPanel } from './useBackstoriesPanel.js';
@@ -53,21 +54,35 @@ function useReviewQueueCount(): number | null {
   return pagination.total ?? query.data.length;
 }
 
+function useAdminCommunityStats() {
+  const authority = useAdminAuthority();
+  const query = useQuery({
+    enabled: authority.allowed,
+    queryKey: ['adminCommunityStats', authority.cacheKey],
+    queryFn: ({ signal }) =>
+      authority.read((request) => loadAdminCommunityStats(request), signal),
+  });
+  return panelState(query, 'admin:community-stats');
+}
+
 export function useAdminTodayPage() {
   const delivery = useAdminOperations();
   const characters = useCharacterDirectoryPanel({ withRegionOptions: false });
   const reviewTotal = useReviewQueueCount();
+  const stats = useAdminCommunityStats();
   if (delivery.query.isError)
     return {
       status: 'error' as const,
       error: delivery.query.error,
       retry: delivery.retry,
     };
+  // Stats load inside their own card. A slow or failed read must not hide alerts.
   if (!delivery.query.data) return { status: 'loading' as const };
   return {
     status: 'ready' as const,
     data: {
       ops: delivery.query.data,
+      stats,
       // The directory count is a convenience; a failed read shows a dash, not an error page.
       characterTotal: characters.query.data ? characters.pagination.total : null,
       reviewTotal,

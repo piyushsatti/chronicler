@@ -11,6 +11,8 @@ import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { isSafeInternalPath } from '../../../utils/url.js';
 import { labelFor, pluralize } from '../../../utils/format.js';
+import type { AppError } from '../../../errors/types.js';
+import type { AdminCommunityStatsView } from '../adapters/adminAdapter.js';
 import type { AdminOpsView } from '../types.js';
 import { useAdminTodayPage } from '../hooks/useAdminSectionPage.js';
 import styles from './adminToday.module.css';
@@ -76,6 +78,82 @@ function TodaySummary({
         </Link>
       </div>
     </section>
+  );
+}
+
+function CommunityStatsBody({ stats }: { stats: AdminCommunityStatsView }): React.JSX.Element {
+  return (
+    <>
+      <StatTile
+        label="Characters"
+        value={stats.totalCharacters}
+        hint="Includes retired and pending"
+      />
+      <p className="type-title">By class</p>
+      <p className="type-caption">A character with more than one class is counted in each.</p>
+      {stats.charactersByClass.length === 0 ? (
+        <EmptyState kind="no-events" message="No characters yet." />
+      ) : (
+        <ul className={styles.list} aria-label="Characters by class">
+          {stats.charactersByClass.map((row) => (
+            <li key={row.key || 'none'} className={styles.item}>
+              <span>{row.key || 'No class'}</span>
+              <span>{row.count.toLocaleString('en-GB')}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="type-title">Quest hexes</p>
+      {stats.questHexes.length === 0 ? (
+        <EmptyState kind="no-events" message="No quests on a hex yet." />
+      ) : (
+        <ul className={styles.list} aria-label="Quest hexes">
+          {stats.questHexes.map((hex) => (
+            <li key={hex.id} className={styles.item}>
+              <div className="stack" data-gap="1">
+                <span className="type-title">{hex.name}</span>
+                <span className="type-caption">{hex.mapName}</span>
+              </div>
+              <span>{pluralize(hex.questCount, 'quest')}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function CommunityStatsCard({
+  stats,
+}: {
+  stats: {
+    data?: AdminCommunityStatsView;
+    isError: boolean;
+    error?: AppError;
+    refetch: () => unknown;
+  };
+}): React.JSX.Element {
+  return (
+    <Card
+      as="section"
+      aria-label="Community stats"
+      className={`stack ${styles.panel}`}
+      data-el="admin.today.community"
+    >
+      <h2 className="type-title">Community stats</h2>
+      {stats.isError ? (
+        <StatePanel
+          status="error"
+          variant="inline"
+          error={stats.error}
+          onRetry={() => void stats.refetch()}
+        />
+      ) : stats.data ? (
+        <CommunityStatsBody stats={stats.data} />
+      ) : (
+        <StatePanel status="loading" variant="inline" />
+      )}
+    </Card>
   );
 }
 
@@ -171,7 +249,7 @@ export function AdminTodayBody(): React.JSX.Element {
   if (view.status === 'error')
     return <AdminReadFailure error={view.error} retry={view.retry} />;
   if (view.status === 'loading') return <StatePanel status="loading" />;
-  const { ops, characterTotal, reviewTotal } = view.data;
+  const { ops, stats, characterTotal, reviewTotal } = view.data;
   return (
     <div className="stack" data-gap="4">
       <TodaySummary
@@ -183,6 +261,7 @@ export function AdminTodayBody(): React.JSX.Element {
         <AttentionCard ops={ops} />
         <RecentDeliveriesCard ops={ops} />
       </div>
+      <CommunityStatsCard stats={stats} />
     </div>
   );
 }

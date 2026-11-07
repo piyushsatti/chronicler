@@ -465,6 +465,7 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.upsertUnlockable":                   ruleAdmin,
 	"Mutation.withdrawFromQuest":                  ruleSignup,
 	"Query.adminCharacterDirectory":               ruleStaff,
+	"Query.adminCommunityStats":                   ruleAdmin,
 	"Query.adminOperations":                       ruleAdmin,
 	"Query.archonAssignments":                     ruleAdmin,
 	"Query.backstories":                           ruleBackstory,

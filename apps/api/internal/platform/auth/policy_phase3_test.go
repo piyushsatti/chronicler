@@ -789,6 +789,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.upsertUnlockable":                   "ADMIN",
 		"Mutation.withdrawFromQuest":                  "CHAR_SIGNUP",
 		"Query.adminCharacterDirectory":               "STAFF",
+		"Query.adminCommunityStats":                   "ADMIN",
 		"Query.adminOperations":                       "ADMIN",
 		"Query.archonAssignments":                     "ADMIN",
 		"Query.backstories":                           "BACKSTORY_PUBLIC_OR_ADMIN",
@@ -882,7 +883,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			}
 		}
 	}
-	if len(expected) != 153 || len(actual) != len(expected) || len(operationRules) != len(expected) {
+	if len(expected) != 154 || len(actual) != len(expected) || len(operationRules) != len(expected) {
 		t.Fatalf("coverage expected%d SDL%d registry%d", len(expected), len(actual), len(operationRules))
 	}
 	p, _, facts := policyTestProvider(t)

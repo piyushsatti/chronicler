@@ -148,6 +148,53 @@ func (q *Queries) SiteActivitySummary(ctx context.Context) (SiteActivitySummaryR
 	return i, err
 }
 
+const siteAdminCharacterClasses = `-- name: SiteAdminCharacterClasses :many
+WITH live AS (
+    SELECT id FROM characters WHERE deleted_at IS NULL
+), totals AS (
+    SELECT count(*)::integer AS total_characters FROM live
+)
+SELECT totals.total_characters,
+       coalesce(classes.name, '')::text AS class_name,
+       count(DISTINCT live.id)::integer AS class_count
+FROM totals
+LEFT JOIN live ON true
+LEFT JOIN LATERAL (
+    SELECT c.name
+    FROM character_catalog_picks p
+    JOIN creation_catalog c ON c.id = p.catalog_id AND c.kind = 'class'
+    WHERE p.character_id = live.id
+) classes ON true
+GROUP BY totals.total_characters, classes.name
+ORDER BY class_count DESC, class_name
+`
+
+type SiteAdminCharacterClassesRow struct {
+	TotalCharacters int32  `json:"total_characters"`
+	ClassName       string `json:"class_name"`
+	ClassCount      int32  `json:"class_count"`
+}
+
+func (q *Queries) SiteAdminCharacterClasses(ctx context.Context) ([]SiteAdminCharacterClassesRow, error) {
+	rows, err := q.db.Query(ctx, siteAdminCharacterClasses)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SiteAdminCharacterClassesRow{}
+	for rows.Next() {
+		var i SiteAdminCharacterClassesRow
+		if err := rows.Scan(&i.TotalCharacters, &i.ClassName, &i.ClassCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const siteAdminDeliveryCounts = `-- name: SiteAdminDeliveryCounts :one
 SELECT count(*) FILTER (WHERE state IN ('queued', 'running', 'retry_wait', 'repair_required'))::integer AS pending_count,
        count(*) FILTER (WHERE state IN ('dead', 'succeeded', 'cancelled'))::integer AS terminal_count,
@@ -321,6 +368,51 @@ func (q *Queries) SiteAdminMaintenanceJobs(ctx context.Context) ([]SiteAdminMain
 			&i.State,
 			&i.SafeErrorCode,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const siteAdminQuestHexCounts = `-- name: SiteAdminQuestHexCounts :many
+SELECT n.public_id::text AS hex_id,
+       n.name AS hex_name,
+       m.name AS map_name,
+       count(DISTINCT q.id)::integer AS quest_count
+FROM quest_pointcrawl_nodes qpn
+JOIN pointcrawl_nodes n ON n.id = qpn.node_id
+JOIN maps m ON m.id = n.map_id AND m.grid = 'hex'
+JOIN quests q ON q.id = qpn.quest_id AND q.deleted_at IS NULL
+GROUP BY n.public_id, n.name, m.name
+ORDER BY quest_count DESC, n.name, m.name
+`
+
+type SiteAdminQuestHexCountsRow struct {
+	HexID      string `json:"hex_id"`
+	HexName    string `json:"hex_name"`
+	MapName    string `json:"map_name"`
+	QuestCount int32  `json:"quest_count"`
+}
+
+func (q *Queries) SiteAdminQuestHexCounts(ctx context.Context) ([]SiteAdminQuestHexCountsRow, error) {
+	rows, err := q.db.Query(ctx, siteAdminQuestHexCounts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SiteAdminQuestHexCountsRow{}
+	for rows.Next() {
+		var i SiteAdminQuestHexCountsRow
+		if err := rows.Scan(
+			&i.HexID,
+			&i.HexName,
+			&i.MapName,
+			&i.QuestCount,
 		); err != nil {
 			return nil, err
 		}

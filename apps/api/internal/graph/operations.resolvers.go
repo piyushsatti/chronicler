@@ -2682,6 +2682,22 @@ func (r *queryResolver) AdminOperations(ctx context.Context, deliveryState *stri
 	return toAdminOperationsType(view), nil
 }
 
+// AdminCommunityStats is the resolver for the adminCommunityStats field.
+func (r *queryResolver) AdminCommunityStats(ctx context.Context) (*AdminCommunityStatsType, error) {
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SiteQueries.AdminCommunityStats(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+	return toAdminCommunityStats(view), nil
+}
+
 // SearchableKinds is the resolver for the searchableKinds field.
 func (r *queryResolver) SearchableKinds(ctx context.Context) ([]*SearchKindType, error) {
 	if r.Services.SiteQueries == nil {

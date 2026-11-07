@@ -1,4 +1,4 @@
-import { HttpResponse } from 'msw';
+import { delay, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import { AdminTodayBody } from '../../../src/features/admin/pages/AdminPage.js';
@@ -84,6 +84,76 @@ describe('Admin today and delivery', () => {
     expect(screen.queryByText(/Delivery configuration/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Lyra Storm/)).not.toBeInTheDocument();
     expect(screen.getByText('No deliveries recorded yet.')).toBeVisible();
+  });
+
+  it('shows character totals, classes, and quest hexes to the admin overview', async () => {
+    mockGraphqlOps({
+      AdminCommunityStats: () =>
+        HttpResponse.json({
+          data: {
+            adminCommunityStats: {
+              totalCharacters: 4,
+              charactersByClass: [
+                { key: 'Wizard', count: 2 },
+                { key: '', count: 1 },
+              ],
+              questHexes: [
+                {
+                  id: '11111111-1111-4111-8111-111111111111',
+                  name: 'Ashfall',
+                  mapName: 'Lightfall',
+                  questCount: 3,
+                },
+              ],
+            },
+          },
+        }),
+    });
+    renderWithProviders(<AdminTodayBody />);
+    const stats = await screen.findByRole('region', { name: 'Community stats' });
+    const scope = within(stats);
+    expect(await scope.findByText('4')).toBeVisible();
+    expect(scope.getByText('Characters')).toBeVisible();
+    expect(scope.getByText('Wizard')).toBeVisible();
+    expect(scope.getByText('2')).toBeVisible();
+    expect(scope.getByText('No class')).toBeVisible();
+    expect(scope.getByText('1')).toBeVisible();
+    expect(scope.getByText('Ashfall')).toBeVisible();
+    expect(scope.getByText('Lightfall')).toBeVisible();
+    expect(scope.getByText('3 quests')).toBeVisible();
+  });
+
+  it('shows an alert and deliveries when community stats fail', async () => {
+    mockGraphqlOps({
+      AdminOperations: () =>
+        HttpResponse.json({ data: { adminOperations: goodOps } }),
+      AdminCommunityStats: () =>
+        HttpResponse.json({
+          errors: [{ message: 'boom', extensions: { code: 'INTERNAL' } }],
+        }),
+    });
+    renderWithProviders(<AdminTodayBody />);
+    expect(await screen.findByText('Delivery lag')).toBeVisible();
+    expect(screen.getByText('No deliveries recorded yet.')).toBeVisible();
+    const stats = screen.getByRole('region', { name: 'Community stats' });
+    expect(within(stats).getByRole('alert')).toHaveTextContent(
+      'Something went wrong. Please try again.',
+    );
+  });
+
+  it('shows an alert while community stats are still loading', async () => {
+    mockGraphqlOps({
+      AdminOperations: () =>
+        HttpResponse.json({ data: { adminOperations: goodOps } }),
+      AdminCommunityStats: async () => {
+        await delay('infinite');
+        return HttpResponse.json({ data: { adminCommunityStats: null } });
+      },
+    });
+    renderWithProviders(<AdminTodayBody />);
+    expect(await screen.findByText('Delivery lag')).toBeVisible();
+    const stats = screen.getByRole('region', { name: 'Community stats' });
+    expect(within(stats).getByRole('status')).toHaveTextContent('Loading…');
   });
 
   it('shows controlled error', async () => {

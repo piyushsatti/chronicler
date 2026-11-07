@@ -55,6 +55,13 @@ export type AdminCharacterDirectoryType = {
   total: Scalars['Int']['output'];
 };
 
+export type AdminCommunityStatsType = {
+  /** Class catalog name. Empty when the character has no class pick. */
+  charactersByClass: Array<CountByKeyType>;
+  questHexes: Array<AdminQuestHexCountType>;
+  totalCharacters: Scalars['Int']['output'];
+};
+
 export type AdminDeliveryConfigType = {
   announcementRoleHealthy?: Maybe<Scalars['Boolean']['output']>;
   announcementRoleId?: Maybe<Scalars['String']['output']>;
@@ -108,6 +115,13 @@ export type AdminOperationsType = {
 export type AdminOperationsTypeActiveAlertsArgs = {
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
+};
+
+export type AdminQuestHexCountType = {
+  id: Scalars['ID']['output'];
+  mapName: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  questCount: Scalars['Int']['output'];
 };
 
 export type AnnouncementRoleInput = {
@@ -1647,6 +1661,7 @@ export type Query = {
    */
   _contractLayoutStub: Scalars['Boolean']['output'];
   adminCharacterDirectory: AdminCharacterDirectoryType;
+  adminCommunityStats: AdminCommunityStatsType;
   adminOperations: AdminOperationsType;
   archonAssignments: ArchonPage;
   auditBody: Array<BodySpanAudit>;
