@@ -2235,6 +2235,7 @@ export type QuestPointcrawlLinkInput = {
 };
 
 export type QuestPointcrawlLinkType = {
+  name: Scalars['String']['output'];
   pointcrawlNodeId: Scalars['ID']['output'];
   questId: Scalars['ID']['output'];
   role: Scalars['String']['output'];

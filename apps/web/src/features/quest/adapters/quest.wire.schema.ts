@@ -69,6 +69,7 @@ export const questDetailWireSchema = questBoardItemWireSchema.extend({
     z.object({
       pointcrawlNodeId: z.string().uuid(),
       role: z.enum(['expected', 'visited']),
+      name: z.string(),
     }),
   ),
   durationHours: z.number(),

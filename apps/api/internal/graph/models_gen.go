@@ -1051,6 +1051,7 @@ type QuestPointcrawlLinkType struct {
 	QuestID          string `json:"questId"`
 	PointcrawlNodeID string `json:"pointcrawlNodeId"`
 	Role             string `json:"role"`
+	Name             string `json:"name"`
 }
 
 type QuestStateCountType struct {

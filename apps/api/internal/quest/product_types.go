@@ -147,6 +147,7 @@ type QuestHexView struct {
 	HexId   string
 	QuestId string
 	Role    string
+	Name    string
 }
 
 type QuestParticipantView struct {

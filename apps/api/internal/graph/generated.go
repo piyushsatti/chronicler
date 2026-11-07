@@ -957,6 +957,7 @@ type ComplexityRoot struct {
 	}
 
 	QuestPointcrawlLinkType struct {
+		Name             func(childComplexity int) int
 		PointcrawlNodeID func(childComplexity int) int
 		QuestID          func(childComplexity int) int
 		Role             func(childComplexity int) int
@@ -6522,6 +6523,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.QuestParticipantType.UpdatedAt(childComplexity), true
 
+	case "QuestPointcrawlLinkType.name":
+		if e.complexity.QuestPointcrawlLinkType.Name == nil {
+			break
+		}
+
+		return e.complexity.QuestPointcrawlLinkType.Name(childComplexity), true
+
 	case "QuestPointcrawlLinkType.pointcrawlNodeId":
 		if e.complexity.QuestPointcrawlLinkType.PointcrawlNodeID == nil {
 			break
@@ -9161,6 +9169,7 @@ type QuestPointcrawlLinkType {
   questId: ID!
   pointcrawlNodeId: ID!
   role: String!
+  name: String!
 }
 
 type QuestParticipantType {
@@ -33949,6 +33958,8 @@ func (ec *executionContext) fieldContext_Mutation_setQuestPointcrawlLinks(ctx co
 				return ec.fieldContext_QuestPointcrawlLinkType_pointcrawlNodeId(ctx, field)
 			case "role":
 				return ec.fieldContext_QuestPointcrawlLinkType_role(ctx, field)
+			case "name":
+				return ec.fieldContext_QuestPointcrawlLinkType_name(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type QuestPointcrawlLinkType", field.Name)
 		},
@@ -45205,6 +45216,50 @@ func (ec *executionContext) fieldContext_QuestPointcrawlLinkType_role(_ context.
 	return fc, nil
 }
 
+func (ec *executionContext) _QuestPointcrawlLinkType_name(ctx context.Context, field graphql.CollectedField, obj *QuestPointcrawlLinkType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_QuestPointcrawlLinkType_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_QuestPointcrawlLinkType_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QuestPointcrawlLinkType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _QuestStateCountType_state(ctx context.Context, field graphql.CollectedField, obj *QuestStateCountType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_QuestStateCountType_state(ctx, field)
 	if err != nil {
@@ -46800,6 +46855,8 @@ func (ec *executionContext) fieldContext_QuestType_pointcrawlLinks(ctx context.C
 				return ec.fieldContext_QuestPointcrawlLinkType_pointcrawlNodeId(ctx, field)
 			case "role":
 				return ec.fieldContext_QuestPointcrawlLinkType_role(ctx, field)
+			case "name":
+				return ec.fieldContext_QuestPointcrawlLinkType_name(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type QuestPointcrawlLinkType", field.Name)
 		},
@@ -64529,6 +64586,11 @@ func (ec *executionContext) _QuestPointcrawlLinkType(ctx context.Context, sel as
 			}
 		case "role":
 			out.Values[i] = ec._QuestPointcrawlLinkType_role(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._QuestPointcrawlLinkType_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

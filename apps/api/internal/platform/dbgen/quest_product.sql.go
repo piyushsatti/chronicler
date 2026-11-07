@@ -1984,7 +1984,7 @@ func (q *Queries) ProductQuestReadParticipants(ctx context.Context, arg ProductQ
 }
 
 const productQuestReadPointcrawlLinks = `-- name: ProductQuestReadPointcrawlLinks :many
-SELECT n.public_id::text AS node_id, q.public_id::text AS quest_id, qpn.role
+SELECT n.public_id::text AS node_id, q.public_id::text AS quest_id, qpn.role, n.name AS node_name
 FROM quest_pointcrawl_nodes qpn
 JOIN quests q ON q.id = qpn.quest_id
 JOIN pointcrawl_nodes n ON n.id = qpn.node_id
@@ -1993,9 +1993,10 @@ ORDER BY n.public_id, qpn.role
 `
 
 type ProductQuestReadPointcrawlLinksRow struct {
-	NodeID  string `json:"node_id"`
-	QuestID string `json:"quest_id"`
-	Role    string `json:"role"`
+	NodeID   string `json:"node_id"`
+	QuestID  string `json:"quest_id"`
+	Role     string `json:"role"`
+	NodeName string `json:"node_name"`
 }
 
 func (q *Queries) ProductQuestReadPointcrawlLinks(ctx context.Context, questID pgtype.UUID) ([]ProductQuestReadPointcrawlLinksRow, error) {
@@ -2007,7 +2008,12 @@ func (q *Queries) ProductQuestReadPointcrawlLinks(ctx context.Context, questID p
 	items := []ProductQuestReadPointcrawlLinksRow{}
 	for rows.Next() {
 		var i ProductQuestReadPointcrawlLinksRow
-		if err := rows.Scan(&i.NodeID, &i.QuestID, &i.Role); err != nil {
+		if err := rows.Scan(
+			&i.NodeID,
+			&i.QuestID,
+			&i.Role,
+			&i.NodeName,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
