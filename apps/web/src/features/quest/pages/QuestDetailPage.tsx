@@ -109,7 +109,10 @@ export function QuestDetailPage(): React.JSX.Element {
   const playerLabel = (index: number) => peopleLabels[index + (hasDm ? 1 : 0)];
   const seated = quest.participants
     .map((participant, index) => ({ participant, label: playerLabel(index) }))
-    .filter(({ participant }) => participant.status !== 'waitlisted');
+    .filter(
+      ({ participant }) =>
+        participant.status !== 'waitlisted' && participant.status !== 'withdrawn',
+    );
   const waiting = quest.participants
     .map((participant, index) => ({ participant, label: playerLabel(index) }))
     .filter(({ participant }) => participant.status === 'waitlisted');

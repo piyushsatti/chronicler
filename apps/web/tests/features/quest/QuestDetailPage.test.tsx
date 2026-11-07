@@ -365,6 +365,40 @@ describe('QuestDetailPage', () => {
     expect(screen.getByText('Waitlist · 1 waiting')).toBeInTheDocument();
   });
 
+  it('omits withdrawn players from the signup list', async () => {
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: {
+            quest: {
+              ...detailGood,
+              participants: [
+                detailGood.participants[0],
+                {
+                  ...detailGood.participants[0],
+                  characterId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+                  characterName: 'Rook Vale',
+                  status: 'withdrawn',
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    await userEvent.click(await screen.findByRole('tab', { name: 'Cast' }));
+    const roster = screen.getByRole('region', { name: 'Roster' });
+    expect(within(roster).getByText('Lyra Storm')).toBeInTheDocument();
+    expect(within(roster).queryByText('Rook Vale')).not.toBeInTheDocument();
+    expect(within(roster).queryByText('Withdrawn')).not.toBeInTheDocument();
+  });
+
   it.each([
     ['last_game_played', true],
     ['dm_pick', false],
