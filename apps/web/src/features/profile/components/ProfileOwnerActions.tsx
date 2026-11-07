@@ -6,6 +6,7 @@ import { useProfileActions } from '../hooks/useProfileActions.js';
 import { Select } from '../../../components/primitives/Select.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import { statusLabel, weekdayLabel } from '../../../utils/format.js';
+import styles from '../pages/profile.module.css';
 const DAYS = [
   'MONDAY',
   'TUESDAY',
@@ -142,43 +143,49 @@ export function ProfileOwnerActions({
         >
           <h3 className="type-heading">Your availability</h3>
           {slots.map((slot, index) => (
-            <fieldset className="stack" key={index} disabled={actions.pending}>
+            <fieldset
+              className={`stack ${styles.window}`}
+              key={index}
+              disabled={actions.pending}
+            >
               <legend>Window {index + 1}</legend>
-              <div className="stack">
-                <span id={`${dayLabelId}-${index}`}>Day {index + 1}</span>
-                <Select
-                  label={`Day ${index + 1}`}
-                  labelId={`${dayLabelId}-${index}`}
-                  value={slot.day}
-                  disabled={actions.pending}
-                  options={DAYS.map((day) => ({ value: day, label: weekdayLabel(day) }))}
-                  onValueChange={(value) => changeSlot(index, 'day', value)}
-                />
+              <div className={`row ${styles.times}`} data-wrap="1" data-align="end">
+                <div className="stack">
+                  <span id={`${dayLabelId}-${index}`}>Day {index + 1}</span>
+                  <Select
+                    label={`Day ${index + 1}`}
+                    labelId={`${dayLabelId}-${index}`}
+                    value={slot.day}
+                    disabled={actions.pending}
+                    options={DAYS.map((day) => ({ value: day, label: weekdayLabel(day) }))}
+                    onValueChange={(value) => changeSlot(index, 'day', value)}
+                  />
+                </div>
+                <label className="stack">
+                  Start time
+                  <input
+                    className="field-input"
+                    aria-label={`Start time ${index + 1}`}
+                    type="time"
+                    required
+                    value={slot.startTime.slice(0, 5)}
+                    onChange={(event) =>
+                      changeSlot(index, 'startTime', event.target.value)
+                    }
+                  />
+                </label>
+                <label className="stack">
+                  End time
+                  <input
+                    className="field-input"
+                    aria-label={`End time ${index + 1}`}
+                    required
+                    placeholder="24:00"
+                    value={slot.endTime.slice(0, 5)}
+                    onChange={(event) => changeSlot(index, 'endTime', event.target.value)}
+                  />
+                </label>
               </div>
-              <label className="stack">
-                Start time
-                <input
-                  className="field-input"
-                  aria-label={`Start time ${index + 1}`}
-                  type="time"
-                  required
-                  value={slot.startTime.slice(0, 5)}
-                  onChange={(event) =>
-                    changeSlot(index, 'startTime', event.target.value)
-                  }
-                />
-              </label>
-              <label className="stack">
-                End time
-                <input
-                  className="field-input"
-                  aria-label={`End time ${index + 1}`}
-                  required
-                  placeholder="24:00"
-                  value={slot.endTime.slice(0, 5)}
-                  onChange={(event) => changeSlot(index, 'endTime', event.target.value)}
-                />
-              </label>
               <label className="stack">
                 Note
                 <input

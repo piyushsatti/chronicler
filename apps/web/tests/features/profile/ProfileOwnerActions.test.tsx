@@ -29,6 +29,39 @@ describe('Profile owner writes', () => {
     await screen.findByText('Availability saved.');
     expect(slots).toEqual([{ ...wire.availability[0], day: 'TUESDAY' }]);
   });
+  it('keeps day, start, and end on one wrapping row and round-trips an end of 24:00', async () => {
+    let slots: unknown;
+    server.use(graphql.mutation('ProfileSetMyAvailability', ({ variables }) => {
+      slots = variables.slots;
+      return HttpResponse.json({ data: { setMyAvailability: variables.slots } });
+    }));
+    const current = profile();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ProfileOwnerActions
+        profile={{
+          ...current,
+          availability: [{ ...current.availability[0], endTime: '24:00:00' }],
+        }}
+        canAvailability
+        canDm={false}
+      />,
+    );
+    const start = screen.getByLabelText('Start time 1');
+    const end = screen.getByLabelText('End time 1');
+    const row = start.closest('.row');
+    expect(row).toHaveAttribute('data-wrap', '1');
+    expect(row).toContainElement(end);
+    expect(row).toContainElement(screen.getByRole('button', { name: /^Day 1 / }));
+    expect(row).not.toContainElement(screen.getByLabelText('Availability note 1'));
+    expect(start).toHaveAttribute('type', 'time');
+    expect(start).toHaveValue('18:00');
+    expect(end).toHaveValue('24:00');
+    expect(end).not.toHaveAttribute('type', 'time');
+    await user.click(screen.getByRole('button', { name: 'Save availability' }));
+    await screen.findByText('Availability saved.');
+    expect(slots).toEqual([{ ...current.availability[0], endTime: '24:00:00' }]);
+  });
   it('omits an untouched avatar and explicitly clears a removed one', async () => {
     const attempts: Record<string, unknown>[] = [];
     server.use(
