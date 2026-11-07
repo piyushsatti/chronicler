@@ -51,6 +51,35 @@ describe('DMProfilePage', () => {
     expect(screen.queryByRole('complementary', { name: 'Availability' })).not.toBeInTheDocument();
   });
 
+  it('shows myUnlocks.dmTier on the owner DM profile and nothing when it is empty', async () => {
+    signInProfile();
+    let queried = '';
+    server.use(
+      graphql.query('ProfileDmTier', ({ query }) => {
+        queried = query;
+        return HttpResponse.json({ data: { myUnlocks: { dmTier: 'Wayfinder' } } });
+      }),
+    );
+    const named = renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@mira' });
+    expect(await screen.findByText('Wayfinder')).toBeVisible();
+    expect(queried).toMatch(/myUnlocks[\s\S]*dmTier/);
+    named.unmount();
+
+    server.use(graphql.query('ProfileDmTier', () => HttpResponse.json({ data: { myUnlocks: { dmTier: '' } } })));
+    const empty = renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@mira' });
+    await screen.findByRole('heading', { level: 1, name: 'Mira' });
+    expect(screen.queryByText('Wayfinder')).not.toBeInTheDocument();
+    empty.unmount();
+
+    server.use(
+      graphql.query('MemberProfile', () => HttpResponse.json({ data: { memberProfile: { ...profile, member: { ...profile.member, id: '22222222-2222-4222-8222-222222222222', handle: 'other', displayName: 'Other DM' } } } })),
+      graphql.query('ProfileDmTier', () => HttpResponse.json({ data: { myUnlocks: { dmTier: 'Wayfinder' } } })),
+    );
+    renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@other' });
+    await screen.findByRole('heading', { level: 1, name: 'Other DM' });
+    expect(screen.queryByText('Wayfinder')).not.toBeInTheDocument();
+  });
+
   it('shows no availability rail when public availability is empty', async () => {
     server.use(
       graphql.query('MemberProfile', () =>

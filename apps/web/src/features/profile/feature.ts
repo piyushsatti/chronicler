@@ -24,6 +24,7 @@ export const graphql: FeatureGraphql = {
     }
     return HttpResponse.json({ data: { memberProfile: goodMemberProfile } });
   },
+  ProfileDmTier: () => HttpResponse.json({ data: { myUnlocks: { dmTier: '' } } }),
   ProfileActivity: () => HttpResponse.json({ data: { memberActivityStats: null, documents: { items: [], total: 0 } } }),
   ProfileDmDetails: () =>
     HttpResponse.json({
