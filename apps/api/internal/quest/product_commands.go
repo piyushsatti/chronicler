@@ -192,7 +192,7 @@ func reauthorizeQuestReplay(ctx context.Context, repos ProductCommandRepos, acto
 
 func admitLockedQuestReplay(ctx context.Context, repos ProductCommandRepos, current auth.Authority, request auth.Request, decision auth.Decision, subjectID string) error {
 	switch request.Operation() {
-	case "Mutation.updateQuest", "Mutation.transitionQuestStatus", "Mutation.closeQuest", "Mutation.deleteQuest", "Mutation.restoreQuest", "Mutation.selectQuestParticipants", "Mutation.attestQuestParticipation", "Mutation.setQuestPointcrawlLinks", "Mutation.syncQuestDiscord", "Mutation.removeQuestFromArc":
+	case "Mutation.updateQuest", "Mutation.transitionQuestStatus", "Mutation.closeQuest", "Mutation.deleteQuest", "Mutation.restoreQuest", "Mutation.selectQuestParticipants", "Mutation.addQuestParticipant", "Mutation.removeQuestParticipant", "Mutation.attestQuestParticipation", "Mutation.setQuestPointcrawlLinks", "Mutation.syncQuestDiscord", "Mutation.removeQuestFromArc":
 		locked, err := repos.Quest.LockRestoreQuest(ctx, RestoreQuestSpec{QuestId: subjectID})
 		if err != nil {
 			return err

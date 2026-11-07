@@ -650,6 +650,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		AcknowledgeSuppressedNotifications func(childComplexity int, limit int, meta CommandMeta) int
+		AddQuestParticipant                func(childComplexity int, questID string, characterID string, meta CommandMeta) int
 		AdjustPcxp                         func(childComplexity int, characterID string, amount int, note string, meta CommandMeta) int
 		AssignArchon                       func(childComplexity int, memberID string, regionID string, meta CommandMeta) int
 		AssignLieutenant                   func(childComplexity int, memberID string, npcDocumentID string, meta CommandMeta) int
@@ -678,6 +679,7 @@ type ComplexityRoot struct {
 		PublishDocument                    func(childComplexity int, id string, expectedRevision int, meta CommandMeta) int
 		RedriveDiscordDelivery             func(childComplexity int, jobID string, reason string, meta CommandMeta) int
 		RemoveQuestFromArc                 func(childComplexity int, questID string, meta CommandMeta) int
+		RemoveQuestParticipant             func(childComplexity int, questID string, characterID string, meta CommandMeta) int
 		RestoreCharacter                   func(childComplexity int, characterID string, meta CommandMeta) int
 		RestoreDocument                    func(childComplexity int, id string, meta CommandMeta) int
 		RestoreQuest                       func(childComplexity int, questID string, meta CommandMeta) int
@@ -1307,6 +1309,8 @@ type MutationResolver interface {
 	RemoveQuestFromArc(ctx context.Context, questID string, meta CommandMeta) (*QuestType, error)
 	SignupForQuest(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error)
 	WithdrawFromQuest(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error)
+	AddQuestParticipant(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error)
+	RemoveQuestParticipant(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error)
 	SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, meta CommandMeta) ([]*QuestParticipantType, error)
 	AttestQuestParticipation(ctx context.Context, questID string, entries []*ParticipationAttestationInput, meta CommandMeta) ([]*QuestParticipantType, error)
 	SyncQuestDiscord(ctx context.Context, questID string, meta CommandMeta) (*DeliveryReceipt, error)
@@ -4115,6 +4119,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.AcknowledgeSuppressedNotifications(childComplexity, args["limit"].(int), args["meta"].(CommandMeta)), true
 
+	case "Mutation.addQuestParticipant":
+		if e.complexity.Mutation.AddQuestParticipant == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addQuestParticipant_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddQuestParticipant(childComplexity, args["questId"].(string), args["characterId"].(string), args["meta"].(CommandMeta)), true
+
 	case "Mutation.adjustPcxp":
 		if e.complexity.Mutation.AdjustPcxp == nil {
 			break
@@ -4445,6 +4461,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RemoveQuestFromArc(childComplexity, args["questId"].(string), args["meta"].(CommandMeta)), true
+
+	case "Mutation.removeQuestParticipant":
+		if e.complexity.Mutation.RemoveQuestParticipant == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_removeQuestParticipant_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RemoveQuestParticipant(childComplexity, args["questId"].(string), args["characterId"].(string), args["meta"].(CommandMeta)), true
 
 	case "Mutation.restoreCharacter":
 		if e.complexity.Mutation.RestoreCharacter == nil {
@@ -9130,6 +9158,16 @@ extend type Mutation {
     characterId: ID!
     meta: CommandMeta!
   ): QuestParticipantType!
+  addQuestParticipant(
+    questId: ID!
+    characterId: ID!
+    meta: CommandMeta!
+  ): QuestParticipantType!
+  removeQuestParticipant(
+    questId: ID!
+    characterId: ID!
+    meta: CommandMeta!
+  ): QuestParticipantType!
   selectQuestParticipants(
     questId: ID!
     characterIds: [ID!]!
@@ -9917,6 +9955,27 @@ func (ec *executionContext) field_Mutation_acknowledgeSuppressedNotifications_ar
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_addQuestParticipant_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "questId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["questId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "characterId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["characterId"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
+	if err != nil {
+		return nil, err
+	}
+	args["meta"] = arg2
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_adjustPcxp_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -10466,6 +10525,27 @@ func (ec *executionContext) field_Mutation_removeQuestFromArc_args(ctx context.C
 		return nil, err
 	}
 	args["meta"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_removeQuestParticipant_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "questId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["questId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "characterId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["characterId"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
+	if err != nil {
+		return nil, err
+	}
+	args["meta"] = arg2
 	return args, nil
 }
 
@@ -33928,6 +34008,168 @@ func (ec *executionContext) fieldContext_Mutation_withdrawFromQuest(ctx context.
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_withdrawFromQuest_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addQuestParticipant(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addQuestParticipant(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddQuestParticipant(rctx, fc.Args["questId"].(string), fc.Args["characterId"].(string), fc.Args["meta"].(CommandMeta))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*QuestParticipantType)
+	fc.Result = res
+	return ec.marshalNQuestParticipantType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐQuestParticipantType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addQuestParticipant(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "questId":
+				return ec.fieldContext_QuestParticipantType_questId(ctx, field)
+			case "memberId":
+				return ec.fieldContext_QuestParticipantType_memberId(ctx, field)
+			case "characterId":
+				return ec.fieldContext_QuestParticipantType_characterId(ctx, field)
+			case "status":
+				return ec.fieldContext_QuestParticipantType_status(ctx, field)
+			case "manual":
+				return ec.fieldContext_QuestParticipantType_manual(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_QuestParticipantType_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_QuestParticipantType_updatedAt(ctx, field)
+			case "characterName":
+				return ec.fieldContext_QuestParticipantType_characterName(ctx, field)
+			case "memberHandle":
+				return ec.fieldContext_QuestParticipantType_memberHandle(ctx, field)
+			case "memberDisplayName":
+				return ec.fieldContext_QuestParticipantType_memberDisplayName(ctx, field)
+			case "memberAvatarUrl":
+				return ec.fieldContext_QuestParticipantType_memberAvatarUrl(ctx, field)
+			case "lastPlayedAt":
+				return ec.fieldContext_QuestParticipantType_lastPlayedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type QuestParticipantType", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addQuestParticipant_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_removeQuestParticipant(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_removeQuestParticipant(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().RemoveQuestParticipant(rctx, fc.Args["questId"].(string), fc.Args["characterId"].(string), fc.Args["meta"].(CommandMeta))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*QuestParticipantType)
+	fc.Result = res
+	return ec.marshalNQuestParticipantType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐQuestParticipantType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_removeQuestParticipant(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "questId":
+				return ec.fieldContext_QuestParticipantType_questId(ctx, field)
+			case "memberId":
+				return ec.fieldContext_QuestParticipantType_memberId(ctx, field)
+			case "characterId":
+				return ec.fieldContext_QuestParticipantType_characterId(ctx, field)
+			case "status":
+				return ec.fieldContext_QuestParticipantType_status(ctx, field)
+			case "manual":
+				return ec.fieldContext_QuestParticipantType_manual(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_QuestParticipantType_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_QuestParticipantType_updatedAt(ctx, field)
+			case "characterName":
+				return ec.fieldContext_QuestParticipantType_characterName(ctx, field)
+			case "memberHandle":
+				return ec.fieldContext_QuestParticipantType_memberHandle(ctx, field)
+			case "memberDisplayName":
+				return ec.fieldContext_QuestParticipantType_memberDisplayName(ctx, field)
+			case "memberAvatarUrl":
+				return ec.fieldContext_QuestParticipantType_memberAvatarUrl(ctx, field)
+			case "lastPlayedAt":
+				return ec.fieldContext_QuestParticipantType_lastPlayedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type QuestParticipantType", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_removeQuestParticipant_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -62087,6 +62329,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "withdrawFromQuest":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_withdrawFromQuest(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "addQuestParticipant":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addQuestParticipant(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "removeQuestParticipant":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_removeQuestParticipant(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

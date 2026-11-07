@@ -104,7 +104,7 @@ func TestFormerDMRetainsOwnedQuestManagement(t *testing.T) {
 		if actor.LiveDM() {
 			t.Fatal("fixture retained current DM authority")
 		}
-		for _, operation := range []Operation{"Mutation.updateQuest", "Mutation.transitionQuestStatus", "Mutation.closeQuest", "Mutation.selectQuestParticipants", "Mutation.deleteQuest", "Mutation.syncQuestDiscord"} {
+		for _, operation := range []Operation{"Mutation.updateQuest", "Mutation.transitionQuestStatus", "Mutation.closeQuest", "Mutation.selectQuestParticipants", "Mutation.addQuestParticipant", "Mutation.removeQuestParticipant", "Mutation.deleteQuest", "Mutation.syncQuestDiscord"} {
 			request, err := ForQuest(operation, QuestFacts{ID: policySubject, DMID: policyActor})
 			policyExpect(t, p, actor, policyMustRequest(t, request, err), Decision{Allowed: true})
 			foreign, err := ForQuest(operation, QuestFacts{ID: policySubject, DMID: policyOther})
@@ -713,6 +713,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 	}
 	expected := map[Operation]string{
 		"Mutation.acknowledgeSuppressedNotifications": "SELF",
+		"Mutation.addQuestParticipant":                "QUEST_DM",
 		"Mutation.adjustPcxp":                         "CHAR_OWNER",
 		"Mutation.assignArchon":                       "ADMIN",
 		"Mutation.assignLieutenant":                   "LIEUTENANT_WRITE",
@@ -740,6 +741,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.publishDocument":                    "DOC_WRITE",
 		"Mutation.redriveDiscordDelivery":             "ADMIN",
 		"Mutation.removeQuestFromArc":                 "QUEST_DM",
+		"Mutation.removeQuestParticipant":             "QUEST_DM",
 		"Mutation.restoreCharacter":                   "CHAR_OWNER",
 		"Mutation.restoreDocument":                    "DOC_WRITE",
 		"Mutation.restoreQuest":                       "QUEST_DM",
@@ -883,7 +885,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			}
 		}
 	}
-	if len(expected) != 154 || len(actual) != len(expected) || len(operationRules) != len(expected) {
+	if len(expected) != 156 || len(actual) != len(expected) || len(operationRules) != len(expected) {
 		t.Fatalf("coverage expected%d SDL%d registry%d", len(expected), len(actual), len(operationRules))
 	}
 	p, _, facts := policyTestProvider(t)

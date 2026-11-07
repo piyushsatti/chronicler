@@ -1,0 +1,6 @@
+mutation QuestAddParticipant($questId: ID!, $characterId: ID!, $meta: CommandMeta!) {
+  addQuestParticipant(questId: $questId, characterId: $characterId, meta: $meta) {
+    characterId
+    status
+  }
+}

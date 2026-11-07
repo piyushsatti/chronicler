@@ -14,8 +14,10 @@ import { Avatar } from '../../../components/primitives/Avatar.js';
 import { DiscordDeliveryStatus } from '../components/DiscordDeliveryStatus.js';
 import { QuestParticipation } from '../components/QuestParticipation.js';
 import { QuestDmActions } from '../components/QuestDmActions.js';
+import { QuestRosterCorrection } from '../components/QuestRosterCorrection.js';
 import { QuestOwnerActions } from '../components/QuestOwnerActions.js';
 import { useQuestDetailPage } from '../hooks/useQuestDetailPage.js';
+import { useRosterCharacterSearch } from '../hooks/useRosterCharacterSearch.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { useMemberHref } from '../../../hooks/useMemberHref.js';
 import { useQuestTableRules } from '../hooks/useQuestTableRules.js';
@@ -65,6 +67,7 @@ export function QuestDetailPage(): React.JSX.Element {
   const memberHref = useMemberHref();
   const { code = '' } = useParams();
   const detail = useQuestDetailPage(code);
+  const rosterSearch = useRosterCharacterSearch();
   const { page, commands } = detail;
   const [tab, setTab] = useState('details');
   // House rules live on the DM's profile; fetch them only once the tab is open.
@@ -469,6 +472,14 @@ export function QuestDetailPage(): React.JSX.Element {
             pending={commands.pending}
             execute={commands.execute}
             error={commands.error}
+          />
+        ) : null}
+        {detail.admin && (quest.machineStatus === 'open' || quest.machineStatus === 'full') ? (
+          <QuestRosterCorrection
+            quest={quest}
+            pending={commands.pending}
+            execute={commands.execute}
+            search={rosterSearch}
           />
         ) : null}
       </div>

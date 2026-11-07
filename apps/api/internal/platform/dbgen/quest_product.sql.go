@@ -269,6 +269,18 @@ func (q *Queries) ProductQuestBumpDiscordDesired(ctx context.Context, arg Produc
 	return i, err
 }
 
+const productQuestCharacterID = `-- name: ProductQuestCharacterID :one
+SELECT c.id FROM characters c WHERE c.public_id = $1::uuid
+`
+
+// Removal addresses a soft-deleted character who still holds a seat.
+func (q *Queries) ProductQuestCharacterID(ctx context.Context, characterID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, productQuestCharacterID, characterID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const productQuestCharacterInternal = `-- name: ProductQuestCharacterInternal :one
 SELECT c.id, c.public_id, owner.public_id AS owner_public_id, c.status
 FROM characters c

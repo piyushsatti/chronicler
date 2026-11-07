@@ -1011,6 +1011,46 @@ func (r *mutationResolver) WithdrawFromQuest(ctx context.Context, questID string
 	return toQuestParticipantFromQuest(view), nil
 }
 
+// AddQuestParticipant is the resolver for the addQuestParticipant field.
+func (r *mutationResolver) AddQuestParticipant(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error) {
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.AddQuestParticipant(ctx, actor, quest.CorrectQuestRosterSpec{
+		QuestId:     questID,
+		CharacterId: characterID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestParticipantFromQuest(view), nil
+}
+
+// RemoveQuestParticipant is the resolver for the removeQuestParticipant field.
+func (r *mutationResolver) RemoveQuestParticipant(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error) {
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.RemoveQuestParticipant(ctx, actor, quest.CorrectQuestRosterSpec{
+		QuestId:     questID,
+		CharacterId: characterID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestParticipantFromQuest(view), nil
+}
+
 // SelectQuestParticipants is the resolver for the selectQuestParticipants field.
 func (r *mutationResolver) SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, meta CommandMeta) ([]*QuestParticipantType, error) {
 	if r.Services.QuestCommands == nil {

@@ -860,6 +860,108 @@ func (p *ProductPostgres) StoreWithdrawFromQuest(ctx context.Context, write With
 	return result, nil
 }
 
+func (p *ProductPostgres) StoreCorrectQuestRoster(ctx context.Context, write CorrectQuestRosterWrite) (QuestParticipantView, bool, error) {
+	previous := questParticipant(write.Roster, write.ValidatedInput.CharacterId)
+	plan, err := planRosterCorrection(write.ValidatedInput.Action, write.Quest, rosterAdmission(write.Candidates, write.ValidatedInput.CharacterId), previous)
+	if err != nil {
+		return QuestParticipantView{}, false, err
+	}
+	if plan.Skip {
+		return *previous, true, nil
+	}
+	character, lockedRow, err := p.rosterCharacterRow(ctx, write.ValidatedInput.QuestId, write.ValidatedInput.CharacterId, write.ValidatedInput.Action == "remove")
+	if err != nil {
+		return QuestParticipantView{}, false, err
+	}
+	at := pgtype.Timestamptz{Time: write.At.UTC(), Valid: true}
+	if err := p.writeCorrectedParticipant(ctx, lockedRow.ID, character, plan.Status, previous, at); err != nil {
+		return QuestParticipantView{}, false, err
+	}
+	if err := p.applyRosterDelta(ctx, lockedRow.ID, plan.Delta); err != nil {
+		return QuestParticipantView{}, false, err
+	}
+	return rosterCorrectionView(write, character, previous, plan.Status, write.At), false, nil
+}
+
+func (p *ProductPostgres) rosterCharacterRow(ctx context.Context, questID, characterID string, allowDeleted bool) (dbgen.ProductQuestCharacterInternalRow, dbgen.Quest, error) {
+	var character dbgen.ProductQuestCharacterInternalRow
+	var locked dbgen.Quest
+	parsed, err := questUUID(questID)
+	if err != nil {
+		return character, locked, err
+	}
+	publicID := mustUUID(characterID)
+	character, err = p.queries().ProductQuestCharacterInternal(ctx, publicID)
+	if errors.Is(err, pgx.ErrNoRows) && allowDeleted {
+		// Soft-deleted characters stay seated; removal still needs the row id.
+		character.ID, err = p.queries().ProductQuestCharacterID(ctx, publicID)
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return character, locked, apierr.New(apierr.NotFound, "character not found")
+	}
+	if err != nil {
+		return character, locked, err
+	}
+	locked, err = p.queries().ProductQuestLockByID(ctx, parsed)
+	return character, locked, err
+}
+
+func (p *ProductPostgres) writeCorrectedParticipant(ctx context.Context, questRowID int64, character dbgen.ProductQuestCharacterInternalRow, status string, previous *QuestParticipantView, at pgtype.Timestamptz) error {
+	if previous == nil {
+		memberID, err := p.internalMember(ctx, db.UUIDString(character.OwnerPublicID))
+		if err != nil {
+			return err
+		}
+		return p.insertOrRejoinQuestParticipant(ctx, dbgen.ProductQuestInsertParticipantParams{
+			QuestID: questRowID, MemberID: memberID, CharacterID: character.ID, Status: status, Manual: false, At: at,
+		}, false)
+	}
+	if previous.Status == "withdrawn" {
+		_, err := p.queries().ProductQuestRejoinParticipant(ctx, dbgen.ProductQuestRejoinParticipantParams{
+			Status: status, At: at, QuestID: questRowID, CharacterID: character.ID,
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apierr.New(apierr.Conflict, "quest roster changed")
+		}
+		return err
+	}
+	_, err := p.queries().ProductQuestUpdateParticipant(ctx, dbgen.ProductQuestUpdateParticipantParams{
+		Status: status, Manual: false, At: at, QuestID: questRowID, CharacterID: character.ID,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apierr.New(apierr.NotFound, "participant not found")
+	}
+	return err
+}
+
+func (p *ProductPostgres) applyRosterDelta(ctx context.Context, questRowID int64, delta int32) error {
+	if delta == 0 {
+		return nil
+	}
+	_, err := p.queries().ProductQuestIncrementCapacity(ctx, dbgen.ProductQuestIncrementCapacityParams{Delta: delta, QuestID: questRowID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apierr.New(apierr.Conflict, "quest capacity exceeded")
+	}
+	return err
+}
+
+func rosterCorrectionView(write CorrectQuestRosterWrite, character dbgen.ProductQuestCharacterInternalRow, previous *QuestParticipantView, status string, at time.Time) QuestParticipantView {
+	result := QuestParticipantView{
+		QuestId: write.ValidatedInput.QuestId, CharacterId: write.ValidatedInput.CharacterId,
+		MemberId: db.UUIDString(character.OwnerPublicID), Status: status, CreatedAt: at.UTC(), UpdatedAt: at.UTC(),
+	}
+	if previous == nil {
+		return result
+	}
+	result.MemberId = previous.MemberId
+	result.CharacterName = previous.CharacterName
+	result.MemberHandle = previous.MemberHandle
+	result.MemberDisplayName = previous.MemberDisplayName
+	result.MemberAvatarUrl = previous.MemberAvatarUrl
+	result.CreatedAt = previous.CreatedAt
+	return result
+}
+
 func validateQuestWithdrawalWrite(write WithdrawFromQuestWrite) (*QuestParticipantView, error) {
 	if !write.Locked.Exists || write.Locked.Before == nil {
 		return nil, apierr.New(apierr.NotFound, "quest not found")

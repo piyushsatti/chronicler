@@ -21428,7 +21428,8 @@
         "LockUpsertQuestSummary(ctx context.Context, spec quest.UpsertQuestSummarySpec) (quest.UpsertQuestSummaryState, error)",
         "StoreUpsertQuestSummary(ctx context.Context, write quest.UpsertQuestSummaryWrite) (document.DocumentView, error)",
         "LockWithdrawFromQuest(ctx context.Context, spec quest.WithdrawFromQuestSpec) (quest.WithdrawFromQuestState, error)",
-        "StoreWithdrawFromQuest(ctx context.Context, write quest.WithdrawFromQuestWrite) (quest.QuestParticipantView, error)"
+        "StoreWithdrawFromQuest(ctx context.Context, write quest.WithdrawFromQuestWrite) (quest.QuestParticipantView, error)",
+        "StoreCorrectQuestRoster(ctx context.Context, write quest.CorrectQuestRosterWrite) (quest.QuestParticipantView, bool, error)"
       ],
       "owner": "QUE02",
       "provider": "QUE04"

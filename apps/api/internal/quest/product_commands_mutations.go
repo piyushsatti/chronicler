@@ -770,6 +770,67 @@ func recordQuestPromotions(ctx context.Context, repos ProductCommandRepos, fresh
 	return nil
 }
 
+func (s ProductCommands) AddQuestParticipant(ctx context.Context, actor auth.Authority, spec CorrectQuestRosterSpec, meta product.CommandMeta) (QuestParticipantView, error) {
+	return s.correctQuestRoster(ctx, actor, spec, meta, "add", "addQuestParticipant", "Mutation.addQuestParticipant")
+}
+
+func (s ProductCommands) RemoveQuestParticipant(ctx context.Context, actor auth.Authority, spec CorrectQuestRosterSpec, meta product.CommandMeta) (QuestParticipantView, error) {
+	return s.correctQuestRoster(ctx, actor, spec, meta, "remove", "removeQuestParticipant", "Mutation.removeQuestParticipant")
+}
+
+func (s ProductCommands) correctQuestRoster(ctx context.Context, actor auth.Authority, spec CorrectQuestRosterSpec, meta product.CommandMeta, action, operation, policyOperation string) (QuestParticipantView, error) {
+	questID := strings.TrimSpace(spec.QuestId)
+	characterID := strings.TrimSpace(spec.CharacterId)
+	if err := commandPublicID(&questID); err != nil {
+		return QuestParticipantView{}, err
+	}
+	if err := commandPublicID(&characterID); err != nil {
+		return QuestParticipantView{}, err
+	}
+	spec.QuestId, spec.CharacterId, spec.Action = questID, characterID, action
+	request, preview, err := s.questDMRequest(ctx, actor, auth.Operation(policyOperation), questID)
+	if err != nil {
+		return QuestParticipantView{}, err
+	}
+	return runQuestCommand(ctx, s, actor, operation, request, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (QuestParticipantView, error) {
+		return applyQuestRosterCorrection(ctx, repos, fresh, at, spec, request, preview)
+	})
+}
+
+func applyQuestRosterCorrection(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec CorrectQuestRosterSpec, request auth.Request, preview *QuestView) (QuestParticipantView, error) {
+	if product.MissingDependency(repos.Characters) {
+		return QuestParticipantView{}, apierr.New(apierr.Internal, "character admission reader required")
+	}
+	admissions, err := repos.Characters.LockAdmissions(ctx, []string{spec.CharacterId})
+	if err != nil {
+		return QuestParticipantView{}, err
+	}
+	locked, err := repos.Quest.LockSelectQuestParticipants(ctx, SelectQuestParticipantsSpec{QuestId: spec.QuestId, CharacterIds: []string{spec.CharacterId}, AsOf: at})
+	if err != nil {
+		return QuestParticipantView{}, err
+	}
+	if !locked.Exists || locked.Before == nil {
+		return QuestParticipantView{}, apierr.New(apierr.NotFound, "quest not found")
+	}
+	if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), spec.QuestId, preview.DmId, locked.OwnerID); err != nil {
+		return QuestParticipantView{}, err
+	}
+	view, skipped, err := repos.Quest.StoreCorrectQuestRoster(ctx, CorrectQuestRosterWrite{
+		At: at, ValidatedInput: spec, Quest: locked.Before, Roster: locked.Roster, Candidates: admissions,
+	})
+	if err != nil || skipped {
+		return view, err
+	}
+	if _, err := repos.Quest.StoreSyncQuestDiscord(ctx, SyncQuestDiscordWrite{
+		ActorID: fresh.Claims().MemberID, At: at,
+		ValidatedInput: SyncQuestDiscordSpec{QuestId: spec.QuestId, AsOf: at},
+		Locked:         SyncQuestDiscordState{Exists: true},
+	}); err != nil {
+		return QuestParticipantView{}, err
+	}
+	return view, nil
+}
+
 func (s ProductCommands) AttestQuestParticipation(ctx context.Context, actor auth.Authority, spec AttestQuestParticipationSpec, meta product.CommandMeta) ([]QuestParticipantView, error) {
 	questID := strings.TrimSpace(spec.QuestId)
 	if err := commandPublicID(&questID); err != nil {

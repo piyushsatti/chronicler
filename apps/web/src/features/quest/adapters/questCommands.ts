@@ -6,6 +6,8 @@ import type {
   TransitionQuestStatusMutation,
   QuestSelectParticipantsMutation,
   QuestAttestParticipationMutation,
+  QuestAddParticipantMutation,
+  QuestRemoveParticipantMutation,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -15,11 +17,13 @@ import TRANSITION from './questTransition.graphql?raw';
 import CLOSE from './questClose.graphql?raw';
 import SELECT from './questSelect.graphql?raw';
 import ATTEST from './questAttest.graphql?raw';
+import ADD from './questAddParticipant.graphql?raw';
+import REMOVE from './questRemoveParticipant.graphql?raw';
 
 export type Attendance = { characterId: string; status: 'played' | 'no_show' };
 export type Reward = { characterId: string; pcxp: number; note?: string };
 export type QuestCommand =
-  | { kind: 'signup' | 'withdraw'; questId: string; characterId: string }
+  | { kind: 'signup' | 'withdraw' | 'rosterAdd' | 'rosterRemove'; questId: string; characterId: string }
   | { kind: 'transition'; questId: string; to: 'played' | 'cancelled' }
   | { kind: 'select'; questId: string; characterIds: string[] }
   | { kind: 'attest'; questId: string; entries: Attendance[] }
@@ -55,6 +59,24 @@ export async function executeQuestCommand(
         });
         participant.parse(data.withdrawFromQuest);
         return 'Your character has withdrawn.';
+      }
+      case 'rosterAdd': {
+        const data = await graphqlRequest<QuestAddParticipantMutation>(ADD, {
+          questId,
+          characterId: command.characterId,
+          meta,
+        });
+        participant.parse(data.addQuestParticipant);
+        return 'Character added to the roster.';
+      }
+      case 'rosterRemove': {
+        const data = await graphqlRequest<QuestRemoveParticipantMutation>(REMOVE, {
+          questId,
+          characterId: command.characterId,
+          meta,
+        });
+        participant.parse(data.removeQuestParticipant);
+        return 'Character removed from the roster.';
       }
       case 'transition': {
         const data = await graphqlRequest<TransitionQuestStatusMutation>(TRANSITION, {
