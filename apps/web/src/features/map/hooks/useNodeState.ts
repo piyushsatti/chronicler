@@ -10,11 +10,11 @@ import {
   type Pointcrawl,
 } from '../adapters/mapAdapter.js';
 import { isHexMap } from '../mapWords.js';
-import { nextNodeState } from '../nodeState.js';
+import type { NodeState } from '../nodeState.js';
 
 /**
- * A hex's display state and the admin-only control that cycles it. Every viewer sees
- * the state; only admins on a hex map get `cycle`. The server re-checks authority.
+ * A hex's display state and the admin-only control that sets it. Every viewer sees
+ * the state; only admins on a hex map get `set`. The server re-checks authority.
  */
 export function useNodeState({
   map,
@@ -57,9 +57,8 @@ export function useNodeState({
     setPending(false);
     setError('');
   }, [epoch]);
-  const next = nextNodeState(node.state);
-  async function cycle() {
-    if (lock.current || !canSet || !isCurrent()) return;
+  async function set(next: NodeState) {
+    if (next === node.state || lock.current || !canSet || !isCurrent()) return;
     const identity = `${node.id}:${next}`;
     const key = replay.current.get(identity) ?? crypto.randomUUID();
     replay.current.set(identity, key);
@@ -88,5 +87,5 @@ export function useNodeState({
       }
     }
   }
-  return { hexMap, state: node.state, next, canSet, pending, error, cycle };
+  return { hexMap, state: node.state, canSet, pending, error, set };
 }
