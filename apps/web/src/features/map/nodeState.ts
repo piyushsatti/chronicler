@@ -31,9 +31,3 @@ export function nodeStateLabel(state: NodeState): string {
 export function nodeStateMeaning(state: NodeState): string {
   return MEANINGS[state];
 }
-
-/** The admin control cycles Locked → Unlocked → Mapped → Locked. */
-export function nextNodeState(state: NodeState): NodeState {
-  const index = NODE_STATES.indexOf(state);
-  return NODE_STATES[(index + 1) % NODE_STATES.length] ?? 'LOCKED';
-}
