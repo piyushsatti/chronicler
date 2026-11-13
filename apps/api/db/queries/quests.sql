@@ -211,3 +211,9 @@ WHERE public_id = sqlc.arg(public_id);
 
 -- name: DeliverySettingPayload :one
 SELECT payload FROM site_settings WHERE key = sqlc.arg(setting_key)::text;
+
+-- name: QuestPlayerListTarget :one
+SELECT q.discord_thread_id, q.status, q.deleted_at
+FROM quests q
+WHERE q.public_id = sqlc.arg(public_id)::uuid;
+

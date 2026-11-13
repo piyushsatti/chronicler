@@ -13,7 +13,7 @@ Authors asked for an easy way to hide text without typing marker syntax. The edi
 
 Named pattern: **conformist client reader verified by shared conformance vectors**. The client adopts the server's grammar unchanged (conformist, not a translation), and both runtimes are tested against the same vectors. This follows [scoped-body](/docs/interfaces/scoped-body.md): "editor validation must consume those vectors".
 
-`apps/web/src/features/editor/hideMarkers.ts` reads audience tokens with the same boundary and precedence as `classifyMarkerLine` / `classifyMarkers` in `apps/api/internal/document/body.go`. The Hide action uses it for two things only:
+`apps/web/src/components/interactive/markdown-editor/hideMarkers.ts` reads audience tokens with the same boundary and precedence as `classifyMarkerLine` / `classifyMarkers` in `apps/api/internal/document/body.go`. The Hide action uses it for two things only:
 
 1. **Stripping:** remove every audience token (valid, malformed and lookalike such as `[!dm@x]`) inside the wrapped range, so the written header is the block's only token.
 2. **Confirming:** detect an existing hidden scope (DM, member or malformed) that the new marker would change, and ask the author before writing.

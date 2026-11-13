@@ -88,109 +88,102 @@ func bumpCapacity(t *testing.T, f questCloseFixture, wantFilled int, wantStatus 
 	}
 }
 
-// TestLastGamePlayedSignupBumpsVeteranForNewPlayer checks that a player who has never played
-// takes the seat of the seated player with the most recent game, who drops to the waitlist.
-func TestLastGamePlayedSignupBumpsVeteranForNewPlayer(t *testing.T) {
-	f := bumpQuest(t, "last_game_played", 2)
-	recent, longAgo, newcomer := bumpPlayer(t, f), bumpPlayer(t, f), bumpPlayer(t, f)
-	bumpPlayed(t, f, recent, 3)
-	bumpPlayed(t, f, longAgo, 10)
-	if got := bumpSignup(t, f, recent).Status; got != "signed_up" {
-		t.Fatalf("recent=%s", got)
+// TestSignupOnOpenQuestWaitlists checks that a signup on a quest with open seats lands on
+// the waitlist for both signup types and does not fill a seat.
+func TestSignupOnOpenQuestWaitlists(t *testing.T) {
+	for _, signupType := range []string{"last_game_played", "dm_pick"} {
+		t.Run(signupType, func(t *testing.T) {
+			f := bumpQuest(t, signupType, 2)
+			first, second := bumpPlayer(t, f), bumpPlayer(t, f)
+			if got := bumpSignup(t, f, first).Status; got != "waitlisted" {
+				t.Fatalf("first signup=%s want waitlisted", got)
+			}
+			if got := bumpSignup(t, f, second).Status; got != "waitlisted" {
+				t.Fatalf("second signup=%s want waitlisted", got)
+			}
+			bumpCapacity(t, f, 0, "open")
+		})
 	}
-	if got := bumpSignup(t, f, longAgo).Status; got != "signed_up" {
-		t.Fatalf("longAgo=%s", got)
-	}
-	bumpCapacity(t, f, 2, "full")
-	if got := bumpSignup(t, f, newcomer).Status; got != "signed_up" {
-		t.Fatalf("newcomer signup returned %s, want signed_up", got)
-	}
-	for character, want := range map[string]string{newcomer: "signed_up", longAgo: "signed_up", recent: "waitlisted"} {
-		if got := bumpStatus(t, f, character); got != want {
-			t.Fatalf("status of %s=%s want %s", character, got, want)
-		}
-	}
-	bumpCapacity(t, f, 2, "full")
 }
 
-// TestLastGamePlayedSignupBumpsByLongerWaitingVeteran checks that a veteran whose last game is
-// older than the seated veteran's takes that seat.
-func TestLastGamePlayedSignupBumpsByLongerWaitingVeteran(t *testing.T) {
+// TestLastGamePlayedSignupDoesNotBumpSeatedPlayer checks that a higher-priority newcomer
+// waits and leaves an existing seat alone.
+func TestLastGamePlayedSignupDoesNotBumpSeatedPlayer(t *testing.T) {
 	f := bumpQuest(t, "last_game_played", 1)
 	seated, waiting := bumpPlayer(t, f), bumpPlayer(t, f)
 	bumpPlayed(t, f, seated, 3)
 	bumpPlayed(t, f, waiting, 30)
-	bumpSignup(t, f, seated)
-	if got := bumpSignup(t, f, waiting).Status; got != "signed_up" {
-		t.Fatalf("longer-waiting signup returned %s, want signed_up", got)
+	if got := bumpSignup(t, f, seated).Status; got != "waitlisted" {
+		t.Fatalf("seated signup=%s want waitlisted", got)
 	}
-	if got := bumpStatus(t, f, seated); got != "waitlisted" {
-		t.Fatalf("bumped veteran status=%s want waitlisted", got)
+	markSeated(t, f, seated)
+	if got := bumpSignup(t, f, waiting).Status; got != "waitlisted" {
+		t.Fatalf("higher-priority signup returned %s, want waitlisted", got)
+	}
+	if got := bumpStatus(t, f, seated); got != "signed_up" {
+		t.Fatalf("existing seat status=%s want signed_up", got)
 	}
 	bumpCapacity(t, f, 1, "full")
 }
 
-// TestLastGamePlayedSignupEqualPriorityDoesNotBump checks that an equal-priority newcomer goes
-// to the waitlist because the earlier signup keeps the seat.
-func TestLastGamePlayedSignupEqualPriorityDoesNotBump(t *testing.T) {
-	for name, days := range map[string]int{"never played": -1, "same last game day": 7} {
-		t.Run(name, func(t *testing.T) {
-			f := bumpQuest(t, "last_game_played", 1)
-			seated, newcomer := bumpPlayer(t, f), bumpPlayer(t, f)
-			if days >= 0 {
-				bumpPlayed(t, f, seated, days)
-				bumpPlayed(t, f, newcomer, days)
-			}
-			bumpSignup(t, f, seated)
-			if got := bumpSignup(t, f, newcomer).Status; got != "waitlisted" {
-				t.Fatalf("equal-priority signup returned %s, want waitlisted", got)
-			}
-			if got := bumpStatus(t, f, seated); got != "signed_up" {
-				t.Fatalf("seated status=%s want signed_up", got)
-			}
-			bumpCapacity(t, f, 1, "full")
-		})
+// TestWithdrawnSignupReturnsToWaitlist checks that a seated player who withdraws and signs
+// up again is waitlisted, and that the rejoin does not take the open seat.
+func TestWithdrawnSignupReturnsToWaitlist(t *testing.T) {
+	f := bumpQuest(t, "dm_pick", 1)
+	character := bumpPlayer(t, f)
+	if got := bumpSignup(t, f, character).Status; got != "waitlisted" {
+		t.Fatalf("signup=%s want waitlisted", got)
+	}
+	markSeated(t, f, character)
+	if _, err := f.commands.WithdrawFromQuest(context.Background(), questCharacterActor(t, f, character), WithdrawFromQuestSpec{QuestId: f.questID, CharacterId: character}, product.CommandMeta{IdempotencyKey: uuid.NewString()}); err != nil {
+		t.Fatal(err)
+	}
+	if got := bumpSignup(t, f, character).Status; got != "waitlisted" {
+		t.Fatalf("rejoin=%s want waitlisted", got)
+	}
+	bumpCapacity(t, f, 0, "open")
+}
+
+// markSeated holds a seat for a player who already waitlisted. Signup itself never does this.
+func markSeated(t *testing.T, f questCloseFixture, character string) {
+	t.Helper()
+	ctx := context.Background()
+	if _, err := f.fixture.Pool.Exec(ctx, `UPDATE quest_participants p SET status='signed_up' FROM characters c, quests q WHERE p.character_id=c.id AND p.quest_id=q.id AND q.public_id=$1::uuid AND c.public_id=$2::uuid AND p.status='waitlisted'`, f.questID, character); err != nil {
+		t.Fatal(err)
+	}
+	if got := bumpStatus(t, f, character); got != "signed_up" {
+		t.Fatalf("seat %s status=%s", character, got)
+	}
+	if _, err := f.fixture.Pool.Exec(ctx, `UPDATE quests SET filled_count = (SELECT count(*)::integer FROM quest_participants p WHERE p.quest_id=quests.id AND p.status='signed_up'), status = CASE WHEN (SELECT count(*) FROM quest_participants p WHERE p.quest_id=quests.id AND p.status='signed_up') >= slots_max THEN 'full' ELSE 'open' END WHERE public_id=$1::uuid AND status IN ('open','full')`, f.questID); err != nil {
+		t.Fatal(err)
 	}
 }
 
-// TestLastGamePlayedSignupLowerPriorityWaitlists checks that a newcomer ranked below every
-// seated player goes to the waitlist.
-func TestLastGamePlayedSignupLowerPriorityWaitlists(t *testing.T) {
-	f := bumpQuest(t, "last_game_played", 2)
-	never, longAgo, recent := bumpPlayer(t, f), bumpPlayer(t, f), bumpPlayer(t, f)
-	bumpPlayed(t, f, longAgo, 30)
-	bumpPlayed(t, f, recent, 2)
-	bumpSignup(t, f, never)
-	bumpSignup(t, f, longAgo)
-	if got := bumpSignup(t, f, recent).Status; got != "waitlisted" {
-		t.Fatalf("lower-priority signup returned %s, want waitlisted", got)
-	}
-	for _, character := range []string{never, longAgo} {
-		if got := bumpStatus(t, f, character); got != "signed_up" {
-			t.Fatalf("seated status=%s want signed_up", got)
+// TestDMPickWithdrawalOverCapDoesNotPromote checks that withdrawing one seated player from a
+// DM Pick quest that is still over slots_max leaves the waitlist where it is.
+func TestDMPickWithdrawalOverCapDoesNotPromote(t *testing.T) {
+	f := bumpQuest(t, "dm_pick", 1)
+	seated := []string{bumpPlayer(t, f), bumpPlayer(t, f), bumpPlayer(t, f)}
+	waiter := bumpPlayer(t, f)
+	for _, character := range seated {
+		if got := bumpSignup(t, f, character).Status; got != "waitlisted" {
+			t.Fatalf("signup=%s want waitlisted", got)
 		}
+		markSeated(t, f, character)
+	}
+	if got := bumpSignup(t, f, waiter).Status; got != "waitlisted" {
+		t.Fatalf("waiter signup=%s want waitlisted", got)
+	}
+	if _, err := f.commands.WithdrawFromQuest(context.Background(), questCharacterActor(t, f, seated[0]), WithdrawFromQuestSpec{QuestId: f.questID, CharacterId: seated[0]}, product.CommandMeta{IdempotencyKey: uuid.NewString()}); err != nil {
+		t.Fatal(err)
+	}
+	if got := bumpStatus(t, f, waiter); got != "waitlisted" {
+		t.Fatalf("waiter status=%s want waitlisted", got)
+	}
+	if got := bumpStatus(t, f, seated[0]); got != "withdrawn" {
+		t.Fatalf("withdrawn status=%s want withdrawn", got)
 	}
 	bumpCapacity(t, f, 2, "full")
-}
-
-// TestDMPickSignupNeverBumps checks that dm_pick quests, and quests with no signup type, keep
-// first-come seating: a full quest waitlists even a player who has never played.
-func TestDMPickSignupNeverBumps(t *testing.T) {
-	for _, signupType := range []string{"dm_pick", ""} {
-		t.Run("type="+signupType, func(t *testing.T) {
-			f := bumpQuest(t, signupType, 1)
-			veteran, newcomer := bumpPlayer(t, f), bumpPlayer(t, f)
-			bumpPlayed(t, f, veteran, 3)
-			bumpSignup(t, f, veteran)
-			if got := bumpSignup(t, f, newcomer).Status; got != "waitlisted" {
-				t.Fatalf("signup returned %s, want waitlisted", got)
-			}
-			if got := bumpStatus(t, f, veteran); got != "signed_up" {
-				t.Fatalf("veteran status=%s want signed_up", got)
-			}
-			bumpCapacity(t, f, 1, "full")
-		})
-	}
 }
 
 // TestLastGamePlayedWithdrawalPromotesHighestPriorityWaiter checks that a seat freed by a
@@ -201,10 +194,13 @@ func TestLastGamePlayedWithdrawalPromotesHighestPriorityWaiter(t *testing.T) {
 		t.Run(signupType, func(t *testing.T) {
 			f := bumpQuest(t, signupType, 1)
 			seated, firstWaiter, longerWaiter := bumpPlayer(t, f), bumpPlayer(t, f), bumpPlayer(t, f)
-			// The seated player has never played, so neither veteran bumps them on signup.
+			// The seated player has never played. Signup waitlists them; the seat is held separately.
 			bumpPlayed(t, f, firstWaiter, 3)
 			bumpPlayed(t, f, longerWaiter, 30)
-			bumpSignup(t, f, seated)
+			if got := bumpSignup(t, f, seated).Status; got != "waitlisted" {
+				t.Fatalf("seated signup=%s want waitlisted", got)
+			}
+			markSeated(t, f, seated)
 			for _, character := range []string{firstWaiter, longerWaiter} {
 				if got := bumpSignup(t, f, character).Status; got != "waitlisted" {
 					t.Fatalf("veteran signup=%s want waitlisted", got)
@@ -255,28 +251,27 @@ func bumpNotificationCount(t *testing.T, f questCloseFixture, character string) 
 	return count
 }
 
-// TestLastGamePlayedBumpNotifiesBumpedPlayer checks that bumping a seated player off a Last
-// Game Played quest writes a notification row for the bumped player, not just the newcomer.
-func TestLastGamePlayedBumpNotifiesBumpedPlayer(t *testing.T) {
+// TestLastGamePlayedSignupDoesNotNotifyABump checks that a higher-priority signup leaves the
+// seated player in place and writes no bump notice for them.
+func TestLastGamePlayedSignupDoesNotNotifyABump(t *testing.T) {
 	f := bumpQuest(t, "last_game_played", 1)
 	seated, newcomer := bumpPlayer(t, f), bumpPlayer(t, f)
 	bumpPlayed(t, f, seated, 3)
-	if got := bumpSignup(t, f, seated).Status; got != "signed_up" {
+	if got := bumpSignup(t, f, seated).Status; got != "waitlisted" {
 		t.Fatalf("seated=%s", got)
 	}
-	// The player's own signup already wrote a QuestSignupConfirmed notification; the bump
-	// below must add a second, distinct notification row for the same player.
 	if got := bumpNotificationCount(t, f, seated); got != 1 {
 		t.Fatalf("seated notifications after own signup=%d, want 1", got)
 	}
-	if got := bumpSignup(t, f, newcomer).Status; got != "signed_up" {
-		t.Fatalf("newcomer signup returned %s, want signed_up", got)
+	markSeated(t, f, seated)
+	if got := bumpSignup(t, f, newcomer).Status; got != "waitlisted" {
+		t.Fatalf("newcomer signup returned %s, want waitlisted", got)
 	}
-	if got := bumpStatus(t, f, seated); got != "waitlisted" {
-		t.Fatalf("bumped player status=%s want waitlisted", got)
+	if got := bumpStatus(t, f, seated); got != "signed_up" {
+		t.Fatalf("seated status=%s want signed_up", got)
 	}
-	if got := bumpNotificationCount(t, f, seated); got != 2 {
-		t.Fatalf("bumped player notifications=%d, want 2 (signup confirmed + bumped)", got)
+	if got := bumpNotificationCount(t, f, seated); got != 1 {
+		t.Fatalf("seated notifications=%d, want 1 (signup only, no bump)", got)
 	}
 	if got := bumpNotificationCount(t, f, newcomer); got != 1 {
 		t.Fatalf("newcomer notifications=%d, want 1", got)
@@ -284,14 +279,17 @@ func TestLastGamePlayedBumpNotifiesBumpedPlayer(t *testing.T) {
 	bumpCapacity(t, f, 1, "full")
 }
 
-// TestDMPickedSeatNeverBumped checks that a DM-picked seat is immune to the Last Game
-// Played bump: a higher-priority newcomer bumps the next-lowest ordinary seat instead.
-func TestDMPickedSeatNeverBumped(t *testing.T) {
+// TestDMPickedSeatStaysSeatedOnSignup checks that a later signup leaves a DM-picked seat
+// and any other held seat where they are.
+func TestDMPickedSeatStaysSeatedOnSignup(t *testing.T) {
 	f := bumpQuest(t, "last_game_played", 2)
 	recent, mid, newcomer := bumpPlayer(t, f), bumpPlayer(t, f), bumpPlayer(t, f)
 	bumpPlayed(t, f, recent, 2)
 	bumpPlayed(t, f, mid, 10)
-	bumpSignup(t, f, mid)
+	if got := bumpSignup(t, f, mid).Status; got != "waitlisted" {
+		t.Fatalf("mid signup=%s want waitlisted", got)
+	}
+	markSeated(t, f, mid)
 
 	if _, err := f.fixture.Pool.Exec(context.Background(), `INSERT INTO quest_participants(quest_id,character_id,member_id,status)
 		SELECT q.id,c.id,c.owner_id,'waitlisted' FROM quests q,characters c WHERE q.public_id=$1::uuid AND c.public_id=$2::uuid`, f.questID, recent); err != nil {
@@ -300,27 +298,26 @@ func TestDMPickedSeatNeverBumped(t *testing.T) {
 	if _, err := f.commands.SelectQuestParticipants(context.Background(), f.actor, SelectQuestParticipantsSpec{QuestId: f.questID, CharacterIds: []string{recent}}, product.CommandMeta{IdempotencyKey: uuid.NewString()}); err != nil {
 		t.Fatal(err)
 	}
-	// A real DM pick syncs Discord (revision bumps to 1); the bump logic below never touches
-	// Discord itself, so revision stays at 1 for the rest of this test.
+	// A real DM pick syncs Discord (revision bumps to 1). Signup does not.
 	bumpCapacityAfterDMPick(t, f, 2, "full")
 
-	if got := bumpSignup(t, f, newcomer).Status; got != "signed_up" {
-		t.Fatalf("newcomer signup returned %s, want signed_up", got)
+	if got := bumpSignup(t, f, newcomer).Status; got != "waitlisted" {
+		t.Fatalf("newcomer signup returned %s, want waitlisted", got)
 	}
 	if got := bumpStatus(t, f, recent); got != "signed_up" {
-		t.Fatalf("DM-picked seat status=%s, want signed_up (must not be bumped)", got)
+		t.Fatalf("DM-picked seat status=%s, want signed_up", got)
 	}
-	if got := bumpStatus(t, f, mid); got != "waitlisted" {
-		t.Fatalf("next-lowest seat status=%s, want waitlisted", got)
+	if got := bumpStatus(t, f, mid); got != "signed_up" {
+		t.Fatalf("existing seat status=%s, want signed_up", got)
 	}
 	bumpCapacityAfterDMPick(t, f, 2, "full")
 }
 
-// TestDMPickedSeatRejoinClearsImmunity checks that bump immunity does not survive a
-// withdrawal and rejoin: rejoining is always an ordinary signup, never a DM pick.
-func TestDMPickedSeatRejoinClearsImmunity(t *testing.T) {
+// TestDMPickedWithdrawalRejoinWaitlists checks that a DM-picked player who withdraws and
+// signs up again returns to the waitlist instead of reclaiming the seat.
+func TestDMPickedWithdrawalRejoinWaitlists(t *testing.T) {
 	f := bumpQuest(t, "last_game_played", 1)
-	picked, newcomer := bumpPlayer(t, f), bumpPlayer(t, f)
+	picked := bumpPlayer(t, f)
 	bumpPlayed(t, f, picked, 2)
 
 	if _, err := f.fixture.Pool.Exec(context.Background(), `INSERT INTO quest_participants(quest_id,character_id,member_id,status)
@@ -337,16 +334,8 @@ func TestDMPickedSeatRejoinClearsImmunity(t *testing.T) {
 	if _, err := f.commands.WithdrawFromQuest(context.Background(), questCharacterActor(t, f, picked), WithdrawFromQuestSpec{QuestId: f.questID, CharacterId: picked}, product.CommandMeta{IdempotencyKey: uuid.NewString()}); err != nil {
 		t.Fatal(err)
 	}
-	if got := bumpSignup(t, f, picked).Status; got != "signed_up" {
-		t.Fatalf("rejoin returned %s, want signed_up", got)
+	if got := bumpSignup(t, f, picked).Status; got != "waitlisted" {
+		t.Fatalf("rejoin returned %s, want waitlisted", got)
 	}
-
-	if got := bumpSignup(t, f, newcomer).Status; got != "signed_up" {
-		t.Fatalf("newcomer signup returned %s, want signed_up", got)
-	}
-	if got := bumpStatus(t, f, picked); got != "waitlisted" {
-		t.Fatalf("rejoined seat status=%s, want waitlisted (immunity must not survive a rejoin)", got)
-	}
-	// The real DM pick earlier synced Discord (revision bumps to 1, see bumpCapacityAfterDMPick).
-	bumpCapacityAfterDMPick(t, f, 1, "full")
+	bumpCapacityAfterDMPick(t, f, 0, "open")
 }

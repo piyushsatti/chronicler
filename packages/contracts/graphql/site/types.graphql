@@ -47,6 +47,20 @@ type AdminOperationsType {
   activeAlerts(limit: Int! = 50, offset: Int! = 0): [AdminHealthAlertType!]!
 }
 
+type AdminQuestHexCountType {
+  id: ID!
+  name: String!
+  mapName: String!
+  questCount: Int!
+}
+
+type AdminCommunityStatsType {
+  totalCharacters: Int!
+  "Class catalog name. Empty when the character has no class pick."
+  charactersByClass: [CountByKeyType!]!
+  questHexes: [AdminQuestHexCountType!]!
+}
+
 type CategoryCountType {
   category: String!
   count: Int!

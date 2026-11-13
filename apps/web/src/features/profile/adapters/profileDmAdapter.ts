@@ -11,34 +11,14 @@ const arcPage = z.object({
 const schema = z.object({
   questArcs: arcPage,
   dmStats: z.object({ sessionCount: z.number().int().nonnegative() }).nullable(),
-  documents: z.object({
-    items: z.array(
-      z.object({
-        id: z.string().uuid(),
-        slug: z.string(),
-        title: z.string(),
-        status: z.string(),
-        authorId: z.string().uuid(),
-        canEditBody: z.boolean(),
-        canEditMetadata: z.boolean(),
-      }),
-    ),
-    total: z.number().int().nonnegative(),
-  }),
 });
 export type ProfileDmDetails = z.infer<typeof schema>;
-export const PROFILE_DM_PAGE_SIZE = 20;
 export async function loadProfileDmDetails(
   memberId: string,
-  offset: number,
   init?: RequestInit,
 ): Promise<ProfileDmDetails> {
   try {
-    const data = await graphqlRequest<ProfileDmDetailsQuery>(QUERY, {
-      memberId,
-      limit: PROFILE_DM_PAGE_SIZE,
-      offset,
-    }, init);
+    const data = await graphqlRequest<ProfileDmDetailsQuery>(QUERY, { memberId }, init);
     const parsed = schema.safeParse(data);
     if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'profile:dm');
     const arcs = [...parsed.data.questArcs.items];

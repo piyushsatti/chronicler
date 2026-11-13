@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type {
   AdminBackstoriesQuery,
   AdminCharactersQuery,
+  AdminCommunityStatsQuery,
   AdminCreationCatalogQuery,
   AdminDiscordSettingsQuery,
   AdminGameCalendarQuery,
@@ -41,10 +42,14 @@ import {
 } from './adminRequest.js';
 import { adminPage, type AdminPage, type AdminPageRequest } from './adminPage.js';
 import { toAppError } from '../../../errors/toAppError.js';
-import { discordSafeErrorReason } from '../../../utils/discordDelivery.js';
+import {
+  DISCORD_GENERIC_REASON,
+  discordSafeErrorReason,
+} from '../../../utils/discordDelivery.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import PENDING_DM_PROFILES from './pendingDmProfiles.graphql?raw';
 import ADMIN_OPS from './adminOperations.graphql?raw';
+import ADMIN_COMMUNITY_STATS from './adminCommunityStats.graphql?raw';
 import ADMIN_CHARS from './adminCharacters.graphql?raw';
 import PENDING_CHAR_VERIFICATIONS from './pendingCharacterVerifications.graphql?raw';
 import ADMIN_MEMBERS from './adminMembers.graphql?raw';
@@ -120,6 +125,7 @@ const charPendingSchema = z.object({
         ownerDisplayName: z.string(),
         ddbUrl: z.string().nullable().optional(),
         verificationSubmittedAt: z.string().nullable().optional(),
+        ddbSyncedAt: z.string().nullable().optional(),
       }),
     )
     .optional()
@@ -156,7 +162,12 @@ const adminOpsSchema = z.object({
       lastStartedAt: z.string().nullable(),
       lastFinishedAt: z.string().nullable(),
       jobId: z.string().nullable(),
-      safeErrorCode: z.string().nullable(),
+      // Known Discord codes become the same sentence a delivery row shows.
+      // Any other code is kept so the page still shows it.
+      safeErrorCode: z
+        .string()
+        .nullable()
+        .transform((code) => discordSafeErrorReason(code) ?? code),
     }),
   ),
   deliveries: z.array(
@@ -174,11 +185,14 @@ const adminOpsSchema = z.object({
       failureStreak: z.number().int(),
       maxAttempts: z.number().int(),
       nextAttemptAt: z.string().nullable(),
-      // The API sends the job's safe error code; known codes become a sentence.
+      // The API sends a safe error code. Known codes become a sentence;
+      // any other code becomes the generic sentence, never the raw text.
       safeError: z
         .string()
         .nullable()
-        .transform((code) => discordSafeErrorReason(code) ?? code),
+        .transform((code) =>
+          code ? (discordSafeErrorReason(code) ?? DISCORD_GENERIC_REASON) : null,
+        ),
       redriveCount: z.number().int(),
       createdAt: z.string(),
       updatedAt: z.string(),
@@ -218,6 +232,7 @@ export type CharVerifyRow = {
   ownerDisplayName: string;
   ddbUrl: string | null;
   verificationSubmittedAt: string | null;
+  ddbSyncedAt: string | null;
 };
 
 export type AdminOpsView = z.infer<typeof adminOpsSchema>;
@@ -264,6 +279,7 @@ export function parseCharPending(wire: unknown): AdapterResult<CharVerifyRow[]> 
       ownerDisplayName: i.ownerDisplayName,
       ddbUrl: i.ddbUrl ?? null,
       verificationSubmittedAt: i.verificationSubmittedAt ?? null,
+      ddbSyncedAt: i.ddbSyncedAt ?? null,
     })),
   };
 }
@@ -320,6 +336,35 @@ export async function loadCharVerifyQueue(
   } catch (error) {
     throw toAppError(error, 'admin:loadCharVerifyQueue');
   }
+}
+
+const communityStatsSchema = z.object({
+  totalCharacters: z.number().int().nonnegative(),
+  charactersByClass: z.array(
+    z.object({
+      key: z.string(),
+      count: z.number().int().nonnegative(),
+    }),
+  ),
+  questHexes: z.array(
+    z.object({
+      id: z.string().min(1),
+      name: z.string().min(1),
+      mapName: z.string().min(1),
+      questCount: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
+export type AdminCommunityStatsView = z.infer<typeof communityStatsSchema>;
+
+export async function loadAdminCommunityStats(
+  request: AdminReadRequest,
+): Promise<AdminCommunityStatsView> {
+  const data = await adminRead<AdminCommunityStatsQuery>(ADMIN_COMMUNITY_STATS, undefined, request);
+  const result = communityStatsSchema.safeParse(data.adminCommunityStats);
+  if (!result.success) throw toAppError({ failure: 'InvalidWire' }, 'admin:community-stats');
+  return result.data;
 }
 
 export async function loadAdminOperations(

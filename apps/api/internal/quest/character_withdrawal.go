@@ -137,6 +137,10 @@ func (p *ProductPostgres) withdrawQuestParticipant(ctx context.Context, effects 
 }
 
 func (p *ProductPostgres) promoteQuestWaitlist(ctx context.Context, effects *character.WithdrawalEffects, actorID string, plan character.WithdrawalPlan, admissions []character.Admission, at time.Time, questID string, locked WithdrawFromQuestState, previous *QuestParticipantView) error {
+	// Pre-withdrawal count: one withdrawal from an over-cap DM Pick party does not open a seat.
+	if locked.Before != nil && locked.Before.SignupType != nil && *locked.Before.SignupType == dmPickSignup && locked.Before.FilledCount > locked.Before.SlotsMax {
+		return nil
+	}
 	candidates := locked.Roster
 	if locked.Before != nil && locked.Before.SignupType != nil && *locked.Before.SignupType == lastGamePlayedSignup {
 		ordered, err := p.waitlistBySeatPriority(ctx, questID, locked.Roster)

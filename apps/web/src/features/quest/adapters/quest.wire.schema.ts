@@ -16,6 +16,7 @@ export const questParticipantWireSchema = z.object({
   memberDisplayName: z.string().optional(),
   memberAvatarUrl: z.string().nullable().optional(),
   status: z.string(),
+  lastPlayedAt: z.string().nullable().optional(),
 });
 
 const questBoardItemWireSchema = z.object({
@@ -42,6 +43,12 @@ const questBoardItemWireSchema = z.object({
       slug: z.string(),
       title: z.string(),
       effectiveBody: z.string().nullable().optional(),
+      // Quest extra information lives on the brief as frontmatter.additional_info.
+      frontmatter: z
+        .object({
+          additional_info: z.string().nullish(),
+        })
+        .nullish(),
     })
     .nullable()
     .optional(),
@@ -63,6 +70,7 @@ export const questDetailWireSchema = questBoardItemWireSchema.extend({
     z.object({
       pointcrawlNodeId: z.string().uuid(),
       role: z.enum(['expected', 'visited']),
+      name: z.string(),
     }),
   ),
   durationHours: z.number(),

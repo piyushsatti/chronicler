@@ -168,6 +168,22 @@ func (s ProductQueries) DiscordDeliveryMode(ctx context.Context, actor auth.Auth
 	return s.Reads.Operations.ReadDiscordDeliveryMode(ctx, actor, spec)
 }
 
+// shortcut: not a SiteReadRepository method; that list is frozen by go-seams.json. Move it onto the interface when the seam is revised.
+type adminCommunityStatsReader interface {
+	ReadAdminCommunityStats(ctx context.Context, actor auth.Authority) (AdminCommunityStats, error)
+}
+
+func (s ProductQueries) AdminCommunityStats(ctx context.Context, actor auth.Authority) (AdminCommunityStats, error) {
+	if err := s.admit(ctx, actor, auth.Operation("Query.adminCommunityStats")); err != nil {
+		return AdminCommunityStats{}, err
+	}
+	reader, ok := s.Reads.Site.(adminCommunityStatsReader)
+	if !ok {
+		return AdminCommunityStats{}, apierr.New(apierr.Internal, "site community stats unavailable")
+	}
+	return reader.ReadAdminCommunityStats(ctx, actor)
+}
+
 func (s ProductQueries) AdminOperations(ctx context.Context, actor auth.Authority, spec AdminOperationsSpec) (AdminOperationsView, error) {
 	if spec.Limit <= 0 || spec.Offset < 0 {
 		return AdminOperationsView{}, apierr.New(apierr.Invalid, "invalid admin operations page")

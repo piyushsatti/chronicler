@@ -65,6 +65,8 @@ type QuestWriteRepository interface {
 	StoreSignupForQuest(ctx context.Context, write SignupForQuestWrite) (QuestParticipantView, string, error)
 	LockSyncQuestDiscord(ctx context.Context, spec SyncQuestDiscordSpec) (SyncQuestDiscordState, error)
 	StoreSyncQuestDiscord(ctx context.Context, write SyncQuestDiscordWrite) (DeliveryReceipt, error)
+	LockPublishQuestPlayerList(ctx context.Context, spec PublishQuestPlayerListSpec) (PublishQuestPlayerListState, error)
+	StorePublishQuestPlayerList(ctx context.Context, write PublishQuestPlayerListWrite) (DeliveryReceipt, error)
 	LockTransitionQuestStatus(ctx context.Context, spec TransitionQuestStatusSpec) (TransitionQuestStatusState, error)
 	StoreTransitionQuestStatus(ctx context.Context, write TransitionQuestStatusWrite) (QuestView, error)
 	LockUpdateQuest(ctx context.Context, spec UpdateQuestSpec) (UpdateQuestState, error)
@@ -73,6 +75,8 @@ type QuestWriteRepository interface {
 	StoreUpsertQuestSummary(ctx context.Context, write UpsertQuestSummaryWrite) (document.DocumentView, error)
 	LockWithdrawFromQuest(ctx context.Context, spec WithdrawFromQuestSpec) (WithdrawFromQuestState, error)
 	StoreWithdrawFromQuest(ctx context.Context, write WithdrawFromQuestWrite) (QuestParticipantView, error)
+	StoreCorrectQuestRoster(ctx context.Context, write CorrectQuestRosterWrite) (QuestParticipantView, bool, error)
+	WaitlistedCharacterIDs(ctx context.Context, questID string) ([]string, error)
 }
 
 type ProductBatchRepository interface {

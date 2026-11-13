@@ -154,6 +154,8 @@ type AdminCharacterDirectoryEntryType {
   verificationStatus: String!
   verificationSubmittedAt: DateTime
   ddbUrl: String
+  "Mirror time of the last successful D&D Beyond sync. Older than verificationSubmittedAt means that sync failed and the sheet is stale."
+  ddbSyncedAt: DateTime
   updatedAt: DateTime!
 }
 
@@ -1271,9 +1273,21 @@ extend type Mutation {
     characterId: ID!
     meta: CommandMeta!
   ): QuestParticipantType!
+  addQuestParticipant(
+    questId: ID!
+    characterId: ID!
+    meta: CommandMeta!
+  ): QuestParticipantType!
+  removeQuestParticipant(
+    questId: ID!
+    characterId: ID!
+    meta: CommandMeta!
+  ): QuestParticipantType!
   selectQuestParticipants(
     questId: ID!
     characterIds: [ID!]!
+    # Empty characterIds. The server seats the open last_game_played slots in seat order.
+    fillByLastGamePlayed: Boolean! = false
     meta: CommandMeta!
   ): [QuestParticipantType!]!
   attestQuestParticipation(
@@ -1282,6 +1296,7 @@ extend type Mutation {
     meta: CommandMeta!
   ): [QuestParticipantType!]!
   syncQuestDiscord(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
+  publishQuestPlayerList(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
   deleteQuest(questId: ID!, meta: CommandMeta!): CommandReceipt!
   restoreQuest(questId: ID!, meta: CommandMeta!): QuestType!
   setQuestPointcrawlLinks(
@@ -1390,6 +1405,7 @@ type QuestPointcrawlLinkType {
   questId: ID!
   pointcrawlNodeId: ID!
   role: String!
+  name: String!
 }
 
 type QuestParticipantType {
@@ -1404,6 +1420,8 @@ type QuestParticipantType {
   memberHandle: String!
   memberDisplayName: String!
   memberAvatarUrl: String
+  # Loaded only for last_game_played. Null there means this player has never played.
+  lastPlayedAt: DateTime
 }
 
 type QuestStateCountType {
@@ -1531,6 +1549,7 @@ extend type Query {
     limit: Int! = 25
     offset: Int! = 0
   ): AdminOperationsType!
+  adminCommunityStats: AdminCommunityStatsType!
   searchableKinds: [SearchKindType!]!
   siteStats: SiteStatsType!
   discordDeliveryMode: String!
@@ -1604,6 +1623,20 @@ type AdminOperationsType {
   deliveryTotal: Int!
   deliveries: [AdminDeliveryJobType!]!
   activeAlerts(limit: Int! = 50, offset: Int! = 0): [AdminHealthAlertType!]!
+}
+
+type AdminQuestHexCountType {
+  id: ID!
+  name: String!
+  mapName: String!
+  questCount: Int!
+}
+
+type AdminCommunityStatsType {
+  totalCharacters: Int!
+  "Class catalog name. Empty when the character has no class pick."
+  charactersByClass: [CountByKeyType!]!
+  questHexes: [AdminQuestHexCountType!]!
 }
 
 type CategoryCountType {

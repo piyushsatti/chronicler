@@ -24,6 +24,17 @@ type ProductCommands struct {
 	Runner uow.Runner[ProductCommandRepos]
 	Clock  product.Clock
 	IDs    product.IDGenerator
+	// Nil builds the production client. Tests set this so submission does not call the network.
+	Ddb DdbClient
+}
+
+// errSubmissionPreview rolls the read transaction back so the network fetch is not inside it.
+var errSubmissionPreview = errors.New("submission preview")
+
+type submissionPreview struct {
+	replay bool
+	view   CharacterView
+	ddbURL string
 }
 
 func NewProductCommands(runner uow.Runner[ProductCommandRepos], clock product.Clock, ids product.IDGenerator) (*ProductCommands, error) {
@@ -292,10 +303,11 @@ func admitOwnedCharacterCommand(ctx context.Context, repos ProductCommandRepos, 
 	if err != nil {
 		return admission, err
 	}
-	if ownerID != fresh.Claims().MemberID {
+	operation := auth.Operation("Mutation." + opName)
+	if ownerID != fresh.Claims().MemberID && !staffMayEditCharacterProfile(fresh, operation) {
 		return admission, apierr.New(apierr.Forbidden, "character owner required")
 	}
-	request, err := auth.ForCharacter(auth.Operation("Mutation."+opName), auth.CharacterFacts{ID: characterID, OwnerID: ownerID})
+	request, err := auth.ForCharacter(operation, auth.CharacterFacts{ID: characterID, OwnerID: ownerID})
 	if err != nil {
 		return admission, err
 	}
@@ -317,12 +329,16 @@ func admitOwnedCharacterCommand(ctx context.Context, repos ProductCommandRepos, 
 	return characterCommandAdmission{fresh: fresh, request: request, decision: decision, claim: claim, ownerID: ownerID}, nil
 }
 
+func staffMayEditCharacterProfile(actor auth.Authority, operation auth.Operation) bool {
+	return operation == "Mutation.updateCharacterProfile" && (actor.Claims().Has(auth.Admin) || actor.IsPlatformOwner())
+}
+
 func admitCharacterWrite(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation auth.Operation, characterID, ownerID string) error {
 	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
 	if err != nil {
 		return err
 	}
-	if fresh.Claims().MemberID != actor.Claims().MemberID || fresh.Claims().MemberID != ownerID {
+	if fresh.Claims().MemberID != actor.Claims().MemberID || (fresh.Claims().MemberID != ownerID && !staffMayEditCharacterProfile(fresh, operation)) {
 		return apierr.New(apierr.Forbidden, "character owner required")
 	}
 	request, err := auth.ForCharacter(operation, auth.CharacterFacts{ID: characterID, OwnerID: ownerID})
@@ -481,6 +497,15 @@ func (s ProductCommands) CreateCharacter(ctx context.Context, actor auth.Authori
 	if err := validateCreateCharacterInput(&spec); err != nil {
 		return CharacterView{}, err
 	}
+	// Same shape as submit: replay commits, a new claim rolls back, then the fetch stays outside the write.
+	preview, err := s.previewCreate(ctx, actor, spec, meta)
+	if err != nil {
+		return CharacterView{}, err
+	}
+	if preview.replay {
+		return preview.view, nil
+	}
+	payload := fetchSubmissionMirror(ctx, s.submissionDdbClient(), ddbURLString(spec.Input.DdbUrl))
 	return runOperationCommand(ctx, s, actor, "Mutation.createCharacter", "createCharacter", spec, meta, actor.Claims().MemberID,
 		func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (CharacterView, error) {
 			if err := validateCharacterGuild(ctx, repos, fresh, spec.Input.GuildId); err != nil {
@@ -496,6 +521,7 @@ func (s ProductCommands) CreateCharacter(ctx context.Context, actor auth.Authori
 			}
 			return repos.Character.StoreCreateCharacter(ctx, CreateCharacterWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked, HistoryID: &id,
+				DdbPayload: payload,
 			})
 		})
 }
@@ -532,6 +558,15 @@ func (s ProductCommands) SubmitForVerification(ctx context.Context, actor auth.A
 	if err := commandExpectedUpdatedAt(spec.ExpectedUpdatedAt); err != nil {
 		return CharacterView{}, err
 	}
+	preview, err := s.previewSubmit(ctx, actor, spec, meta)
+	if err != nil {
+		return CharacterView{}, err
+	}
+	if preview.replay {
+		return preview.view, nil
+	}
+	// Network stays outside the submission transaction. A failed sync still submits.
+	payload := fetchSubmissionMirror(ctx, s.submissionDdbClient(), preview.ddbURL)
 	return runOwnedCharacterCommand(ctx, s, actor, "submitForVerification", spec.CharacterId, spec, meta,
 		func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (CharacterView, error) {
 			locked, err := repos.Character.LockSubmitForVerification(ctx, spec)
@@ -544,10 +579,113 @@ func (s ProductCommands) SubmitForVerification(ctx context.Context, actor auth.A
 			if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.submitForVerification", spec.CharacterId, locked.OwnerID); err != nil {
 				return CharacterView{}, err
 			}
+			applied := json.RawMessage(nil)
+			if locked.Before != nil && locked.Before.DdbUrl != nil && *locked.Before.DdbUrl == preview.ddbURL {
+				applied = payload
+			}
 			return repos.Character.StoreSubmitForVerification(ctx, SubmitForVerificationWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
+				DdbPayload: applied,
 			})
 		})
+}
+
+func (s ProductCommands) previewCreate(ctx context.Context, actor auth.Authority, spec CreateCharacterSpec, meta product.CommandMeta) (submissionPreview, error) {
+	var preview submissionPreview
+	fingerprint, err := product.Fingerprint(spec)
+	if err != nil {
+		return preview, err
+	}
+	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
+		admission, err := admitCharacterOperation(ctx, repos, actor, "Mutation.createCharacter", "createCharacter", meta, fingerprint)
+		if err != nil {
+			return err
+		}
+		if !admission.claim.Replay {
+			return errSubmissionPreview
+		}
+		if err := restoreCharacterReplay(admission.claim, &preview.view); err != nil {
+			return err
+		}
+		preview.replay = true
+		return nil
+	})
+	if errors.Is(err, errSubmissionPreview) {
+		return preview, nil
+	}
+	return preview, err
+}
+
+func (s ProductCommands) previewSubmit(ctx context.Context, actor auth.Authority, spec SubmitForVerificationSpec, meta product.CommandMeta) (submissionPreview, error) {
+	var preview submissionPreview
+	fingerprint, err := product.Fingerprint(spec)
+	if err != nil {
+		return preview, err
+	}
+	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
+		admission, err := admitOwnedCharacterCommand(ctx, repos, actor, "submitForVerification", spec.CharacterId, meta, fingerprint)
+		if err != nil {
+			return err
+		}
+		if admission.claim.Replay {
+			if err := restoreCharacterReplay(admission.claim, &preview.view); err != nil {
+				return err
+			}
+			preview.replay = true
+			return nil
+		}
+		locked, err := repos.Character.LockSubmitForVerification(ctx, spec)
+		if err != nil {
+			return err
+		}
+		if !locked.Exists || locked.Before == nil {
+			return apierr.New(apierr.NotFound, "character not found")
+		}
+		preview.ddbURL = ddbURLString(locked.Before.DdbUrl)
+		return errSubmissionPreview
+	})
+	if errors.Is(err, errSubmissionPreview) {
+		return preview, nil
+	}
+	return preview, err
+}
+
+func (s ProductCommands) submissionDdbClient() DdbClient {
+	if s.Ddb != nil {
+		return s.Ddb
+	}
+	httpClient, err := NewProductionDdbHTTPClient()
+	if err != nil {
+		return nil
+	}
+	client, err := NewDdbClient(httpClient, time.Now)
+	if err != nil {
+		return nil
+	}
+	return client
+}
+
+func ddbURLString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+// fetchSubmissionMirror returns a mirror payload, or nil when the sync cannot be stored.
+// The caller still creates the approval request; a nil payload leaves the previous mirror in place.
+func fetchSubmissionMirror(ctx context.Context, client DdbClient, rawURL string) json.RawMessage {
+	if client == nil || strings.TrimSpace(rawURL) == "" {
+		return nil
+	}
+	snapshot, _, err := client.Fetch(ctx, rawURL)
+	if err != nil || len(snapshot.Payload) == 0 {
+		return nil
+	}
+	if _, _, err := decodeStoredCharacterDDBMirror("submission", snapshot.Payload, pgTime(time.Unix(1, 0).UTC())); err != nil {
+		return nil
+	}
+	return snapshot.Payload
 }
 
 func (s ProductCommands) RetireCharacter(ctx context.Context, actor auth.Authority, spec RetireCharacterSpec, meta product.CommandMeta) (CharacterView, error) {

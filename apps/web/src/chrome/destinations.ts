@@ -10,6 +10,8 @@ export type NavAuth = {
   isAdmin: boolean;
   /** Holds the dm role (or admin): shows the DM dashboard link. */
   isDm?: boolean;
+  /** Holds the verifier role. Admin does not. */
+  isVerifier?: boolean;
 };
 
 function matchesPath(pathname: string, prefixes: readonly string[]): boolean {
@@ -63,16 +65,24 @@ export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
     label: 'Community',
     href: '/community',
     matches: (pathname) =>
-      matchesPath(pathname, ['/community', '/players', '/dms', '/characters', '/editor/dm-table']),
+      matchesPath(pathname, ['/community', '/players', '/dms', '/characters']),
   },
 ];
 
-/** Review stays reachable as Admin → Review, so it has no bar item of its own. */
+/** Admins reach Review inside this workspace. Verifiers use VERIFY_DESTINATION. */
 const ADMIN_DESTINATION: SiteDestination = {
   id: 'admin',
   label: 'Admin',
   href: '/admin',
   matches: (pathname) => matchesPath(pathname, ['/admin', '/gallery']),
+};
+
+/** Verifier role only. The page is the review queue, with no other admin section. */
+const VERIFY_DESTINATION: SiteDestination = {
+  id: 'verify',
+  label: 'Verify',
+  href: '/verify',
+  matches: (pathname) => matchesPath(pathname, ['/verify']),
 };
 
 /** The member's DM dashboard; `/dms` (the directory) stays under Community. */
@@ -83,10 +93,11 @@ const DM_DESTINATION: SiteDestination = {
   matches: (pathname) => matchesPath(pathname, ['/dm']),
 };
 
-/** DM and Admin join the same link list when the member holds the role. */
+/** DM, Verify, and Admin join the same link list when the member holds the role. */
 export function destinationsForAuth(auth?: NavAuth): readonly SiteDestination[] {
   const extras = [
     ...(auth?.isDm ? [DM_DESTINATION] : []),
+    ...(auth?.isVerifier ? [VERIFY_DESTINATION] : []),
     ...(auth?.isAdmin ? [ADMIN_DESTINATION] : []),
   ];
   return [...PRIMARY_DESTINATIONS, ...extras];

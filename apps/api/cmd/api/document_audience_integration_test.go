@@ -144,21 +144,28 @@ func TestProductionChainAudienceFullPagesReadableTotalsBacklinksAndMap(t *testin
 	}
 	for i := 0; i < 8; i++ {
 		d := f.doc(t, fixtureIDs[i], &author, document.StatusPublished, document.VisibilityPublic)
-		title := prefix + " " + string(rune('A'+i))
+		// Readable rows share title and body so ts_rank ties. A distinct
+		// suffix or body token can outrank public id and change the page.
+		title := prefix
+		body := "tied search body"
+		if i >= 3 {
+			title = prefix + " " + string(rune('A'+i))
+			body = d.body
+		}
 		d.title = title
-		f.exec(t, `UPDATE documents SET kind='codex_entry',category='location/fixture',title=$2,updated_at='2020-01-01T00:00:00Z' WHERE id=$1`, d.rowID, title)
+		f.exec(t, `UPDATE documents SET kind='codex_entry',category='location/fixture',title=$2,body=$3,updated_at='2020-01-01T00:00:00Z' WHERE id=$1`, d.rowID, title, body)
 		docs = append(docs, d)
 	}
 	// First three are readable (two public and one intentional exact-handle
 	// grant). Newer hidden rows precede them in the raw ordering.
-	f.exec(t, `UPDATE documents SET policy='["member:@Exact-Handle"]'::jsonb WHERE id=$1`, docs[1].rowID)
+	f.exec(t, `UPDATE documents SET policy='["member:@Exact-Handle"]'::jsonb,updated_at='2020-01-01T00:00:00Z' WHERE id=$1`, docs[1].rowID)
 	f.exec(t, `UPDATE documents SET policy='["!member:@Exact-Handle","role:player"]'::jsonb,updated_at='2030-01-01T00:00:00Z' WHERE id=$1`, docs[3].rowID)
 	f.exec(t, `UPDATE documents SET status='draft',policy='["role:player"]'::jsonb,updated_at='2030-01-01T00:00:00Z' WHERE id=$1`, docs[4].rowID)
 	f.exec(t, `UPDATE documents SET visibility='restricted',updated_at='2030-01-01T00:00:00Z' WHERE id=$1`, docs[5].rowID)
 	f.exec(t, `UPDATE documents SET policy='{}'::jsonb,updated_at='2030-01-01T00:00:00Z' WHERE id=$1`, docs[6].rowID)
 	f.exec(t, `UPDATE documents SET deleted_at=now(),updated_at='2030-01-01T00:00:00Z' WHERE id=$1`, docs[7].rowID)
-	// Equal matching title terms and update timestamps leave the public UUID
-	// descending tie-break; insertion order deliberately differs.
+	// Equal title, body, and updated_at leave the public UUID descending
+	// tie-break; insertion order deliberately differs.
 	expected := []string{"90000000-0000-4000-8000-000000000003", "90000000-0000-4000-8000-000000000002", "90000000-0000-4000-8000-000000000001"}
 	for _, tc := range []struct {
 		offset int

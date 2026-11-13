@@ -7,7 +7,7 @@ import { useCurrentAccess } from '../auth/useCurrentAccess.js';
 import { useAuth } from '../auth/AuthContext.js';
 import { useOwnsCharacter } from '../features/member/hooks/useOwnsCharacter.js';
 import { useSearchDialog } from '../features/search/components/SearchCommandRoot.js';
-import { isDm } from '../auth/roles.js';
+import { hasRole, isDm } from '../auth/roles.js';
 import { useMe } from '../hooks/useMe.js';
 import { personName } from '../utils/format.js';
 import {
@@ -141,6 +141,7 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
     isAuthenticated,
     isAdmin: adminAccess.allowed,
     isDm: isSignedIn && isDm(me.data?.roles),
+    isVerifier: isSignedIn && hasRole(me.data?.roles, 'verifier'),
   });
   const ownCharacter = useOwnsCharacter(
     /^\/characters\/([^/]+)/.exec(location.pathname)?.[1] ?? null,

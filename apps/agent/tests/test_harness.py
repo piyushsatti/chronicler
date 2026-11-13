@@ -735,6 +735,44 @@ async def test_default_two_rounds_preserve_full_reads_and_then_answer():
 
 
 @pytest.mark.asyncio
+async def test_default_research_rounds_is_two_and_none_is_uncapped():
+    search_read = [
+        call("search_documents", {"query": "one"}, 1),
+        call("read_document", {"document_id": A}, 2),
+        call("search_documents", {"query": "two"}, 3),
+        call("read_document", {"document_id": B}, 4),
+    ]
+    capped_model = Model([*search_read, final((B,), "Cited within the cap.")])
+    capped = ResearchHarness(capped_model, Archive(), "Rules")
+    assert capped._research_rounds == 2
+    capped_answer = await capped.answer("Still inside the context budget?")
+    assert capped_answer.text == "Cited within the cap."
+    assert capped_model.requests[4][1] == []
+    assert capped_model.requests[4][2]["tool_choice"] == "none"
+
+    open_model = Model(
+        [
+            *search_read,
+            call("search_documents", {"query": "three"}, 5),
+            call("read_document", {"document_id": A}, 6),
+            final((A,), "Cited after another round."),
+        ]
+    )
+    opened = ResearchHarness(open_model, Archive(), "Rules", research_rounds=None)
+    assert opened._research_rounds is None
+    open_answer = await opened.answer("Still inside the context budget?")
+    assert open_answer.text == "Cited after another round."
+    assert all(
+        request[2]["tool_choice"] == "required" for request in open_model.requests
+    )
+    assert {tool["function"]["name"] for tool in open_model.requests[4][1]} == {
+        "search_documents",
+        "read_document",
+        "finish_answer",
+    }
+
+
+@pytest.mark.asyncio
 async def test_generic_setting_overview_anchors_bounded_search_and_citations():
     model = Model(
         [

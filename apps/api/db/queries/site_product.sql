@@ -69,6 +69,13 @@ WHERE key = sqlc.arg(setting_key)::text
 RETURNING key, payload, updated_at;
 -- name: SiteJobClock :one
 SELECT clock_timestamp()::timestamptz AS now;
+-- Latest row per kind on the maintenance lane (worker.EnqueueDailyMaintenance).
+-- expectedSlot is updated_at: the payload slot is not a GraphQL DateTime.
+-- name: SiteAdminMaintenanceJobs :many
+SELECT DISTINCT ON (kind) kind, state, safe_error_code, updated_at
+FROM background_jobs
+WHERE lane = 'maintenance'
+ORDER BY kind, updated_at DESC, id DESC;
 -- name: SiteAdminDeliveryCounts :one
 SELECT count(*) FILTER (WHERE state IN ('queued', 'running', 'retry_wait', 'repair_required'))::integer AS pending_count,
        count(*) FILTER (WHERE state IN ('dead', 'succeeded', 'cancelled'))::integer AS terminal_count,
@@ -78,7 +85,7 @@ WHERE kind = 'quest_discord_delivery'
   AND (sqlc.narg(delivery_state)::text IS NULL OR state = sqlc.narg(delivery_state));
 -- name: SiteAdminDeliveryJobs :many
 WITH matching AS (
-    SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.safe_error_code, b.next_run_at,
+    SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.safe_error_code, b.error_message, b.next_run_at,
            b.created_at, b.updated_at, b.payload
     FROM background_jobs b
     WHERE b.kind = 'quest_discord_delivery'
@@ -108,7 +115,7 @@ WITH matching AS (
 )
 SELECT (SELECT count(*) FROM matching)::bigint AS total,
        projected.public_id, projected.state, projected.attempts, projected.redrive_count, projected.safe_error_code,
-       projected.next_run_at, projected.created_at, projected.updated_at, projected.quest_public_id, projected.quest_short_code,
+       projected.error_message, projected.next_run_at, projected.created_at, projected.updated_at, projected.quest_public_id, projected.quest_short_code,
        projected.quest_title, projected.discord_desired_revision, projected.discord_applied_revision, projected.discord_message_id,
        projected.event_url, COALESCE(projected.admin_override, false)::boolean AS admin_override
 FROM (SELECT 1) marker LEFT JOIN projected ON true
@@ -199,3 +206,33 @@ heartbeat_alerts AS (
 )
 SELECT (SELECT count(*)::integer FROM job_alerts)
      + (SELECT count(*)::integer FROM heartbeat_alerts) AS total;
+-- name: SiteAdminCharacterClasses :many
+WITH live AS (
+    SELECT id FROM characters WHERE deleted_at IS NULL
+), totals AS (
+    SELECT count(*)::integer AS total_characters FROM live
+)
+SELECT totals.total_characters,
+       coalesce(classes.name, '')::text AS class_name,
+       count(DISTINCT live.id)::integer AS class_count
+FROM totals
+LEFT JOIN live ON true
+LEFT JOIN LATERAL (
+    SELECT c.name
+    FROM character_catalog_picks p
+    JOIN creation_catalog c ON c.id = p.catalog_id AND c.kind = 'class'
+    WHERE p.character_id = live.id
+) classes ON true
+GROUP BY totals.total_characters, classes.name
+ORDER BY class_count DESC, class_name;
+-- name: SiteAdminQuestHexCounts :many
+SELECT n.public_id::text AS hex_id,
+       n.name AS hex_name,
+       m.name AS map_name,
+       count(DISTINCT q.id)::integer AS quest_count
+FROM quest_pointcrawl_nodes qpn
+JOIN pointcrawl_nodes n ON n.id = qpn.node_id
+JOIN maps m ON m.id = n.map_id AND m.grid = 'hex'
+JOIN quests q ON q.id = qpn.quest_id AND q.deleted_at IS NULL
+GROUP BY n.public_id, n.name, m.name
+ORDER BY quest_count DESC, n.name, m.name;

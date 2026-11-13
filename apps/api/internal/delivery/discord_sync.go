@@ -65,6 +65,7 @@ type RESTSync struct {
 	FallbackOrigin string
 	Settings       SettingsReader
 	Quests         QuestStore
+	Players        PlayerListStore
 	HTTP           *http.Client
 	Apply          RevisionApplier
 	// DryRun applies the revision without calling Discord. Opt-in only;
@@ -391,9 +392,14 @@ func (s *syncRun) call(ctx context.Context, method, path string, payload any) ([
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	encoded, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
+	// Discord's edge rejects a GET that carries a body (even "null") with an HTML 400 or 502.
+	var body io.Reader
+	if payload != nil {
+		encoded, err := json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+		body = bytes.NewReader(encoded)
 	}
 	client := s.HTTP
 	if client == nil {
@@ -403,12 +409,14 @@ func (s *syncRun) call(ctx context.Context, method, path string, payload any) ([
 	if base == "" {
 		base = "https://discord.com/api/v10"
 	}
-	request, err := http.NewRequestWithContext(ctx, method, base+path, bytes.NewReader(encoded))
+	request, err := http.NewRequestWithContext(ctx, method, base+path, body)
 	if err != nil {
 		return nil, err
 	}
 	request.Header.Set("Authorization", "Bot "+s.Token)
-	request.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		request.Header.Set("Content-Type", "application/json")
+	}
 	response, err := client.Do(request)
 	if err != nil {
 		return nil, err

@@ -1,0 +1,11 @@
+query QuestRosterCharacters($namePrefix: String!) {
+  characters(filters: { namePrefix: $namePrefix, status: "active" }, limit: 8, offset: 0) {
+    items {
+      id
+      name
+      ownerId
+      status
+      shortCode
+    }
+  }
+}

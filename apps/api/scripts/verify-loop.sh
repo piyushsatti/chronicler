@@ -18,8 +18,9 @@ git -C "$repo" diff --exit-code -- packages/contracts/schema.graphql
 go test -count=1 ./internal/graph -run '^TestFrontendOperationsMatchServerGraphQLValidator$'
 
 go test ./...
-# -tags=integration: Postgres via testcontainers (needs Docker daemon)
-go test -tags=integration ./test/integration/... ./internal/quest/... ./internal/document/...
+# -tags=integration: Postgres via testcontainers (needs Docker daemon).
+# cmd/api is the mounted production-chain lane; keep it here so a new migration cannot rot outside CI.
+go test -tags=integration ./test/integration/... ./internal/quest/... ./internal/document/... ./cmd/api/
 
 # package script runs vitest. `bun test` is Bun's runner and skips vitest aliases.
 ( cd "$repo/apps/discord" && bun run test )

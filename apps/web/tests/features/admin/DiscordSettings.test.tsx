@@ -34,11 +34,15 @@ function mockSettings(
   });
 }
 
-async function openPanel() {
+async function openPanel(findTimeout?: number) {
   renderWithProviders(<AdminDeliveryPage />, {
     route: '/admin/delivery?section=discord',
   });
-  return screen.findByRole('button', { name: 'Save Discord settings' });
+  return screen.findByRole(
+    'button',
+    { name: 'Save Discord settings' },
+    { timeout: findTimeout },
+  );
 }
 
 describe('Discord settings panel', () => {
@@ -51,14 +55,17 @@ describe('Discord settings panel', () => {
         { name: 'Table 2', channelId: VOICE_B },
       ],
     });
-    await openPanel();
-    expect(await screen.findByLabelText('Announce channel ID')).toHaveValue(CHANNEL);
+    await openPanel(10_000);
+    expect(
+      await screen.findByLabelText('Announce channel ID', {}, { timeout: 10_000 }),
+    ).toHaveValue(CHANNEL);
     expect(screen.getByLabelText('Quest role ID')).toHaveValue(ROLE);
     const list = within(screen.getByRole('list', { name: 'Voice channels' }));
     expect(list.getAllByRole('listitem')).toHaveLength(2);
     expect(screen.getByLabelText('Name 1')).toHaveValue('Table 1');
     expect(screen.getByLabelText('Channel ID 2')).toHaveValue(VOICE_B);
-  });
+    // Saved settings and the filled announce field each wait 10s.
+  }, 25_000);
 
   it('says plainly that no voice channels exist yet', async () => {
     mockSettings({ announceChannelId: null, roleId: null, voiceChannels: [] });

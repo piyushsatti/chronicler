@@ -30,6 +30,12 @@ func productIDs() product.IDGenerator {
 	return func() string { return uuid.NewString() }
 }
 
+// testDdbClient is nil in production, which builds the real sheet client per command.
+var testDdbClient character.DdbClient
+
+// UseTestDdbClient binds the sheet client Wire gives character commands.
+func UseTestDdbClient(client character.DdbClient) { testDdbClient = client }
+
 type productReadStores struct {
 	member       *member.ProductPostgres
 	character    *character.ProductPostgres
@@ -167,6 +173,7 @@ func wireProductCommands(pool *db.Pool, memberPool *member.PostgresStore, policy
 	if err != nil {
 		return err
 	}
+	characterCommands.Ddb = testDdbClient
 
 	documentRunner := db.NewRunner(pool, func(tx pgx.Tx) document.ProductCommandRepos {
 		return bindDocumentCommandRepos(tx, policy, authority, producer)
@@ -244,6 +251,7 @@ func bindMemberCommandRepos(tx pgx.Tx, policy *auth.Policy, memberPool *member.P
 
 func bindCharacterCommandRepos(tx pgx.Tx, policy *auth.Policy, memberPool *member.PostgresStore) character.ProductCommandRepos {
 	pg, _ := character.NewProductPostgres(tx)
+	pg.Ddb = testDdbClient
 	memPG, _ := member.NewProductPostgres(tx)
 	docPG, _ := document.NewProductPostgres(tx)
 	questPG, _ := quest.NewProductPostgres(tx)

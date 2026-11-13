@@ -9,7 +9,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { findCodexCategory } from '../../../utils/codexCategories.js';
 import { personLabels } from '../../../utils/format.js';
-import type { EntityLinkEntry, EntityLinkIndex } from '../types.js';
+import type { EntityLinkEntry, EntityLinkIndex } from '../../../components/interactive/markdown-editor/types.js';
 import BOARD_QUERY from './entityLinkQuestBoard.graphql?raw';
 import CODEX_QUERY from './entityLinkCodexDirectory.graphql?raw';
 import SEARCH_QUERY from './entityLinkSearch.graphql?raw';

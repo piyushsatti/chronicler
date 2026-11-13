@@ -14,7 +14,7 @@ import {
   RegionMultiField,
   DateTimeField,
 } from '../../../src/features/editor/fields/FieldControls.js';
-import { LiveEditor } from '../../../src/features/editor/LiveEditor.js';
+import { LiveEditor } from '../../../src/components/interactive/markdown-editor/LiveEditor.js';
 
 const error = {
   kind: 'invalid' as const,

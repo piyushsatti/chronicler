@@ -29,7 +29,7 @@ SELECT input.ordinality::integer AS input_index, input.quest_id::uuid AS quest_i
        c.public_id AS character_public_id, c.name AS character_name,
        m.handle AS member_handle, m.display_name AS member_display_name,
        m.avatar_url AS member_avatar_url, qp.status, qp.manual,
-       qp.created_at, qp.updated_at
+       qp.created_at, qp.updated_at, last_game.last_played_at::timestamptz AS last_played_at
 FROM unnest($1::uuid[]) WITH ORDINALITY AS input(quest_id, ordinality)
 LEFT JOIN unnest($2::text[]) WITH ORDINALITY AS status_input(status, ordinality)
   ON status_input.ordinality = input.ordinality
@@ -71,6 +71,7 @@ type ProductQuestBatchParticipantsRow struct {
 	Manual            pgtype.Bool        `json:"manual"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	LastPlayedAt      pgtype.Timestamptz `json:"last_played_at"`
 }
 
 // Last Game Played quests list new players first, then the longest wait since a played game.
@@ -99,6 +100,7 @@ func (q *Queries) ProductQuestBatchParticipants(ctx context.Context, arg Product
 			&i.Manual,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LastPlayedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -267,6 +269,18 @@ func (q *Queries) ProductQuestBumpDiscordDesired(ctx context.Context, arg Produc
 	return i, err
 }
 
+const productQuestCharacterID = `-- name: ProductQuestCharacterID :one
+SELECT c.id FROM characters c WHERE c.public_id = $1::uuid
+`
+
+// Removal addresses a soft-deleted character who still holds a seat.
+func (q *Queries) ProductQuestCharacterID(ctx context.Context, characterID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, productQuestCharacterID, characterID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const productQuestCharacterInternal = `-- name: ProductQuestCharacterInternal :one
 SELECT c.id, c.public_id, owner.public_id AS owner_public_id, c.status
 FROM characters c
@@ -388,6 +402,21 @@ func (q *Queries) ProductQuestClosureRoster(ctx context.Context, questID pgtype.
 		return nil, err
 	}
 	return items, nil
+}
+
+const productQuestCountDMPicked = `-- name: ProductQuestCountDMPicked :one
+SELECT count(*)::integer AS total
+FROM quest_participants qp
+JOIN quests q ON q.id = qp.quest_id
+WHERE q.public_id = $1::uuid AND qp.dm_picked
+`
+
+// Rows the DM hand-picked, including a pick who later withdrew. Rejoin clears the flag.
+func (q *Queries) ProductQuestCountDMPicked(ctx context.Context, questID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, productQuestCountDMPicked, questID)
+	var total int32
+	err := row.Scan(&total)
+	return total, err
 }
 
 const productQuestCountParticipants = `-- name: ProductQuestCountParticipants :one
@@ -780,7 +809,8 @@ UPDATE quests q SET filled_count = q.filled_count + $1::integer,
            ELSE q.status
        END
 WHERE q.id = $2::bigint
-  AND q.filled_count + $1::integer BETWEEN 0 AND q.slots_max
+  AND q.filled_count + $1::integer >= 0
+  AND (q.filled_count + $1::integer <= q.slots_max OR q.signup_type = 'dm_pick')
 RETURNING q.id, q.public_id, q.status, q.slots_max, q.filled_count, q.updated_at
 `
 
@@ -798,6 +828,8 @@ type ProductQuestIncrementCapacityRow struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+// DM Pick may pass slots_max, including a later withdrawal that decrements while still over it.
+// Every other signup type, including an unset one, stays inside the cap.
 func (q *Queries) ProductQuestIncrementCapacity(ctx context.Context, arg ProductQuestIncrementCapacityParams) (ProductQuestIncrementCapacityRow, error) {
 	row := q.db.QueryRow(ctx, productQuestIncrementCapacity, arg.Delta, arg.QuestID)
 	var i ProductQuestIncrementCapacityRow
@@ -1984,7 +2016,7 @@ func (q *Queries) ProductQuestReadParticipants(ctx context.Context, arg ProductQ
 }
 
 const productQuestReadPointcrawlLinks = `-- name: ProductQuestReadPointcrawlLinks :many
-SELECT n.public_id::text AS node_id, q.public_id::text AS quest_id, qpn.role
+SELECT n.public_id::text AS node_id, q.public_id::text AS quest_id, qpn.role, n.name AS node_name
 FROM quest_pointcrawl_nodes qpn
 JOIN quests q ON q.id = qpn.quest_id
 JOIN pointcrawl_nodes n ON n.id = qpn.node_id
@@ -1993,9 +2025,10 @@ ORDER BY n.public_id, qpn.role
 `
 
 type ProductQuestReadPointcrawlLinksRow struct {
-	NodeID  string `json:"node_id"`
-	QuestID string `json:"quest_id"`
-	Role    string `json:"role"`
+	NodeID   string `json:"node_id"`
+	QuestID  string `json:"quest_id"`
+	Role     string `json:"role"`
+	NodeName string `json:"node_name"`
 }
 
 func (q *Queries) ProductQuestReadPointcrawlLinks(ctx context.Context, questID pgtype.UUID) ([]ProductQuestReadPointcrawlLinksRow, error) {
@@ -2007,7 +2040,12 @@ func (q *Queries) ProductQuestReadPointcrawlLinks(ctx context.Context, questID p
 	items := []ProductQuestReadPointcrawlLinksRow{}
 	for rows.Next() {
 		var i ProductQuestReadPointcrawlLinksRow
-		if err := rows.Scan(&i.NodeID, &i.QuestID, &i.Role); err != nil {
+		if err := rows.Scan(
+			&i.NodeID,
+			&i.QuestID,
+			&i.Role,
+			&i.NodeName,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -2374,6 +2412,35 @@ func (q *Queries) ProductQuestSeatPriority(ctx context.Context, questID pgtype.U
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const productQuestSeatedDiscordIDs = `-- name: ProductQuestSeatedDiscordIDs :many
+SELECT DISTINCT m.discord_id
+FROM quests q
+JOIN quest_participants qp ON qp.quest_id = q.id AND qp.status = 'signed_up'
+JOIN members m ON m.id = qp.member_id
+WHERE q.public_id = $1::uuid
+ORDER BY m.discord_id
+`
+
+func (q *Queries) ProductQuestSeatedDiscordIDs(ctx context.Context, publicID pgtype.UUID) ([]string, error) {
+	rows, err := q.db.Query(ctx, productQuestSeatedDiscordIDs, publicID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var discord_id string
+		if err := rows.Scan(&discord_id); err != nil {
+			return nil, err
+		}
+		items = append(items, discord_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

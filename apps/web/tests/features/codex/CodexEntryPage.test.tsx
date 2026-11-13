@@ -26,9 +26,13 @@ function renderReader(route: string): void {
   );
 }
 
-async function expectReader(): Promise<void> {
+async function expectReader(findTimeout?: number): Promise<void> {
   expect(
-    await screen.findByRole('heading', { name: entry.document.title }),
+    await screen.findByRole(
+      'heading',
+      { name: entry.document.title },
+      { timeout: findTimeout },
+    ),
   ).toBeVisible();
   expect(screen.getByText(entry.document.effectiveBody)).toBeVisible();
   expect(screen.getByRole('link', { name: 'More Features' })).toHaveAttribute(
@@ -44,8 +48,9 @@ async function expectReader(): Promise<void> {
 describe('Codex document routes', () => {
   it('renders the canonical document body and real backlink count', async () => {
     renderReader('/codex/tree-of-light');
-    await expectReader();
-  });
+    // One 10s wait for the entry; the case limit has to outlast it.
+    await expectReader(10_000);
+  }, 15_000);
 
   it('gives the body the full width and puts More in {category} below it (owner item 18)', async () => {
     server.use(

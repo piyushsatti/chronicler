@@ -27,6 +27,6 @@ describe('DM overview complete quest reads', () => {
       ...data,
       quests: variables.questOffset === 0 ? { total: 2, items: [quest(1)] } : { total, items },
     } })));
-    await expect(loadDmDashboard(memberId, 0, 0, request, 'all')).rejects.toMatchObject({ kind: 'invalid' });
+    await expect(loadDmDashboard(memberId, 0, request, 'all')).rejects.toMatchObject({ kind: 'invalid' });
   });
 });

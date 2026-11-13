@@ -6919,6 +6919,15 @@
           "resolver_args": [],
           "kind": "OBJECT",
           "owner": "QUE01"
+        },
+        {
+          "name": "Name",
+          "wire_name": "name",
+          "go_type": "string",
+          "wire_type": "String!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "QUE01"
         }
       ],
       "enum_values": [],
@@ -6954,6 +6963,15 @@
           "wire_name": "createdAt",
           "go_type": "time.Time",
           "wire_type": "DateTime!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "QUE01"
+        },
+        {
+          "name": "LastPlayedAt",
+          "wire_name": "lastPlayedAt",
+          "go_type": "*time.Time",
+          "wire_type": "DateTime",
           "resolver_args": [],
           "kind": "OBJECT",
           "owner": "QUE01"
@@ -10466,6 +10484,14 @@
           "go_type": "time.Time",
           "internal": true,
           "meaning": "one injected UTC clock sample for all display projection/filter/count SQL in owning query task"
+        },
+        {
+          "name": "FillByLastGamePlayed",
+          "wire_name": "fillByLastGamePlayed",
+          "go_type": "bool",
+          "sdl_type": "Boolean!",
+          "default": "false",
+          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
         }
       ],
       "owner": "QUE01"
@@ -21403,6 +21429,8 @@
         "StoreSignupForQuest(ctx context.Context, write quest.SignupForQuestWrite) (quest.QuestParticipantView, string, error)",
         "LockSyncQuestDiscord(ctx context.Context, spec quest.SyncQuestDiscordSpec) (quest.SyncQuestDiscordState, error)",
         "StoreSyncQuestDiscord(ctx context.Context, write quest.SyncQuestDiscordWrite) (quest.DeliveryReceipt, error)",
+        "LockPublishQuestPlayerList(ctx context.Context, spec quest.PublishQuestPlayerListSpec) (quest.PublishQuestPlayerListState, error)",
+        "StorePublishQuestPlayerList(ctx context.Context, write quest.PublishQuestPlayerListWrite) (quest.DeliveryReceipt, error)",
         "LockTransitionQuestStatus(ctx context.Context, spec quest.TransitionQuestStatusSpec) (quest.TransitionQuestStatusState, error)",
         "StoreTransitionQuestStatus(ctx context.Context, write quest.TransitionQuestStatusWrite) (quest.QuestView, error)",
         "LockUpdateQuest(ctx context.Context, spec quest.UpdateQuestSpec) (quest.UpdateQuestState, error)",
@@ -21410,7 +21438,9 @@
         "LockUpsertQuestSummary(ctx context.Context, spec quest.UpsertQuestSummarySpec) (quest.UpsertQuestSummaryState, error)",
         "StoreUpsertQuestSummary(ctx context.Context, write quest.UpsertQuestSummaryWrite) (document.DocumentView, error)",
         "LockWithdrawFromQuest(ctx context.Context, spec quest.WithdrawFromQuestSpec) (quest.WithdrawFromQuestState, error)",
-        "StoreWithdrawFromQuest(ctx context.Context, write quest.WithdrawFromQuestWrite) (quest.QuestParticipantView, error)"
+        "StoreWithdrawFromQuest(ctx context.Context, write quest.WithdrawFromQuestWrite) (quest.QuestParticipantView, error)",
+        "StoreCorrectQuestRoster(ctx context.Context, write quest.CorrectQuestRosterWrite) (quest.QuestParticipantView, bool, error)",
+        "WaitlistedCharacterIDs(ctx context.Context, questID string) ([]string, error)"
       ],
       "owner": "QUE02",
       "provider": "QUE04"

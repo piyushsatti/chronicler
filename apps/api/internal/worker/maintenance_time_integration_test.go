@@ -65,9 +65,13 @@ func TestMaintenanceTimeNativeProcessOnePoolOneAndSafeFailures(t *testing.T) {
 		if ok, err := handler.ProcessOne(ctx); err != nil || !ok {
 			t.Fatalf("kind=%s processed=%v error=%v", kind, ok, err)
 		}
-		var state, code string
-		if err := f.Pool.QueryRow(ctx, `SELECT state,COALESCE(error_message,'') FROM background_jobs WHERE job_key=$1`, key).Scan(&state, &code); err != nil || state != wantState || code != wantCode {
-			t.Fatalf("kind=%s state=%s code=%s error=%v", kind, state, code, err)
+		var state, code, safe string
+		wantSafe := ""
+		if wantState == "repair_required" {
+			wantSafe = wantCode
+		}
+		if err := f.Pool.QueryRow(ctx, `SELECT state,COALESCE(error_message,''),COALESCE(safe_error_code,'') FROM background_jobs WHERE job_key=$1`, key).Scan(&state, &code, &safe); err != nil || state != wantState || code != wantCode || safe != wantSafe {
+			t.Fatalf("kind=%s state=%s code=%s safe=%s error=%v", kind, state, code, safe, err)
 		}
 		if pool.Stat().AcquiredConns() != 0 {
 			t.Fatal("maintenance retained borrowed connection")
@@ -89,9 +93,16 @@ func TestMaintenanceTimeNativeProcessOnePoolOneAndSafeFailures(t *testing.T) {
 	if _, err := f.Pool.Exec(ctx, `DELETE FROM time_anchors`); err != nil {
 		t.Fatal(err)
 	}
-	process("gametime_fill", "retry_wait", "JOB_INVARIANT_FAILED")
+	process("gametime_fill", "repair_required", worker.TimeAnchorUncoveredCode)
 	if err := f.Pool.QueryRow(ctx, `SELECT count(*) FROM game_time_map WHERE real_date>='2026-10-14' AND game_day=0`).Scan(&count); err != nil || count != 30 {
 		t.Fatalf("missing trajectory rewrote zero rows=%d error=%v", count, err)
+	}
+	if _, err := f.Pool.Exec(ctx, `INSERT INTO time_anchors(public_id,real_utc,epoch_day,rate) VALUES($1,'2026-10-01T00:00:00Z',100,1);`, uuid.NewString()); err != nil {
+		t.Fatal(err)
+	}
+	process("gametime_fill", "succeeded", "")
+	if err := f.Pool.QueryRow(ctx, `SELECT (SELECT game_day FROM game_time_map WHERE real_date='2026-10-14'),(SELECT game_day FROM game_time_map WHERE real_date='2026-11-12'),(SELECT count(*) FROM game_time_map WHERE real_date>='2026-10-14' AND game_day<>0)`).Scan(&first, &last, &count); err != nil || first != 113 || last != 142 || count != 30 {
+		t.Fatalf("resumed projection=%d/%d count=%d error=%v", first, last, count, err)
 	}
 }
 

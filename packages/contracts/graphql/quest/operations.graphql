@@ -58,9 +58,21 @@ extend type Mutation {
     characterId: ID!
     meta: CommandMeta!
   ): QuestParticipantType!
+  addQuestParticipant(
+    questId: ID!
+    characterId: ID!
+    meta: CommandMeta!
+  ): QuestParticipantType!
+  removeQuestParticipant(
+    questId: ID!
+    characterId: ID!
+    meta: CommandMeta!
+  ): QuestParticipantType!
   selectQuestParticipants(
     questId: ID!
     characterIds: [ID!]!
+    # Empty characterIds. The server seats the open last_game_played slots in seat order.
+    fillByLastGamePlayed: Boolean! = false
     meta: CommandMeta!
   ): [QuestParticipantType!]!
   attestQuestParticipation(
@@ -69,6 +81,7 @@ extend type Mutation {
     meta: CommandMeta!
   ): [QuestParticipantType!]!
   syncQuestDiscord(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
+  publishQuestPlayerList(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
   deleteQuest(questId: ID!, meta: CommandMeta!): CommandReceipt!
   restoreQuest(questId: ID!, meta: CommandMeta!): QuestType!
   setQuestPointcrawlLinks(

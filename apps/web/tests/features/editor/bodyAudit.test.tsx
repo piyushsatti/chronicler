@@ -10,11 +10,11 @@ import {
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LiveEditor } from '../../../src/features/editor/LiveEditor.js';
+import { LiveEditor } from '../../../src/components/interactive/markdown-editor/LiveEditor.js';
 import { createTestQueryClient } from '../../../src/providers.js';
-import type { BodySpanAudit } from '../../../src/features/editor/adapters/bodyAudit.js';
-import type { BodyAudit } from '../../../src/features/editor/bodyAuditCopy.js';
-import { previewHiddenSummary } from '../../../src/features/editor/bodyAuditCopy.js';
+import type { BodySpanAudit } from '../../../src/components/interactive/markdown-editor/types.js';
+import type { BodyAudit } from '../../../src/components/interactive/markdown-editor/bodyAuditCopy.js';
+import { previewHiddenSummary } from '../../../src/components/interactive/markdown-editor/bodyAuditCopy.js';
 import { useBodyAudit } from '../../../src/features/editor/hooks/useBodyAudit.js';
 
 const auditBody = vi.hoisted(() => vi.fn());

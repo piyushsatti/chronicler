@@ -79,12 +79,3 @@ export type FieldSchema = {
 };
 
 export type EditorMeta = Record<string, unknown>;
-
-export type EntityLinkEntry = {
-  id: string;
-  label: string;
-  href?: string;
-  kind?: string;
-};
-
-export type EntityLinkIndex = EntityLinkEntry[];

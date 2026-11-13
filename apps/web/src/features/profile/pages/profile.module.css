@@ -105,6 +105,20 @@
   align-self: flex-start;
 }
 
+/* Same writing height as the document editor. The page-level `.le-doc` gutter
+   is 40vh and its toolbar sticks, which is for one editor that owns the page.
+   Three sections would stack that empty space and cover each other. */
+.dmEditor :global(.le-doc.le-doc) {
+  margin-inline: 0;
+  max-inline-size: none;
+  min-block-size: 12rem;
+  padding: var(--sp-2) var(--sp-1) var(--sp-5);
+}
+
+.dmEditor :global(.le-toolbar.le-toolbar) {
+  position: static;
+}
+
 .body :global(.card.stack) {
   gap: var(--sp-3);
 }
@@ -127,4 +141,26 @@
 .body .pinCard {
   display: flex;
   flex-direction: column;
+}
+
+/* Day, start, and end share one row. The fieldset shrinks to the form so the
+   row wraps once three fields no longer fit, instead of scrolling sideways. */
+.window {
+  min-inline-size: 0;
+}
+
+.times {
+  min-inline-size: 0;
+}
+
+.times > * {
+  flex: 1 1 10rem;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.times :global(.field-input),
+.times :global(.select) {
+  inline-size: 100%;
+  min-inline-size: 0;
 }

@@ -5,7 +5,7 @@ import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { personLabels } from '../../../utils/format.js';
+import { ddbSubmissionStale, personLabels } from '../../../utils/format.js';
 import { isSafeDdbUrl } from '../../../utils/url.js';
 import type { useCharacterVerifyTab } from '../hooks/useCharacterVerifyTab.js';
 
@@ -15,17 +15,7 @@ export function CharacterVerifyTab({
   view: ReturnType<typeof useCharacterVerifyTab>;
 }): React.JSX.Element {
   const { formatDate } = useDateFormatter();
-  const {
-    queue,
-    changeRequestId,
-    setChangeRequestId,
-    changeRequestNote,
-    setChangeRequestNote,
-    noteError,
-    setNoteError,
-    feedback,
-    decide,
-  } = view;
+  const { queue, feedback, decide } = view;
 
   if (queue.isError) {
     return <AdminReadFailure error={queue.error} retry={queue.retry} />;
@@ -70,6 +60,9 @@ export function CharacterVerifyTab({
       <ul className="stack">
         {queue.data.map((row, index) => {
           const ddbUrl = isSafeDdbUrl(row.ddbUrl) ? row.ddbUrl : null;
+          const sheetStale =
+            row.verificationSubmittedAt != null &&
+            ddbSubmissionStale(row.verificationSubmittedAt, row.ddbSyncedAt);
           return (
             <li key={row.id} className="card stack">
               <Link className="type-title" to={`/characters/${row.shortCode}`}>
@@ -88,21 +81,29 @@ export function CharacterVerifyTab({
                   'No D&D Beyond link.'
                 )}
               </p>
+              {row.verificationSubmittedAt ? (
+                <p role="status" className="type-caption">
+                  {sheetStale
+                    ? 'D&D Beyond sync failed for this submission. The saved sheet may be out of date.'
+                    : 'D&D Beyond sheet was synced for this submission.'}
+                </p>
+              ) : null}
               <div className="row">
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
                   disabled={decide.isPending || row.verificationSubmittedAt === null}
-                  onClick={() => {
-                    setChangeRequestId((current) =>
-                      current === row.id ? null : row.id,
-                    );
-                    setChangeRequestNote('');
-                    setNoteError(null);
-                  }}
+                  onClick={() =>
+                    decide.mutate({
+                      characterId: row.id,
+                      approve: false,
+                      note: null,
+                      expectedSubmissionAt: row.verificationSubmittedAt,
+                    })
+                  }
                 >
-                  Request changes
+                  Reject
                 </Button>
                 <Button
                   type="button"
@@ -120,56 +121,6 @@ export function CharacterVerifyTab({
                   Approve
                 </Button>
               </div>
-              {changeRequestId === row.id ? (
-                <form
-                  className="stack"
-                  data-testid={`change-request-form-${row.id}`}
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const note = changeRequestNote.trim();
-                    if (!note) {
-                      setNoteError(
-                        'Add a note describing the changes the owner needs to make.',
-                      );
-                      return;
-                    }
-                    setNoteError(null);
-                    decide.mutate({
-                      characterId: row.id,
-                      approve: false,
-                      note,
-                      expectedSubmissionAt: row.verificationSubmittedAt,
-                    });
-                  }}
-                >
-                  <label className="stack">
-                    <span className="type-label">
-                      What does the owner need to change?
-                    </span>
-                    <textarea
-                      disabled={
-                        decide.isPending || row.verificationSubmittedAt === null
-                      }
-                      className="field-input"
-                      rows={2}
-                      value={changeRequestNote}
-                      onChange={(event) => setChangeRequestNote(event.target.value)}
-                    />
-                  </label>
-                  {noteError ? (
-                    <p className="type-caption" role="alert">
-                      {noteError}
-                    </p>
-                  ) : null}
-                  <Button
-                    type="submit"
-                    variant="secondary"
-                    disabled={decide.isPending || row.verificationSubmittedAt === null}
-                  >
-                    Send change request
-                  </Button>
-                </form>
-              ) : null}
             </li>
           );
         })}

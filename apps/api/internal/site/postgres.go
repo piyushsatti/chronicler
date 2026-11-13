@@ -8,8 +8,13 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 )
 
+type siteStatsQueries interface {
+	CountMembersSite(ctx context.Context) (int32, error)
+	SiteCommunitySnapshot(ctx context.Context) ([]dbgen.SiteCommunitySnapshotRow, error)
+}
+
 type PostgresStats struct {
-	q *dbgen.Queries
+	q siteStatsQueries
 }
 
 func NewPostgresStats(pool *pgxpool.Pool) *PostgresStats {
@@ -21,5 +26,18 @@ func (p *PostgresStats) Stats(ctx context.Context) (Stats, error) {
 	if err != nil {
 		return Stats{}, err
 	}
-	return Stats{TotalMembers: int(n)}, nil
+	rows, err := p.q.SiteCommunitySnapshot(ctx)
+	if err != nil {
+		return Stats{}, err
+	}
+	snapshot, err := mapCommunitySnapshot(rows)
+	if err != nil {
+		return Stats{}, err
+	}
+	// CountMembersSite is active members; the snapshot's total_members counts every row.
+	return Stats{
+		TotalMembers:     int(n),
+		ActiveCharacters: int(snapshot.ActiveCharacters),
+		TotalQuests:      int(snapshot.TotalQuests),
+	}, nil
 }

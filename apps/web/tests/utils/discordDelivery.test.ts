@@ -8,8 +8,20 @@ import {
 } from '../../src/utils/discordDelivery.js';
 
 describe('discordSafeErrorReason', () => {
-  it('maps the permission code to the shared sentence and leaves other codes alone', () => {
+  it('maps each delivery failure code to one sentence and leaves unknown codes alone', () => {
     expect(discordSafeErrorReason('DISCORD_PERMISSION')).toBe(DISCORD_PERMISSION_REASON);
+    expect(discordSafeErrorReason('DISCORD_NOT_FOUND')).toBe(
+      'the quest channel or its post was not found',
+    );
+    expect(discordSafeErrorReason('DISCORD_RATE_LIMIT')).toBe(
+      'Discord is limiting how fast posts are sent',
+    );
+    expect(discordSafeErrorReason('DISCORD_UNAVAILABLE')).toBe('Discord was unavailable');
+    expect(discordSafeErrorReason('DISCORD_UNAUTHORIZED')).toBe('Discord refused the bot’s login');
+    expect(discordSafeErrorReason('DISCORD_NOT_CONFIGURED')).toBe(
+      'Discord posting is not set up for this community',
+    );
+    expect(discordSafeErrorReason('DISCORD_REJECTED')).toBe(DISCORD_GENERIC_REASON);
     expect(discordSafeErrorReason('SOMETHING_ELSE')).toBeNull();
     expect(discordSafeErrorReason(null)).toBeNull();
   });

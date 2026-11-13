@@ -10,7 +10,7 @@ describe('current Document reader URLs', () => {
     ['rule', 'guide', '/rules/guides/a%20story'],
     ['rule', 'ruling', '/rules/rulings/a%20story'],
     ['summary', null, '/chronicles/a%20story'],
-    ['community', 'dm_table', '/community/dm-table/a%20story'],
+    ['community', 'dm_table', null],
     ['community', 'hall_of_fame', '/community?tab=hall-of-fame'],
   ])('links %s to its real reader', (kind, category, href) => {
     expect(documentHref({ kind: kind ?? '', category, slug: 'a story' })).toBe(href);

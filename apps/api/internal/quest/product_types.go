@@ -147,12 +147,14 @@ type QuestHexView struct {
 	HexId   string
 	QuestId string
 	Role    string
+	Name    string
 }
 
 type QuestParticipantView struct {
 	CharacterId       string
 	CharacterName     string
 	CreatedAt         time.Time
+	LastPlayedAt      *time.Time
 	Manual            bool
 	MemberAvatarUrl   *string
 	MemberDisplayName string
@@ -309,9 +311,10 @@ type RestoreQuestSpec struct {
 }
 
 type SelectQuestParticipantsSpec struct {
-	QuestId      string
-	CharacterIds []string
-	AsOf         time.Time
+	QuestId              string
+	CharacterIds         []string
+	AsOf                 time.Time
+	FillByLastGamePlayed bool
 }
 
 type SetQuestHexesSpec struct {
@@ -327,6 +330,11 @@ type SignupForQuestSpec struct {
 }
 
 type SyncQuestDiscordSpec struct {
+	QuestId string
+	AsOf    time.Time
+}
+
+type PublishQuestPlayerListSpec struct {
 	QuestId string
 	AsOf    time.Time
 }
@@ -357,6 +365,13 @@ type UpsertQuestSummarySpec struct {
 type WithdrawFromQuestSpec struct {
 	QuestId     string
 	CharacterId string
+	AsOf        time.Time
+}
+
+type CorrectQuestRosterSpec struct {
+	QuestId     string
+	CharacterId string
+	Action      string
 	AsOf        time.Time
 }
 
@@ -601,6 +616,14 @@ type SyncQuestDiscordState struct {
 	AllowedHexes []spatial.PointcrawlAdmission
 }
 
+type PublishQuestPlayerListState struct {
+	Exists    bool
+	SubjectID string
+	OwnerID   string
+	Status    string
+	ThreadID  string
+}
+
 type TransitionQuestStatusState struct {
 	Exists       bool
 	SubjectID    string
@@ -776,6 +799,13 @@ type SyncQuestDiscordWrite struct {
 	EventKey       *string
 }
 
+type PublishQuestPlayerListWrite struct {
+	ActorID        string
+	At             time.Time
+	ValidatedInput PublishQuestPlayerListSpec
+	Locked         PublishQuestPlayerListState
+}
+
 type TransitionQuestStatusWrite struct {
 	ActorID        string
 	At             time.Time
@@ -834,6 +864,15 @@ type WithdrawFromQuestWrite struct {
 	DecisionID     *string
 	RevisionID     *string
 	EventKey       *string
+}
+
+type CorrectQuestRosterWrite struct {
+	At             time.Time
+	ValidatedInput CorrectQuestRosterSpec
+	Quest          *QuestView
+	Roster         []QuestParticipantView
+	Candidates     []character.Admission
+	Staff          bool
 }
 
 type ArcQuestsKey struct {

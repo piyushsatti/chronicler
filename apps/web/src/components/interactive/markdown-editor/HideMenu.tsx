@@ -1,14 +1,14 @@
 import { useId, useRef, useState } from 'react';
-import { Menu } from '../../components/primitives/Menu.js';
-import { Modal } from '../../components/primitives/Modal.js';
-import { Popover } from '../../components/primitives/Popover.js';
-import { Button } from '../../components/primitives/Button.js';
-import { StatePanel } from '../../components/foundation/StatePanel.js';
-import { toAppError } from '../../errors/toAppError.js';
-import { personLabels } from '../../utils/format.js';
+import { Menu } from '../../primitives/Menu.js';
+import { Modal } from '../../primitives/Modal.js';
+import { Popover } from '../../primitives/Popover.js';
+import { Button } from '../../primitives/Button.js';
+import { StatePanel } from '../../foundation/StatePanel.js';
+import { toAppError } from '../../../errors/toAppError.js';
+import { personLabels } from '../../../utils/format.js';
 import { markerHandle, type HideMarker, type HideScope } from './hideMarkers.js';
-import { useMarkerMemberSearch } from './hooks/useMarkerMemberSearch.js';
-import styles from './editor.module.css';
+import { useMarkerMemberSearch } from '../../../hooks/useMarkerMemberSearch.js';
+import styles from './markdown-editor.module.css';
 
 const HIDE_HINT = 'Hide text from players';
 

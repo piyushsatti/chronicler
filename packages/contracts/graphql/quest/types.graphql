@@ -86,6 +86,7 @@ type QuestPointcrawlLinkType {
   questId: ID!
   pointcrawlNodeId: ID!
   role: String!
+  name: String!
 }
 
 type QuestParticipantType {
@@ -100,6 +101,8 @@ type QuestParticipantType {
   memberHandle: String!
   memberDisplayName: String!
   memberAvatarUrl: String
+  # Loaded only for last_game_played. Null there means this player has never played.
+  lastPlayedAt: DateTime
 }
 
 type QuestStateCountType {

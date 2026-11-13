@@ -2,8 +2,6 @@ query DmDashboard(
   $memberId: ID!
   $questLimit: Int!
   $questOffset: Int!
-  $tableLimit: Int!
-  $tableOffset: Int!
 ) {
   dmStats(memberId: $memberId) {
     sessionCount
@@ -29,22 +27,6 @@ query DmDashboard(
       briefDocument {
         title
       }
-    }
-  }
-  documents(
-    filters: { kind: "community", category: "dm_table", createdBy: $memberId }
-    limit: $tableLimit
-    offset: $tableOffset
-  ) {
-    total
-    items {
-      id
-      slug
-      title
-      status
-      authorId
-      canEditMetadata
-      canEditBody
     }
   }
 }

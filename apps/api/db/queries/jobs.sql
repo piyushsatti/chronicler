@@ -37,3 +37,15 @@ UPDATE agent_questions SET result=$2,updated_at=clock_timestamp() WHERE job_id=$
 INSERT INTO background_jobs (job_key,kind,lane,state,payload,next_run_at)
 VALUES ($1,$2,$3,'queued',$4,clock_timestamp())
 ON CONFLICT(job_key) DO NOTHING;
+
+-- name: EnqueuePlayerListJob :exec
+-- Requeue a succeeded roster that never stored a message id.
+INSERT INTO background_jobs (job_key,kind,lane,state,payload,next_run_at)
+VALUES ($1,$2,$3,'queued',$4,clock_timestamp())
+ON CONFLICT(job_key) DO UPDATE SET state='queued',payload=EXCLUDED.payload,attempts=0,error_message=NULL,safe_error_code=NULL,
+ next_run_at=clock_timestamp(),updated_at=clock_timestamp(),completion_operation=NULL,completion_payload=NULL
+WHERE background_jobs.state<>'running'
+ AND (background_jobs.state<>'succeeded' OR COALESCE(background_jobs.completion_payload->>'message_id','')='');
+
+-- name: BackgroundJobByKey :one
+SELECT public_id, state, completion_payload FROM background_jobs WHERE job_key = sqlc.arg(job_key)::text;

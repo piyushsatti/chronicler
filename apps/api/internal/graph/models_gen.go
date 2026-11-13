@@ -42,7 +42,9 @@ type AdminCharacterDirectoryEntryType struct {
 	VerificationStatus      string     `json:"verificationStatus"`
 	VerificationSubmittedAt *time.Time `json:"verificationSubmittedAt,omitempty"`
 	DdbURL                  *string    `json:"ddbUrl,omitempty"`
-	UpdatedAt               time.Time  `json:"updatedAt"`
+	// Mirror time of the last successful D&D Beyond sync. Older than verificationSubmittedAt means that sync failed and the sheet is stale.
+	DdbSyncedAt *time.Time `json:"ddbSyncedAt,omitempty"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
 }
 
 type AdminCharacterDirectoryFiltersInput struct {
@@ -54,6 +56,13 @@ type AdminCharacterDirectoryFiltersInput struct {
 type AdminCharacterDirectoryType struct {
 	Items []*AdminCharacterDirectoryEntryType `json:"items"`
 	Total int                                 `json:"total"`
+}
+
+type AdminCommunityStatsType struct {
+	TotalCharacters int `json:"totalCharacters"`
+	// Class catalog name. Empty when the character has no class pick.
+	CharactersByClass []*CountByKeyType         `json:"charactersByClass"`
+	QuestHexes        []*AdminQuestHexCountType `json:"questHexes"`
 }
 
 type AdminDeliveryConfigType struct {
@@ -103,6 +112,13 @@ type AdminOperationsType struct {
 	DeliveryTotal         int                        `json:"deliveryTotal"`
 	Deliveries            []*AdminDeliveryJobType    `json:"deliveries"`
 	ActiveAlerts          []*AdminHealthAlertType    `json:"activeAlerts"`
+}
+
+type AdminQuestHexCountType struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	MapName    string `json:"mapName"`
+	QuestCount int    `json:"questCount"`
 }
 
 type AnnouncementRoleInput struct {
@@ -1023,17 +1039,18 @@ type QuestListResult struct {
 }
 
 type QuestParticipantType struct {
-	QuestID           string    `json:"questId"`
-	MemberID          string    `json:"memberId"`
-	CharacterID       string    `json:"characterId"`
-	Status            string    `json:"status"`
-	Manual            bool      `json:"manual"`
-	CreatedAt         time.Time `json:"createdAt"`
-	UpdatedAt         time.Time `json:"updatedAt"`
-	CharacterName     string    `json:"characterName"`
-	MemberHandle      string    `json:"memberHandle"`
-	MemberDisplayName string    `json:"memberDisplayName"`
-	MemberAvatarURL   *string   `json:"memberAvatarUrl,omitempty"`
+	QuestID           string     `json:"questId"`
+	MemberID          string     `json:"memberId"`
+	CharacterID       string     `json:"characterId"`
+	Status            string     `json:"status"`
+	Manual            bool       `json:"manual"`
+	CreatedAt         time.Time  `json:"createdAt"`
+	UpdatedAt         time.Time  `json:"updatedAt"`
+	CharacterName     string     `json:"characterName"`
+	MemberHandle      string     `json:"memberHandle"`
+	MemberDisplayName string     `json:"memberDisplayName"`
+	MemberAvatarURL   *string    `json:"memberAvatarUrl,omitempty"`
+	LastPlayedAt      *time.Time `json:"lastPlayedAt,omitempty"`
 }
 
 type QuestPcxpAwardInput struct {
@@ -1051,6 +1068,7 @@ type QuestPointcrawlLinkType struct {
 	QuestID          string `json:"questId"`
 	PointcrawlNodeID string `json:"pointcrawlNodeId"`
 	Role             string `json:"role"`
+	Name             string `json:"name"`
 }
 
 type QuestStateCountType struct {

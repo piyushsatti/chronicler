@@ -18,13 +18,13 @@ import { useEditorHistory } from './useEditorHistory.js';
 import { useEditorOptions } from './useEditorOptions.js';
 import { useEditorPreview } from './useEditorPreview.js';
 import { useBodyAudit } from './useBodyAudit.js';
-import type { BodySpanAudit } from '../adapters/bodyAudit.js';
+import type { BodySpanAudit } from '../../../components/interactive/markdown-editor/types.js';
 import {
   auditLine,
   auditTypos,
   previewHiddenSummary,
   typoSummary,
-} from '../bodyAuditCopy.js';
+} from '../../../components/interactive/markdown-editor/bodyAuditCopy.js';
 import {
   editorBodyError,
   editorFormInvalid,

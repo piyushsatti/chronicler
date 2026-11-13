@@ -15,11 +15,12 @@ on:
 
 jobs:
   go:
-    # Self-hosted Triton runners (no GitHub minutes). Dependabot PRs stay on
-    # GitHub-hosted runners.
-    runs-on: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && 'ubuntu-latest' || 'triton' }}
+    # Self-hosted Triton runners (no GitHub minutes). Fork and Dependabot
+    # pull requests run on GitHub-hosted runners.
+    runs-on: ${{ (github.event.pull_request.head.repo.fork || github.event.pull_request.user.login == 'dependabot[bot]') && 'ubuntu-latest' || 'triton' }}
     # Fresh container per job. Integration tests own Postgres via
     # testcontainers, so the job talks to the host Docker through its socket.
+    # On a fork that host is the GitHub-hosted runner, not Triton.
     # No pre-started DATABASE_URL service.
     container:
       image: buildpack-deps:noble

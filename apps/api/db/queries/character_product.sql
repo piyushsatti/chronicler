@@ -288,11 +288,12 @@ SELECT c.public_id AS id, c.name, owner.public_id AS owner_id,
        region.public_id AS region_id, region.name AS region_name,
        guild.public_id AS guild_id,
        'PENDING'::text AS verification_status,
-       c.verification_submitted_at, c.ddb_url, c.updated_at
+       c.verification_submitted_at, c.ddb_url, ddb.synced_at AS ddb_synced_at, c.updated_at
 FROM characters c
 JOIN members owner ON owner.id = c.owner_id
 LEFT JOIN documents guild ON guild.id = c.guild_document_id
 LEFT JOIN regions region ON region.id = c.region_id
+LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
 LEFT JOIN LATERAL (
     SELECT verification.created_at
     FROM verifications verification
@@ -495,7 +496,21 @@ WHERE public_id = sqlc.arg(character_id)::uuid AND deleted_at IS NOT NULL
 RETURNING public_id AS id, updated_at;
 -- name: CharacterProductRetire :one
 UPDATE characters
-SET status = 'retired', updated_at = sqlc.arg(at)::timestamptz
+SET status = 'retired',
+    updated_at = sqlc.arg(at)::timestamptz,
+    -- An open submission is the review-queue row. A verdict at or after it is already resolved.
+    verification_submitted_at = CASE
+        WHEN verification_submitted_at IS NOT NULL
+             AND NOT EXISTS (
+                 SELECT 1
+                 FROM verifications verification
+                 WHERE verification.subject_type = 'character'
+                   AND verification.subject_id = characters.id
+                   AND verification.created_at >= characters.verification_submitted_at
+             )
+        THEN NULL
+        ELSE verification_submitted_at
+    END
 WHERE public_id = sqlc.arg(character_id)::uuid
   AND deleted_at IS NULL
   AND status NOT IN ('dead', 'retired')

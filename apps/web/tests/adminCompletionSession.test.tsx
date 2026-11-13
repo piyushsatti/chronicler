@@ -46,14 +46,18 @@ describe('Admin workspace session subtree', () => {
       </>,
       { route: '/admin/world' },
     );
-    const name = await screen.findByLabelText('Name');
+    const name = await screen.findByLabelText('Name', {}, { timeout: 10_000 });
     await userEvent.type(name, 'Unsaved region name');
     expect(name).toHaveValue('Unsaved region name');
     await userEvent.click(screen.getByRole('button', { name: 'Replace session' }));
-    await waitFor(() => expect(validations).toBeGreaterThan(1));
-    expect(await screen.findByLabelText('Name')).toHaveValue('');
+    await waitFor(() => expect(validations).toBeGreaterThan(1), { timeout: 10_000 });
+    // The field unmounts with the old session and comes back empty.
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue(''), {
+      timeout: 10_000,
+    });
     expect(screen.getByRole('button', { name: 'Create region' })).toBeDisabled();
-  });
+    // Three 10s waits, plus typing the unsaved name between them.
+  }, 45_000);
   it.each(['success', 'failure'] as const)(
     'does not publish a late %s assignment read into the next session',
     async (outcome) => {

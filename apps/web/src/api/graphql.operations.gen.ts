@@ -396,6 +396,11 @@ export type AdminCharactersQueryVariables = Exact<{
 
 export type AdminCharactersQuery = { adminCharacterDirectory: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerHandle: string, ownerDisplayName: string, status: string, verificationStatus: string }> } };
 
+export type AdminCommunityStatsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AdminCommunityStatsQuery = { adminCommunityStats: { totalCharacters: number, charactersByClass: Array<{ key: string, count: number }>, questHexes: Array<{ id: string, name: string, mapName: string, questCount: number }> } };
+
 export type AdminCreationCatalogQueryVariables = Exact<{
   limit?: number;
   offset?: number;
@@ -531,12 +536,10 @@ export type DmDashboardQueryVariables = Exact<{
   memberId: string;
   questLimit: number;
   questOffset: number;
-  tableLimit: number;
-  tableOffset: number;
 }>;
 
 
-export type DmDashboardQuery = { dmStats: { sessionCount: number } | null, questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> }, quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, briefDocument: { title: string } | null }> }, documents: { total: number, items: Array<{ id: string, slug: string, title: string, status: string, authorId: string, canEditMetadata: boolean, canEditBody: boolean }> } };
+export type DmDashboardQuery = { dmStats: { sessionCount: number } | null, questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> }, quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, briefDocument: { title: string } | null }> } };
 
 export type PendingCharacterVerificationsQueryVariables = Exact<{
   limit?: number;
@@ -544,7 +547,7 @@ export type PendingCharacterVerificationsQueryVariables = Exact<{
 }>;
 
 
-export type PendingCharacterVerificationsQuery = { pendingCharacterVerifications: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerHandle: string, ownerDisplayName: string, ddbUrl: string | null, verificationSubmittedAt: string | null }> } };
+export type PendingCharacterVerificationsQuery = { pendingCharacterVerifications: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerHandle: string, ownerDisplayName: string, ddbUrl: string | null, verificationSubmittedAt: string | null, ddbSyncedAt: string | null }> } };
 
 export type PendingDmProfilesQueryVariables = Exact<{
   limit: number;
@@ -1612,12 +1615,15 @@ export type ProfileActivityQuery = { memberActivityStats: { questsPlayed: number
 
 export type ProfileDmDetailsQueryVariables = Exact<{
   memberId: string;
-  limit: number;
-  offset: number;
 }>;
 
 
-export type ProfileDmDetailsQuery = { questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> }, dmStats: { sessionCount: number } | null, documents: { total: number, items: Array<{ id: string, slug: string, title: string, status: string, authorId: string, canEditBody: boolean, canEditMetadata: boolean }> } };
+export type ProfileDmDetailsQuery = { questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> }, dmStats: { sessionCount: number } | null };
+
+export type ProfileDmTierQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ProfileDmTierQuery = { myUnlocks: { dmTier: string } };
 
 export type ProfileSetMyAvailabilityMutationVariables = Exact<{
   slots: Array<AvailabilitySlotInput> | AvailabilitySlotInput;
@@ -1658,6 +1664,15 @@ export type MyCharactersQueryVariables = Exact<{
 
 
 export type MyCharactersQuery = { myCharacters: { total: number, items: Array<{ id: string, status: string, name: string, shortCode: string }> } };
+
+export type QuestAddParticipantMutationVariables = Exact<{
+  questId: string;
+  characterId: string;
+  meta: CommandMeta;
+}>;
+
+
+export type QuestAddParticipantMutation = { addQuestParticipant: { characterId: string, status: string } };
 
 export type QuestSetArcMutationVariables = Exact<{
   id: string;
@@ -1713,7 +1728,7 @@ export type QuestQueryVariables = Exact<{
 }>;
 
 
-export type QuestQuery = { quest: { id: string, shortCode: string, status: string, dmId: string, updatedAt: string, arcId: string | null, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, signupType: string | null, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, regions: Array<string>, arc: { id: string, name: string } | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null, frontmatter: unknown } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, status: string }>, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string }> } | null };
+export type QuestQuery = { quest: { id: string, shortCode: string, status: string, dmId: string, updatedAt: string, arcId: string | null, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, signupType: string | null, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, regions: Array<string>, arc: { id: string, name: string } | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null, frontmatter: unknown } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, status: string, lastPlayedAt: string | null }>, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string, name: string }> } | null };
 
 export type QuestListQueryVariables = Exact<{
   filters: QuestFiltersInput;
@@ -1752,7 +1767,7 @@ export type QuestParticipantsQueryVariables = Exact<{
 }>;
 
 
-export type QuestParticipantsQuery = { quest: { participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, memberAvatarUrl: string | null, status: string }> } | null };
+export type QuestParticipantsQuery = { quest: { participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, memberAvatarUrl: string | null, status: string, lastPlayedAt: string | null }> } | null };
 
 export type QuestSetPointcrawlLinksMutationVariables = Exact<{
   questId: string;
@@ -1763,6 +1778,14 @@ export type QuestSetPointcrawlLinksMutationVariables = Exact<{
 
 export type QuestSetPointcrawlLinksMutation = { setQuestPointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string }> };
 
+export type PublishQuestPlayerListMutationVariables = Exact<{
+  questId: string;
+  meta: CommandMeta;
+}>;
+
+
+export type PublishQuestPlayerListMutation = { publishQuestPlayerList: { jobId: string, deliveryStatus: string } };
+
 export type QuestRegionsQueryVariables = Exact<{
   limit: number;
 }>;
@@ -1770,9 +1793,26 @@ export type QuestRegionsQueryVariables = Exact<{
 
 export type QuestRegionsQuery = { regions: Array<{ id: string, name: string }> };
 
+export type QuestRemoveParticipantMutationVariables = Exact<{
+  questId: string;
+  characterId: string;
+  meta: CommandMeta;
+}>;
+
+
+export type QuestRemoveParticipantMutation = { removeQuestParticipant: { characterId: string, status: string } };
+
+export type QuestRosterCharactersQueryVariables = Exact<{
+  namePrefix: string;
+}>;
+
+
+export type QuestRosterCharactersQuery = { characters: { items: Array<{ id: string, name: string, ownerId: string, status: string, shortCode: string }> } };
+
 export type QuestSelectParticipantsMutationVariables = Exact<{
   questId: string;
   characterIds: Array<string> | string;
+  fillByLastGamePlayed?: boolean;
   meta: CommandMeta;
 }>;
 

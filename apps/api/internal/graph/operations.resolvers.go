@@ -1011,8 +1011,48 @@ func (r *mutationResolver) WithdrawFromQuest(ctx context.Context, questID string
 	return toQuestParticipantFromQuest(view), nil
 }
 
+// AddQuestParticipant is the resolver for the addQuestParticipant field.
+func (r *mutationResolver) AddQuestParticipant(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error) {
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.AddQuestParticipant(ctx, actor, quest.CorrectQuestRosterSpec{
+		QuestId:     questID,
+		CharacterId: characterID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestParticipantFromQuest(view), nil
+}
+
+// RemoveQuestParticipant is the resolver for the removeQuestParticipant field.
+func (r *mutationResolver) RemoveQuestParticipant(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error) {
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.RemoveQuestParticipant(ctx, actor, quest.CorrectQuestRosterSpec{
+		QuestId:     questID,
+		CharacterId: characterID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestParticipantFromQuest(view), nil
+}
+
 // SelectQuestParticipants is the resolver for the selectQuestParticipants field.
-func (r *mutationResolver) SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, meta CommandMeta) ([]*QuestParticipantType, error) {
+func (r *mutationResolver) SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, fillByLastGamePlayed bool, meta CommandMeta) ([]*QuestParticipantType, error) {
 	if r.Services.QuestCommands == nil {
 		return nil, fmt.Errorf("quest commands unavailable")
 	}
@@ -1021,8 +1061,9 @@ func (r *mutationResolver) SelectQuestParticipants(ctx context.Context, questID 
 		return nil, err
 	}
 	views, err := r.Services.QuestCommands.SelectQuestParticipants(ctx, actor, quest.SelectQuestParticipantsSpec{
-		QuestId:      questID,
-		CharacterIds: characterIds,
+		QuestId:              questID,
+		CharacterIds:         characterIds,
+		FillByLastGamePlayed: fillByLastGamePlayed,
 	}, commandMeta)
 	if err != nil {
 		return nil, err
@@ -1061,6 +1102,25 @@ func (r *mutationResolver) SyncQuestDiscord(ctx context.Context, questID string,
 		return nil, err
 	}
 	receipt, err := r.Services.QuestCommands.SyncQuestDiscord(ctx, actor, quest.SyncQuestDiscordSpec{
+		QuestId: questID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDeliveryReceipt(receipt), nil
+}
+
+// PublishQuestPlayerList is the resolver for the publishQuestPlayerList field.
+func (r *mutationResolver) PublishQuestPlayerList(ctx context.Context, questID string, meta CommandMeta) (*DeliveryReceipt, error) {
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.QuestCommands.PublishQuestPlayerList(ctx, actor, quest.PublishQuestPlayerListSpec{
 		QuestId: questID,
 	}, commandMeta)
 	if err != nil {
@@ -2680,6 +2740,22 @@ func (r *queryResolver) AdminOperations(ctx context.Context, deliveryState *stri
 		return nil, err
 	}
 	return toAdminOperationsType(view), nil
+}
+
+// AdminCommunityStats is the resolver for the adminCommunityStats field.
+func (r *queryResolver) AdminCommunityStats(ctx context.Context) (*AdminCommunityStatsType, error) {
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SiteQueries.AdminCommunityStats(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+	return toAdminCommunityStats(view), nil
 }
 
 // SearchableKinds is the resolver for the searchableKinds field.

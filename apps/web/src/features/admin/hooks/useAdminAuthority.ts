@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
-import { canAccessVerify, isAdmin, isDm } from '../../../auth/roles.js';
+import { canAccessVerify, hasRole, isAdmin, isDm } from '../../../auth/roles.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { TransportError, type AppError } from '../../../errors/types.js';
 import { useMe } from '../../../hooks/useMe.js';
@@ -9,7 +9,7 @@ import { useAuth } from '../../../auth/AuthContext.js';
 import { useCurrentAccess } from '../../../auth/useCurrentAccess.js';
 import type { AdminCommand, AdminReadRequest } from '../adapters/adminRequest.js';
 
-export type WorkspaceAuthority = 'admin' | 'review' | 'dm';
+export type WorkspaceAuthority = 'admin' | 'review' | 'verifier' | 'dm';
 
 /** One permission refresh budget belongs to the mounted route, including its tabs. */
 export const AuthorityFailureContext = createContext<((error: unknown) => void) | null>(
@@ -60,9 +60,11 @@ function permits(
 ): boolean {
   return required === 'review'
     ? canAccessVerify(roles)
-    : required === 'dm'
-      ? isDm(roles)
-      : isAdmin(roles);
+    : required === 'verifier'
+      ? hasRole(roles, 'verifier')
+      : required === 'dm'
+        ? isDm(roles)
+        : isAdmin(roles);
 }
 
 export function useAdminAuthority(required: WorkspaceAuthority = 'admin') {
@@ -71,19 +73,27 @@ export function useAdminAuthority(required: WorkspaceAuthority = 'admin') {
   const roles = me.isSuccess ? me.data.roles : undefined;
   const adminAccess = useCurrentAccess('admin');
   const reviewAccess = useCurrentAccess('review');
-  const proof = required === 'review' ? reviewAccess : adminAccess;
+  const proof =
+    required === 'review' || required === 'verifier' ? reviewAccess : adminAccess;
   const allowed =
-    required === 'dm' ? permits(roles, required) || adminAccess.allowed : proof.allowed;
+    required === 'verifier'
+      ? // Review proof also admits admins; this authority does not.
+        permits(roles, required) && proof.allowed
+      : required === 'dm'
+        ? permits(roles, required) || adminAccess.allowed
+        : proof.allowed;
   const error: AppError | null = me.isError
     ? toAppError(me.error, 'workspace:account')
-    : required !== 'dm' && proof.status === 'error'
-      ? proof.error
-      : me.isSuccess && !allowed && proof.status === 'forbidden'
-        ? toAppError(
-            new TransportError('FORBIDDEN', { status: 403 }),
-            'workspace:account',
-          )
-        : null;
+    : required === 'verifier' && me.isSuccess && !permits(roles, required)
+      ? toAppError(new TransportError('FORBIDDEN', { status: 403 }), 'workspace:account')
+      : required !== 'dm' && proof.status === 'error'
+        ? proof.error
+        : me.isSuccess && !allowed && proof.status === 'forbidden'
+          ? toAppError(
+              new TransportError('FORBIDDEN', { status: 403 }),
+              'workspace:account',
+            )
+          : null;
 
   const auth = useAuth();
   const identity = me.isSuccess
@@ -134,9 +144,11 @@ export function useAdminAuthority(required: WorkspaceAuthority = 'admin') {
       );
     }
     if (
-      required === 'dm'
-        ? !permits(account.data.roles, required) && !adminAccess.isCurrentProof()
-        : !proof.isCurrentProof()
+      required === 'verifier'
+        ? !permits(account.data.roles, required) || !proof.isCurrentProof()
+        : required === 'dm'
+          ? !permits(account.data.roles, required) && !adminAccess.isCurrentProof()
+          : !proof.isCurrentProof()
     ) {
       throw toAppError(
         new TransportError('FORBIDDEN', { status: 403 }),

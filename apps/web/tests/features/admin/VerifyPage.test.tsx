@@ -25,6 +25,40 @@ describe('VerifyPage', () => {
     await screen.findByRole('button', { name: /^DM profiles/ });
     // Character tab is default and shows the pending character.
     expect(screen.getByText('Pending Hero')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'D&D Beyond sync failed for this submission. The saved sheet may be out of date.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a fresh D&D Beyond sync on the review row', async () => {
+    server.use(
+      graphql.query('PendingCharacterVerifications', () =>
+        HttpResponse.json({
+          data: {
+            pendingCharacterVerifications: {
+              total: 1,
+              items: [
+                {
+                  ...pending.items[0],
+                  ddbSyncedAt: pending.items[0].verificationSubmittedAt,
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(<VerifyPage />);
+    expect(
+      await screen.findByText('D&D Beyond sheet was synced for this submission.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        'D&D Beyond sync failed for this submission. The saved sheet may be out of date.',
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it('shows controlled error', async () => {
@@ -46,7 +80,7 @@ describe('VerifyPage', () => {
       let decided = false;
       let queueReads = 0;
       let sent: Record<string, unknown> | undefined;
-      const note = approve ? null : 'Please revise the backstory.';
+      const note = null;
       server.use(
         graphql.query('PendingCharacterVerifications', () => {
           queueReads++;
@@ -76,21 +110,15 @@ describe('VerifyPage', () => {
       expect(
         await screen.findByRole('link', { name: 'Pending Hero' }),
       ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', {
+          name: 'What does the owner need to change?',
+        }),
+      ).not.toBeInTheDocument();
       if (approve) await user.click(screen.getByRole('button', { name: 'Approve' }));
-      else {
-        await user.click(screen.getByRole('button', { name: 'Request changes' }));
-        await user.type(
-          screen.getByRole('textbox', {
-            name: 'What does the owner need to change?',
-          }),
-          note ?? '',
-        );
-        await user.click(screen.getByRole('button', { name: 'Send change request' }));
-      }
+      else await user.click(screen.getByRole('button', { name: 'Reject' }));
       expect(await screen.findByRole('status')).toHaveTextContent(
-        approve
-          ? 'Character approved.'
-          : 'Change request recorded and returned to the owner.',
+        approve ? 'Character approved.' : 'Character rejected.',
       );
       await waitFor(() => {
         expect(

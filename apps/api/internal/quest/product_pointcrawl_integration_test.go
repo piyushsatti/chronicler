@@ -63,7 +63,7 @@ func TestFrontendQuestPointcrawlVisitedUsesCurrentSpatialFacts(t *testing.T) {
 		t.Fatalf("assigned steward links=%+v err=%v", links, err)
 	}
 	for _, want := range spec.Hexes {
-		if !slices.Contains(links, QuestHexView{QuestId: f.questID, HexId: want.HexId, Role: want.Role}) {
+		if !slices.Contains(links, QuestHexView{QuestId: f.questID, HexId: want.HexId, Role: want.Role, Name: "Steward node"}) {
 			t.Fatalf("lost node/role pairing %v in %v", want, links)
 		}
 	}

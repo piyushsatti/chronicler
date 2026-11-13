@@ -1,0 +1,6 @@
+mutation PublishQuestPlayerList($questId: ID!, $meta: CommandMeta!) {
+  publishQuestPlayerList(questId: $questId, meta: $meta) {
+    jobId
+    deliveryStatus
+  }
+}

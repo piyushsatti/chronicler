@@ -17,6 +17,10 @@ type Participant struct {
 	Manual      bool
 }
 
+// placeQuestSignup is the participant status a signup writes. Open seats and
+// signup type do not matter: signup never takes a seat and never bumps one.
+func placeQuestSignup() string { return "waitlisted" }
+
 func canSignUp(q LegacyQuestView) error {
 	switch q.Status {
 	case Open, Full:

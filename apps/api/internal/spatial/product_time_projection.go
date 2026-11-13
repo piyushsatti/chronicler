@@ -2,12 +2,18 @@ package spatial
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
+
+// ErrTimeAnchorUncovered is no anchor on or before the first projected date.
+// Commands stay invalid input. Maintenance parks it instead of retrying to dead.
+var ErrTimeAnchorUncovered = errors.New("time anchor must cover every projected date")
 
 const timeProjectionDays = 30
 
@@ -54,7 +60,7 @@ func projectTimeCells(from, to product.Date, anchors []TimeAnchorView) ([]GameDa
 			index++
 		}
 		if index < 0 {
-			return nil, apierr.New(apierr.Invalid, "time anchor must cover every projected date")
+			return nil, fmt.Errorf("%w: %w", ErrTimeAnchorUncovered, apierr.New(apierr.Invalid, ErrTimeAnchorUncovered.Error()))
 		}
 		day, err := computeGameDay(date, anchors[index])
 		if err != nil {

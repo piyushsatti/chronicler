@@ -92,7 +92,7 @@ func TestFrontendQuestSignupOwnershipEligibilityReplayAndCapacity(t *testing.T) 
 	assertQuestCloseCode(t, err, apierr.Forbidden)
 	meta := product.CommandMeta{IdempotencyKey: uuid.NewString()}
 	joined, err := f.commands.SignupForQuest(ctx, owner, input, meta)
-	if err != nil || joined.Status != "signed_up" {
+	if err != nil || joined.Status != "waitlisted" {
 		t.Fatalf("signup=%+v err=%v", joined, err)
 	}
 	before := f.snapshot(t)
@@ -109,11 +109,11 @@ func TestFrontendQuestSignupOwnershipEligibilityReplayAndCapacity(t *testing.T) 
 	}
 	var count, filled, notices int
 	var status string
-	if err := f.fixture.Pool.QueryRow(ctx, `SELECT q.filled_count,q.status,(SELECT count(*) FROM quest_participants WHERE quest_id=q.id AND status='signed_up'),(SELECT count(*) FROM notifications WHERE member_id=(SELECT id FROM members WHERE public_id=$2)) FROM quests q WHERE q.public_id=$1`, f.questID, owner.Claims().MemberID).Scan(&filled, &status, &count, &notices); err != nil {
+	if err := f.fixture.Pool.QueryRow(ctx, `SELECT q.filled_count,q.status,(SELECT count(*) FROM quest_participants WHERE quest_id=q.id AND status='waitlisted'),(SELECT count(*) FROM notifications WHERE member_id=(SELECT id FROM members WHERE public_id=$2)) FROM quests q WHERE q.public_id=$1`, f.questID, owner.Claims().MemberID).Scan(&filled, &status, &count, &notices); err != nil {
 		t.Fatal(err)
 	}
-	if filled != 1 || status != "full" || count != 1 || notices != 1 {
-		t.Fatalf("filled=%d status=%s signed_up=%d notices=%d", filled, status, count, notices)
+	if filled != 0 || status != "open" || count != 1 || notices != 1 {
+		t.Fatalf("filled=%d status=%s waitlisted=%d notices=%d", filled, status, count, notices)
 	}
 	if _, err := f.fixture.Pool.Exec(ctx, `UPDATE characters SET status='retired' WHERE public_id=$1`, f.characterID); err != nil {
 		t.Fatal(err)
@@ -225,7 +225,7 @@ func TestFrontendQuestParticipationNotificationFailureRollsBack(t *testing.T) {
 	}
 }
 
-func TestFrontendQuestConcurrentSignupsReserveOneSeat(t *testing.T) {
+func TestFrontendQuestConcurrentSignupsBothWaitlist(t *testing.T) {
 	f := newQuestCloseFixture(t)
 	setQuestPreplay(t, f, true)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -255,7 +255,7 @@ func TestFrontendQuestConcurrentSignupsReserveOneSeat(t *testing.T) {
 		(SELECT count(*) FROM notifications) FROM quests q WHERE q.public_id=$1`, f.questID).Scan(&filled, &signedUp, &waiting, &notices); err != nil {
 		t.Fatal(err)
 	}
-	if filled != 1 || signedUp != 1 || waiting != 1 || notices != 2 {
+	if filled != 0 || signedUp != 0 || waiting != 2 || notices != 2 {
 		t.Fatalf("filled=%d signed_up=%d waitlisted=%d notices=%d", filled, signedUp, waiting, notices)
 	}
 }

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Profiler, useState } from 'react';
 import { describe, expect, it } from 'vitest';
-import { LiveEditor } from '../../../src/features/editor/LiveEditor.js';
+import { LiveEditor } from '../../../src/components/interactive/markdown-editor/LiveEditor.js';
 
 /**
  * Loop 3 L2: a keystroke must reach the parent in the same render as the
