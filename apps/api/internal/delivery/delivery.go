@@ -29,6 +29,7 @@ func parseQuestPayload(payload []byte) (string, int, error) {
 
 const LaneDiscord = "discord"
 const KindQuestDiscord = "quest_discord_delivery"
+const KindQuestPlayerList = "quest_player_list"
 
 // DiscordSync applies the current desired Discord state for one quest.
 type DiscordSync interface {
@@ -64,6 +65,9 @@ func (h *Handler) ProcessOne(ctx context.Context) (bool, error) {
 	if job.ID == "" {
 		return false, nil
 	}
+	if job.Kind == KindQuestPlayerList {
+		return h.processPlayerList(ctx, job)
+	}
 	questID, desired, err := parseQuestPayload(job.Payload)
 	if err != nil {
 		return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, err.Error())
@@ -91,6 +95,51 @@ func (h *Handler) ProcessOne(ctx context.Context) (bool, error) {
 		}
 	}
 	slog.InfoContext(ctx, "discord delivery succeeded", "job", job.ID, "quest", questID)
+	return true, nil
+}
+
+type playerListPublisher interface {
+	PublishPlayerList(ctx context.Context, jobKey string, body jobs.QuestPlayerListPayload) (string, error)
+}
+
+func (h *Handler) processPlayerList(ctx context.Context, job jobs.Job) (bool, error) {
+	body, err := parsePlayerListPayload(job.Payload)
+	if err != nil {
+		return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, err.Error())
+	}
+	publisher, ok := h.sync.(playerListPublisher)
+	if !ok {
+		return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, "player list publisher missing")
+	}
+	var messageID string
+	if err := jobs.RunLeased(ctx, h.store, job, func(work context.Context) error {
+		id, err := publisher.PublishPlayerList(work, job.Key, body)
+		messageID = id
+		return err
+	}); err != nil {
+		if errors.Is(err, ErrDiscordForbidden) {
+			return true, h.store.FailWithCode(ctx, job.Receipt(), jobs.RepairRequired, err.Error(), SafeCodeDiscordPermission)
+		}
+		if errors.Is(err, ErrPlayerListTooLong) || errors.Is(err, ErrBadPayload) {
+			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, err.Error())
+		}
+		if job.Attempts >= jobs.MaxAttempts {
+			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, err.Error())
+		}
+		return true, h.store.Retry(ctx, job.Receipt(), jobs.Backoff(job.Attempts), err.Error())
+	}
+	payload := []byte(`{}`)
+	if messageID != "" {
+		encoded, marshalErr := json.Marshal(map[string]string{"message_id": messageID})
+		if marshalErr != nil {
+			return true, marshalErr
+		}
+		payload = encoded
+	}
+	if err := h.store.SucceedWith(ctx, job.Receipt(), payload); err != nil {
+		return true, err
+	}
+	slog.InfoContext(ctx, "player list delivery succeeded", "job", job.ID, "quest", body.PublicID)
 	return true, nil
 }
 

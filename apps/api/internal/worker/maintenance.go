@@ -14,6 +14,9 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
+// TimeAnchorUncoveredCode is the parked gametime_fill code when no anchor covers today.
+const TimeAnchorUncoveredCode = "TIME_ANCHOR_UNCOVERED"
+
 const LaneMaintenance = "maintenance"
 
 var errUnknownMaintenanceKind = errors.New("UNKNOWN_MAINTENANCE_KIND")
@@ -62,6 +65,11 @@ func (h *MaintenanceHandler) ProcessOne(ctx context.Context) (bool, error) {
 		if errors.Is(errRun, errMaintenanceBusy) {
 			return true, h.store.Retry(ctx, job.Receipt(), time.Second, "JOB_BUSY")
 		}
+		// Retrying cannot invent an anchor, and eight failures would mark the day dead.
+		// spatial.ErrTimeAnchorUncovered stays in that package: its tests import worker.
+		if timeAnchorUncovered(errRun) {
+			return true, h.store.FailWithCode(ctx, job.Receipt(), jobs.RepairRequired, TimeAnchorUncoveredCode, TimeAnchorUncoveredCode)
+		}
 		code := maintenanceFailureCode(errRun)
 		if job.Attempts >= jobs.MaxAttempts {
 			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, code)
@@ -98,6 +106,11 @@ func (h *MaintenanceHandler) executeMaintenanceJob(ctx context.Context, kind str
 	}
 	_, err = h.timeWriter.FillFuture(ctx, scope, product.Date(at.Format("2006-01-02")), 30)
 	return err
+}
+
+func timeAnchorUncovered(err error) bool {
+	failure, ok := errors.AsType[*apierr.Error](err)
+	return ok && failure.Code == apierr.Invalid && failure.Message == "time anchor must cover every projected date"
 }
 
 func maintenanceFailureCode(err error) string {

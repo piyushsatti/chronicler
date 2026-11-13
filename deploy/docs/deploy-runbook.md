@@ -14,8 +14,6 @@ Production deploy, promotion, and rollback use one admitted Actions run under [D
 
 Both release workflows are thin callers of [`deploy-release.yml`](/.github/workflows/deploy-release.yml), a reusable workflow (`workflow_call`) that holds the steps. Each caller supplies its trigger, tag rule, runner labels, GitHub environment, concurrency group, constants, and which optional Compose pieces run. The caller passes `secrets: inherit`: a job that calls a reusable workflow cannot set `environment`, so the called jobs name it, and environment secrets reach them only through the caller's inherited secrets. A secret that is not passed resolves to an empty string without an error, so the workflow's missing-value check is the gate. The caller's `env` is not propagated, and a concurrency group shared by caller and called workflow would cancel the run, so concurrency is set only in the callers. See GitHub's [reuse workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows) and [reusing workflow configurations](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations) references.
 
-[`deploy-api.yml`](/.github/workflows/deploy-api.yml) still only publishes images (`ghcr.io/piyushsatti/chronicler/api` and `.../discord`). It does not deploy, migrate, promote Vercel, verify a release, or roll back, and it is not a release path.
-
 [`deploy/compose.production.yaml`](/deploy/compose.production.yaml) serves both environments. `chronicler-api` (the Go API with the background-job worker in the same process) and `chronicler-discord-bot` always run. Two optional pieces are Compose profiles, selected by `COMPOSE_PROFILES`, which the workflow sets: `local-db` adds `chronicler-postgres` (PostgreSQL 16 with a named volume; staging), and `tunnel` adds `chronicler-cloudflared` (the pinned Cloudflare connector; production). The API uses `DATABASE_URL` when it is set and otherwise builds the local URL from `POSTGRES_*`. Variables are listed in [`deploy/production.env.example`](/deploy/production.env.example). The API listens on `127.0.0.1:${API_PORT:-8080}`; images come from `API_IMAGE` and `DISCORD_IMAGE`, or are built from the repository with `--build` when those are unset.
 
 Compose interpolates every service, including those in inactive profiles, so a `:?` check cannot guard a variable only one mode needs. Compose keeps `:?` for what both modes need (`JWT_SECRET`, `INGEST_SECRET`, the bot values). The workflow checks each mode's own values before it deploys anything.
@@ -50,6 +48,8 @@ One-time setup the owner performs:
 Provider settings, the tunnel, and the Vercel project are unverified, and no end-to-end staging release has been verified for these docs.
 
 ## Production release
+
+The Supabase Data API is unused. Migration `0016_revoke_data_api_grants.sql` removes table and sequence grants for `anon` and `authenticated`, including the migrating role's default privileges for future objects. It does nothing when those roles do not exist.
 
 Cut a production release by tagging a commit that is on `main` and pushing the tag:
 

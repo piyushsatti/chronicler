@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
@@ -21,7 +21,13 @@ import { useMe } from '../../../hooks/useMe.js';
 import { MapPanelBody } from './MapPanelBody.js';
 import { NodeStateSwatch } from './NodeStateSwatch.js';
 import { useNodeState } from '../hooks/useNodeState.js';
-import { nodeStateLabel, nodeStateMeaning } from '../nodeState.js';
+import { Select } from '../../../components/primitives/Select.js';
+import {
+  NODE_STATES,
+  nodeStateLabel,
+  nodeStateMeaning,
+  type NodeState,
+} from '../nodeState.js';
 import styles from '../pages/map.module.css';
 import stateStyles from './nodeState.module.css';
 export function MapNodeDetails(props: MapNodeDetailsProps) {
@@ -30,6 +36,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
     useMapNodeDetails(props);
   const me = useMe();
   const hexState = useNodeState(props);
+  const stateLabelId = useId();
   const [confirming, setConfirming] = useState<{
     documentId: string;
     relation: string;
@@ -103,28 +110,34 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
       <MapPanelBody>
         {hexState.hexMap ? (
           <>
-            <p className={stateStyles.stateRow} data-node-state={hexState.state}>
-              <span className={stateStyles.stateName}>Hex state</span>
-              <span
-                className={stateStyles.stateValue}
-                title={nodeStateMeaning(hexState.state)}
-              >
-                <NodeStateSwatch state={hexState.state} />
-                {nodeStateLabel(hexState.state)}
+            <div className={stateStyles.stateRow} data-node-state={hexState.state}>
+              <span id={stateLabelId} className={stateStyles.stateName}>
+                Hex state
               </span>
               {hexState.canSet ? (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  pending={hexState.pending}
-                  onClick={() => {
-                    void hexState.cycle();
+                <Select
+                  label="Hex state"
+                  labelId={stateLabelId}
+                  value={hexState.state}
+                  disabled={hexState.pending}
+                  options={NODE_STATES.map((state) => ({
+                    value: state,
+                    label: nodeStateLabel(state),
+                  }))}
+                  onValueChange={(state) => {
+                    void hexState.set(state as NodeState);
                   }}
+                />
+              ) : (
+                <span
+                  className={stateStyles.stateValue}
+                  title={nodeStateMeaning(hexState.state)}
                 >
-                  Change to {nodeStateLabel(hexState.next)}
-                </Button>
-              ) : null}
-            </p>
+                  <NodeStateSwatch state={hexState.state} />
+                  {nodeStateLabel(hexState.state)}
+                </span>
+              )}
+            </div>
             {hexState.error ? <p role="alert">{hexState.error}</p> : null}
           </>
         ) : null}

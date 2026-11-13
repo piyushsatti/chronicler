@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { safeAppError, toAppError } from '../../../errors/toAppError.js';
 import { TransportError, type AppError } from '../../../errors/types.js';
 import { previewBodyAs } from '../adapters/editorMutations.js';
-import type { PreviewViewer } from '../bodyAuditCopy.js';
+import type { PreviewViewer } from '../../../components/interactive/markdown-editor/bodyAuditCopy.js';
 import type { EditorPreview } from '../types.js';
 
 type PreviewRequest = { source: string; viewer: PreviewViewer };

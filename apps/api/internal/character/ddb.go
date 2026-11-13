@@ -96,8 +96,20 @@ func NewDdbClient(client *http.Client, clock product.Clock) (*HTTPDdbClient, err
 	return &HTTPDdbClient{Client: &clone, Clock: clock}, nil
 }
 
+// ddbHTTPTransportOverride is nil in production. cmd/api integration tests set it
+// so a forgotten fake client cannot dial D&D Beyond.
+var ddbHTTPTransportOverride http.RoundTripper
+
+// UseDdbHTTPTransportForTests replaces the production sheet transport for this process.
+func UseDdbHTTPTransportForTests(transport http.RoundTripper) {
+	ddbHTTPTransportOverride = transport
+}
+
 func NewProductionDdbHTTPClient() (*http.Client, error) {
-	transport := newDdbTransport(net.DefaultResolver)
+	transport := ddbHTTPTransportOverride
+	if transport == nil {
+		transport = newDdbTransport(net.DefaultResolver)
+	}
 	return &http.Client{Transport: transport, Timeout: ddbRequestTimeout}, nil
 }
 

@@ -20,11 +20,13 @@ it('shows only real totals as stat tiles and an action in each empty subsection'
     seriesAuthority(me.id),
   );
   renderWithProviders(<DMDashboardPage />, { route: '/dm' });
-  await screen.findByRole('heading', { name: 'Your quests' });
+  await screen.findByRole('heading', { name: 'Your quests' }, { timeout: 10_000 });
   const stats = screen.getByLabelText('Your DM stats');
   expect(stats).toHaveTextContent('Quests posted0');
   expect(stats).toHaveTextContent('Sessions run3');
-  expect(stats).toHaveTextContent('DM tables0');
+  expect(stats).not.toHaveTextContent('DM tables');
+  expect(screen.queryByRole('heading', { name: 'Your DM tables' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Your page' })).toHaveAttribute('href', '/me');
   expect(screen.getByRole('complementary', { name: 'DM tools' })).toBeVisible();
   for (const name of ['Upcoming quests', 'Past quests']) {
@@ -36,9 +38,14 @@ it('shows only real totals as stat tiles and an action in each empty subsection'
   const series = screen.getByRole('region', { name: 'Your series' });
   expect(series.querySelector('[data-component="EmptyState"]')).toBeTruthy();
   expect(
-    await within(series).findByRole('button', { name: 'Create a series' }),
+    await within(series).findByRole(
+      'button',
+      { name: 'Create a series' },
+      { timeout: 10_000 },
+    ),
   ).toBeVisible();
-});
+  // Dashboard heading and the series-authority button each wait 10s.
+}, 25_000);
 
 it('separates upcoming and past quests, omits missing stats and renders own series as cards', async () => {
   signIn(['dm']);

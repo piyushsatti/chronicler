@@ -319,17 +319,8 @@ const groups = [
       'edit own availability',
       'submit DM verification',
       'read filtered and paginated schedule',
-      'open or edit owned DM table',
     ],
     access: 'Public profile projection; edits require current account ownership.',
-  },
-  {
-    paths: ['/editor/dm-table', '/editor/dm-table/:id/edit'],
-    feature: 'editor',
-    actors: editorActors,
-    actions: editorActions,
-    access:
-      'Document-owned community content in dm_table category; edit by actual Document UUID.',
   },
   {
     paths: ['/editor/hall-of-fame', '/editor/hall-of-fame/:id/edit'],
@@ -345,18 +336,6 @@ const groups = [
     actors: publicActors,
     actions: ['read authorized community Document', 'follow canonical reader links'],
     access: 'Document audience governs disclosure and server-projected body.',
-  },
-  {
-    paths: ['/community/dm-table/:slug'],
-    feature: 'profile',
-    actors: editorActors,
-    actions: [
-      'read authorized DM table',
-      'navigate DM and schedule',
-      'open editor with actual UUID',
-    ],
-    access:
-      'Document audience governs body and current authority governs edit affordance.',
   },
   {
     paths: ['/codex'],

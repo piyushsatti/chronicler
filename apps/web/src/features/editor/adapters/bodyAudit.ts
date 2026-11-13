@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { graphqlRequest } from '../../../api/graphql.js';
 import type { AuditBodyQuery } from '../../../api/graphql.operations.gen.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import type { BodySpanAudit } from '../../../components/interactive/markdown-editor/types.js';
 import AUDIT_BODY from './auditBody.graphql?raw';
 
 const span = z.object({
@@ -13,11 +14,7 @@ const span = z.object({
   token: z.string().nullable(),
   tokenLine: z.number().int().positive().nullable(),
   tokenColumn: z.number().int().positive().nullable(),
-});
-
-/** One marked span of a body, as the server's marker parser reports it (1-based lines). */
-export type BodySpanAudit = z.infer<typeof span>;
-export type BodySpanKind = BodySpanAudit['kind'];
+}) satisfies z.ZodType<BodySpanAudit>;
 
 const spans = z.array(span);
 

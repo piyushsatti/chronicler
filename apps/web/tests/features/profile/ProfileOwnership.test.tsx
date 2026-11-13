@@ -70,7 +70,7 @@ describe('Profile ownership and table identity', () => {
       screen.queryByRole('link', { name: 'New DM table' }),
     ).not.toBeInTheDocument();
   });
-  it('allows matching owner controls and existing table creation route', async () => {
+  it('allows matching owner controls', async () => {
     account.id = '11111111-1111-4111-8111-111111111111';
     account.roles = ['dm', 'player'];
     renderWithProviders(
@@ -83,10 +83,7 @@ describe('Profile ownership and table identity', () => {
     expect(
       await screen.findByRole('heading', { name: 'Your profile' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'New DM table' })).toHaveAttribute(
-      'href',
-      '/editor/dm-table',
-    );
+    expect(screen.queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
   });
   it('shows only real DM owner actions in the collapsed empty-work block', async () => {
     account.id = '11111111-1111-4111-8111-111111111111';
@@ -106,7 +103,7 @@ describe('Profile ownership and table identity', () => {
     renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@mira' });
     const panel = await screen.findByRole('tabpanel', { name: 'About' });
     expect(await within(panel).findByText('Nothing here yet.')).toBeVisible();
-    expect(within(panel).getByRole('link', { name: 'New DM table' })).toHaveAttribute('href', '/editor/dm-table');
+    expect(within(panel).queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
     // No dead /series/new link. useMe is mocked here, so the create button's DM check never runs.
     expect(within(panel).queryByRole('link', { name: 'Create a series' })).not.toBeInTheDocument();
     expect(within(panel).getByRole('link', { name: 'Post a quest' })).toHaveAttribute('href', '/quests/new');
@@ -130,7 +127,7 @@ describe('Profile ownership and table identity', () => {
     renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@mira' });
     const panel = await screen.findByRole('tabpanel', { name: 'About' });
     expect(await within(panel).findByText('Nothing here yet.')).toBeVisible();
-    expect(within(panel).getByRole('link', { name: 'New DM table' })).toBeVisible();
+    expect(within(panel).queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
     // No dead /series/new link. useMe is mocked here, so the create button's DM check never runs.
     expect(within(panel).queryByRole('link', { name: 'Create a series' })).not.toBeInTheDocument();
     expect(within(panel).queryByRole('link', { name: 'Post a quest' })).not.toBeInTheDocument();
@@ -169,33 +166,15 @@ describe('Profile ownership and table identity', () => {
     ).toEqual({ ok: true, data: null });
     expect(parseDmTableDocument({ ...table, authorId: 'bad' }).ok).toBe(false);
   });
-  it('pages actual authored tables and UUID-filtered sessions beyond the first page', async () => {
-    const tableCalls: Record<string, unknown>[] = [];
+  it('pages UUID-filtered sessions beyond the first page', async () => {
     const sessionCalls: Record<string, unknown>[] = [];
     server.use(
-      graphql.query('ProfileDmDetails', ({ variables }) => {
-        tableCalls.push(variables);
-        return HttpResponse.json({
-          data: {
-            questArcs: { items: [], total: 0 },
-            dmStats: { sessionCount: 7 },
-            documents: {
-              items: [
-                {
-                  id: table.id,
-                  slug: table.slug,
-                  title: table.title,
-                  status: table.status,
-                  authorId: table.authorId,
-                  canEditBody: false,
-                  canEditMetadata: false,
-                },
-              ],
-              total: 21,
-            },
-          },
-        });
-      }),
+      graphql.query('ProfileDmDetails', () => HttpResponse.json({
+        data: {
+          questArcs: { items: [], total: 0 },
+          dmStats: { sessionCount: 7 },
+        },
+      })),
       graphql.query('DmTableSchedule', ({ variables }) => {
         sessionCalls.push(variables);
         return HttpResponse.json({ data: { quests: { items: [], total: 21 } } });
@@ -210,14 +189,7 @@ describe('Profile ownership and table identity', () => {
     );
     expect(await screen.findByText('Sessions run')).toBeVisible();
     await waitFor(() => expect(screen.getByText('Sessions run').closest('[data-component="StatTile"]')).toHaveTextContent('7'));
-    await user.click(screen.getByRole('button', { name: 'Next tables' }));
-    await waitFor(() =>
-      expect(tableCalls.at(-1)).toMatchObject({
-        memberId: table.authorId,
-        limit: 20,
-        offset: 20,
-      }),
-    );
+    expect(screen.queryByRole('button', { name: 'Next tables' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next sessions' }));
     await waitFor(() =>
       expect(sessionCalls.at(-1)).toMatchObject({

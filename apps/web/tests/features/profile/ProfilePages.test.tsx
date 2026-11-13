@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { graphql, http, HttpResponse } from 'msw';
-import { screen, within, waitFor } from '@testing-library/react';
+import { fireEvent, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import profile from '../../fixtures/wire/profile/member-profile-good.json';
 import character from '../../fixtures/wire/character/good.json';
@@ -34,6 +34,48 @@ describe('DMProfilePage', () => {
     expect(screen.getByRole('button', { name: 'Save availability' })).toBeVisible();
   });
 
+  it('renders each DM profile section as markdown and loads that text into the editor', async () => {
+    signInProfile();
+    const dmProfile = {
+      ...profile.dmProfile,
+      tagline: 'A **bold** tagline',
+      philosophy: 'Bring a _lantern_.',
+      houseRules: '- Phones away',
+    };
+    server.use(
+      graphql.query('MemberProfile', () =>
+        HttpResponse.json({ data: { memberProfile: { ...profile, dmProfile } } }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route path="/dms/:shortCode" element={<DMProfilePage />} />
+      </Routes>,
+      { route: '/dms/@mira' },
+    );
+    const about = await screen.findByRole('tabpanel', { name: 'About' });
+    expect(within(about).getByText('bold').tagName).toBe('STRONG');
+    expect(within(about).getByText('lantern').tagName).toBe('EM');
+    expect(within(about).getByRole('listitem')).toHaveTextContent('Phones away');
+    expect(within(about).queryByText('A **bold** tagline')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Edit profile' }));
+    const tagline = screen.getByRole('group', { name: 'Tagline' });
+    const philosophy = screen.getByRole('group', { name: 'Philosophy' });
+    const rules = screen.getByRole('group', { name: 'House rules' });
+    expect(within(tagline).getByText('A **bold** tagline')).toBeVisible();
+    expect(within(philosophy).getByText('Bring a _lantern_.')).toBeVisible();
+    expect(within(rules).getByText('Phones away')).toBeVisible();
+    fireEvent.mouseDown(within(rules).getByText('Phones away'));
+    expect(screen.getByRole('textbox', { name: 'House rules' })).toHaveValue('- Phones away');
+    for (const section of [tagline, philosophy, rules]) {
+      expect(section.className).toContain('dmEditor');
+    }
+    expect(
+      readFileSync(join(process.cwd(), 'src/features/profile/pages/profile.module.css'), 'utf8'),
+    ).toContain('min-block-size: 12rem');
+  });
+
   it('renders the DM name and accepting status without a handle line', async () => {
     renderWithProviders(
       <Routes>
@@ -49,6 +91,35 @@ describe('DMProfilePage', () => {
     expect(screen.getByText('Accepting players')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to DMs' })).toHaveAttribute('href', '/dms');
     expect(screen.queryByRole('complementary', { name: 'Availability' })).not.toBeInTheDocument();
+  });
+
+  it('shows myUnlocks.dmTier on the owner DM profile and nothing when it is empty', async () => {
+    signInProfile();
+    let queried = '';
+    server.use(
+      graphql.query('ProfileDmTier', ({ query }) => {
+        queried = query;
+        return HttpResponse.json({ data: { myUnlocks: { dmTier: 'Wayfinder' } } });
+      }),
+    );
+    const named = renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@mira' });
+    expect(await screen.findByText('Wayfinder')).toBeVisible();
+    expect(queried).toMatch(/myUnlocks[\s\S]*dmTier/);
+    named.unmount();
+
+    server.use(graphql.query('ProfileDmTier', () => HttpResponse.json({ data: { myUnlocks: { dmTier: '' } } })));
+    const empty = renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@mira' });
+    await screen.findByRole('heading', { level: 1, name: 'Mira' });
+    expect(screen.queryByText('Wayfinder')).not.toBeInTheDocument();
+    empty.unmount();
+
+    server.use(
+      graphql.query('MemberProfile', () => HttpResponse.json({ data: { memberProfile: { ...profile, member: { ...profile.member, id: '22222222-2222-4222-8222-222222222222', handle: 'other', displayName: 'Other DM' } } } })),
+      graphql.query('ProfileDmTier', () => HttpResponse.json({ data: { myUnlocks: { dmTier: 'Wayfinder' } } })),
+    );
+    renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@other' });
+    await screen.findByRole('heading', { level: 1, name: 'Other DM' });
+    expect(screen.queryByText('Wayfinder')).not.toBeInTheDocument();
   });
 
   it('shows no availability rail when public availability is empty', async () => {
@@ -110,15 +181,18 @@ describe('DMProfilePage', () => {
     );
     renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@mira' });
 
-    await screen.findByRole('alert');
-    expect(await screen.findByRole('link', { name: 'Table of Mists' })).toHaveAttribute('href', '/community/dm-table/table-of-mists');
+    await screen.findByRole('alert', {}, { timeout: 10_000 });
+    expect(screen.queryByRole('link', { name: 'Table of Mists' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /The Glass Road/ })).toHaveAttribute('href', '/series/66666666-6666-4666-8666-666666666666');
-    expect(screen.getByRole('link', { name: 'New DM table' })).toBeVisible();
-    expect(await screen.findByRole('button', { name: 'Create a series' })).toBeVisible();
+    expect(
+      await screen.findByRole('button', { name: 'Create a series' }, { timeout: 10_000 }),
+    ).toBeVisible();
     const quests = screen.getByRole('heading', { name: 'Quests' }).closest('[data-component="Card"]');
     expect(quests).toContainElement(screen.getByRole('alert'));
     expect(screen.queryByText('Nothing here yet.')).not.toBeInTheDocument();
-  });
+    // Schedule alert, loaded table, and the series button each wait 10s.
+  }, 35_000);
 
   it('keeps the loaded schedule and limits details errors to tables and series', async () => {
     signInProfile();
@@ -136,7 +210,7 @@ describe('DMProfilePage', () => {
 
     await screen.findAllByRole('alert');
     expect(await screen.findByRole('link', { name: 'Next adventure' })).toHaveAttribute('href', '/quests/next-adventure');
-    for (const title of ['DM tables', 'Series']) {
+    for (const title of ['Series']) {
       const section = screen.getByRole('heading', { name: title }).closest('[data-component="Card"]');
       expect(section).not.toBeNull();
       expect(section?.querySelector('[role="alert"]')).toBeVisible();
@@ -193,7 +267,8 @@ describe('DMProfilePage', () => {
     const quietLine = await within(panel).findByText('Nothing here yet.');
     expect(quietLine).toBeVisible();
     expect(within(panel).getAllByText('Nothing here yet.')).toHaveLength(1);
-    expect(within(panel).queryByRole('heading', { name: 'Tables, series and quests' })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole('heading', { name: 'Series and quests' })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole('heading', { name: 'DM tables' })).not.toBeInTheDocument();
     expect(quietLine.closest('[data-component="Card"]')).toBeNull();
     expect(within(panel).queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
     expect(within(panel).queryByRole('link', { name: 'Create a series' })).not.toBeInTheDocument();
@@ -216,9 +291,9 @@ describe('DMProfilePage', () => {
     );
     renderWithProviders(<Routes><Route path="/dms/:shortCode" element={<DMProfilePage />} /></Routes>, { route: '/dms/@mira' });
 
-    expect(await screen.findByRole('heading', { name: 'Tables, series and quests' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Series and quests' })).toBeVisible();
     expect(screen.getAllByText('Nothing here yet.')).toHaveLength(1);
-    expect(screen.getByRole('link', { name: 'New DM table' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Create a series' })).toBeVisible();
     expect(await screen.findByRole('link', { name: 'Post a quest' })).toBeVisible();
     expect(screen.queryByRole('heading', { name: 'DM tables' })).not.toBeInTheDocument();

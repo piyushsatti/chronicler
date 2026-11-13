@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { loadAudienceMembers } from '../adapters/editorAudienceMembers.js';
+import { loadAudienceMembers } from '../features/editor/adapters/editorAudienceMembers.js';
 
 /**
  * Member search for the Hide menu's "Only for a member…" picker. Same

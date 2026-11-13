@@ -43,6 +43,11 @@ describe('retained Quest journeys', () => {
     const user = userEvent.setup();
     const inputs: unknown[] = [];
     server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: { quest: { ...detail, dmId: '11111111-1111-4111-8111-111111111111' } },
+        }),
+      ),
       graphql.query('MyCharacters', () =>
         HttpResponse.json({
           data: {
@@ -73,9 +78,10 @@ describe('retained Quest journeys', () => {
     await user.click(await screen.findByRole('button', { name: /^Your character/ }));
     const rook = await screen.findByRole('menuitem', { name: 'Rook' });
     expect(screen.queryByRole('menuitem', { name: /Pending/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign up' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Join waitlist' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument();
     await user.click(rook);
-    await user.click(screen.getByRole('button', { name: 'Sign up' }));
+    await user.click(screen.getByRole('button', { name: 'Join waitlist' }));
     expect(await screen.findByText('You joined the waitlist.')).toBeInTheDocument();
     expect(inputs).toEqual([
       expect.objectContaining({
@@ -141,9 +147,9 @@ describe('retained Quest journeys', () => {
     );
     renderDetail();
     await screen.findByRole('button', { name: 'Review closure' });
-    expect(
-      screen.getByRole('group', { name: /Lyra Storm/ }),
-    ).toHaveTextContent('Member (@player1)');
+    expect(screen.getByRole('group', { name: /Lyra Storm/ })).toHaveTextContent(
+      'Member (@player1)',
+    );
     expect(
       screen.queryByRole('button', { name: 'Mark played' }),
     ).not.toBeInTheDocument();
@@ -259,9 +265,19 @@ describe('retained Quest journeys', () => {
   it('links the shared summary editor using authoritative UUIDs without prose search', async () => {
     login();
     server.use(
-      graphql.query('Quest', () => HttpResponse.json({ data: { quest: {
-        ...detail, participants: detail.participants.map((participant) => ({ ...participant, memberId: actorId })),
-      } } })),
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: {
+            quest: {
+              ...detail,
+              participants: detail.participants.map((participant) => ({
+                ...participant,
+                memberId: actorId,
+              })),
+            },
+          },
+        }),
+      ),
       graphql.query('QuestSummaryPage', () =>
         HttpResponse.json({
           data: {
@@ -293,26 +309,47 @@ describe('retained Quest journeys', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /^Summary character/ }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Lyra Storm' }));
-    expect(screen.getByRole('link', { name: 'Write a character summary' })).toHaveAttribute('href', `/summaries/new?questId=${detail.id}&characterId=${characterId}`);
-  });
-
-  it.each([false, true])('gives empty summaries a role-valid action, staff=%s', async (staff) => {
-    if (staff) login();
-    server.use(graphql.query('QuestSummaryPage', () => HttpResponse.json({
-      data: { questSummaries: { ...summaries, summaries: [] } },
-    })));
-    renderWithProviders(
-      <Routes><Route path="/quests/:code/summary" element={<QuestSummaryPage />} /></Routes>,
-      { route: '/quests/Q-101/summary' },
+    expect(
+      screen.getByRole('link', { name: 'Write a character summary' }),
+    ).toHaveAttribute(
+      'href',
+      `/summaries/new?questId=${detail.id}&characterId=${characterId}`,
     );
-    const section = await screen.findByRole('region', { name: 'Linked summaries' });
-    if (staff) {
-      expect(within(section).getByRole('link', { name: 'Write a DM summary' })).toHaveAttribute('href', `/summaries/new?questId=${detail.id}`);
-      expect(within(section).queryByRole('link', { name: 'Back to the quest' })).not.toBeInTheDocument();
-    } else {
-      expect(within(section).getByRole('link', { name: 'Back to the quest' })).toHaveAttribute('href', '/quests/Q-101');
-      expect(within(section).queryByRole('link', { name: 'Write a DM summary' })).not.toBeInTheDocument();
-    }
   });
 
+  it.each([false, true])(
+    'gives empty summaries a role-valid action, staff=%s',
+    async (staff) => {
+      if (staff) login();
+      server.use(
+        graphql.query('QuestSummaryPage', () =>
+          HttpResponse.json({
+            data: { questSummaries: { ...summaries, summaries: [] } },
+          }),
+        ),
+      );
+      renderWithProviders(
+        <Routes>
+          <Route path="/quests/:code/summary" element={<QuestSummaryPage />} />
+        </Routes>,
+        { route: '/quests/Q-101/summary' },
+      );
+      const section = await screen.findByRole('region', { name: 'Linked summaries' });
+      if (staff) {
+        expect(
+          within(section).getByRole('link', { name: 'Write a DM summary' }),
+        ).toHaveAttribute('href', `/summaries/new?questId=${detail.id}`);
+        expect(
+          within(section).queryByRole('link', { name: 'Back to the quest' }),
+        ).not.toBeInTheDocument();
+      } else {
+        expect(
+          within(section).getByRole('link', { name: 'Back to the quest' }),
+        ).toHaveAttribute('href', '/quests/Q-101');
+        expect(
+          within(section).queryByRole('link', { name: 'Write a DM summary' }),
+        ).not.toBeInTheDocument();
+      }
+    },
+  );
 });

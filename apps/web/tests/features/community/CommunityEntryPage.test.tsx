@@ -21,6 +21,13 @@ function reader() {
 }
 
 describe('Community document reader', () => {
+  it('does not present a DM table document as a community post', async () => {
+    server.use(graphql.query('CommunityEntry', () => HttpResponse.json({ data: { document: { ...entry, category: 'dm_table' } } })));
+    reader();
+    expect(await screen.findByRole('heading', { name: 'Post not found' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: entry.title })).not.toBeInTheDocument();
+  });
+
   it('opens a non-table community Document through its canonical link', async () => {
     reader();
     expect(await screen.findByRole('heading', { name: entry.title })).toBeVisible();

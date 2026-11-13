@@ -422,6 +422,7 @@ func toQuestParticipantFromQuest(v quest.QuestParticipantView) *QuestParticipant
 		MemberHandle:      v.MemberHandle,
 		MemberDisplayName: v.MemberDisplayName,
 		MemberAvatarURL:   v.MemberAvatarUrl,
+		LastPlayedAt:      v.LastPlayedAt,
 	}
 }
 
@@ -1037,6 +1038,7 @@ func toAdminCharacterDirectoryEntryType(v character.AdminCharacterDirectoryEntry
 		VerificationStatus:      string(v.VerificationStatus),
 		VerificationSubmittedAt: v.VerificationSubmittedAt,
 		DdbURL:                  v.DdbUrl,
+		DdbSyncedAt:             v.DdbSyncedAt,
 		UpdatedAt:               v.UpdatedAt,
 	}
 }
@@ -1067,17 +1069,27 @@ func toActivitySummaryType(v member.ActivitySummaryView) *ActivitySummaryType {
 
 func toSiteStatsView(v site.SiteStatsView) *SiteStatsType {
 	return &SiteStatsType{
-		TotalMembers:                 int(v.TotalMembers),
-		MembersByRole:                toCountByKeyTypes(v.MembersByRole),
-		ActiveCharacters:             int(v.ActiveCharacters),
-		PublishedDocumentsByKind:     toCountByKeyTypes(v.PublishedDocumentsByKind),
-		PublishedDocumentsByCategory: toCountByKeyTypes(v.PublishedDocumentsByCategory),
-		TotalMaps:                    int(v.TotalMaps),
-		TotalRegions:                 int(v.TotalRegions),
-		TotalQuests:                  int(v.TotalQuests),
-		TotalDms:                     int(v.TotalDms),
-		Activity:                     toActivitySummaryType(v.Activity),
+		TotalMembers:     int(v.TotalMembers),
+		MembersByRole:    toCountByKeyTypes(v.MembersByRole),
+		ActiveCharacters: int(v.ActiveCharacters),
+		TotalMaps:        int(v.TotalMaps),
+		TotalRegions:     int(v.TotalRegions),
+		TotalQuests:      int(v.TotalQuests),
+		TotalDms:         int(v.TotalDms),
+		Activity:         toActivitySummaryType(v.Activity),
 	}
+}
+
+func toAdminCommunityStats(v site.AdminCommunityStats) *AdminCommunityStatsType {
+	classes := make([]*CountByKeyType, len(v.Classes))
+	for i, row := range v.Classes {
+		classes[i] = &CountByKeyType{Key: row.Name, Count: int(row.Count)}
+	}
+	hexes := make([]*AdminQuestHexCountType, len(v.QuestHexes))
+	for i, row := range v.QuestHexes {
+		hexes[i] = &AdminQuestHexCountType{ID: row.ID, Name: row.Name, MapName: row.MapName, QuestCount: int(row.QuestCount)}
+	}
+	return &AdminCommunityStatsType{TotalCharacters: int(v.TotalCharacters), CharactersByClass: classes, QuestHexes: hexes}
 }
 
 func toSiteStatsFromSnapshot(snapshot site.CommunityStatsSnapshot) *SiteStatsType {
@@ -1887,6 +1899,7 @@ func toQuestPointcrawlLinkType(v quest.QuestHexView) *QuestPointcrawlLinkType {
 		QuestID:          v.QuestId,
 		PointcrawlNodeID: v.HexId,
 		Role:             v.Role,
+		Name:             v.Name,
 	}
 }
 

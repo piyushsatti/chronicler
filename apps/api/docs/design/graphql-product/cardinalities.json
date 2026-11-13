@@ -728,20 +728,6 @@
     "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
   },
   {
-    "field": "SiteStatsV2Type.publishedDocumentsByCategory",
-    "max": 100,
-    "rule": "closed finite domain or explicitly bounded derived relation",
-    "scalar_item_weight": 1,
-    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
-  },
-  {
-    "field": "SiteStatsV2Type.publishedDocumentsByKind",
-    "max": 20,
-    "rule": "closed finite domain or explicitly bounded derived relation",
-    "scalar_item_weight": 1,
-    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
-  },
-  {
     "field": "SummaryDerivedV2Type.dms",
     "max": 100,
     "rule": "closed finite domain or explicitly bounded derived relation",

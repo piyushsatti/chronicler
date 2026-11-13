@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useAuth } from '../../../auth/AuthContext.js';
+import { isAdmin } from '../../../auth/roles.js';
 import { useMe } from '../../../hooks/useMe.js';
 import {
   retireCharacter,
@@ -43,20 +44,27 @@ export function useOwnerActions({ character }: { character: CharacterViewModel }
     memberId: string;
     value: string;
   } | null>(null);
-  const current = (
+  const liveAccount = () =>
+    client.getQueryState<NonNullable<typeof me.data>>(queryKeys.me);
+  const canRun = (
     attempt: { token: string | null; memberId: string } | null | undefined,
+    kind: OwnerCommand['kind'],
   ) => {
-    const account = client.getQueryState<NonNullable<typeof me.data>>(queryKeys.me);
-    return Boolean(
-      attempt &&
-      isCurrentSession(attempt.token) &&
-      account?.status === 'success' &&
-      account.data?.id === attempt.memberId &&
-      attempt.memberId === character.ownerId,
+    const account = liveAccount();
+    if (
+      !attempt ||
+      !isCurrentSession(attempt.token) ||
+      account?.status !== 'success' ||
+      account.data?.id !== attempt.memberId
+    )
+      return false;
+    return (
+      attempt.memberId === character.ownerId ||
+      (kind === 'profile' && isAdmin(account.data?.roles))
     );
   };
   const refresh = async (attempt: { token: string | null; memberId: string }) => {
-    if (!current(attempt)) return;
+    if (!canRun(attempt, 'profile')) return;
     await Promise.all([
       client.invalidateQueries({ queryKey: queryKeys.character(character.shortCode) }),
       client.invalidateQueries({ queryKey: queryKeys.character(character.id) }),
@@ -65,9 +73,9 @@ export function useOwnerActions({ character }: { character: CharacterViewModel }
   };
   const write = useMutation({
     mutationFn: async (attempt: NonNullable<typeof replay.current>) => {
-      if (!current(attempt))
-        throw toAppError({ failure: 'Unauthorized' }, 'character:session');
       const { command, key } = attempt;
+      if (!canRun(attempt, command.kind))
+        throw toAppError({ failure: 'Unauthorized' }, 'character:session');
       switch (command.kind) {
         case 'profile':
           await updateCharacterProfile(command.id, command.input, key);
@@ -102,19 +110,19 @@ export function useOwnerActions({ character }: { character: CharacterViewModel }
       }
     },
     onMutate: (attempt) => {
-      if (current(attempt)) setMessage(null);
+      if (canRun(attempt, attempt.command.kind)) setMessage(null);
     },
     onSuccess: async (result, attempt) => {
-      if (!current(attempt)) return;
+      if (!canRun(attempt, attempt.command.kind)) return;
       if (replay.current === attempt) replay.current = null;
       setMessage({ token: attempt.token, memberId: attempt.memberId, value: result });
       await refresh(attempt);
     },
     onSettled: (_value, _error, attempt) => {
-      if (current(attempt)) busy.current = false;
+      if (canRun(attempt, attempt.command.kind)) busy.current = false;
     },
     onError: async (error, attempt) => {
-      if (!current(attempt)) return;
+      if (!canRun(attempt, attempt.command.kind)) return;
       if (
         toAppError(error, 'character:owner').kind === 'forbidden' &&
         !authorityRefreshed.current
@@ -134,7 +142,7 @@ export function useOwnerActions({ character }: { character: CharacterViewModel }
     reset();
   }, [token, memberId, character.id, reset]);
   const submit = (command: OwnerCommand) => {
-    if (!memberId || busy.current || !current({ token, memberId })) return;
+    if (!memberId || busy.current || !canRun({ token, memberId }, command.kind)) return;
     const identity = JSON.stringify(
       command.kind === 'submit' || command.kind === 'retire'
         ? [command.kind, command.id]
@@ -154,10 +162,12 @@ export function useOwnerActions({ character }: { character: CharacterViewModel }
     setImageUrl,
     imageUrlError: imageUrlError(imageUrl),
     ddbUrlError: ddbUrl.trim() ? ddbUrlError(ddbUrl) : undefined,
-    message: current(message) ? (message?.value ?? null) : null,
-    pending: current(write.variables) && write.isPending,
+    message: canRun(message, 'profile') ? (message?.value ?? null) : null,
+    pending: Boolean(
+      write.variables && canRun(write.variables, write.variables.command.kind) && write.isPending,
+    ),
     error:
-      current(write.variables) && write.error
+      write.variables && canRun(write.variables, write.variables.command.kind) && write.error
         ? toAppError(write.error, 'character:owner')
         : null,
     saveProfile: () => {
@@ -183,7 +193,7 @@ export function useOwnerActions({ character }: { character: CharacterViewModel }
     retire: () =>
       submit({ kind: 'retire', id: character.id, version: character.updatedAt }),
     reload: async () => {
-      if (!memberId || !current({ token, memberId })) return;
+      if (!memberId || !canRun({ token, memberId }, 'profile')) return;
       replay.current = null;
       await refresh({ token, memberId });
     },

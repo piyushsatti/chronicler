@@ -22,7 +22,7 @@ import { Tabs } from '../../../components/primitives/Tabs.js';
 import type { AppError } from '../../../errors/types.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { isCharacterOwner } from '../../../utils/permissions.js';
+import { canEditOwned, isCharacterOwner } from '../../../utils/permissions.js';
 import { isSafeDdbUrl } from '../../../utils/url.js';
 import type { CharacterViewModel } from '../adapters/characterAdapter.js';
 import { CharacterActivityPanel } from '../components/CharacterActivityPanel.js';
@@ -38,6 +38,7 @@ import {
   isSentinelDate,
   statusLabel,
   verificationLabel,
+  ddbSubmissionStale,
 } from '../../../utils/format.js';
 import {
   useCharacterConnections,
@@ -381,7 +382,7 @@ function CharacterOverview({
 
 function readyRegions(
   character: CharacterViewModel,
-  opts: { showOwner: boolean; timeZone: string | null },
+  opts: { showOwner: boolean; profileEdit: boolean; timeZone: string | null },
   activeTab: string,
   setActiveTab: (id: string) => void,
 ): PageRegionRenderers {
@@ -444,6 +445,12 @@ function readyRegions(
         <div className={styles.ownerLineRow}>
           <CharacterOwnerLine ownerId={character.ownerId} />
         </div>
+        {(character.verificationStatus ?? '').toUpperCase() === 'PENDING' &&
+        ddbSubmissionStale(character.verificationSubmittedAt, character.ddbMirror?.syncedAt ?? null) ? (
+          <p role="status" className="type-caption" data-el="character.staleSheet">
+            D&D Beyond sync failed for this submission. The saved sheet may be out of date.
+          </p>
+        ) : null}
         <CharacterStats character={character} />
         <Tabs
             aria-label="Character sections"
@@ -485,11 +492,11 @@ function readyRegions(
                   label: 'Summaries',
                   panel: <SummariesPanel characterId={character.id} />,
                 },
-                ...(opts.showOwner ? [{
+                ...(opts.profileEdit ? [{
                   id: 'edit',
                   label: 'Edit',
                   panel: <Card pad={5} className={styles.ownerShelf}>
-                    <OwnerActions key={character.id} character={character} />
+                    <OwnerActions key={character.id} character={character} profileOnly={!opts.showOwner} />
                   </Card>,
                 }] : []),
               ]}
@@ -549,6 +556,7 @@ export function CharacterPage(): React.JSX.Element {
           ? statusRegions('empty')
           : readyRegions(page.view, {
               showOwner: isCharacterOwner(me.data?.id, page.view.ownerId),
+              profileEdit: canEditOwned(me.data?.id, page.view.ownerId, me.data?.roles),
               timeZone,
             }, activeTab, setActiveTab);
 

@@ -1,11 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { LiveEditor } from '../../../components/interactive/markdown-editor/LiveEditor.js';
 import type { MemberProfileView } from '../adapters/memberProfileAdapter.js';
 import { useProfileActions } from '../hooks/useProfileActions.js';
 import { Select } from '../../../components/primitives/Select.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import { statusLabel, weekdayLabel } from '../../../utils/format.js';
+import styles from '../pages/profile.module.css';
 const DAYS = [
   'MONDAY',
   'TUESDAY',
@@ -16,6 +18,11 @@ const DAYS = [
   'SUNDAY',
 ];
 type DmText = 'tagline' | 'philosophy' | 'houseRules';
+const DM_FIELDS: { field: DmText; label: string; limit: number }[] = [
+  { field: 'tagline', label: 'Tagline', limit: 200 },
+  { field: 'philosophy', label: 'Philosophy', limit: 4000 },
+  { field: 'houseRules', label: 'House rules', limit: 4000 },
+];
 function dmDraft(profile: MemberProfileView) {
   return {
     tagline: profile.dmProfile?.tagline ?? '',
@@ -52,8 +59,13 @@ export function ProfileOwnerActions({
   const [avatarDirty, setAvatarDirty] = useState(false);
   const [slots, setSlots] = useState(profile.availability);
   const [dm, setDm] = useState(() => dmDraft(profile));
-  const updateDm = (field: DmText, value: string) => {
-    setDm((current) => ({ ...current, [field]: value }));
+  const updateDm = (field: DmText, value: string, limit: number) => {
+    setDm((current) => {
+      const previous = current[field];
+      // Over the cap, or the same text with `\r` removed, is not an edit.
+      if (value.length > limit || value === previous.replaceAll('\r', '')) return current;
+      return { ...current, [field]: value };
+    });
   };
   const changeSlot = (
     index: number,
@@ -142,43 +154,49 @@ export function ProfileOwnerActions({
         >
           <h3 className="type-heading">Your availability</h3>
           {slots.map((slot, index) => (
-            <fieldset className="stack" key={index} disabled={actions.pending}>
+            <fieldset
+              className={`stack ${styles.window}`}
+              key={index}
+              disabled={actions.pending}
+            >
               <legend>Window {index + 1}</legend>
-              <div className="stack">
-                <span id={`${dayLabelId}-${index}`}>Day {index + 1}</span>
-                <Select
-                  label={`Day ${index + 1}`}
-                  labelId={`${dayLabelId}-${index}`}
-                  value={slot.day}
-                  disabled={actions.pending}
-                  options={DAYS.map((day) => ({ value: day, label: weekdayLabel(day) }))}
-                  onValueChange={(value) => changeSlot(index, 'day', value)}
-                />
+              <div className={`row ${styles.times}`} data-wrap="1" data-align="end">
+                <div className="stack">
+                  <span id={`${dayLabelId}-${index}`}>Day {index + 1}</span>
+                  <Select
+                    label={`Day ${index + 1}`}
+                    labelId={`${dayLabelId}-${index}`}
+                    value={slot.day}
+                    disabled={actions.pending}
+                    options={DAYS.map((day) => ({ value: day, label: weekdayLabel(day) }))}
+                    onValueChange={(value) => changeSlot(index, 'day', value)}
+                  />
+                </div>
+                <label className="stack">
+                  Start time
+                  <input
+                    className="field-input"
+                    aria-label={`Start time ${index + 1}`}
+                    type="time"
+                    required
+                    value={slot.startTime.slice(0, 5)}
+                    onChange={(event) =>
+                      changeSlot(index, 'startTime', event.target.value)
+                    }
+                  />
+                </label>
+                <label className="stack">
+                  End time
+                  <input
+                    className="field-input"
+                    aria-label={`End time ${index + 1}`}
+                    required
+                    placeholder="24:00"
+                    value={slot.endTime.slice(0, 5)}
+                    onChange={(event) => changeSlot(index, 'endTime', event.target.value)}
+                  />
+                </label>
               </div>
-              <label className="stack">
-                Start time
-                <input
-                  className="field-input"
-                  aria-label={`Start time ${index + 1}`}
-                  type="time"
-                  required
-                  value={slot.startTime.slice(0, 5)}
-                  onChange={(event) =>
-                    changeSlot(index, 'startTime', event.target.value)
-                  }
-                />
-              </label>
-              <label className="stack">
-                End time
-                <input
-                  className="field-input"
-                  aria-label={`End time ${index + 1}`}
-                  required
-                  placeholder="24:00"
-                  value={slot.endTime.slice(0, 5)}
-                  onChange={(event) => changeSlot(index, 'endTime', event.target.value)}
-                />
-              </label>
               <label className="stack">
                 Note
                 <input
@@ -253,33 +271,19 @@ export function ProfileOwnerActions({
               });
             }}
           >
-            {(['tagline', 'philosophy', 'houseRules'] satisfies DmText[]).map(
-              (field) => (
-                <label className="stack" key={field}>
-                  <span className="type-label">
-                    {field === 'houseRules'
-                      ? 'House rules'
-                      : field === 'tagline'
-                        ? 'Tagline'
-                        : 'Philosophy'}
-                  </span>
-                  <textarea
-                    className="field-input"
-                    aria-label={
-                      field === 'houseRules'
-                        ? 'House rules'
-                        : field === 'tagline'
-                          ? 'Tagline'
-                          : 'Philosophy'
-                    }
-                    maxLength={field === 'tagline' ? 200 : 4000}
-                    disabled={actions.pending}
+            <fieldset className="stack field-group" disabled={actions.pending}>
+              {DM_FIELDS.map(({ field, label, limit }) => (
+                <div className={`stack ${styles.dmEditor}`} role="group" aria-label={label} key={field}>
+                  <span className="type-label">{label}</span>
+                  <LiveEditor
+                    label={label}
+                    placeholder="Write in Markdown."
                     value={dm[field]}
-                    onChange={(event) => updateDm(field, event.target.value)}
+                    onChange={(value) => updateDm(field, value, limit)}
                   />
-                </label>
-              ),
-            )}
+                </div>
+              ))}
+            </fieldset>
             <Checkbox
               label="Accepting players"
               checked={dm.acceptingPlayers}

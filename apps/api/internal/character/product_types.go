@@ -16,6 +16,7 @@ import (
 )
 
 type AdminCharacterDirectoryEntryView struct {
+	DdbSyncedAt             *time.Time
 	DdbUrl                  *string
 	GuildId                 *string
 	Id                      string
@@ -725,6 +726,8 @@ type CreateCharacterWrite struct {
 	DecisionID     *string
 	RevisionID     *string
 	EventKey       *string
+	// Nil when the submission sync failed. Stored with At so it is not older than verification_submitted_at.
+	DdbPayload json.RawMessage
 }
 
 type DecideVerificationWrite struct {
@@ -822,6 +825,8 @@ type SubmitForVerificationWrite struct {
 	DecisionID     *string
 	RevisionID     *string
 	EventKey       *string
+	// Nil when the submission sync failed. Stored with At so it is not older than verification_submitted_at.
+	DdbPayload json.RawMessage
 }
 
 type SyncCharacterDdbWrite struct {

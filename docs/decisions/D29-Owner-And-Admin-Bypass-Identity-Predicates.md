@@ -1,6 +1,6 @@
 # D29: Owner And Admin Bypass Identity Predicates
 
-**Status:** decided 2026-07-31; amended 2026-09-16  
+**Status:** decided 2026-07-31; amended 2026-09-16; amended 2026-11-07  
 **Kind:** boundary  
 **Owner:** global (`docs/decisions/`)  
 **Interface:** [live-authority](/docs/interfaces/live-authority.md)
@@ -15,6 +15,7 @@ Ownership, permission and audience checks ask who the caller is. The existence o
 
 - Platform owner is the deployment-declared fixed account set, not an application-grantable role. Admin is an assigned, revocable role. Their current representation and enforcement must be established by the provider; legacy bootstrap mechanics are not the current Go implementation.
 - **September 16 exception:** only the owning player may mutate a player character or its owned sub-resources, including progression/log writes and D&D Beyond sync. Platform owner, admin, verifier and all other staff are excluded. Admin/verifier assessment decisions are a separate ledgered authority, with no grant to edit player-authored fields or sync.
+- **November 7 carve-out:** `updateCharacterProfile` is the one player-character mutation an admin or the platform owner may perform on a character they do not own. Verifiers and other DMs are not included. The rest of the September 16 exception stands.
 - Surface: bypass grants access to an existing operation; it never creates a missing mutation.
 - Authorization: bypass skips caller-dependent checks outside the named exception.
 - Invariant: required fields, constraints, legal transitions and quality gates still apply. A check independent of the caller has nothing to bypass.
@@ -31,7 +32,7 @@ The document author's raw-body grant and the approved per-viewer block rule rema
 
 ## Consequences
 
-The September amendment supersedes July's universal wording for player-character mutations. Remaining aggregates converge on shared authority logic. Missing surfaces and denied operations are separate findings with separate remedies.
+The September amendment supersedes July's universal wording for player-character mutations. The November 7 carve-out restores bypass for profile fields only. Remaining aggregates converge on shared authority logic. Missing surfaces and denied operations are separate findings with separate remedies.
 
 ## Enforced by
 

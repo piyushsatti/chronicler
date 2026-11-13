@@ -104,7 +104,7 @@ func TestFormerDMRetainsOwnedQuestManagement(t *testing.T) {
 		if actor.LiveDM() {
 			t.Fatal("fixture retained current DM authority")
 		}
-		for _, operation := range []Operation{"Mutation.updateQuest", "Mutation.transitionQuestStatus", "Mutation.closeQuest", "Mutation.selectQuestParticipants", "Mutation.deleteQuest", "Mutation.syncQuestDiscord"} {
+		for _, operation := range []Operation{"Mutation.updateQuest", "Mutation.transitionQuestStatus", "Mutation.closeQuest", "Mutation.selectQuestParticipants", "Mutation.addQuestParticipant", "Mutation.removeQuestParticipant", "Mutation.deleteQuest", "Mutation.syncQuestDiscord", "Mutation.publishQuestPlayerList"} {
 			request, err := ForQuest(operation, QuestFacts{ID: policySubject, DMID: policyActor})
 			policyExpect(t, p, actor, policyMustRequest(t, request, err), Decision{Allowed: true})
 			foreign, err := ForQuest(operation, QuestFacts{ID: policySubject, DMID: policyOther})
@@ -431,13 +431,29 @@ func testPolicyAuthorizationContrasts(t *testing.T) {
 		policyExpect(t, p, player, req, Decision{Allowed: true})
 	})
 	t.Run("all literal character operations refuse staff bypass", func(t *testing.T) {
-		for _, op := range []Operation{"Mutation.adjustPcxp", "Mutation.deleteCharacter", "Mutation.deleteCharacterLog", "Mutation.logCharacterEvent", "Mutation.restoreCharacter", "Mutation.retireCharacter", "Mutation.setCharacterGuild", "Mutation.submitForVerification", "Mutation.syncCharacterDdb", "Mutation.updateCharacterProfile", "Mutation.upsertDowntimeProject", "Mutation.signupForQuest", "Mutation.withdrawFromQuest"} {
+		for _, op := range []Operation{"Mutation.adjustPcxp", "Mutation.deleteCharacter", "Mutation.deleteCharacterLog", "Mutation.logCharacterEvent", "Mutation.restoreCharacter", "Mutation.retireCharacter", "Mutation.setCharacterGuild", "Mutation.submitForVerification", "Mutation.syncCharacterDdb", "Mutation.upsertDowntimeProject", "Mutation.signupForQuest", "Mutation.withdrawFromQuest"} {
 			req, e := ForCharacter(op, CharacterFacts{policySubject, policyActor})
 			req = policyMustRequest(t, req, e)
 			policyExpect(t, p, player, req, Decision{Allowed: true})
 			for _, actor := range []Authority{admin, owner, policyAuthority(t, policyOther, []Role{Role("verifier")}, false, false), policyAuthority(t, policyOther, []Role{DM}, true, false)} {
 				policyExpect(t, p, actor, req, Decision{RuleCode: "OWNERSHIP"})
 			}
+		}
+	})
+	t.Run("profile edits admit admin and platform owner only", func(t *testing.T) {
+		req, e := ForCharacter("Mutation.updateCharacterProfile", CharacterFacts{policySubject, policyActor})
+		req = policyMustRequest(t, req, e)
+		policyExpect(t, p, player, req, Decision{Allowed: true})
+		policyExpect(t, p, admin, req, Decision{true, true, "OWNERSHIP"})
+		policyExpect(t, p, owner, req, Decision{true, true, "OWNERSHIP"})
+		dmAdmin := policyAuthority(t, policyOther, []Role{DM, Admin}, true, false)
+		policyExpect(t, p, dmAdmin, req, Decision{true, true, "OWNERSHIP"})
+		for _, actor := range []Authority{
+			policyAuthority(t, policyOther, []Role{Verifier}, false, false),
+			policyAuthority(t, policyOther, []Role{DM}, true, false),
+			policyAuthority(t, policyOther, []Role{Player}, false, false),
+		} {
+			policyExpect(t, p, actor, req, Decision{RuleCode: "OWNERSHIP"})
 		}
 	})
 	t.Run("arc creation approved DM and retained authorship", func(t *testing.T) {
@@ -713,6 +729,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 	}
 	expected := map[Operation]string{
 		"Mutation.acknowledgeSuppressedNotifications": "SELF",
+		"Mutation.addQuestParticipant":                "QUEST_DM",
 		"Mutation.adjustPcxp":                         "CHAR_OWNER",
 		"Mutation.assignArchon":                       "ADMIN",
 		"Mutation.assignLieutenant":                   "LIEUTENANT_WRITE",
@@ -738,8 +755,10 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.logCharacterEvent":                  "CHAR_OWNER",
 		"Mutation.markNotificationsRead":              "SELF",
 		"Mutation.publishDocument":                    "DOC_WRITE",
+		"Mutation.publishQuestPlayerList":             "QUEST_DM",
 		"Mutation.redriveDiscordDelivery":             "ADMIN",
 		"Mutation.removeQuestFromArc":                 "QUEST_DM",
+		"Mutation.removeQuestParticipant":             "QUEST_DM",
 		"Mutation.restoreCharacter":                   "CHAR_OWNER",
 		"Mutation.restoreDocument":                    "DOC_WRITE",
 		"Mutation.restoreQuest":                       "QUEST_DM",
@@ -789,6 +808,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.upsertUnlockable":                   "ADMIN",
 		"Mutation.withdrawFromQuest":                  "CHAR_SIGNUP",
 		"Query.adminCharacterDirectory":               "STAFF",
+		"Query.adminCommunityStats":                   "ADMIN",
 		"Query.adminOperations":                       "ADMIN",
 		"Query.archonAssignments":                     "ADMIN",
 		"Query.backstories":                           "BACKSTORY_PUBLIC_OR_ADMIN",
@@ -882,7 +902,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			}
 		}
 	}
-	if len(expected) != 153 || len(actual) != len(expected) || len(operationRules) != len(expected) {
+	if len(expected) != 157 || len(actual) != len(expected) || len(operationRules) != len(expected) {
 		t.Fatalf("coverage expected%d SDL%d registry%d", len(expected), len(actual), len(operationRules))
 	}
 	p, _, facts := policyTestProvider(t)

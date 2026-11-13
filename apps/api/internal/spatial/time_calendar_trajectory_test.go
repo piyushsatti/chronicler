@@ -1,10 +1,12 @@
 package spatial
 
 import (
+	"errors"
 	"math"
 	"testing"
 	"time"
 
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
@@ -72,7 +74,9 @@ func TestTimeProjectionUsesMidnightsAndLatestCalibration(t *testing.T) {
 			t.Fatalf("cell %d=%+v, want %d", i, cells[i], want)
 		}
 	}
-	if _, err := projectTimeCells("2026-10-14", "2026-10-17", anchors[1:]); err == nil {
-		t.Fatal("accepted first anchor after current midnight")
+	_, err = projectTimeCells("2026-10-14", "2026-10-17", anchors[1:])
+	failure, ok := errors.AsType[*apierr.Error](err)
+	if !errors.Is(err, ErrTimeAnchorUncovered) || !ok || failure.Code != apierr.Invalid {
+		t.Fatalf("uncovered error=%v", err)
 	}
 }

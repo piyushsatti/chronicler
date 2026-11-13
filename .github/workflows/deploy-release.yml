@@ -312,6 +312,29 @@ jobs:
           done
           echo "health check failed" >&2
           exit 1
+      - name: Remove old release images
+        if: ${{ success() }}
+        # Housekeeping: a failure here must not roll back a healthy deploy.
+        continue-on-error: true
+        env:
+          TAG: ${{ github.ref_name }}
+          TAG_PATTERN: ${{ inputs.tag_pattern }}
+        run: |
+          set -euo pipefail
+          docker system df
+          for repository in chronicler-api chronicler-discord; do
+            previous="$PREV_API_IMAGE"
+            if [[ "$repository" == chronicler-discord ]]; then
+              previous="$PREV_DISCORD_IMAGE"
+            fi
+            images="$(docker images "$repository" --no-trunc --format '{{.Tag}} {{.ID}}')"
+            while read -r tag image; do
+              if [[ "$tag" =~ $TAG_PATTERN && "$tag" != "$TAG" && "$image" != "$previous" ]]; then
+                docker rmi "$repository:$tag" || true
+              fi
+            done <<<"$images"
+          done
+          docker system df
       # Only the API and bot roll back: the tunnel connector is pinned in the
       # Compose file, and the database is never restored here.
       - name: Roll back to previous images

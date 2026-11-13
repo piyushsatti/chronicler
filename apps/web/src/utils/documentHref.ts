@@ -20,9 +20,9 @@ export function documentHref(document: {
       return `/chronicles/${slug}`;
     case 'community':
       if (document.category === 'hall_of_fame') return '/community?tab=hall-of-fame';
-      return document.category === 'dm_table'
-        ? `/community/dm-table/${slug}`
-        : `/community/entries/${slug}`;
+      // DM tables are retired in the UI; the documents stay in the database.
+      if (document.category === 'dm_table') return null;
+      return `/community/entries/${slug}`;
     case 'quest_brief':
       return document.questShortCode
         ? `/quests/${encodeURIComponent(document.questShortCode)}`

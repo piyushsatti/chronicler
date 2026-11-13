@@ -34,15 +34,15 @@ type API struct {
 	Members       *member.PostgresStore
 	Notifications notification.Queries
 	Documents     document.Queries
-	SiteStats     func() site.Stats
+	SiteStats     func(context.Context) (site.Stats, error)
 	MemberMe      func(string) (member.Member, error)
 }
 
 func Wire(ctx context.Context, cfg config.Config) API {
 	mem := API{
 		QuestCmd: quest.NewCommands(quest.MemoryRunner(), time.Now),
-		SiteStats: func() site.Stats {
-			return site.Stats{}
+		SiteStats: func(context.Context) (site.Stats, error) {
+			return site.Stats{}, nil
 		},
 		MemberMe: func(id string) (member.Member, error) {
 			return member.Member{ID: id, Handle: "me", DisplayName: "Me", Status: member.StatusActive}, nil
@@ -129,13 +129,7 @@ func wirePostgres(ctx context.Context, cfg config.Config, pool *db.Pool, base AP
 	base.Agent = agent.New(cfg.IngestSecret, agent.NewPostgresStore(pgxPool))
 	base.JobStore = jobStore
 	base.Members = memStore
-	base.SiteStats = func() site.Stats {
-		st, err := sitePG.Stats(context.Background())
-		if err != nil {
-			return site.Stats{}
-		}
-		return st
-	}
+	base.SiteStats = sitePG.Stats
 	base.MemberMe = func(id string) (member.Member, error) {
 		return memStore.GetByID(context.Background(), id)
 	}

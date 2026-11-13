@@ -7,7 +7,10 @@ import type { GraphqlRequestBody } from '../../../src/chrome/featureModule.js';
 import { renderWithProviders } from '../../test-utils.js';
 import { mockGraphqlOps, signIn } from './authority-test-utils.js';
 import goodOps from '../../fixtures/wire/admin/ops-good.json';
-import { DISCORD_PERMISSION_REASON } from '../../../src/utils/discordDelivery.js';
+import {
+  DISCORD_GENERIC_REASON,
+  DISCORD_PERMISSION_REASON,
+} from '../../../src/utils/discordDelivery.js';
 
 const delivery = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -49,6 +52,70 @@ describe('delivery redrive', () => {
     expect(within(rowFor('Parked quest')).queryByText(/Next try/)).toBeNull();
     expect(within(rowFor('Dead quest')).queryByText(/Next try/)).toBeNull();
     expect(within(rowFor('Waiting quest')).getByText(/Next try/)).toBeVisible();
+  });
+
+  it('explains each Discord failure in one sentence and stays quiet after success', async () => {
+    const raw = 'discord api status 400: {"message":"Unknown Channel","code":10003}';
+    mockGraphqlOps({
+      AdminOperations: () => HttpResponse.json({ data: { adminOperations: {
+        ...goodOps,
+        deliveryTotal: 6,
+        scheduledWork: [{
+          kind: 'gametime_fill',
+          expectedSlot: '2026-10-21T00:00:00Z',
+          outcome: 'failed',
+          lastStartedAt: '2026-10-21T00:00:00Z',
+          lastFinishedAt: '2026-10-21T00:01:00Z',
+          jobId: null,
+          safeErrorCode: 'DISCORD_NOT_CONFIGURED',
+        }],
+        deliveries: [
+          { ...rows[2], safeError: 'DISCORD_NOT_FOUND', questTitle: 'Missing channel' },
+          { ...rows[2], id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', safeError: 'DISCORD_RATE_LIMIT', questTitle: 'Rate limited' },
+          { ...rows[2], id: 'abababab-abab-4aba-8aba-abababababab', safeError: 'DISCORD_UNAVAILABLE', questTitle: 'Discord down' },
+          { ...rows[0], safeError: raw, questTitle: 'Unknown failure' },
+          { ...rows[3], safeError: 'DISCORD_PERMISSION' },
+          { ...delivery, id: 'ffffffff-ffff-4fff-8fff-ffffffffffff', state: 'dead', safeError: null, questTitle: 'No code' },
+        ],
+      } } }),
+    });
+    renderWithProviders(<AdminDeliveryPage />, { route: '/admin/delivery' });
+    await screen.findByText('Missing channel');
+    const missing = within(rowFor('Missing channel'));
+    expect(missing.getByText('the quest channel or its post was not found')).toBeVisible();
+    expect(missing.queryByText(/Unknown Channel|discord api|DISCORD_NOT_FOUND/)).toBeNull();
+    expect(within(rowFor('Rate limited')).getByText('Discord is limiting how fast posts are sent')).toBeVisible();
+    expect(within(rowFor('Discord down')).getByText('Discord was unavailable')).toBeVisible();
+    const unknown = within(rowFor('Unknown failure'));
+    expect(unknown.getByText(DISCORD_GENERIC_REASON)).toBeVisible();
+    expect(unknown.queryByText(/Unknown Channel|10003|discord api/)).toBeNull();
+    expect(within(rowFor('No code')).getByText(DISCORD_GENERIC_REASON)).toBeVisible();
+    const done = within(rowFor('Done quest'));
+    expect(done.queryByText(DISCORD_PERMISSION_REASON)).toBeNull();
+    expect(done.queryByText(DISCORD_GENERIC_REASON)).toBeNull();
+    const scheduled = within(rowFor('Gametime fill'));
+    expect(scheduled.getByText('Discord posting is not set up for this community')).toBeVisible();
+    expect(scheduled.queryByText('DISCORD_NOT_CONFIGURED')).toBeNull();
+  });
+
+  it('shows a scheduled job code that has no Discord sentence', async () => {
+    mockGraphqlOps({
+      AdminOperations: () => HttpResponse.json({ data: { adminOperations: {
+        ...goodOps,
+        scheduledWork: [{
+          kind: 'gametime_fill',
+          expectedSlot: '2026-10-21T00:00:00Z',
+          outcome: 'repair_required',
+          lastStartedAt: null,
+          lastFinishedAt: null,
+          jobId: null,
+          safeErrorCode: 'TIME_ANCHOR_UNCOVERED',
+        }],
+      } } }),
+    });
+    renderWithProviders(<AdminDeliveryPage />, { route: '/admin/delivery' });
+    await screen.findByText('Gametime fill');
+    expect(within(rowFor('Gametime fill')).getByText('TIME_ANCHOR_UNCOVERED')).toBeVisible();
   });
 
   it('names the missing bot permission for a DISCORD_PERMISSION row, never the raw code', async () => {

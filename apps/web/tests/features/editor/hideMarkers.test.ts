@@ -6,7 +6,7 @@ import {
   hideMarkerToken,
   markerHandle,
   type HideMarker,
-} from '../../../src/features/editor/hideMarkers.js';
+} from '../../../src/components/interactive/markdown-editor/hideMarkers.js';
 import fixture from '../../../../../packages/contracts/fixtures/audience-markers.v1.json';
 
 const DM = { kind: 'dm' } as const;

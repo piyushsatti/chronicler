@@ -8,12 +8,11 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Button } from '../../components/primitives/Button.js';
-import { useScrollEdges } from '../../components/primitives/useScrollEdges.js';
-import type { EntityLinkIndex } from './types.js';
+import { Button } from '../../primitives/Button.js';
+import { useScrollEdges } from '../../primitives/useScrollEdges.js';
+import type { BodySpanAudit, EntityLinkIndex } from './types.js';
 import { HideMenu, type HidePlan } from './HideMenu.js';
 import { hideLines, type HideMarker } from './hideMarkers.js';
-import type { BodySpanAudit } from './adapters/bodyAudit.js';
 import {
   auditBadgeIcon,
   auditBadgeLabel,
@@ -22,7 +21,7 @@ import {
   LIST_NESTED_WARNING,
   type BodyAudit,
 } from './bodyAuditCopy.js';
-import styles from './editor.module.css';
+import styles from './markdown-editor.module.css';
 
 /** Shown in an empty document; says what the editor does with typed text. */
 const DEFAULT_PLACEHOLDER = 'Start writing. Type [[ to link a Codex entry.';
@@ -108,6 +107,8 @@ export type LiveEditorProps = {
   toolbarEnd?: React.ReactNode;
   placeholder?: string;
   compact?: boolean;
+  /** Accessible name of the writing area. Document editors keep "Document body". */
+  label?: string;
   entityIndex?: EntityLinkIndex;
   /**
    * The server's audit of the body (`auditBody`). The blocks editor badges the
@@ -308,11 +309,12 @@ function BlocksLiveEditor({
   toolbarEnd,
   placeholder,
   compact,
+  label,
   entityIndex,
   audit,
   focusLine,
 }: Required<
-  Pick<LiveEditorProps, 'value' | 'onChange' | 'toolbar' | 'placeholder' | 'compact'>
+  Pick<LiveEditorProps, 'value' | 'onChange' | 'toolbar' | 'placeholder' | 'compact' | 'label'>
 > &
   Pick<LiveEditorProps, 'toolbarStart' | 'toolbarEnd' | 'audit' | 'focusLine'> & {
     entityIndex: EntityLinkIndex;
@@ -895,7 +897,7 @@ function BlocksLiveEditor({
   const inputFor = (i: number, mono: boolean): React.JSX.Element => (
     <textarea
       ref={setInputRef}
-      aria-label="Document body"
+      aria-label={label}
       aria-describedby={auditFor(i, i).describedBy}
       className={`le-input ${mono ? 'le-mono type-code' : leTypeClass(lines[i])}`}
       rows={1}
@@ -1154,6 +1156,7 @@ export function LiveEditor({
   toolbarEnd,
   placeholder = DEFAULT_PLACEHOLDER,
   compact = false,
+  label = 'Document body',
   entityIndex = [],
   audit = null,
   focusLine = null,
@@ -1167,6 +1170,7 @@ export function LiveEditor({
       toolbarEnd={toolbarEnd}
       placeholder={placeholder}
       compact={compact}
+      label={label}
       entityIndex={entityIndex}
       audit={audit}
       focusLine={focusLine}

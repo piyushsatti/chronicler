@@ -342,7 +342,7 @@ SELECT input.ordinality::integer AS input_index, input.quest_id::uuid AS quest_i
        c.public_id AS character_public_id, c.name AS character_name,
        m.handle AS member_handle, m.display_name AS member_display_name,
        m.avatar_url AS member_avatar_url, qp.status, qp.manual,
-       qp.created_at, qp.updated_at
+       qp.created_at, qp.updated_at, last_game.last_played_at::timestamptz AS last_played_at
 FROM unnest(@quest_ids::uuid[]) WITH ORDINALITY AS input(quest_id, ordinality)
 LEFT JOIN unnest(@statuses::text[]) WITH ORDINALITY AS status_input(status, ordinality)
   ON status_input.ordinality = input.ordinality
@@ -443,6 +443,13 @@ UPDATE quest_participants SET status = @status::text, manual = false, dm_picked 
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint AND status = 'withdrawn'
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
 
+-- name: ProductQuestCountDMPicked :one
+-- Rows the DM hand-picked, including a pick who later withdrew. Rejoin clears the flag.
+SELECT count(*)::integer AS total
+FROM quest_participants qp
+JOIN quests q ON q.id = qp.quest_id
+WHERE q.public_id = @quest_id::uuid AND qp.dm_picked;
+
 -- name: ProductQuestSeatPriority :many
 -- Seated and waitlisted participants in Last Game Played seat order: players who have never
 -- played another quest first, then the oldest last played game, then the earlier signup.
@@ -475,6 +482,8 @@ RETURNING q.public_id AS quest_id, c.public_id AS character_id, owner.public_id 
 SELECT q.id, q.public_id, q.status, q.slots_max, q.filled_count
 FROM quests q WHERE q.id = @quest_id::bigint FOR UPDATE OF q;
 -- name: ProductQuestIncrementCapacity :one
+-- DM Pick may pass slots_max, including a later withdrawal that decrements while still over it.
+-- Every other signup type, including an unset one, stays inside the cap.
 UPDATE quests q SET filled_count = q.filled_count + @delta::integer,
        status = CASE
            WHEN q.status = 'open' AND q.filled_count + @delta::integer >= q.slots_max THEN 'full'
@@ -482,7 +491,8 @@ UPDATE quests q SET filled_count = q.filled_count + @delta::integer,
            ELSE q.status
        END
 WHERE q.id = @quest_id::bigint
-  AND q.filled_count + @delta::integer BETWEEN 0 AND q.slots_max
+  AND q.filled_count + @delta::integer >= 0
+  AND (q.filled_count + @delta::integer <= q.slots_max OR q.signup_type = 'dm_pick')
 RETURNING q.id, q.public_id, q.status, q.slots_max, q.filled_count, q.updated_at;
 -- name: ProductQuestReplaceRegions :exec
 DELETE FROM quest_regions WHERE quest_id = @quest_id::bigint;
@@ -494,7 +504,7 @@ JOIN regions r ON r.id = input.region_id
 RETURNING quest_id, region_id;
 
 -- name: ProductQuestReadPointcrawlLinks :many
-SELECT n.public_id::text AS node_id, q.public_id::text AS quest_id, qpn.role
+SELECT n.public_id::text AS node_id, q.public_id::text AS quest_id, qpn.role, n.name AS node_name
 FROM quest_pointcrawl_nodes qpn
 JOIN quests q ON q.id = qpn.quest_id
 JOIN pointcrawl_nodes n ON n.id = qpn.node_id
@@ -710,8 +720,21 @@ FROM characters c
 JOIN members owner ON owner.id = c.owner_id
 WHERE c.public_id = @character_id::uuid AND c.deleted_at IS NULL;
 
+-- name: ProductQuestCharacterID :one
+-- Removal addresses a soft-deleted character who still holds a seat.
+SELECT c.id FROM characters c WHERE c.public_id = @character_id::uuid;
+
 -- name: ProductQuestMemberPublicID :one
 SELECT public_id FROM members WHERE id = @member_id::bigint;
 
 -- name: ProductQuestArcInternalID :one
 SELECT arc.id FROM quest_arcs arc WHERE arc.public_id = @arc_id::uuid;
+
+-- name: ProductQuestSeatedDiscordIDs :many
+SELECT DISTINCT m.discord_id
+FROM quests q
+JOIN quest_participants qp ON qp.quest_id = q.id AND qp.status = 'signed_up'
+JOIN members m ON m.id = qp.member_id
+WHERE q.public_id = sqlc.arg(public_id)::uuid
+ORDER BY m.discord_id;
+

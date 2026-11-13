@@ -175,11 +175,12 @@ The original `mounted-http-013` through `mounted-http-017`, `mounted-http-025` t
 
 ## Complete root inventory
 
-The following164 roots are the accepted business API. Introspection fields are excluded. Each keeps the SDL argument/default/result contract.
+The following 167 roots are the accepted business API. Introspection fields are excluded. Each keeps the SDL argument/default/result contract.
 
 | Operation                                   | Source                          |
 | ------------------------------------------- | ------------------------------- |
 | Mutation.acknowledgeSuppressedNotifications | notification-operations.graphql |
+| Mutation.addQuestParticipant                | quest/operations.graphql        |
 | Mutation.adjustPcxp                         | character-operations.graphql    |
 | Mutation.assignArchon                       | spatial-operations.graphql      |
 | Mutation.assignLieutenant                   | document-operations.graphql     |
@@ -210,8 +211,10 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Mutation.logCharacterEvent                  | character-operations.graphql    |
 | Mutation.markNotificationsRead              | notification-operations.graphql |
 | Mutation.publishDocument                    | document-operations.graphql     |
+| Mutation.publishQuestPlayerList             | quest-operations.graphql        |
 | Mutation.redriveDiscordDelivery             | site-operations.graphql         |
 | Mutation.removeQuestFromArc                 | quest-operations.graphql        |
+| Mutation.removeQuestParticipant             | quest/operations.graphql        |
 | Mutation.restoreCharacter                   | character-operations.graphql    |
 | Mutation.restoreDocument                    | document-operations.graphql     |
 | Mutation.restoreQuest                       | quest-operations.graphql        |

@@ -9,6 +9,7 @@ query PendingCharacterVerifications($limit: Int! = 50, $offset: Int! = 0) {
       ownerDisplayName
       ddbUrl
       verificationSubmittedAt
+      ddbSyncedAt
     }
   }
 }

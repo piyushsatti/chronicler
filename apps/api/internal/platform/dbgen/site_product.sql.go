@@ -148,6 +148,53 @@ func (q *Queries) SiteActivitySummary(ctx context.Context) (SiteActivitySummaryR
 	return i, err
 }
 
+const siteAdminCharacterClasses = `-- name: SiteAdminCharacterClasses :many
+WITH live AS (
+    SELECT id FROM characters WHERE deleted_at IS NULL
+), totals AS (
+    SELECT count(*)::integer AS total_characters FROM live
+)
+SELECT totals.total_characters,
+       coalesce(classes.name, '')::text AS class_name,
+       count(DISTINCT live.id)::integer AS class_count
+FROM totals
+LEFT JOIN live ON true
+LEFT JOIN LATERAL (
+    SELECT c.name
+    FROM character_catalog_picks p
+    JOIN creation_catalog c ON c.id = p.catalog_id AND c.kind = 'class'
+    WHERE p.character_id = live.id
+) classes ON true
+GROUP BY totals.total_characters, classes.name
+ORDER BY class_count DESC, class_name
+`
+
+type SiteAdminCharacterClassesRow struct {
+	TotalCharacters int32  `json:"total_characters"`
+	ClassName       string `json:"class_name"`
+	ClassCount      int32  `json:"class_count"`
+}
+
+func (q *Queries) SiteAdminCharacterClasses(ctx context.Context) ([]SiteAdminCharacterClassesRow, error) {
+	rows, err := q.db.Query(ctx, siteAdminCharacterClasses)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SiteAdminCharacterClassesRow{}
+	for rows.Next() {
+		var i SiteAdminCharacterClassesRow
+		if err := rows.Scan(&i.TotalCharacters, &i.ClassName, &i.ClassCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const siteAdminDeliveryCounts = `-- name: SiteAdminDeliveryCounts :one
 SELECT count(*) FILTER (WHERE state IN ('queued', 'running', 'retry_wait', 'repair_required'))::integer AS pending_count,
        count(*) FILTER (WHERE state IN ('dead', 'succeeded', 'cancelled'))::integer AS terminal_count,
@@ -172,15 +219,15 @@ func (q *Queries) SiteAdminDeliveryCounts(ctx context.Context, deliveryState pgt
 
 const siteAdminDeliveryJobs = `-- name: SiteAdminDeliveryJobs :many
 WITH matching AS (
-    SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.safe_error_code, b.next_run_at,
+    SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.safe_error_code, b.error_message, b.next_run_at,
            b.created_at, b.updated_at, b.payload
     FROM background_jobs b
     WHERE b.kind = 'quest_discord_delivery'
       AND ($1::text IS NULL OR b.state = $1)
 ), page AS (
-    SELECT public_id, state, attempts, redrive_count, safe_error_code, next_run_at, created_at, updated_at, payload FROM matching ORDER BY updated_at DESC, public_id LIMIT $3::integer OFFSET $2::integer
+    SELECT public_id, state, attempts, redrive_count, safe_error_code, error_message, next_run_at, created_at, updated_at, payload FROM matching ORDER BY updated_at DESC, public_id LIMIT $3::integer OFFSET $2::integer
 ), projected AS (
-    SELECT page.public_id, page.state, page.attempts, page.redrive_count, page.safe_error_code, page.next_run_at, page.created_at, page.updated_at, page.payload,
+    SELECT page.public_id, page.state, page.attempts, page.redrive_count, page.safe_error_code, page.error_message, page.next_run_at, page.created_at, page.updated_at, page.payload,
            q.public_id AS quest_public_id, q.short_code AS quest_short_code,
            (CASE WHEN d.id IS NOT NULL AND d.deleted_at IS NULL AND document_readable(
              d.public_id, author.public_id, d.status, d.visibility, d.policy,
@@ -202,7 +249,7 @@ WITH matching AS (
 )
 SELECT (SELECT count(*) FROM matching)::bigint AS total,
        projected.public_id, projected.state, projected.attempts, projected.redrive_count, projected.safe_error_code,
-       projected.next_run_at, projected.created_at, projected.updated_at, projected.quest_public_id, projected.quest_short_code,
+       projected.error_message, projected.next_run_at, projected.created_at, projected.updated_at, projected.quest_public_id, projected.quest_short_code,
        projected.quest_title, projected.discord_desired_revision, projected.discord_applied_revision, projected.discord_message_id,
        projected.event_url, COALESCE(projected.admin_override, false)::boolean AS admin_override
 FROM (SELECT 1) marker LEFT JOIN projected ON true
@@ -228,6 +275,7 @@ type SiteAdminDeliveryJobsRow struct {
 	Attempts               pgtype.Int4        `json:"attempts"`
 	RedriveCount           pgtype.Int4        `json:"redrive_count"`
 	SafeErrorCode          pgtype.Text        `json:"safe_error_code"`
+	ErrorMessage           pgtype.Text        `json:"error_message"`
 	NextRunAt              pgtype.Timestamptz `json:"next_run_at"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
@@ -267,6 +315,7 @@ func (q *Queries) SiteAdminDeliveryJobs(ctx context.Context, arg SiteAdminDelive
 			&i.Attempts,
 			&i.RedriveCount,
 			&i.SafeErrorCode,
+			&i.ErrorMessage,
 			&i.NextRunAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -278,6 +327,92 @@ func (q *Queries) SiteAdminDeliveryJobs(ctx context.Context, arg SiteAdminDelive
 			&i.DiscordMessageID,
 			&i.EventUrl,
 			&i.AdminOverride,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const siteAdminMaintenanceJobs = `-- name: SiteAdminMaintenanceJobs :many
+SELECT DISTINCT ON (kind) kind, state, safe_error_code, updated_at
+FROM background_jobs
+WHERE lane = 'maintenance'
+ORDER BY kind, updated_at DESC, id DESC
+`
+
+type SiteAdminMaintenanceJobsRow struct {
+	Kind          string             `json:"kind"`
+	State         string             `json:"state"`
+	SafeErrorCode pgtype.Text        `json:"safe_error_code"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Latest row per kind on the maintenance lane (worker.EnqueueDailyMaintenance).
+// expectedSlot is updated_at: the payload slot is not a GraphQL DateTime.
+func (q *Queries) SiteAdminMaintenanceJobs(ctx context.Context) ([]SiteAdminMaintenanceJobsRow, error) {
+	rows, err := q.db.Query(ctx, siteAdminMaintenanceJobs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SiteAdminMaintenanceJobsRow{}
+	for rows.Next() {
+		var i SiteAdminMaintenanceJobsRow
+		if err := rows.Scan(
+			&i.Kind,
+			&i.State,
+			&i.SafeErrorCode,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const siteAdminQuestHexCounts = `-- name: SiteAdminQuestHexCounts :many
+SELECT n.public_id::text AS hex_id,
+       n.name AS hex_name,
+       m.name AS map_name,
+       count(DISTINCT q.id)::integer AS quest_count
+FROM quest_pointcrawl_nodes qpn
+JOIN pointcrawl_nodes n ON n.id = qpn.node_id
+JOIN maps m ON m.id = n.map_id AND m.grid = 'hex'
+JOIN quests q ON q.id = qpn.quest_id AND q.deleted_at IS NULL
+GROUP BY n.public_id, n.name, m.name
+ORDER BY quest_count DESC, n.name, m.name
+`
+
+type SiteAdminQuestHexCountsRow struct {
+	HexID      string `json:"hex_id"`
+	HexName    string `json:"hex_name"`
+	MapName    string `json:"map_name"`
+	QuestCount int32  `json:"quest_count"`
+}
+
+func (q *Queries) SiteAdminQuestHexCounts(ctx context.Context) ([]SiteAdminQuestHexCountsRow, error) {
+	rows, err := q.db.Query(ctx, siteAdminQuestHexCounts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SiteAdminQuestHexCountsRow{}
+	for rows.Next() {
+		var i SiteAdminQuestHexCountsRow
+		if err := rows.Scan(
+			&i.HexID,
+			&i.HexName,
+			&i.MapName,
+			&i.QuestCount,
 		); err != nil {
 			return nil, err
 		}

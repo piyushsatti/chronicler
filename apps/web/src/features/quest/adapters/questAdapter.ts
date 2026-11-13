@@ -100,6 +100,8 @@ export type QuestParticipantView = {
   memberHandle: string;
   memberDisplayName?: string;
   status: string;
+  /** Last played instant for a last_game_played quest; null when this player has never played. */
+  lastPlayedAt?: string | null;
 };
 
 export type QuestDetailView = Omit<QuestBoardItemView, 'participants'> & {
@@ -113,7 +115,13 @@ export type QuestDetailView = Omit<QuestBoardItemView, 'participants'> & {
   dmId: string;
   updatedAt: string;
   arc: { id: string; name: string } | null;
-  pointcrawlLinks: Array<{ pointcrawlNodeId: string; role: 'expected' | 'visited' }>;
+  pointcrawlLinks: Array<{
+    pointcrawlNodeId: string;
+    role: 'expected' | 'visited';
+    name: string;
+  }>;
+  /** Player note from the quest post; blank notes are absent. */
+  additionalInfo: string | null;
 };
 
 export type QuestBoardCardPropsView = {
@@ -290,6 +298,7 @@ export function parseQuestDetail(
         memberHandle: p.memberHandle,
         memberDisplayName: p.memberDisplayName,
         status: p.status,
+        lastPlayedAt: p.lastPlayedAt ?? null,
       })),
       durationHours: parsed.data.durationHours,
       genres: parsed.data.genres,
@@ -299,6 +308,8 @@ export function parseQuestDetail(
       updatedAt: parsed.data.updatedAt,
       arc: parsed.data.arc,
       pointcrawlLinks: parsed.data.pointcrawlLinks,
+      additionalInfo:
+        parsed.data.briefDocument?.frontmatter?.additional_info?.trim() || null,
     },
   };
 }

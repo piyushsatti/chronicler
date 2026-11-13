@@ -24,6 +24,7 @@ export const graphql: FeatureGraphql = {
     }
     return HttpResponse.json({ data: { memberProfile: goodMemberProfile } });
   },
+  ProfileDmTier: () => HttpResponse.json({ data: { myUnlocks: { dmTier: '' } } }),
   ProfileActivity: () => HttpResponse.json({ data: { memberActivityStats: null, documents: { items: [], total: 0 } } }),
   ProfileDmDetails: () =>
     HttpResponse.json({
@@ -81,14 +82,6 @@ export const routes: readonly FeatureRoute[] = [
     element: lazyElement(() =>
       import('./pages/ProfilePages.js').then((module) => ({
         default: module.DMProfilePage,
-      })),
-    ),
-  },
-  {
-    path: '/community/dm-table/:slug',
-    element: lazyElement(() =>
-      import('./pages/ProfilePages.js').then((module) => ({
-        default: module.DmTableDetailPage,
       })),
     ),
   },

@@ -14,8 +14,10 @@ import { Avatar } from '../../../components/primitives/Avatar.js';
 import { DiscordDeliveryStatus } from '../components/DiscordDeliveryStatus.js';
 import { QuestParticipation } from '../components/QuestParticipation.js';
 import { QuestDmActions } from '../components/QuestDmActions.js';
+import { QuestRosterCorrection } from '../components/QuestRosterCorrection.js';
 import { QuestOwnerActions } from '../components/QuestOwnerActions.js';
 import { useQuestDetailPage } from '../hooks/useQuestDetailPage.js';
+import { useRosterCharacterSearch } from '../hooks/useRosterCharacterSearch.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { useMemberHref } from '../../../hooks/useMemberHref.js';
 import { useQuestTableRules } from '../hooks/useQuestTableRules.js';
@@ -39,6 +41,14 @@ const DECLARATION: PageDeclaration = {
 };
 
 const BACK = { to: '/quests', label: 'Quests' } as const;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Days since a last_game_played waitlist player's last played quest. No instant means new. */
+function lastPlayedAge(lastPlayedAt: string | null | undefined, now = Date.now()): string {
+  const then = lastPlayedAt ? Date.parse(lastPlayedAt) : Number.NaN;
+  if (!Number.isFinite(then)) return 'New';
+  return pluralize(Math.max(0, Math.floor((now - then) / DAY_MS)), 'day');
+}
 
 /** First plain sentence-ish chunk of the brief, for the header lede. */
 function briefLede(body: string | null): string | null {
@@ -57,6 +67,7 @@ export function QuestDetailPage(): React.JSX.Element {
   const memberHref = useMemberHref();
   const { code = '' } = useParams();
   const detail = useQuestDetailPage(code);
+  const rosterSearch = useRosterCharacterSearch();
   const { page, commands } = detail;
   const [tab, setTab] = useState('details');
   // House rules live on the DM's profile; fetch them only once the tab is open.
@@ -109,13 +120,33 @@ export function QuestDetailPage(): React.JSX.Element {
   const playerLabel = (index: number) => peopleLabels[index + (hasDm ? 1 : 0)];
   const seated = quest.participants
     .map((participant, index) => ({ participant, label: playerLabel(index) }))
-    .filter(({ participant }) => participant.status !== 'waitlisted');
+    .filter(
+      ({ participant }) =>
+        participant.status !== 'waitlisted' && participant.status !== 'withdrawn',
+    );
   const waiting = quest.participants
     .map((participant, index) => ({ participant, label: playerLabel(index) }))
     .filter(({ participant }) => participant.status === 'waitlisted');
   const hasSchedule = !isSentinelDate(quest.scheduledAt);
   const hasUpdated = !isSentinelDate(quest.updatedAt);
+  // MemberMe has not returned yet. null === dmId would flash the signup card.
+  const memberPending =
+    detail.isAuthenticated && detail.memberId === null && !detail.charactersError;
+  const dmHoldsSeat = quest.participants.some(
+    (participant) =>
+      participant.memberId === quest.dmId &&
+      (participant.status === 'signed_up' || participant.status === 'waitlisted'),
+  );
+  const hideParticipation =
+    memberPending || (detail.memberId === quest.dmId && !dmHoldsSeat);
   const dmHandleLabel = handleLabel(quest.dmHandle);
+  const seenPlaces = new Set<string>();
+  const placeNames = quest.pointcrawlLinks.flatMap((link) => {
+    const name = link.name.trim();
+    if (!name || seenPlaces.has(link.pointcrawlNodeId)) return [];
+    seenPlaces.add(link.pointcrawlNodeId);
+    return [name];
+  });
 
   const facts: Array<{ key: string; value: React.ReactNode }> = [
     { key: 'Status', value: statusLabel(quest.status) },
@@ -144,6 +175,14 @@ export function QuestDetailPage(): React.JSX.Element {
       value: `${quest.filledCount} of ${pluralize(quest.slotsMax, 'seat')} filled`,
     },
     ...(quest.regionName ? [{ key: 'Region', value: quest.regionName }] : []),
+    ...(placeNames.length
+      ? [
+          {
+            key: placeNames.length > 1 ? 'Places' : 'Place',
+            value: placeNames.join(', '),
+          },
+        ]
+      : []),
     ...(quest.arc
       ? [
           {
@@ -166,8 +205,14 @@ export function QuestDetailPage(): React.JSX.Element {
           </Card.Eyebrow>
         </div>
         {seated.length === 0 ? (
-          <EmptyState kind="no-characters" message="No one has signed up yet." />
-        ) : (
+          <EmptyState
+            kind="no-characters"
+            message={
+              waiting.length > 0 ? 'No one has a seat yet.' : 'No one has signed up yet.'
+            }
+          />
+        ) : null}
+        {seated.length > 0 || seatsOpen > 0 ? (
           <ul className={styles.roster}>
             {seated.map(({ participant, label }) => (
               <li key={participant.characterId} className={styles.rosterRow}>
@@ -192,7 +237,7 @@ export function QuestDetailPage(): React.JSX.Element {
               </li>
             ) : null}
           </ul>
-        )}
+        ) : null}
       </Card>
       <Card as="section" pad={4} aria-label="Waitlist">
         <div className={styles.cardHead}>
@@ -209,21 +254,30 @@ export function QuestDetailPage(): React.JSX.Element {
             </p>
           ) : null}
           <ul className={styles.roster}>
-            {waiting.map(({ participant, label }) => (
-              <li key={participant.characterId} className={styles.rosterRow}>
-                <Avatar name={participant.characterName} size="sm" />
-                <div className="stack" data-gap="1">
-                  <span className="type-title">{participant.characterName}</span>
-                  <span className={`type-caption ${styles.playerIdentity}`}>
-                    {'Played by '}
-                    {label}
-                  </span>
-                </div>
-                <Chip size="sm" tone="line">
-                  {statusLabel(participant.status)}
-                </Chip>
-              </li>
-            ))}
+            {waiting.map(({ participant, label }) => {
+              const age =
+                quest.signupType === 'last_game_played'
+                  ? lastPlayedAge(participant.lastPlayedAt)
+                  : null;
+              return (
+                <li key={participant.characterId} className={styles.rosterRow}>
+                  <Avatar name={participant.characterName} size="sm" />
+                  <div className="stack" data-gap="1">
+                    <span className="row" data-gap="2" data-align="baseline">
+                      <span className="type-title">{participant.characterName}</span>
+                      {age ? <span className="type-caption">{age}</span> : null}
+                    </span>
+                    <span className={`type-caption ${styles.playerIdentity}`}>
+                      {'Played by '}
+                      {label}
+                    </span>
+                  </div>
+                  <Chip size="sm" tone="line">
+                    {statusLabel(participant.status)}
+                  </Chip>
+                </li>
+              );
+            })}
           </ul>
           </>
         )}
@@ -281,7 +335,7 @@ export function QuestDetailPage(): React.JSX.Element {
           ))}
         </dl>
       </Card>
-      {quest.hookText || quest.tags.length > 0 ? (
+      {quest.hookText || quest.additionalInfo || quest.tags.length > 0 ? (
         <div className={styles.cardGrid}>
           {quest.hookText ? (
             <Card as="section" pad={5} aria-label="Quest description">
@@ -289,16 +343,21 @@ export function QuestDetailPage(): React.JSX.Element {
               <ContentRenderer body={quest.hookText} />
             </Card>
           ) : null}
-          {quest.tags.length > 0 ? (
+          {quest.additionalInfo || quest.tags.length > 0 ? (
             <Card as="section" pad={5} className="stack" aria-label="Additional information">
               <h2 className="type-title">Additional information</h2>
-              <div className="row" data-wrap="1" data-gap="2">
-                {quest.tags.map((label) => (
-                  <Chip key={label} size="sm" tone="line">
-                    {label}
-                  </Chip>
-                ))}
-              </div>
+              {quest.additionalInfo ? (
+                <p className={styles.note}>{quest.additionalInfo}</p>
+              ) : null}
+              {quest.tags.length > 0 ? (
+                <div className="row" data-wrap="1" data-gap="2">
+                  {quest.tags.map((label) => (
+                    <Chip key={label} size="sm" tone="line">
+                      {label}
+                    </Chip>
+                  ))}
+                </div>
+              ) : null}
             </Card>
           ) : null}
         </div>
@@ -355,20 +414,22 @@ export function QuestDetailPage(): React.JSX.Element {
                 </>
               }
             />
-            <QuestParticipation
-              key={quest.id}
-              quest={quest}
-              authenticated={detail.isAuthenticated}
-              guest={detail.isGuest}
-              memberId={detail.memberId}
-              characters={detail.characters.data ?? []}
-              loading={detail.charactersLoading}
-              error={detail.charactersError}
-              retry={detail.retryCharacters}
-              pending={commands.pending}
-              execute={commands.execute}
-              commandError={commands.error}
-            />
+            {hideParticipation ? null : (
+              <QuestParticipation
+                key={quest.id}
+                quest={quest}
+                authenticated={detail.isAuthenticated}
+                guest={detail.isGuest}
+                memberId={detail.memberId}
+                characters={detail.characters.data ?? []}
+                loading={detail.charactersLoading}
+                error={detail.charactersError}
+                retry={detail.retryCharacters}
+                pending={commands.pending}
+                execute={commands.execute}
+                commandError={commands.error}
+              />
+            )}
           </div>
         </Card>
         {dmLabel ? (
@@ -411,6 +472,14 @@ export function QuestDetailPage(): React.JSX.Element {
             pending={commands.pending}
             execute={commands.execute}
             error={commands.error}
+          />
+        ) : null}
+        {detail.admin && (quest.machineStatus === 'open' || quest.machineStatus === 'full') ? (
+          <QuestRosterCorrection
+            quest={quest}
+            pending={commands.pending}
+            execute={commands.execute}
+            search={rosterSearch}
           />
         ) : null}
       </div>

@@ -15,14 +15,13 @@ export function useDmDashboard(questScope: 'page' | 'all' = 'page') {
   const authority = useAdminAuthority('dm');
   const me = useMe();
   const liveDm = useLiveDm();
-  const [questOffset, setQuestOffset] = useState(0),
-    [tableOffset, setTableOffset] = useState(0);
+  const [questOffset, setQuestOffset] = useState(0);
   const query = useQuery({
     enabled: authority.allowed && me.isSuccess,
-    queryKey: ['dmDashboard', authority.cacheKey, questOffset, tableOffset, questScope],
+    queryKey: ['dmDashboard', authority.cacheKey, questOffset, questScope],
     queryFn: ({ signal }) =>
       authority.read(
-        (request) => loadDmDashboard(me.data!.id, questOffset, tableOffset, request, questScope),
+        (request) => loadDmDashboard(me.data!.id, questOffset, request, questScope),
         signal,
       ),
   });
@@ -62,6 +61,5 @@ export function useDmDashboard(questScope: 'page' | 'all' = 'page') {
       void query.refetch();
     },
     questPage: page(questOffset, query.data?.quests.total, setQuestOffset),
-    tablePage: page(tableOffset, query.data?.documents.total, setTableOffset),
   };
 }

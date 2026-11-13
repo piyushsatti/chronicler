@@ -1,9 +1,15 @@
 mutation QuestSelectParticipants(
   $questId: ID!
   $characterIds: [ID!]!
+  $fillByLastGamePlayed: Boolean! = false
   $meta: CommandMeta!
 ) {
-  selectQuestParticipants(questId: $questId, characterIds: $characterIds, meta: $meta) {
+  selectQuestParticipants(
+    questId: $questId
+    characterIds: $characterIds
+    fillByLastGamePlayed: $fillByLastGamePlayed
+    meta: $meta
+  ) {
     characterId
     status
   }

@@ -45,7 +45,7 @@ export function SearchHitRow({
       ) : (
         <p className="type-caption">{hit.snippet}</p>
       )}
-      {!href ? (
+      {!member && !href && hit.kind === 'quest_brief' ? (
         <p className="type-caption">
           This archived brief has no linked quest code.{' '}
           <Link to="/quests" onClick={onNavigate}>

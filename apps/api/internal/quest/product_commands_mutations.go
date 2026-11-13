@@ -307,7 +307,7 @@ func updateQuest(ctx context.Context, repos ProductCommandRepos, fresh auth.Auth
 	if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
 		return QuestView{}, err
 	}
-	if spec.Input.SlotsMax.Set && spec.Input.SlotsMax.Value != nil && locked.Before != nil && *spec.Input.SlotsMax.Value < locked.Before.FilledCount {
+	if locked.Before != nil && questEditExceedsSeatCap(spec.Input, *locked.Before) {
 		return QuestView{}, apierr.New(apierr.Invalid, "quest capacity exceeded")
 	}
 	if spec.Input.ArcId.Set {
@@ -330,6 +330,23 @@ func updateQuest(ctx context.Context, repos ProductCommandRepos, fresh auth.Auth
 		return QuestView{}, err
 	}
 	return result, nil
+}
+
+// questEditExceedsSeatCap reports whether the signup type and seat count about to be
+// saved would put a capped quest over its filled count. DM Pick may stay over slots_max.
+func questEditExceedsSeatCap(input QuestEditFields, before QuestView) bool {
+	signup := before.SignupType
+	if input.SignupType.Set {
+		signup = input.SignupType.Value
+	}
+	slots := before.SlotsMax
+	if input.SlotsMax.Set && input.SlotsMax.Value != nil {
+		slots = *input.SlotsMax.Value
+	}
+	if signup != nil && *signup == dmPickSignup {
+		return false
+	}
+	return before.FilledCount > slots
 }
 
 func editQuestBrief(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, input QuestEditFields, locked UpdateQuestState) ([]notification.Event, error) {
@@ -684,7 +701,10 @@ func (s ProductCommands) SelectQuestParticipants(ctx context.Context, actor auth
 	if err := commandPublicID(&questID); err != nil {
 		return nil, err
 	}
-	if len(spec.CharacterIds) > 100 {
+	if spec.FillByLastGamePlayed && len(spec.CharacterIds) > 0 {
+		return nil, apierr.New(apierr.Invalid, "last game played fill does not take characters")
+	}
+	if !spec.FillByLastGamePlayed && len(spec.CharacterIds) > 100 {
 		return nil, apierr.New(apierr.Invalid, "at most 100 participants may be selected")
 	}
 	ids := make([]string, 0, len(spec.CharacterIds))
@@ -714,6 +734,13 @@ func selectQuestParticipants(ctx context.Context, repos ProductCommandRepos, fre
 	if product.MissingDependency(repos.Characters) {
 		return nil, apierr.New(apierr.Internal, "character admission reader required")
 	}
+	if spec.FillByLastGamePlayed {
+		var err error
+		ids, err = repos.Quest.WaitlistedCharacterIDs(ctx, questID)
+		if err != nil {
+			return nil, err
+		}
+	}
 	admissions, err := repos.Characters.LockAdmissions(ctx, ids)
 	if err != nil {
 		return nil, err
@@ -729,7 +756,7 @@ func selectQuestParticipants(ctx context.Context, repos ProductCommandRepos, fre
 		return nil, err
 	}
 	locked.Candidates = admissions
-	result, err := repos.Quest.StoreSelectQuestParticipants(ctx, SelectQuestParticipantsWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: ids, AsOf: at}, Locked: locked, DMPicked: true})
+	result, err := repos.Quest.StoreSelectQuestParticipants(ctx, SelectQuestParticipantsWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: ids, AsOf: at, FillByLastGamePlayed: spec.FillByLastGamePlayed}, Locked: locked, DMPicked: !spec.FillByLastGamePlayed})
 	if err != nil || len(result) == 0 {
 		return result, err
 	}
@@ -751,6 +778,68 @@ func recordQuestPromotions(ctx context.Context, repos ProductCommandRepos, fresh
 		}
 	}
 	return nil
+}
+
+func (s ProductCommands) AddQuestParticipant(ctx context.Context, actor auth.Authority, spec CorrectQuestRosterSpec, meta product.CommandMeta) (QuestParticipantView, error) {
+	return s.correctQuestRoster(ctx, actor, spec, meta, "add", "addQuestParticipant", "Mutation.addQuestParticipant")
+}
+
+func (s ProductCommands) RemoveQuestParticipant(ctx context.Context, actor auth.Authority, spec CorrectQuestRosterSpec, meta product.CommandMeta) (QuestParticipantView, error) {
+	return s.correctQuestRoster(ctx, actor, spec, meta, "remove", "removeQuestParticipant", "Mutation.removeQuestParticipant")
+}
+
+func (s ProductCommands) correctQuestRoster(ctx context.Context, actor auth.Authority, spec CorrectQuestRosterSpec, meta product.CommandMeta, action, operation, policyOperation string) (QuestParticipantView, error) {
+	questID := strings.TrimSpace(spec.QuestId)
+	characterID := strings.TrimSpace(spec.CharacterId)
+	if err := commandPublicID(&questID); err != nil {
+		return QuestParticipantView{}, err
+	}
+	if err := commandPublicID(&characterID); err != nil {
+		return QuestParticipantView{}, err
+	}
+	spec.QuestId, spec.CharacterId, spec.Action = questID, characterID, action
+	request, preview, err := s.questDMRequest(ctx, actor, auth.Operation(policyOperation), questID)
+	if err != nil {
+		return QuestParticipantView{}, err
+	}
+	return runQuestCommand(ctx, s, actor, operation, request, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (QuestParticipantView, error) {
+		return applyQuestRosterCorrection(ctx, repos, fresh, at, spec, request, preview)
+	})
+}
+
+func applyQuestRosterCorrection(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec CorrectQuestRosterSpec, request auth.Request, preview *QuestView) (QuestParticipantView, error) {
+	if product.MissingDependency(repos.Characters) {
+		return QuestParticipantView{}, apierr.New(apierr.Internal, "character admission reader required")
+	}
+	admissions, err := repos.Characters.LockAdmissions(ctx, []string{spec.CharacterId})
+	if err != nil {
+		return QuestParticipantView{}, err
+	}
+	locked, err := repos.Quest.LockSelectQuestParticipants(ctx, SelectQuestParticipantsSpec{QuestId: spec.QuestId, CharacterIds: []string{spec.CharacterId}, AsOf: at})
+	if err != nil {
+		return QuestParticipantView{}, err
+	}
+	if !locked.Exists || locked.Before == nil {
+		return QuestParticipantView{}, apierr.New(apierr.NotFound, "quest not found")
+	}
+	if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), spec.QuestId, preview.DmId, locked.OwnerID); err != nil {
+		return QuestParticipantView{}, err
+	}
+	view, skipped, err := repos.Quest.StoreCorrectQuestRoster(ctx, CorrectQuestRosterWrite{
+		At: at, ValidatedInput: spec, Quest: locked.Before, Roster: locked.Roster, Candidates: admissions,
+		Staff: fresh.Claims().Has(auth.Admin) || fresh.IsPlatformOwner(),
+	})
+	if err != nil || skipped {
+		return view, err
+	}
+	if _, err := repos.Quest.StoreSyncQuestDiscord(ctx, SyncQuestDiscordWrite{
+		ActorID: fresh.Claims().MemberID, At: at,
+		ValidatedInput: SyncQuestDiscordSpec{QuestId: spec.QuestId, AsOf: at},
+		Locked:         SyncQuestDiscordState{Exists: true},
+	}); err != nil {
+		return QuestParticipantView{}, err
+	}
+	return view, nil
 }
 
 func (s ProductCommands) AttestQuestParticipation(ctx context.Context, actor auth.Authority, spec AttestQuestParticipationSpec, meta product.CommandMeta) ([]QuestParticipantView, error) {
@@ -899,6 +988,34 @@ func (s ProductCommands) SyncQuestDiscord(ctx context.Context, actor auth.Author
 		return repos.Quest.StoreSyncQuestDiscord(ctx, SyncQuestDiscordWrite{
 			ActorID: fresh.Claims().MemberID, At: at, Input: spec,
 			ValidatedInput: SyncQuestDiscordSpec{QuestId: questID, AsOf: at}, Locked: locked,
+		})
+	})
+}
+
+func (s ProductCommands) PublishQuestPlayerList(ctx context.Context, actor auth.Authority, spec PublishQuestPlayerListSpec, meta product.CommandMeta) (DeliveryReceipt, error) {
+	questID := strings.TrimSpace(spec.QuestId)
+	if err := commandPublicID(&questID); err != nil {
+		return DeliveryReceipt{}, err
+	}
+	spec.QuestId = questID
+	request, preview, err := s.questDMRequest(ctx, actor, "Mutation.publishQuestPlayerList", questID)
+	if err != nil {
+		return DeliveryReceipt{}, err
+	}
+	return runQuestCommand(ctx, s, actor, "publishQuestPlayerList", request, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DeliveryReceipt, error) {
+		locked, err := repos.Quest.LockPublishQuestPlayerList(ctx, PublishQuestPlayerListSpec{QuestId: questID, AsOf: at})
+		if err != nil {
+			return DeliveryReceipt{}, err
+		}
+		if !locked.Exists {
+			return DeliveryReceipt{}, apierr.New(apierr.NotFound, "quest not found")
+		}
+		if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
+			return DeliveryReceipt{}, err
+		}
+		return repos.Quest.StorePublishQuestPlayerList(ctx, PublishQuestPlayerListWrite{
+			ActorID: fresh.Claims().MemberID, At: at,
+			ValidatedInput: PublishQuestPlayerListSpec{QuestId: questID, AsOf: at}, Locked: locked,
 		})
 	})
 }

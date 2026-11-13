@@ -389,6 +389,7 @@ const (
 
 var operationRules = map[Operation]policyRule{
 	"Mutation.acknowledgeSuppressedNotifications": ruleSelf,
+	"Mutation.addQuestParticipant":                ruleQuest,
 	"Mutation.adjustPcxp":                         ruleCharacter,
 	"Mutation.assignArchon":                       ruleAdmin,
 	"Mutation.assignLieutenant":                   ruleLieutenantWrite,
@@ -414,8 +415,10 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.logCharacterEvent":                  ruleCharacter,
 	"Mutation.markNotificationsRead":              ruleSelf,
 	"Mutation.publishDocument":                    ruleDocumentWrite,
+	"Mutation.publishQuestPlayerList":             ruleQuest,
 	"Mutation.redriveDiscordDelivery":             ruleAdmin,
 	"Mutation.removeQuestFromArc":                 ruleQuest,
+	"Mutation.removeQuestParticipant":             ruleQuest,
 	"Mutation.restoreCharacter":                   ruleCharacter,
 	"Mutation.restoreDocument":                    ruleDocumentWrite,
 	"Mutation.restoreQuest":                       ruleQuest,
@@ -465,6 +468,7 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.upsertUnlockable":                   ruleAdmin,
 	"Mutation.withdrawFromQuest":                  ruleSignup,
 	"Query.adminCharacterDirectory":               ruleStaff,
+	"Query.adminCommunityStats":                   ruleAdmin,
 	"Query.adminOperations":                       ruleAdmin,
 	"Query.archonAssignments":                     ruleAdmin,
 	"Query.backstories":                           ruleBackstory,
@@ -821,7 +825,7 @@ func (p *Policy) dispatchRule(ctx context.Context, actor Authority, request Requ
 	case rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleCharacterCreate, ruleLieutenantWrite, ruleCatalog, ruleBackstory, ruleCharacterHistory:
 		return p.decideBaseRule(ctx, actor, request, rule, admin, bypass)
 	case ruleCharacter, ruleSignup:
-		return p.decideOwnershipRule(actor, request, rule)
+		return p.decideOwnershipRule(actor, request, rule, bypass)
 	case ruleQuestCreate, ruleArc, rulePreview, ruleDiscord, ruleDocumentCreate, ruleDocumentWrite, ruleRevisions:
 		return p.decideContentRule(ctx, actor, request, rule, admin, bypass)
 	case ruleRegion, ruleMap, ruleQuest, ruleLieutenantRead:
@@ -882,17 +886,19 @@ func requiredRoleFailure(rule policyRule, actor Authority, admin bool) bool {
 	}
 }
 
-func (p *Policy) decideOwnershipRule(actor Authority, request Request, rule policyRule) (Decision, error) {
+func (p *Policy) decideOwnershipRule(actor Authority, request Request, rule policyRule, bypass bool) (Decision, error) {
 	switch rule {
 	case ruleCharacter, ruleSignup:
 		facts, ok := request.input.(CharacterFacts)
 		if !ok {
 			return Decision{}, policyContractError()
 		}
+		// November 7: profile fields are the only character mutation admin and platform owner may override.
+		profileOverride := bypass && request.operation == "Mutation.updateCharacterProfile"
 		return policyResult(policyFailures{
 			role:      actor.claims.Has(Guest) && !actor.claims.Has(Player) && request.operation == "Mutation.signupForQuest",
 			ownership: facts.OwnerID != actor.claims.MemberID,
-		}, false), nil
+		}, profileOverride), nil
 	default:
 		return Decision{}, policyContractError()
 	}

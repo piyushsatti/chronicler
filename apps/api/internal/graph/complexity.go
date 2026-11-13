@@ -98,6 +98,8 @@ func implicitListComplexity(c *ComplexityRoot) {
 	hundred := func(child int) int { return listCost(child, 100) }
 	availability := func(child int) int { return listCost(child, 28) }
 	c.AdminOperationsType.ScheduledWork = func(child int) int { return listCost(child, 2) }
+	c.AdminCommunityStatsType.CharactersByClass = hundred
+	c.AdminCommunityStatsType.QuestHexes = hundred
 	c.CharacterType.Proficiencies = hundred
 	c.DiscordSettingsType.VoiceChannels = hundred
 	c.GameCalendarType.MonthGrid = func(child int) int { return listCost(child, 366) }
@@ -113,8 +115,6 @@ func implicitListComplexity(c *ComplexityRoot) {
 	c.RegionActivityType.LiveQuests = hundred
 	c.RegionActivityType.OpenQuests = hundred
 	c.SiteStatsType.MembersByRole = func(child int) int { return listCost(child, 7) }
-	c.SiteStatsType.PublishedDocumentsByCategory = hundred
-	c.SiteStatsType.PublishedDocumentsByKind = func(child int) int { return listCost(child, 20) }
 	c.SummaryDerivedType.Dms = hundred
 	c.SummaryDerivedType.Players = hundred
 	c.SummaryDerivedType.PointcrawlNodes = hundred
@@ -126,7 +126,13 @@ func mutationListComplexity(c *ComplexityRoot) {
 	c.Mutation.AttestQuestParticipation = func(child int, _ string, entries []*ParticipationAttestationInput, _ CommandMeta) int {
 		return listCost(child, len(entries))
 	}
-	c.Mutation.SelectQuestParticipants = func(child int, _ string, ids []string, _ CommandMeta) int { return listCost(child, len(ids)) }
+	c.Mutation.SelectQuestParticipants = func(child int, _ string, ids []string, fill bool, _ CommandMeta) int {
+		n := len(ids)
+		if fill {
+			n = 100
+		}
+		return listCost(child, n)
+	}
 	c.Mutation.SetMemberRolesBatch = func(child int, changes []*MemberRoleBatchInput, _ CommandMeta) int {
 		return listCost(child, len(changes))
 	}

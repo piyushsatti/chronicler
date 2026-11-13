@@ -11,12 +11,7 @@ import { PointcrawlViewport } from '../../../src/features/map/components/Pointcr
 import { MapKey } from '../../../src/features/map/components/MapKey.js';
 import nodeStateStyles from '../../../src/features/map/components/nodeState.module.css';
 import { setNodeState } from '../../../src/features/map/adapters/mapAdapter.js';
-import {
-  NODE_STATES,
-  nextNodeState,
-  nodeStateLabel,
-  type NodeState,
-} from '../../../src/features/map/nodeState.js';
+import { nodeStateLabel, type NodeState } from '../../../src/features/map/nodeState.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { renderWithProviders } from '../../test-utils.js';
 import good from '../../fixtures/wire/map/goodMap.js';
@@ -77,13 +72,6 @@ function page(nodeId: string) {
 }
 
 describe('hex state', () => {
-  it('cycles Locked, Unlocked, Mapped and back to Locked', () => {
-    expect(NODE_STATES).toEqual(['LOCKED', 'UNLOCKED', 'MAPPED']);
-    expect(nextNodeState('LOCKED')).toBe('UNLOCKED');
-    expect(nextNodeState('UNLOCKED')).toBe('MAPPED');
-    expect(nextNodeState('MAPPED')).toBe('LOCKED');
-  });
-
   it('sends the node, the state and an idempotency key', async () => {
     const calls = serve(['admin']);
     await expect(setNodeState(hexMap.id, river.id, 'UNLOCKED', 'key-1')).resolves.toEqual({
@@ -100,23 +88,18 @@ describe('hex state', () => {
     ]);
   });
 
-  it('lets an admin cycle a hex through every state from the sidebar', async () => {
+  it('lets an admin pick any state from the sidebar, including Unlocked straight to Locked', async () => {
     const calls = serve(['admin', 'player']);
     page(river.id);
     const panel = await screen.findByRole('region', { name: 'Selected hex' });
-    expect(within(panel).getByText('Locked')).toBeVisible();
-    for (const [from, to] of [
-      ['Locked', 'Unlocked'],
-      ['Unlocked', 'Mapped'],
-      ['Mapped', 'Locked'],
-    ] as const) {
-      await userEvent.click(
-        await within(panel).findByRole('button', { name: `Change to ${to}` }),
-      );
-      await waitFor(() => expect(within(panel).getByText(to)).toBeVisible());
-      expect(within(panel).queryByText(from, { selector: 'span' })).toBeNull();
+    const control = await within(panel).findByRole('button', { name: /^Hex state/ });
+    expect(control).toHaveTextContent('Locked');
+    for (const to of ['Mapped', 'Unlocked', 'Locked'] as const) {
+      await userEvent.click(control);
+      await userEvent.click(await screen.findByRole('menuitem', { name: to }));
+      await waitFor(() => expect(control).toHaveTextContent(to));
     }
-    expect(calls.map((call) => call.state)).toEqual(['UNLOCKED', 'MAPPED', 'LOCKED']);
+    expect(calls.map((call) => call.state)).toEqual(['MAPPED', 'UNLOCKED', 'LOCKED']);
     expect(calls.every((call) => call.nodeId === river.id && call.mapId === hexMap.id)).toBe(
       true,
     );
@@ -124,6 +107,15 @@ describe('hex state', () => {
       (call) => (call.meta as { idempotencyKey: string }).idempotencyKey,
     );
     expect(new Set(keys).size).toBe(3);
+  });
+
+  it('sends nothing when an admin picks the current state', async () => {
+    const calls = serve(['admin']);
+    page(river.id);
+    const panel = await screen.findByRole('region', { name: 'Selected hex' });
+    await userEvent.click(await within(panel).findByRole('button', { name: /^Hex state/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Locked' }));
+    expect(calls).toHaveLength(0);
   });
 
   it('refreshes neighbouring hex states after mapping a hex', async () => {
@@ -143,7 +135,8 @@ describe('hex state', () => {
     );
     page(river.id);
     const panel = await screen.findByRole('region', { name: 'Selected hex' });
-    await userEvent.click(await within(panel).findByRole('button', { name: 'Change to Mapped' }));
+    await userEvent.click(await within(panel).findByRole('button', { name: /^Hex state/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Mapped' }));
     const graph = screen.getByRole('group', { name: 'Lightfall map' });
     await waitFor(() => {
       expect(within(graph).getByRole('button', { name: `${river.name}, Mapped` })).toBeVisible();
@@ -160,7 +153,7 @@ describe('hex state', () => {
     const panel = await screen.findByRole('region', { name: 'Selected hex' });
     expect(within(panel).getByText('Hex state')).toBeVisible();
     expect(within(panel).getByText('Mapped')).toBeVisible();
-    expect(within(panel).queryByRole('button', { name: /^Change to/ })).toBeNull();
+    expect(within(panel).queryByRole('button', { name: /^Hex state/ })).toBeNull();
     expect(calls).toHaveLength(0);
   });
 
@@ -174,7 +167,7 @@ describe('hex state', () => {
     page(gate.id);
     const panel = await screen.findByRole('region', { name: 'Selected location' });
     expect(within(panel).queryByText('Hex state')).toBeNull();
-    expect(within(panel).queryByRole('button', { name: /^Change to/ })).toBeNull();
+    expect(within(panel).queryByRole('button', { name: /^Hex state/ })).toBeNull();
   });
 
   it('draws each hex in its state and explains the states in the key', async () => {

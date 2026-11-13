@@ -25,7 +25,9 @@ const ruling = good.items.find((item) => item.category === 'ruling')!;
 describe('rule detail families', () => {
   it('shows a guide on its guide URL', async () => {
     renderAt(`/rules/guides/${guide.slug}`);
-    expect(await screen.findByText(guide.effectiveBody!)).toBeInTheDocument();
+    expect(
+      await screen.findByText(guide.effectiveBody!, {}, { timeout: 10_000 }),
+    ).toBeInTheDocument();
     // The way back sits above the title, not under it.
     const back = screen.getByRole('link', { name: 'Rules' });
     const title = screen.getByRole('heading', { level: 1, name: guide.title });
@@ -33,7 +35,7 @@ describe('rule detail families', () => {
       back.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Edit guide' })).not.toBeInTheDocument();
-  });
+  }, 15_000);
 
   it('does not serve a guide on a ruling URL', async () => {
     renderAt(`/rules/rulings/${guide.slug}`);

@@ -27,6 +27,8 @@ export type ActivitySummaryType = {
 };
 
 export type AdminCharacterDirectoryEntryType = {
+  /** Mirror time of the last successful D&D Beyond sync. Older than verificationSubmittedAt means that sync failed and the sheet is stale. */
+  ddbSyncedAt?: Maybe<Scalars['DateTime']['output']>;
   ddbUrl?: Maybe<Scalars['String']['output']>;
   guildId?: Maybe<Scalars['ID']['output']>;
   id: Scalars['ID']['output'];
@@ -53,6 +55,13 @@ export type AdminCharacterDirectoryFiltersInput = {
 export type AdminCharacterDirectoryType = {
   items: Array<AdminCharacterDirectoryEntryType>;
   total: Scalars['Int']['output'];
+};
+
+export type AdminCommunityStatsType = {
+  /** Class catalog name. Empty when the character has no class pick. */
+  charactersByClass: Array<CountByKeyType>;
+  questHexes: Array<AdminQuestHexCountType>;
+  totalCharacters: Scalars['Int']['output'];
 };
 
 export type AdminDeliveryConfigType = {
@@ -108,6 +117,13 @@ export type AdminOperationsType = {
 export type AdminOperationsTypeActiveAlertsArgs = {
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
+};
+
+export type AdminQuestHexCountType = {
+  id: Scalars['ID']['output'];
+  mapName: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  questCount: Scalars['Int']['output'];
 };
 
 export type AnnouncementRoleInput = {
@@ -898,6 +914,7 @@ export type Mutation = {
    */
   _contractLayoutStub: Scalars['Boolean']['output'];
   acknowledgeSuppressedNotifications: NotificationWriteReceipt;
+  addQuestParticipant: QuestParticipantType;
   adjustPcxp: ProgressionEntryType;
   assignArchon: ArchonAssignmentType;
   assignLieutenant: LieutenantAssignmentType;
@@ -923,8 +940,10 @@ export type Mutation = {
   logCharacterEvent: CharacterLogType;
   markNotificationsRead: NotificationWriteReceipt;
   publishDocument: DocumentType;
+  publishQuestPlayerList: DeliveryReceipt;
   redriveDiscordDelivery: DeliveryReceipt;
   removeQuestFromArc: QuestType;
+  removeQuestParticipant: QuestParticipantType;
   restoreCharacter: CharacterType;
   restoreDocument: DocumentType;
   restoreQuest: QuestType;
@@ -979,6 +998,13 @@ export type Mutation = {
 export type MutationAcknowledgeSuppressedNotificationsArgs = {
   limit?: Scalars['Int']['input'];
   meta: CommandMeta;
+};
+
+
+export type MutationAddQuestParticipantArgs = {
+  characterId: Scalars['ID']['input'];
+  meta: CommandMeta;
+  questId: Scalars['ID']['input'];
 };
 
 
@@ -1155,6 +1181,12 @@ export type MutationPublishDocumentArgs = {
 };
 
 
+export type MutationPublishQuestPlayerListArgs = {
+  meta: CommandMeta;
+  questId: Scalars['ID']['input'];
+};
+
+
 export type MutationRedriveDiscordDeliveryArgs = {
   jobId: Scalars['ID']['input'];
   meta: CommandMeta;
@@ -1163,6 +1195,13 @@ export type MutationRedriveDiscordDeliveryArgs = {
 
 
 export type MutationRemoveQuestFromArcArgs = {
+  meta: CommandMeta;
+  questId: Scalars['ID']['input'];
+};
+
+
+export type MutationRemoveQuestParticipantArgs = {
+  characterId: Scalars['ID']['input'];
   meta: CommandMeta;
   questId: Scalars['ID']['input'];
 };
@@ -1215,6 +1254,7 @@ export type MutationRevokeLieutenantArgs = {
 
 export type MutationSelectQuestParticipantsArgs = {
   characterIds: Array<Scalars['ID']['input']>;
+  fillByLastGamePlayed?: Scalars['Boolean']['input'];
   meta: CommandMeta;
   questId: Scalars['ID']['input'];
 };
@@ -1647,6 +1687,7 @@ export type Query = {
    */
   _contractLayoutStub: Scalars['Boolean']['output'];
   adminCharacterDirectory: AdminCharacterDirectoryType;
+  adminCommunityStats: AdminCommunityStatsType;
   adminOperations: AdminOperationsType;
   archonAssignments: ArchonPage;
   auditBody: Array<BodySpanAudit>;
@@ -2213,6 +2254,7 @@ export type QuestParticipantType = {
   characterId: Scalars['ID']['output'];
   characterName: Scalars['String']['output'];
   createdAt: Scalars['DateTime']['output'];
+  lastPlayedAt?: Maybe<Scalars['DateTime']['output']>;
   manual: Scalars['Boolean']['output'];
   memberAvatarUrl?: Maybe<Scalars['String']['output']>;
   memberDisplayName: Scalars['String']['output'];
@@ -2235,6 +2277,7 @@ export type QuestPointcrawlLinkInput = {
 };
 
 export type QuestPointcrawlLinkType = {
+  name: Scalars['String']['output'];
   pointcrawlNodeId: Scalars['ID']['output'];
   questId: Scalars['ID']['output'];
   role: Scalars['String']['output'];
@@ -2421,8 +2464,6 @@ export type SiteStatsType = {
   activeCharacters: Scalars['Int']['output'];
   activity: ActivitySummaryType;
   membersByRole: Array<CountByKeyType>;
-  publishedDocumentsByCategory: Array<CountByKeyType>;
-  publishedDocumentsByKind: Array<CountByKeyType>;
   totalDms: Scalars['Int']['output'];
   totalMaps: Scalars['Int']['output'];
   totalMembers: Scalars['Int']['output'];

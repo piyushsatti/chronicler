@@ -88,7 +88,7 @@ export const graphql: FeatureGraphql = {
         signupForQuest: {
           questId: goodQuestDetail.id,
           characterId: '00000000-0000-4000-8000-000000000002',
-          status: 'signed_up',
+          status: 'waitlisted',
         },
       },
     }),
@@ -142,6 +142,26 @@ export const graphql: FeatureGraphql = {
   QuestMapOptions: () => HttpResponse.json({ data: { maps: [] } }),
   QuestSelectParticipants: () =>
     HttpResponse.json({ data: { selectQuestParticipants: [] } }),
+  QuestRosterCharacters: () =>
+    HttpResponse.json({ data: { characters: { items: [] } } }),
+  QuestAddParticipant: () =>
+    HttpResponse.json({
+      data: {
+        addQuestParticipant: {
+          characterId: '00000000-0000-4000-8000-000000000002',
+          status: 'signed_up',
+        },
+      },
+    }),
+  QuestRemoveParticipant: () =>
+    HttpResponse.json({
+      data: {
+        removeQuestParticipant: {
+          characterId: '00000000-0000-4000-8000-000000000002',
+          status: 'withdrawn',
+        },
+      },
+    }),
   QuestAttestParticipation: () =>
     HttpResponse.json({ data: { attestQuestParticipation: [] } }),
   QuestSetPointcrawlLinks: () =>

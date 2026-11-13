@@ -1,11 +1,13 @@
 package site
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/piyushsatti/chronicler/apps/api/internal/delivery"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 )
 
@@ -32,6 +34,39 @@ func TestMapDeliveryUsesCanonicalInternalQuestDestination(t *testing.T) {
 	missing := mapAdminDeliveryJob(dbgen.SiteAdminDeliveryJobsRow{})
 	if missing.QuestLink != nil || missing.QuestTitle != nil || missing.QuestId != nil {
 		t.Fatalf("missing association fabricated metadata: %+v", missing)
+	}
+}
+
+func TestMapAdminDeliveryJobExplainsDiscordFailure(t *testing.T) {
+	body := `{"message":"Unknown Channel","code":10003}`
+	for _, test := range []struct {
+		name    string
+		code    string
+		message string
+		want    string
+	}{
+		{name: "stored permission", code: delivery.SafeCodeDiscordPermission, message: "discord api status 404: " + body, want: delivery.SafeCodeDiscordPermission},
+		{name: "missing channel", message: "discord create message: discord api status 404: " + body, want: delivery.SafeCodeDiscordNotFound},
+		{name: "rate limit", message: "discord api status 429: slow down", want: delivery.SafeCodeDiscordRateLimit},
+		{name: "unavailable", message: "discord api status 502: bad gateway", want: delivery.SafeCodeDiscordUnavailable},
+		{name: "login refused", message: "discord api status 401", want: delivery.SafeCodeDiscordUnauthorized},
+		{name: "not configured", message: "discord delivery not configured: announce channel", want: delivery.SafeCodeDiscordNotConfigured},
+		{name: "unreachable", message: "discord create message: dial tcp 1.2.3.4:443: i/o timeout", want: delivery.SafeCodeDiscordUnreachable},
+		{name: "unknown", message: "pq: deadlock detected", want: delivery.SafeCodeDiscordRejected},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			row := dbgen.SiteAdminDeliveryJobsRow{ErrorMessage: pgtype.Text{String: test.message, Valid: true}}
+			if test.code != "" {
+				row.SafeErrorCode = pgtype.Text{String: test.code, Valid: true}
+			}
+			job := mapAdminDeliveryJob(row)
+			if job.SafeError == nil || *job.SafeError != test.want || strings.Contains(*job.SafeError, "Unknown Channel") || strings.Contains(*job.SafeError, body) {
+				t.Fatalf("safe error=%v, want %s", job.SafeError, test.want)
+			}
+		})
+	}
+	if job := mapAdminDeliveryJob(dbgen.SiteAdminDeliveryJobsRow{}); job.SafeError != nil {
+		t.Fatalf("empty failure invented %q", *job.SafeError)
 	}
 }
 

@@ -94,7 +94,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
       <PageHeader
         back={{ to: '/me', label: 'Your page' }}
         title="DM dashboard"
-        lede="Plan your next session and manage your quests, series and DM tables."
+        lede="Plan your next session and manage your quests and series."
         actions={
           <>
             <Link className="btn btn--secondary" to={view.profileHref}>
@@ -112,7 +112,6 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
       <CardGrid className="dm-dashboard__stats" gap={3} aria-label="Your DM stats">
         <StatTile label="Quests posted" value={data.quests.total} />
         {data.dmStats ? <StatTile label="Sessions run" value={data.dmStats.sessionCount} /> : null}
-        <StatTile label="DM tables" value={data.documents.total} />
       </CardGrid>
       <DetailLayout
         railLabel="DM tools"
@@ -186,44 +185,6 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
               <li className="card stack" key={series.id}>
                 <Link className="type-title" to={`/series/${encodeURIComponent(series.id)}`}>{series.name}</Link>
                 <p className="type-caption dm-dashboard__pin">{pluralize(series.questCount, 'quest')}</p>
-              </li>
-            ))}
-          </CardGrid>
-        )}
-      </Card>
-      <Card className="stack">
-        <div className="row" data-wrap="1" data-justify="between" data-align="center">
-          <h2 className="type-heading">Your DM tables</h2>
-          {data.documents.items.length > 0 ? (
-            <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">
-              New DM table
-            </Link>
-          ) : null}
-        </div>
-        <AdminPagination page={view.tablePage} />
-        {data.documents.items.length === 0 ? (
-          <EmptyState
-            kind="generic"
-            message="You have no DM tables yet."
-            action={
-              <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">
-                New DM table
-              </Link>
-            }
-          />
-        ) : (
-          <CardGrid as="ul" gap={3}>
-            {data.documents.items.map((table) => (
-              <li key={table.id} className="card stack">
-                <Link className="type-title" to={`/community/dm-table/${table.slug}`}>
-                  {table.title}
-                </Link>
-                <p className="type-caption dm-dashboard__pin">{statusLabel(table.status)}</p>
-                {table.canEditMetadata ? (
-                  <Link className="type-link" to={`/editor/dm-table/${table.id}/edit`}>
-                    Edit table
-                  </Link>
-                ) : null}
               </li>
             ))}
           </CardGrid>

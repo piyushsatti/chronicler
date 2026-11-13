@@ -4,6 +4,7 @@ import { Card } from '../../components/primitives/Card.js';
 import { EmptyState } from '../../components/primitives/EmptyState.js';
 import { Select } from '../../components/primitives/Select.js';
 import styles from './editor.module.css';
+import markdown from '../../components/interactive/markdown-editor/markdown-editor.module.css';
 import { Button } from '../../components/primitives/Button.js';
 import { StatePanel } from '../../components/foundation/StatePanel.js';
 import { toAppError } from '../../errors/toAppError.js';
@@ -22,7 +23,7 @@ export function EditorSummaryLinks({
   return (
     <Card as="section" className={`stack ${styles.panel}`} aria-label="Summary links">
       <h2 className="type-heading">Quests and character</h2>
-      <ul className={`stack ${styles.items}`} data-gap="2" aria-label="Linked quests">
+      <ul className={`stack ${markdown.items}`} data-gap="2" aria-label="Linked quests">
         {view.selected.map((quest) => (
           <li key={quest.id}>
             {quest.shortCode ? (
@@ -117,7 +118,7 @@ export function EditorSummaryLinks({
                 />
               ) : (
                 <ul
-                  className={`stack ${styles.items} ${styles.questChoices}`}
+                  className={`stack ${markdown.items} ${styles.questChoices}`}
                   data-gap="2"
                   aria-label="Available quests"
                 >

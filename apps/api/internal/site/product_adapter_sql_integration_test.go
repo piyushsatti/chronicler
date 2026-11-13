@@ -416,4 +416,41 @@ func TestRedriveDiscordDeliveryReportsQuestRevisionsAndClearsSafeCode(t *testing
 	}
 }
 
+func TestReadAdminOperationsReturnsLatestMaintenanceJobPerKind(t *testing.T) {
+	fixture := dbtest.NewProductFixture(t)
+	ctx := context.Background()
+	adapter, err := NewProductPostgres(fixture.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	older := time.Date(2026, 10, 20, 1, 0, 0, 0, time.UTC)
+	latest := time.Date(2026, 10, 21, 2, 0, 0, 0, time.UTC)
+	reconcileAt := time.Date(2026, 10, 21, 3, 0, 0, 0, time.UTC)
+	insert := func(key, kind, lane, state string, code *string, at time.Time) {
+		t.Helper()
+		if _, err := fixture.Pool.Exec(ctx, `INSERT INTO background_jobs(job_key,kind,lane,state,safe_error_code,updated_at) VALUES($1,$2,$3,$4,$5,$6)`, key, kind, lane, state, code, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	insert("maintenance-gametime-old", "gametime_fill", "maintenance", "succeeded", nil, older)
+	insert("maintenance-gametime-new", "gametime_fill", "maintenance", "repair_required", ptrString("DISCORD_NOT_CONFIGURED"), latest)
+	insert("maintenance-reconcile", "reconcile_dry_run", "maintenance", "queued", nil, reconcileAt)
+	insert("not-maintenance", "quest_discord_delivery", "discord", "dead", ptrString("DISCORD_PERMISSION"), latest)
+
+	view, err := adapter.ReadAdminOperations(ctx, auth.Authority{}, AdminOperationsSpec{Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(view.ScheduledWork) != 2 {
+		t.Fatalf("scheduled=%+v, want latest gametime_fill and reconcile_dry_run", view.ScheduledWork)
+	}
+	fill, reconcile := view.ScheduledWork[0], view.ScheduledWork[1]
+	if fill.Kind != "gametime_fill" || fill.Outcome != "repair_required" || !fill.ExpectedSlot.Equal(latest) || fill.SafeErrorCode == nil || *fill.SafeErrorCode != "DISCORD_NOT_CONFIGURED" {
+		t.Fatalf("gametime_fill=%+v", fill)
+	}
+	if reconcile.Kind != "reconcile_dry_run" || reconcile.Outcome != "queued" || !reconcile.ExpectedSlot.Equal(reconcileAt) || reconcile.SafeErrorCode != nil {
+		t.Fatalf("reconcile_dry_run=%+v", reconcile)
+	}
+}
+
 func ptrString(value string) *string { return &value }

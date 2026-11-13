@@ -202,6 +202,11 @@
   margin-block-end: var(--sp-2);
 }
 
+.note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .rules > :first-child {
   margin-block-start: 0;
 }

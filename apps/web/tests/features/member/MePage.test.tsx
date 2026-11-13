@@ -51,6 +51,7 @@ describe('MePage', () => {
       'Summaries',
       'Notes',
       'Settings',
+      'Personalize',
     ]);
     expect(within(tabs).getByRole('link', { name: 'Overview' })).toHaveAttribute(
       'aria-current',
@@ -76,10 +77,11 @@ describe('MePage', () => {
       'href',
       '/me/settings',
     );
-    expect(screen.getByRole('link', { name: 'Personalize' })).toHaveAttribute(
+    expect(within(tabs).getByRole('link', { name: 'Personalize' })).toHaveAttribute(
       'href',
       '/me/personalize',
     );
+    expect(screen.getAllByRole('link', { name: 'Personalize' })).toHaveLength(1);
     const since = screen.getByRole('region', { name: 'Since you joined' });
     expect(since).toHaveTextContent('1Summaries written');
     expect(since).toHaveTextContent('Joined');
@@ -269,11 +271,7 @@ describe('MePage', () => {
       ),
     );
     renderWithProviders(<MePage />, { route: '/me' });
-    expect(await screen.findByRole('link', { name: 'Harbor guide' })).toHaveAttribute(
-      'href',
-      '/community/dm-table/harbor-guide',
-    );
-    expect(screen.getByRole('link', { name: 'Harbor tales' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Harbor tales' })).toHaveAttribute(
       'href',
       '/series/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     );
@@ -281,6 +279,8 @@ describe('MePage', () => {
       'href',
       '/quests/Q-91',
     );
+    expect(screen.queryByRole('link', { name: 'Harbor guide' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'DM dashboard' })).toHaveAttribute(
       'href',
       '/dm',
@@ -343,8 +343,9 @@ describe('MePage', () => {
     renderWithProviders(<MePage />, { route: '/me' });
     expect(await screen.findByText('5 series')).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Series 4' })).toBeNull();
-    for (const name of ['See all series', 'See all quests to run', 'See all DM tables'])
+    for (const name of ['See all series', 'See all quests to run'])
       expect(screen.getByRole('link', { name })).toHaveAttribute('href', '/dm');
+    expect(screen.queryByRole('link', { name: 'See all DM tables' })).not.toBeInTheDocument();
   });
 
   it.each([1, 27])(
@@ -487,12 +488,9 @@ describe('MePage', () => {
     );
     renderWithProviders(<MePage />, { route: '/me' });
     expect(
-      await screen.findByRole('heading', { name: 'Your tables, series and quests' }),
+      await screen.findByRole('heading', { name: 'Your series and quests' }),
     ).toBeVisible();
-    expect(screen.getByRole('link', { name: 'New DM table' })).toHaveAttribute(
-      'href',
-      '/editor/dm-table',
-    );
+    expect(screen.queryByRole('link', { name: 'New DM table' })).not.toBeInTheDocument();
     // Starting a series opens the create dialog in place; there is no /series/new page.
     expect(
       await screen.findByRole('button', { name: 'Create a series' }),

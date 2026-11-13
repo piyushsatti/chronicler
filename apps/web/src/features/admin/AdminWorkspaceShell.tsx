@@ -61,7 +61,7 @@ function adminDeclaration(page: string, bare: boolean, authority: WorkspaceAutho
     page,
     regions: [
       ...(bare ? [] : [{ role: 'summary', priority: 0 }]),
-      ...(authority === 'dm' ? [] : [{ role: 'nav', priority: 1 }]),
+      ...(authority === 'dm' || authority === 'verifier' ? [] : [{ role: 'nav', priority: 1 }]),
       { role: 'body', priority: 2 },
     ],
   };
@@ -217,7 +217,7 @@ function AuthorizedWorkspace({
               ? { to: '/me', label: 'Your page' }
               : { to: '/', label: 'Home' }
           }
-          title={authority === 'dm' ? title : 'Admin'}
+          title={authority === 'dm' || authority === 'verifier' ? title : 'Admin'}
         />
         <StatePanel
           status="error"
@@ -225,7 +225,9 @@ function AuthorizedWorkspace({
           deniedMessage={
             authority === 'dm'
               ? 'Only DMs can open this dashboard. Apply to run quests from the DM directory.'
-              : 'This area is for staff.'
+              : authority === 'verifier'
+                ? 'Only verifiers can open this page.'
+                : 'This area is for staff.'
           }
           action={authority === 'dm' ? <Link className="btn btn--primary" to="/dms">Browse DMs and apply</Link> : undefined}
           onRetry={account.reload}

@@ -39,18 +39,19 @@ describe('DM profile editing journey', () => {
     expect(shortcut).toHaveAttribute('href', '/dms/@mira?edit=profile');
     await user.click(shortcut);
     expect(await screen.findByRole('heading', { name: 'Your profile' })).toBeVisible();
-    expect(screen.getByRole('textbox', { name: 'Tagline' })).toHaveValue(
-      'Horror & heists',
-    );
+    expect(
+      within(screen.getByRole('group', { name: 'Tagline' })).getByText('Horror & heists'),
+    ).toBeVisible();
+    expect(screen.getAllByRole('toolbar', { name: 'Markdown formatting' })).toHaveLength(3);
     expect(screen.getByLabelText('Start time 1')).toHaveValue('18:00');
     expect(screen.getByLabelText('End time 1')).toHaveValue('22:00');
     expect(screen.getByRole('checkbox', { name: 'Accepting players' })).toBeChecked();
     expect(screen.getByRole('button', { name: 'Save availability' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Save DM profile' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Close editor' }));
-    expect(screen.queryByRole('textbox', { name: 'Tagline' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Tagline' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Edit profile' }));
-    expect(screen.getByRole('textbox', { name: 'Tagline' })).toBeVisible();
+    expect(screen.getByRole('group', { name: 'Tagline' })).toBeVisible();
   });
 
   it('does not expose another member controls through an edit query', async () => {
@@ -62,7 +63,7 @@ describe('DM profile editing journey', () => {
     renderJourney('/dms/@mira?edit=profile');
     expect(await screen.findByRole('heading', { name: 'Mira' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Edit profile' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: 'Tagline' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Tagline' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Start time 1')).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'Accepting players' })).not.toBeInTheDocument();
   });
@@ -93,7 +94,8 @@ describe('DM profile editing journey', () => {
     if (!(emptyState instanceof HTMLElement)) throw new Error('Missing owner empty state');
     await user.click(within(emptyState).getByRole('button', { name: action }));
     expect(await screen.findByRole('heading', { name: 'Your profile' })).toBeVisible();
-    expect(screen.getByRole('textbox', { name: 'Tagline' })).toBeVisible();
+    expect(screen.getByRole('group', { name: 'Tagline' })).toBeVisible();
+    expect(screen.getAllByRole('toolbar', { name: 'Markdown formatting' })).toHaveLength(3);
     expect(screen.getByRole('button', { name: 'Save availability' })).toBeVisible();
   });
 });

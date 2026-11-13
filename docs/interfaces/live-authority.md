@@ -10,7 +10,7 @@ The JWT asserts identity only. Roles, permissions, and status are read live from
 
 Ownership is an invariant in code; operation declarations name any non-owner authority. [D14](/docs/decisions/D14-Ownership-Is-Code-Override-Is-Declared.md) separates document read audience from write ownership. [D29](/docs/decisions/D29-Owner-And-Admin-Bypass-Identity-Predicates.md) separates existing surfaces, caller-dependent authorization and caller-independent state validity.
 
-**Player-character exception (2026-09-16):** only the owning player may mutate its aggregate, including progression/logs, verification submission, downtime and D&D Beyond sync. Platform owner, admin, verifier and other staff have no mutation bypass. Admin/verifier assessment decisions remain separately authorized and ledgered; they may change approval/lifecycle state without editing player-authored fields or syncing.
+**Player-character exception (2026-09-16, profile carve-out 2026-11-07):** only the owning player may mutate the aggregate, including progression/logs, verification submission, downtime and D&D Beyond sync. Profile fields written by `updateCharacterProfile` may also be edited by an admin or the platform owner. Verifiers and other DMs have no mutation bypass. Admin/verifier assessment decisions remain separately authorized and ledgered; they may change approval/lifecycle state without editing other player-authored fields or syncing.
 
 The per-row read-audience family is documents, revisions and links; public quests and characters do not make their linked documents readable. [scoped-body](/docs/interfaces/scoped-body.md) preserves the whole-document gate, per-viewer blocks on every readable document, and author/admin raw-body grants.
 

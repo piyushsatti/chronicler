@@ -52,7 +52,12 @@ export function QuestParticipation({
   );
   if (!authenticated)
     return (
-      <Card as="section" pad={4} className={styles.signup} aria-label="Your participation">
+      <Card
+        as="section"
+        pad={4}
+        className={styles.signup}
+        aria-label="Your participation"
+      >
         <p className="type-label">Your sign-up</p>
         <p className="type-body">Members can claim a seat at this table.</p>
         <Link className={`btn btn--primary ${styles.fullWidth}`} to="/login">
@@ -62,9 +67,16 @@ export function QuestParticipation({
     );
   if (!preplay)
     return (
-      <Card as="section" pad={4} className={styles.signup} aria-label="Your participation">
+      <Card
+        as="section"
+        pad={4}
+        className={styles.signup}
+        aria-label="Your participation"
+      >
         <p className="type-label">Your sign-up</p>
-        <p className="type-body">Signups and withdrawals are closed for this session.</p>
+        <p className="type-body">
+          Signups and withdrawals are closed for this session.
+        </p>
       </Card>
     );
   return (
@@ -105,7 +117,7 @@ export function QuestParticipation({
           </Button>
         </div>
       ))}
-      {guest ? (
+      {memberId === quest.dmId ? null : guest ? (
         <p>
           Have your first character approved to unlock quest signup.{' '}
           <Link to="/characters">Your characters</Link>
@@ -138,7 +150,9 @@ export function QuestParticipation({
           }}
         >
           <div className="stack" data-gap="1">
-            <span className="type-caption" id={characterLabelId}>Your character</span>
+            <span className="type-caption" id={characterLabelId}>
+              Your character
+            </span>
             <Select
               label="Your character"
               labelId={characterLabelId}
@@ -148,7 +162,10 @@ export function QuestParticipation({
               onValueChange={setSelected}
               options={[
                 { value: '', label: 'Choose your character' },
-                ...eligible.map((character) => ({ value: character.id, label: character.name })),
+                ...eligible.map((character) => ({
+                  value: character.id,
+                  label: character.name,
+                })),
               ]}
             />
           </div>
@@ -158,7 +175,7 @@ export function QuestParticipation({
               pending || !eligible.some((character) => character.id === selected)
             }
           >
-            {quest.filledCount >= quest.slotsMax ? 'Join waitlist' : 'Sign up'}
+            Join waitlist
           </Button>
         </form>
       )}

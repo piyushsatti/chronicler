@@ -4,25 +4,8 @@
   min-inline-size: 0;
 }
 
-/* Formatting tools sit left, the action group right. The action group keeps
-   Publish, Save draft and Cancel on one line and drops to its own row, right
-   aligned, when the card is narrow. */
-.toolbar {
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--sp-2) var(--sp-3);
-}
-
-.formatting {
-  flex: 1 1 0;
-  min-inline-size: 0;
-}
-
-.formatting > :global(.row[role='group']) {
-  border-inline-end: 1px solid var(--color-border);
-  padding-inline-end: var(--sp-2);
-}
-
+/* The action group keeps Publish, Save draft and Cancel on one line and drops
+   to its own row, right aligned, when the card is narrow. */
 .actions {
   flex-wrap: nowrap;
   align-items: center;
@@ -52,16 +35,6 @@
   overflow-wrap: anywhere;
   font-family: var(--font-mono);
   color: var(--color-text-2);
-}
-
-.srLegend {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  padding: 0;
 }
 
 .historyToggle {
@@ -261,10 +234,6 @@
     margin-block-start: 0;
   }
 
-  .formatting {
-    flex-basis: 100%;
-  }
-
   .actions {
     flex-basis: 100%;
     flex-wrap: nowrap;
@@ -342,15 +311,6 @@
   background: var(--color-bg-panel);
 }
 
-.items > li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  min-inline-size: 0;
-  gap: var(--sp-2);
-  overflow-wrap: anywhere;
-}
-
 .linksDisclosure > summary {
   cursor: pointer;
 }
@@ -363,12 +323,6 @@
   max-block-size: calc(var(--sp-8) * 3);
   overflow-y: auto;
   overscroll-behavior-y: contain;
-}
-
-/* Moved from inline styles (2026-10-21) */
-.widgetSource {
-  white-space: pre-wrap;
-  margin: 0;
 }
 
 .pickerMenu {
@@ -435,46 +389,6 @@
 .workspace :global(.pf-label) {
   flex-wrap: wrap;
   column-gap: var(--sp-2);
-}
-
-/* Blocks the server's body audit marks (auditBody). A tinted edge and a text
-   badge name who can read the block, so the colour is never the only signal. */
-.auditBlock {
-  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
-  box-shadow: inset 2px 0 0 var(--color-accent);
-}
-
-.auditBlock[data-audit='SPOILER'] {
-  background: color-mix(in srgb, var(--color-text-2) 6%, transparent);
-  box-shadow: inset 2px 0 0 var(--color-text-2);
-}
-
-.auditBlock[data-audit='MALFORMED'] {
-  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
-  box-shadow: inset 2px 0 0 var(--color-danger);
-}
-
-.auditBadge {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1);
-  margin: var(--sp-2) var(--sp-2) 0;
-  color: var(--color-text-2);
-  font-weight: 600;
-}
-
-.auditWarning {
-  align-items: center;
-  margin: 0 var(--sp-2) var(--sp-1);
-  padding: var(--sp-1) var(--sp-2);
-  border-inline-start: 2px solid var(--color-warn);
-  background: color-mix(in srgb, var(--color-warn) 8%, transparent);
-}
-
-.auditWarning > p {
-  margin: 0;
-  flex: 1 1 16rem;
-  min-inline-size: 0;
 }
 
 .previewViewer {

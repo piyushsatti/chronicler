@@ -150,6 +150,25 @@ func (p *PostgresRevisionApplier) SetDiscordEvent(ctx context.Context, questID, 
 	})
 }
 
+func (p *PostgresRevisionApplier) LoadPlayerList(ctx context.Context, questID string) (PlayerListTarget, error) {
+	uid, err := parseQuestPublicID(questID)
+	if err != nil {
+		return PlayerListTarget{}, err
+	}
+	row, err := p.q.QuestPlayerListTarget(ctx, uid)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PlayerListTarget{}, nil
+	}
+	if err != nil {
+		return PlayerListTarget{}, err
+	}
+	target := PlayerListTarget{Found: true, Status: row.Status, Deleted: row.DeletedAt.Valid}
+	if row.DiscordThreadID.Valid {
+		target.ThreadID = row.DiscordThreadID.String
+	}
+	return target, nil
+}
+
 func (p *PostgresRevisionApplier) SetDiscordThread(ctx context.Context, questID, threadID string) error {
 	uid, err := parseQuestPublicID(questID)
 	if err != nil {

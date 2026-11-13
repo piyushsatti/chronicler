@@ -29,6 +29,7 @@ import { ProfileOwnerActions } from '../components/ProfileOwnerActions.js';
 import { useDmTableDetailPage } from '../hooks/useDmTableDetailPage.js';
 import { useProfileBody } from '../hooks/useProfileBody.js';
 import { useProfileDmDetails } from '../hooks/useProfileDmDetails.js';
+import { useProfileDmTier } from '../hooks/useProfileDmTier.js';
 import styles from './profile.module.css';
 
 function Sessions({ items, emptyMessage = 'No sessions are scheduled yet.', action }: { items: DmTableSessionView[]; emptyMessage?: string; action?: React.ReactNode }) {
@@ -86,105 +87,21 @@ function DmInformation({
   const schedule = state.schedule.data;
   if (
     state.details.isSuccess && state.schedule.isSuccess && details && schedule &&
-    details.documents.total === 0 && details.questArcs.total === 0 && schedule.total === 0
+    details.questArcs.total === 0 && schedule.total === 0
   ) {
     return canCreate ? (
       <Card className="stack" pad={4}>
-        <h2 className="type-heading">Tables, series and quests</h2>
+        <h2 className="type-heading">Series and quests</h2>
         <p className="type-caption">Nothing here yet.</p>
-        {canCreate ? <div className={styles.chips}>
-          <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">New DM table</Link>
+        <div className={styles.chips}>
           <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />
           {canCreateQuest ? <Link className="btn btn--secondary btn--sm" to="/quests/new">Post a quest</Link> : null}
-        </div> : null}
+        </div>
       </Card>
     ) : <p className="type-caption">Nothing here yet.</p>;
   }
   return (
     <div className="stack" data-gap="4">
-      <Card className="stack" pad={4}>
-        <div className={styles.cardHead}>
-          <h2 className="type-heading">DM tables</h2>
-          {canCreate && state.details.data?.documents.items.length ? (
-            <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">
-              New DM table
-            </Link>
-          ) : null}
-        </div>
-        {state.details.isError ? (
-          <StatePanel variant="inline" status="error" error={toAppError(state.details.error, 'profile:tables')} />
-        ) : state.details.isPending ? (
-          <StatePanel variant="inline" status="loading" />
-        ) : state.details.data ? (
-          <>
-            {state.details.data.documents.items.length ? (
-              <CardGrid>
-                {state.details.data.documents.items.map((table) => (
-                  <Card key={table.id} className="stack" pad={4}>
-                    <Link
-                      className={`type-title ${styles.titleLink}`}
-                      to={`/community/dm-table/${table.slug}`}
-                    >
-                      {table.title}
-                    </Link>
-                    <Chip size="sm" tone="status" className={styles.pinEnd}>
-                      {statusLabel(table.status)}
-                    </Chip>
-                    {table.canEditBody || table.canEditMetadata ? (
-                      <Link
-                        className="type-link"
-                        to={`/editor/dm-table/${table.id}/edit`}
-                      >
-                        Edit {table.title}
-                      </Link>
-                    ) : null}
-                  </Card>
-                ))}
-              </CardGrid>
-            ) : (
-              <EmptyState
-                message={
-                  canCreate
-                    ? 'You have not published a DM table yet.'
-                    : 'No DM tables to show yet.'
-                }
-                action={
-                  canCreate ? (
-                    <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">
-                      New DM table
-                    </Link>
-                  ) : <Link className="type-link" to="/dms">Browse DMs</Link>
-                }
-              />
-            )}
-            {state.details.data.documents.total > state.pageSize ? (
-              <nav className="row" data-wrap="1" aria-label="DM table pages">
-                <Button
-                  variant="ghost"
-                  disabled={state.page === 1 || state.details.isFetching}
-                  onClick={() => state.setPage(state.page - 1)}
-                >
-                  Previous tables
-                </Button>
-                <span className="type-caption">
-                  Page {state.page} ·{' '}
-                  {pluralize(state.details.data.documents.total, 'table')}
-                </span>
-                <Button
-                  variant="ghost"
-                  disabled={
-                    state.page * state.pageSize >= state.details.data.documents.total ||
-                    state.details.isFetching
-                  }
-                  onClick={() => state.setPage(state.page + 1)}
-                >
-                  Next tables
-                </Button>
-              </nav>
-            ) : null}
-          </>
-        ) : null}
-      </Card>
       <Card className="stack" pad={4}>
         <div className={styles.cardHead}>
           <h2 className="type-heading">Series</h2>
@@ -301,6 +218,7 @@ function ProfileView({
   const showDmInformation = role === 'dm' || profile.member.roles.includes('dm');
   const dmDetails = useProfileDmDetails(profile.member.id, showDmInformation);
   const owner = me.data?.id === profile.member.id;
+  const dmTier = useProfileDmTier(role === 'dm' && owner);
   const roles = me.data?.roles ?? [];
   const canDm = roles.includes('dm') || roles.includes('admin');
   const liveDm = useLiveDm(owner && canDm);
@@ -334,7 +252,7 @@ function ProfileView({
       {profile.dmProfile || hasActivity ? <Card className="stack" pad={4}>
         <h2 className="type-heading">About</h2>
         {profile.dmProfile?.tagline ? (
-          <p className="type-body">{profile.dmProfile.tagline}</p>
+          <ContentRenderer body={profile.dmProfile.tagline} />
         ) : owner && canDm ? (
           <EmptyState message="You have not written a bio yet." action={<Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Edit profile</Button>} />
         ) : !profile.dmProfile?.philosophy &&
@@ -343,10 +261,10 @@ function ProfileView({
           <EmptyState message={`${name} hasn’t written a bio yet.`} />
         ) : null}
         {profile.dmProfile ? <>
-          {profile.dmProfile.philosophy ? <p className="type-narrative">{profile.dmProfile.philosophy}</p> : null}
+          {profile.dmProfile.philosophy ? <ContentRenderer body={profile.dmProfile.philosophy} /> : null}
           {profile.dmProfile.houseRules ? <>
             <h3 className="type-title">House rules</h3>
-            <p className="type-narrative">{profile.dmProfile.houseRules}</p>
+            <ContentRenderer body={profile.dmProfile.houseRules} />
           </> : null}
         </> : null}
         {hasActivity ? <p className="type-caption">
@@ -374,6 +292,7 @@ function ProfileView({
               actions={owner ? <Button variant="secondary" aria-expanded={editing} onClick={() => setEdit(editing ? '' : 'profile')}>{editing ? 'Close editor' : 'Edit profile'}</Button> : null}
               meta={<>
                 {profile.member.roles.filter((value) => value === 'guest' || value === 'dm' || value === 'player' || value === 'admin').map((value) => <Chip key={value} size="sm" tone="line">{roleLabel(value)}</Chip>)}
+                {dmTier ? <Chip size="sm" tone="line">{dmTier}</Chip> : null}
                 {profile.dmProfile && page.member.isDm ? <Chip size="sm" tone={profile.dmProfile.acceptingPlayers ? 'accent' : 'line'}>{profile.dmProfile.acceptingPlayers ? 'Accepting players' : 'Not accepting players'}</Chip> : null}
                 {profile.availability.map((slot, index) => <Chip key={`${slot.day}-${slot.startTime}-${index}`} size="sm" tone="neutral">{weekdayLabel(slot.day, { plural: true })} {clockLabel(slot.startTime)}–{clockLabel(slot.endTime)}</Chip>)}
               </>}

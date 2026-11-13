@@ -83,6 +83,14 @@ export function QuestDmActions({
   );
   const [confirm, setConfirm] = useState<'played' | 'close' | null>(null);
   const preplay = quest.machineStatus === 'open' || quest.machineStatus === 'full';
+  const unlimited = quest.signupType === 'dm_pick';
+  const seatsLeft = Math.max(0, quest.slotsMax - quest.filledCount);
+  const pickLimit =
+    quest.signupType === 'last_game_played' ? Math.min(2, seatsLeft) : seatsLeft;
+  const canFillByLastPlayed =
+    quest.signupType === 'last_game_played' &&
+    seatsLeft > 0 &&
+    quest.participants.some((participant) => participant.status === 'waitlisted');
   const input = closeInput(rows);
   const validRows =
     rows.length === roster.length &&
@@ -106,6 +114,15 @@ export function QuestDmActions({
             >
               Mark played
             </Button>
+            <Button
+              variant="secondary"
+              disabled={pending || quest.filledCount < 1}
+              onClick={() => {
+                void execute({ kind: 'publishPlayerList', questId: quest.id });
+              }}
+            >
+              Publish player list
+            </Button>
           </div>
           {quest.participants.some(
             (participant) => participant.status === 'waitlisted',
@@ -118,6 +135,7 @@ export function QuestDmActions({
                   kind: 'select',
                   questId: quest.id,
                   characterIds: selected,
+                  fillByLastGamePlayed: false,
                 }).then((success) => {
                   if (success) setSelected([]);
                 });
@@ -125,10 +143,12 @@ export function QuestDmActions({
             >
               <h3 className="type-title">Select waitlisted characters</h3>
               <p className="type-caption">
-                {Math.max(0, quest.slotsMax - quest.filledCount)} seats available.
+                {unlimited
+                  ? 'Seat any waitlisted characters. There is no seat cap. '
+                  : `${seatsLeft} seats available. `}
                 Current character eligibility is checked when you save.
                 {quest.signupType === 'last_game_played'
-                  ? ' The list is ordered for you: new players first, then the players who have waited longest since their last played game.'
+                  ? ' You can reserve two players. The list is ordered for you: new players first, then the players who have waited longest since their last played game.'
                   : ''}
               </p>
               {quest.participants
@@ -155,11 +175,28 @@ export function QuestDmActions({
                     pending ||
                     selected.length === 0 ||
                     selected.length > 100 ||
-                    selected.length > quest.slotsMax - quest.filledCount
+                    (!unlimited && selected.length > pickLimit)
                   }
                 >
                   Confirm selection
                 </Button>
+                {canFillByLastPlayed ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={pending}
+                    onClick={() => {
+                      void execute({
+                        kind: 'select',
+                        questId: quest.id,
+                        characterIds: [],
+                        fillByLastGamePlayed: true,
+                      });
+                    }}
+                  >
+                    Add by Last Game Played
+                  </Button>
+                ) : null}
               </div>
             </form>
           ) : null}

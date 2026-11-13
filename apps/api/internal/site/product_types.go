@@ -129,16 +129,14 @@ type SearchResultView struct {
 }
 
 type SiteStatsView struct {
-	ActiveCharacters             int32
-	Activity                     member.ActivitySummaryView
-	MembersByRole                []CountByKeyView
-	PublishedDocumentsByCategory []CountByKeyView
-	PublishedDocumentsByKind     []CountByKeyView
-	TotalDms                     int32
-	TotalMaps                    int32
-	TotalMembers                 int32
-	TotalQuests                  int32
-	TotalRegions                 int32
+	ActiveCharacters int32
+	Activity         member.ActivitySummaryView
+	MembersByRole    []CountByKeyView
+	TotalDms         int32
+	TotalMaps        int32
+	TotalMembers     int32
+	TotalQuests      int32
+	TotalRegions     int32
 }
 
 type RedriveDiscordDeliverySpec struct {

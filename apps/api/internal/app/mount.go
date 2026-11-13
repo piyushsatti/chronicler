@@ -28,7 +28,7 @@ type HTTPDeps struct {
 	Authority     auth.AuthorityResolver
 	Notifications notification.Queries
 	Documents     document.Queries
-	SiteStats     func() site.Stats
+	SiteStats     func(context.Context) (site.Stats, error)
 	MemberMe      member.MeQuery
 	Login         *login.Service
 	Ingest        *ingest.Handler
@@ -51,7 +51,7 @@ func Mount(mux httpserver.Router, d HTTPDeps) {
 
 	stats := d.SiteStats
 	if stats == nil {
-		stats = func() site.Stats { return site.Stats{} }
+		stats = func(context.Context) (site.Stats, error) { return site.Stats{}, nil }
 	}
 	site.Routes(mux, stats)
 
