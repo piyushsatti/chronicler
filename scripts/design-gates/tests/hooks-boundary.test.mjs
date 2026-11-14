@@ -1,18 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { scanFile } from '../check-boundary.mjs';
+import { collectViolations, scanFile } from '../check-boundary.mjs';
 
-const fixtures = join(
-  fileURLToPath(new URL('.', import.meta.url)),
-  'fixtures/hooks-boundary',
-);
-const webSrc = join(
-  fileURLToPath(new URL('.', import.meta.url)),
-  '../../../apps/web/src',
-);
+const here = dirname(fileURLToPath(import.meta.url));
+const fixtures = join(here, 'fixtures/hooks-boundary');
+const webSrc = join(here, '../../../apps/web/src');
 
 function hits(name) {
   const source = readFileSync(join(fixtures, name), 'utf8');
@@ -33,5 +28,15 @@ test('hooks importing a feature-root file is flagged', () => {
   assert.ok(
     found.some((v) => v.rule === 'shared-feature-import' && v.to === 'onboarding'),
     `expected shared-feature-import into onboarding; saw ${JSON.stringify(found)}`,
+  );
+});
+
+test('collectViolations walks shared folders outside features', () => {
+  const found = collectViolations();
+  assert.ok(
+    found.some(
+      (v) => v.rule === 'shared-feature-import' && v.file.startsWith('src/hooks/'),
+    ),
+    `expected shared-feature-import under src/hooks/; saw none among ${found.filter((v) => v.rule === 'shared-feature-import').length} shared hits`,
   );
 });
