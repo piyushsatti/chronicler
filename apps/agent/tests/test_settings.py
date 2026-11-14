@@ -9,7 +9,7 @@ def environment(monkeypatch, tmp_path):
     values = {
         "AGENT_CONTEXT_FILE": str(context),
         "API_URL": "http://api.test",
-        "INGEST_SECRET": "secret",
+        "AGENT_WORKER_SECRET": "secret",
         "LITELLM_BASE_URL": "https://model.test",
         "LITELLM_API_KEY": "fake",
         "AGENT_MODEL": "answer",
