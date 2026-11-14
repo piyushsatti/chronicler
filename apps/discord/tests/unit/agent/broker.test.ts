@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { parseQuestionResult } from '@discord/agent/broker.js';
+import { parseQuestionResult, submitQuestion } from '@discord/agent/broker.js';
+import type { AgentPort } from '@discord/agent/api.js';
 import { renderQuestionResult } from '@discord/agent/render.js';
-import { completedQuestion, jobId, publicOrigin } from '../../fixtures/api.js';
+import { completedQuestion, jobId, publicOrigin, questionRequest } from '../../fixtures/api.js';
+import { testConfig } from '../../support/config.js';
 
 describe('parseQuestionResult', () => {
   it('accepts a correlated completion with canonical links', () => {
@@ -123,5 +125,52 @@ describe('parseQuestionResult', () => {
     if (result.type === 'question.completed') {
       expect(result.sources).toHaveLength(4);
     }
+  });
+});
+
+describe('submitQuestion failure mapping', () => {
+  const config = testConfig({ agentPublicOrigin: publicOrigin });
+
+  it('rethrows submit network detail when status is undefined', async () => {
+    const agent: AgentPort = {
+      submit: async () => ({
+        ok: false,
+        kind: 'retryable',
+        detail: 'fetch failed',
+      }),
+      poll: async () => ({ ok: true, status: 204, text: '' }),
+    };
+    await expect(
+      submitQuestion(config, questionRequest, undefined, { agent }),
+    ).rejects.toThrow('fetch failed');
+  });
+
+  it('rethrows poll network detail when status is undefined', async () => {
+    const agent: AgentPort = {
+      submit: async () => ({ ok: true, status: 202, text: '' }),
+      poll: async () => ({
+        ok: false,
+        kind: 'retryable',
+        detail: 'timeout: The operation was aborted due to timeout',
+      }),
+    };
+    await expect(
+      submitQuestion(config, questionRequest, undefined, { agent }),
+    ).rejects.toThrow('timeout: The operation was aborted due to timeout');
+  });
+
+  it('rethrows poll byte-cap detail on a 200 failure', async () => {
+    const agent: AgentPort = {
+      submit: async () => ({ ok: true, status: 202, text: '' }),
+      poll: async () => ({
+        ok: false,
+        kind: 'permanent',
+        status: 200,
+        detail: 'response exceeded 65536 bytes',
+      }),
+    };
+    await expect(
+      submitQuestion(config, questionRequest, undefined, { agent }),
+    ).rejects.toThrow('response exceeded 65536 bytes');
   });
 });
