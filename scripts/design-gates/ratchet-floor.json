@@ -2,6 +2,7 @@
   "_comment": "Ceilings for allowlist section lengths. May only fall or hold.",
   "tokens": 0,
   "boundary": 0,
+  "hooksBoundary": 24,
   "responsive": 0,
   "layout": 0,
   "duplication": 0,

@@ -64,7 +64,6 @@ query HomeWarRoom(
         id
         slug
         title
-        effectiveBody
       }
       participants(limit: 100) {
         memberId
@@ -82,42 +81,7 @@ query HomeWarRoom(
     }
     total
   }
-  recentlyClosedQuests(closedSince: $closedSince, limit: 12) {
-    items {
-      id
-      shortCode
-      status
-      scheduledAt
-      slotsMax
-      filledCount
-      displayStatus
-      tags
-      regions
-      dm {
-        handle
-        displayName
-        avatarUrl
-      }
-      briefDocument {
-        id
-        slug
-        title
-        effectiveBody
-      }
-      participants(limit: 100) {
-        memberId
-        characterId
-        characterName
-        memberHandle
-        memberAvatarUrl
-        status
-      }
-      discordDelivery {
-        desiredRevision
-        appliedRevision
-        overallStatus
-      }
-    }
+  recentlyClosedQuests(closedSince: $closedSince, limit: 1) {
     total
   }
   communityDirectory(filters: { acceptingPlayers: true, role: "dm" }, limit: 12) {
