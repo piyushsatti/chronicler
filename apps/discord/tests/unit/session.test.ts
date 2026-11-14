@@ -20,6 +20,8 @@ vi.mock('@discord/agent/mount.js', () => ({
 vi.mock('@discord/health.js', () => ({ mountShardHealth }));
 vi.mock('@discord/log.js', () => ({ logger: { info: vi.fn() } }));
 
+import { mountActivity } from '@discord/activity/mount.js';
+import { mountAgent } from '@discord/agent/mount.js';
 import { start } from '@discord/session.js';
 
 it('logs in with heartbeat enabled and returns stop', async () => {
@@ -30,6 +32,8 @@ it('logs in with heartbeat enabled and returns stop', async () => {
     exitOnTerminal: true,
     exit: undefined,
   });
+  expect(mountActivity).toHaveBeenCalledWith(client, config, { gateway: disposeHealth });
+  expect(mountAgent).toHaveBeenCalledWith(client, config, disposeHealth);
   expect(client.login).toHaveBeenCalledWith('test-token');
   await session.stop();
   expect(disposeHealth).toHaveBeenCalledOnce();

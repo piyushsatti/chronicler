@@ -1,5 +1,6 @@
-import { ChannelType, Events, type Client, type Message } from 'discord.js';
+import { ChannelType, type Client, type Message } from 'discord.js';
 import type { BotConfig } from '../config.js';
+import type { GatewayState } from '../health.js';
 import { logger } from '../log.js';
 import { submitQuestion } from './broker.js';
 import { normalizeMention } from './normalize.js';
@@ -53,6 +54,7 @@ function reply(message: Message, content: string): Promise<unknown> {
 export async function mountAgent(
   client: Client,
   config: BotConfig,
+  gateway?: GatewayState,
 ): Promise<MountedAgent> {
   if (!config.agentEnabled) {
     logger.info('Agent disabled (AGENT_ENABLED is not "true")');
@@ -187,8 +189,10 @@ export async function mountAgent(
       void reply(message, FAILURE_TEXT).catch(() => undefined);
     });
   });
-  client.on(Events.ShardDisconnect, () => {
-    for (const jobId of pending.keys()) stopTyping(jobId);
+  gateway?.subscribe((event) => {
+    if (event.type === 'disconnected') {
+      for (const jobId of pending.keys()) stopTyping(jobId);
+    }
   });
   logger.info('Agent mentions mounted against the API');
 
