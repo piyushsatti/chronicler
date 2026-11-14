@@ -1,5 +1,5 @@
 import { ChannelType, Events, type Client, type Message } from 'discord.js';
-import { config } from '../config.js';
+import type { BotConfig } from '../config.js';
 import { logger } from '../log.js';
 import { submitQuestion } from './broker.js';
 import { normalizeMention } from './normalize.js';
@@ -27,7 +27,7 @@ export interface MountedAgent {
   close(): Promise<void>;
 }
 
-function locallyAllowed(message: Message): boolean {
+function locallyAllowed(config: BotConfig, message: Message): boolean {
   if (message.guildId === null) {
     return (
       message.channel.type === ChannelType.DM &&
@@ -50,7 +50,10 @@ function reply(message: Message, content: string): Promise<unknown> {
   });
 }
 
-export async function mountAgent(client: Client): Promise<MountedAgent> {
+export async function mountAgent(
+  client: Client,
+  config: BotConfig,
+): Promise<MountedAgent> {
   if (!config.agentEnabled) {
     logger.info('Agent disabled (AGENT_ENABLED is not "true")');
     return { close: async () => undefined };
@@ -107,7 +110,7 @@ export async function mountAgent(client: Client): Promise<MountedAgent> {
   };
 
   const handleMessage = async (message: Message): Promise<void> => {
-    if (!client.user || !locallyAllowed(message)) return;
+    if (!client.user || !locallyAllowed(config, message)) return;
     const mentioned = message.mentions.users.has(client.user.id);
     const directParent =
       mentioned || message.author.bot || message.webhookId !== null
@@ -148,7 +151,7 @@ export async function mountAgent(client: Client): Promise<MountedAgent> {
         outcome.authorId,
         outcome.guildId,
         async () => {
-          const result = await submitQuestion(job, abortController.signal);
+          const result = await submitQuestion(config, job, abortController.signal);
           await handleResult(result);
         },
       );

@@ -420,7 +420,7 @@ func TestPublicCollectionsBrowser(t *testing.T) {
 	}
 	sqlBefore := snapshot()
 	write("native-all-tables-before.json", sqlBefore)
-	runtime = app.Wire(ctx, cfg)
+	runtime = wireForTest(ctx, cfg)
 	if runtime.Pool == nil || runtime.Authority == nil {
 		t.Fatal("production Wire did not bind isolated database")
 	}

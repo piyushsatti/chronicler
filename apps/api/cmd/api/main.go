@@ -94,7 +94,16 @@ func apiHandler(mux http.Handler, cfg config.Config, authority auth.AuthorityRes
 		},
 		httpserver.MaxBody(1<<20, "/v1/"),
 		func(next http.Handler) http.Handler {
-			return auth.LiveMiddleware(login.Parser(cfg.JWTSecret), authority, next)
+			parse := login.Parser(cfg.JWTSecret)
+			live := auth.LiveMiddleware(parse, authority, next)
+			identity := auth.Middleware(parse, next)
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodPost && r.URL.Path == "/v1/graphql" {
+					identity.ServeHTTP(w, r)
+					return
+				}
+				live.ServeHTTP(w, r)
+			})
 		},
 	)
 }

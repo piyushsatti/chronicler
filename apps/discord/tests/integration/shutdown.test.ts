@@ -8,7 +8,9 @@ import {
 import type { AddressInfo } from 'node:net';
 import { ChannelType } from 'discord.js';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { start } from '@discord/session.js';
 import { completedQuestion } from '../fixtures/api.js';
+import { testConfig } from '../support/config.js';
 
 type Handler = (request: IncomingMessage, response: ServerResponse) => void;
 
@@ -50,6 +52,7 @@ function mention(reply: ReturnType<typeof vi.fn>) {
 }
 
 let server: Server;
+let config = testConfig();
 let handler: Handler = (_request, response) => {
   response.writeHead(404);
   response.end();
@@ -57,7 +60,6 @@ let handler: Handler = (_request, response) => {
 const seen: string[] = [];
 
 beforeEach(async () => {
-  vi.resetModules();
   seen.length = 0;
   server = createServer((request, response) => {
     seen.push(`${request.method} ${request.url}`);
@@ -67,20 +69,17 @@ beforeEach(async () => {
     server.listen(0, '127.0.0.1', resolve);
   });
   const address = server.address() as AddressInfo;
-  vi.stubEnv('API_URL', `http://127.0.0.1:${address.port}`);
-  vi.stubEnv('DISCORD_TOKEN', 'test-token');
-  vi.stubEnv('BOT_CLIENT_ID', 'test-client-id');
-  vi.stubEnv('GUILD_ID', 'test-guild-id');
-  vi.stubEnv('INGEST_SECRET', 'test-ingest-secret');
-  vi.stubEnv('SNIFFER_ENABLED', 'false');
-  vi.stubEnv('AGENT_ENABLED', 'true');
-  vi.stubEnv('AGENT_ALLOWED_DM_USER_IDS', '111');
-  vi.stubEnv('AGENT_PUBLIC_ORIGIN', 'https://chronicler.example');
-  vi.stubEnv('BOT_HEARTBEAT_ENABLED', 'false');
+  config = testConfig({
+    apiUrl: `http://127.0.0.1:${address.port}`,
+    snifferEnabled: false,
+    agentEnabled: true,
+    agentAllowedDmUserIds: new Set(['111']),
+    agentPublicOrigin: 'https://chronicler.example',
+    heartbeatEnabled: false,
+  });
 });
 
 afterEach(async () => {
-  vi.unstubAllEnvs();
   vi.useRealTimers();
   await new Promise<void>((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
@@ -91,8 +90,12 @@ it('stop clears the gateway watchdog so a later non-ready tick does not exit', a
   vi.useFakeTimers();
   const exit = vi.fn();
   const client = scriptedClient();
-  const { start } = await import('@discord/session.js');
-  const session = await start({ client: client as never, exit });
+  const session = await start({
+    config,
+    client: client as never,
+    exit,
+    installSignalHandlers: false,
+  });
   await session.stop();
   await vi.advanceTimersByTimeAsync(6 * 60 * 1000);
   expect(exit).not.toHaveBeenCalled();
@@ -116,8 +119,12 @@ it('terminal disconnect exits and does not reply to an in-flight question', asyn
   const exit = vi.fn();
   const reply = vi.fn().mockResolvedValue(undefined);
   const client = scriptedClient();
-  const { start } = await import('@discord/session.js');
-  await start({ client: client as never, exit });
+  await start({
+    config,
+    client: client as never,
+    exit,
+    installSignalHandlers: false,
+  });
   client.emit('messageCreate', mention(reply));
   await vi.waitFor(() =>
     expect(seen.some((line) => line.startsWith('GET '))).toBe(true),
@@ -148,8 +155,12 @@ it('does not reply when the API completes after stop', async () => {
   };
   const reply = vi.fn().mockResolvedValue(undefined);
   const client = scriptedClient();
-  const { start } = await import('@discord/session.js');
-  const session = await start({ client: client as never, exit: vi.fn() });
+  const session = await start({
+    config,
+    client: client as never,
+    exit: vi.fn(),
+    installSignalHandlers: false,
+  });
   client.emit('messageCreate', mention(reply));
   await vi.waitFor(() => expect(pendingGets.length).toBeGreaterThan(0));
   await session.stop();

@@ -2,7 +2,6 @@ package graphql
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -29,6 +28,10 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 		if expected, ok := errors.AsType[*apierr.Error](err); ok {
 			presented.Message = expected.Message
 			presented.Extensions = map[string]any{"code": string(expected.Code)}
+			// Recover already logged bare Internal; Wrap sites carry a cause to log.
+			if expected.Cause != nil {
+				slog.ErrorContext(ctx, "unexpected GraphQL error", "error", expected)
+			}
 		} else if presented.Err != nil {
 			// gqlgen wraps resolver errors in gqlerror.Error before presenting.
 			// Parser/validation errors have no wrapped cause and remain useful.
@@ -60,33 +63,8 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 	if limits.MaxComplexity > 0 {
 		srv.Use(extension.FixedComplexityLimit(limits.MaxComplexity))
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		if authority != nil {
-			claims := auth.FromContext(r.Context())
-			var initial *auth.Authority
-			if live, ok := auth.AuthorityFromContext(r.Context()); ok {
-				copy := live
-				initial = &copy
-			}
-			state, err := graph.NewRequestState(claims, authority, initial)
-			if err != nil {
-				writeRequestError(w, r, present, err)
-				return
-			}
-			if _, err := graph.NewLoaderRegistry(resolver.BatchProviders, state); err != nil {
-				writeRequestError(w, r, present, err)
-				return
-			}
-			ctx = graph.WithRequestState(ctx, state)
-		}
-		srv.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func writeRequestError(w http.ResponseWriter, r *http.Request, present func(context.Context, error) *gqlerror.Error, err error) {
-	slog.ErrorContext(r.Context(), "graphql request state", "error", err)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]any{"errors": []*gqlerror.Error{present(r.Context(), err)}})
+	if authority != nil {
+		srv.Use(liveAuthority{resolve: authority, providers: resolver.BatchProviders, present: present})
+	}
+	return srv
 }
