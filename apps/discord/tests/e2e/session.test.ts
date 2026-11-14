@@ -151,13 +151,14 @@ it('stays up when ingest returns 500 and still posts the next message', async ()
   await session.stop();
 });
 
-it('replies with failure when questions return 500 and accepts a second mention', async () => {
+it('replies with failure when questions return 422 and accepts a second mention', async () => {
   let rejects = true;
   handler = (request, response) => {
     if (request.method === 'POST' && request.url === '/v1/agent/questions') {
       if (rejects) {
-        response.writeHead(500);
-        response.end('down');
+        // 422 is permanent; 5xx would retry until WAIT_MS (#128).
+        response.writeHead(422);
+        response.end('bad');
         return;
       }
       response.writeHead(202);
