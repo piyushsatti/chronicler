@@ -113,12 +113,30 @@ func (f *fakeSubjectBatch) ReadBatchNotificationSubjects(context.Context, auth.A
 
 type fakeDocumentAudience struct {
 	readable map[string]bool
+	err      error
 }
 
 func (f *fakeDocumentAudience) ReadableDocumentIDs(_ context.Context, _ auth.Authority, ids []string) (map[string]bool, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
 	out := make(map[string]bool, len(ids))
 	for _, id := range ids {
 		out[id] = f.readable[id]
 	}
 	return out, nil
+}
+
+func TestVisibleNotificationItemsPreservesInjectedCause(t *testing.T) {
+	t.Parallel()
+	dbErr := errors.New("database blip")
+	items := []NotificationView{{SubjectType: subjectTypeDocument, SubjectId: "doc-1"}}
+	_, err := visibleNotificationItems(context.Background(), &fakeDocumentAudience{err: dbErr}, auth.Authority{}, items)
+	if !errors.Is(err, dbErr) {
+		t.Fatalf("errors.Is lost cause: %v", err)
+	}
+	var typed *apierr.Error
+	if !errors.As(err, &typed) || typed.Code != apierr.Internal || typed.Message != "Internal error" {
+		t.Fatalf("client shape: %v", err)
+	}
 }
