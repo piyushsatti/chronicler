@@ -6,7 +6,7 @@
 
 ## Rule
 
-Discord and the Python agent worker exchange grounded Q&A jobs only through ingest-secret REST on the API. No message broker is required on this path. The API persists jobs; the agent answers; Discord polls for the result.
+Discord and the Python agent worker exchange grounded Q&A jobs only through secret-gated REST on the API. Discord uses `INGEST_SECRET` for submit and read; the worker uses `AGENT_WORKER_SECRET` for claim, complete, renew and retry. Both send the value in `X-Ingest-Secret`. No message broker is required on this path. The API persists jobs; the agent answers; Discord polls for the result.
 
 ## Enforcement
 

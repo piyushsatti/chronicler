@@ -21,7 +21,7 @@ AUTH-3 asked what the Discord bot may do. AUTH-4 asked whether Postgres RLS sepa
 
 Accepted limitation: shared secret can post activity for any Discord id; mitigated by append-only counters and single-bot fleet.
 
-**2026-11-14 ruling (issue #134, lead agent under the owner's delegation; provisional):** the bot and the agent worker keep the one shared secret for now, and one bot process runs per Discord token. Before `AGENT_ENABLED` is turned on in production, two things must be true: the agent worker's claim and complete routes check a secret the bot does not hold, and each environment has its own Discord application. The owner names and registers that secret and creates the applications. Signed per-request tokens were rejected as more machinery than two machine callers need.
+**2026-11-14 amendment (issue #134):** the bot keeps `INGEST_SECRET` for ingest, heartbeat, question submit and read; the agent worker uses `AGENT_WORKER_SECRET` for claim, complete, renew and retry. Both still send `X-Ingest-Secret`. One Discord application per environment is due before `AGENT_ENABLED` is turned on in production. Signed per-request tokens were rejected as more machinery than two machine callers need.
 
 ## Alternatives rejected
 
@@ -42,7 +42,7 @@ Ingest stays a single-purpose machine endpoint. Human and machine writers remain
 
 ## Reopen triggers
 
-- `AGENT_ENABLED` is to be turned on in production → the split credential and per-environment application above are due.
+- `AGENT_ENABLED` is to be turned on in production → the per-environment Discord application above is due.
 - Meaningful pre-resolution GraphQL cost measured → revisit gateway placement.
 
 Long-form evidence remains in `.local/docs-quarry/decisions-longform/`.

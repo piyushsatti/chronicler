@@ -4,7 +4,7 @@ Secret values do not belong in the repository, documentation, build output, or r
 
 Local development uses ignored environment files or a local secret manager. The staging and production release workflows supply credentials to the GitHub Actions job that needs them, from the secrets of the GitHub environment `staging` or `production`. Each run writes an env file outside the workspace (mode 600) for Compose on the runner host. Frontend build variables are public and must not contain private keys.
 
-With `CHRONICLER_ENV=production`, the API requires `JWT_SECRET` and `INGEST_SECRET` to be at least 32 characters each. Startup errors name variables without printing values. Development behavior is unchanged. Before deploying this requirement, check existing secret lengths without printing them; a short value requires owner-authorized rotation before deployment.
+With `CHRONICLER_ENV=production`, the API requires `JWT_SECRET`, `INGEST_SECRET` and `AGENT_WORKER_SECRET` to be at least 32 characters each. Startup errors name variables without printing values. Development behavior is unchanged. Before deploying this requirement, check existing secret lengths without printing them; a short value requires owner-authorized rotation before deployment.
 
 `PLATFORM_OWNER_DISCORD_ID` is supplied as a GitHub secret for Actions or through the staging host environment. Never commit it or print its value. Discord application credentials remain in the Discord application settings and the owning runtime secret store.
 
