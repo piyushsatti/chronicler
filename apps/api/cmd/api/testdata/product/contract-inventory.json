@@ -11421,22 +11421,6 @@
     {
       "args": [],
       "definitionKind": "OBJECT",
-      "field": "publishedDocumentsByCategory",
-      "ownerType": "SiteStatsV2Type",
-      "source": "site.graphql",
-      "type": "[CountByKeyType!]!"
-    },
-    {
-      "args": [],
-      "definitionKind": "OBJECT",
-      "field": "publishedDocumentsByKind",
-      "ownerType": "SiteStatsV2Type",
-      "source": "site.graphql",
-      "type": "[CountByKeyType!]!"
-    },
-    {
-      "args": [],
-      "definitionKind": "OBJECT",
       "field": "totalDms",
       "ownerType": "SiteStatsV2Type",
       "source": "site.graphql",
