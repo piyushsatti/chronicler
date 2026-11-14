@@ -12,6 +12,7 @@
 import { Events } from 'discord.js';
 import type { Client, Guild, Message, VoiceState } from 'discord.js';
 import type { BotConfig } from '../config.js';
+import type { GatewayState } from '../health.js';
 import { logger } from '../log.js';
 import {
   isPublicActivityChannel,
@@ -21,16 +22,19 @@ import {
 } from './normalize.js';
 import { deliverActivity } from './forward.js';
 
+export interface MountActivityOptions {
+  voiceTracker?: VoiceSessionTracker;
+  gateway?: GatewayState;
+}
+
 /**
  * Mount gateway listeners on `client` (call before login). No-ops (with a
  * log line) when SNIFFER_ENABLED is not "true".
- *
- * @param voiceTracker - injectable for tests; defaults to a fresh tracker.
  */
 export function mountActivity(
   client: Client,
   config: BotConfig,
-  voiceTracker?: VoiceSessionTracker,
+  options: MountActivityOptions = {},
 ): void {
   if (!config.snifferEnabled) {
     logger.info(
@@ -41,7 +45,7 @@ export function mountActivity(
   }
 
   const tracker =
-    voiceTracker ??
+    options.voiceTracker ??
     new VoiceSessionTracker({
       getChannel: (channelId) => client.channels.cache.get(channelId),
     });
@@ -52,6 +56,43 @@ export function mountActivity(
       deliverActivity(config, event);
     }
     return events;
+  };
+
+  let awaitingGuild = false;
+
+  const runReconcile = (guild: Guild): void => {
+    let recoveryEvents: ReturnType<VoiceSessionTracker['reconcile']> = [];
+    try {
+      recoveryEvents = reconcileVoiceSessions(guild);
+    } catch (error: unknown) {
+      logger.error('Sniffer voice reconciliation failed', {
+        guildId: guild.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    logger.info('Sniffer voice sessions reconciled after gateway readiness', {
+      guildId: guild.id,
+      recoveredEvents: recoveryEvents.length,
+      activeSessions: trackerSessionCount(tracker),
+    });
+  };
+
+  const reconcileConfiguredGuild = (): void => {
+    const guild = client.guilds.cache.get(config.guildId);
+    if (guild === undefined || guild.available === false) {
+      awaitingGuild = true;
+      if (guild === undefined) {
+        logger.warn(
+          'Sniffer voice reconciliation skipped: configured guild is unavailable',
+          {
+            guildId: config.guildId,
+          },
+        );
+      }
+      return;
+    }
+    awaitingGuild = false;
+    runReconcile(guild);
   };
 
   client.on(Events.ChannelUpdate, (_oldChannel, newChannel) => {
@@ -138,40 +179,18 @@ export function mountActivity(
     }
   });
 
-  // discord.js exposes the complete guild voice-state cache once the gateway
-  // has identified. The optional `once` guard keeps lightweight test doubles
-  // compatible while production reconciles the in-memory voice map.
-  const clientWithOnce = client as Client & {
-    once?: (event: string, listener: (readyClient: Client) => void) => Client;
-  };
-  if (typeof clientWithOnce.once === 'function') {
-    clientWithOnce.once(Events.ClientReady, (readyClient) => {
-      const guild = readyClient.guilds.cache.get(config.guildId);
-      if (guild === undefined) {
-        logger.warn(
-          'Sniffer voice reconciliation skipped: configured guild is unavailable',
-          {
-            guildId: config.guildId,
-          },
-        );
-        return;
-      }
-      let recoveryEvents: ReturnType<VoiceSessionTracker['reconcile']> = [];
-      try {
-        recoveryEvents = reconcileVoiceSessions(guild);
-      } catch (error: unknown) {
-        logger.error('Sniffer voice reconciliation failed', {
-          guildId: guild.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-      logger.info('Sniffer voice sessions reconciled after gateway readiness', {
-        guildId: guild.id,
-        recoveredEvents: recoveryEvents.length,
-        activeSessions: trackerSessionCount(tracker),
-      });
-    });
-  }
+  client.on(Events.GuildAvailable, (guild) => {
+    if (guild.id === config.guildId && awaitingGuild) {
+      awaitingGuild = false;
+      runReconcile(guild);
+    }
+  });
+
+  options.gateway?.subscribe((event) => {
+    if (event.type === 'ready' || event.type === 'session_lost') {
+      reconcileConfiguredGuild();
+    }
+  });
 
   logger.info(
     'Sniffer mounted -- forwarding messageCreate/voiceStateUpdate/raw MESSAGE_REACTION_ADD ' +

@@ -3,10 +3,13 @@
 package document
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strings"
@@ -16,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbtest"
 )
 
@@ -388,20 +392,13 @@ func TestPhase3TaskDOC03ProductLifecyclePostgresAcceptance(t *testing.T) {
 	if gotID != public || gotTitle != "Published edit" || gotBody != "body three" || gotFM != "title: Published edit\ntags: [lore, edited]\n" || gotVersion != 7 || gotStatus != "draft" {
 		t.Fatalf("readback id=%s title=%q body=%q frontmatter=%q status=%s version=%d", gotID, gotTitle, gotBody, gotFM, gotStatus, gotVersion)
 	}
-	count := query("CountProductDocumentRevisions", ":one")
-	var revisions int64
-	if err := p.QueryRow(ctx, count, doc03KeyedProductArgs(t, count, pgx.StrictNamedArgs{"document_id": public})).Scan(&revisions); err != nil {
-		t.Fatal(err)
-	}
-	if revisions != 7 {
-		t.Fatalf("revision count=%d, want 7", revisions)
-	}
 	list := query("ListProductDocumentRevisions", ":many")
 	rows, err := p.Query(ctx, list, doc03KeyedProductArgs(t, list, pgx.StrictNamedArgs{"document_id": public, "row_limit": int32(20), "row_offset": int32(0)}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer rows.Close()
+	var revisions int64
 	var gotRevs []int32
 	for rows.Next() {
 		var id, doc uuid.UUID
@@ -414,7 +411,7 @@ func TestPhase3TaskDOC03ProductLifecyclePostgresAcceptance(t *testing.T) {
 		var pby, actor *uuid.UUID
 		var created time.Time
 		var old, next []byte
-		if err := rows.Scan(&id, &doc, &rev, &reason, &title, &body, &fm, &policy, &vis, &pat, &pby, &actor, &created, &old, &next); err != nil {
+		if err := rows.Scan(&revisions, &id, &doc, &rev, &reason, &title, &body, &fm, &policy, &vis, &pat, &pby, &actor, &created, &old, &next); err != nil {
 			t.Fatal(err)
 		}
 		if doc != public {
@@ -453,18 +450,19 @@ func TestPhase3TaskDOC03ProductLifecyclePostgresAcceptance(t *testing.T) {
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if len(gotRevs) != 7 || gotRevs[0] != 7 || gotRevs[6] != 1 {
-		t.Fatalf("revision page=%v, want descending 7..1", gotRevs)
+	if revisions != 7 || len(gotRevs) != 7 || gotRevs[0] != 7 || gotRevs[6] != 1 {
+		t.Fatalf("revision total/page=%d/%v, want 7 and descending 7..1", revisions, gotRevs)
 	}
 	pageRows, err := p.Query(ctx, list, doc03KeyedProductArgs(t, list, pgx.StrictNamedArgs{"document_id": public, "row_limit": int32(2), "row_offset": int32(2)}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var page []int32
+	var pageTotal int64
 	for pageRows.Next() {
 		var id, document uuid.UUID
 		var rev int32
-		if err := pageRows.Scan(&id, &document, &rev, new(string), new(string), new(string), new(*string), new([]byte), new(*string), new(*time.Time), new(*uuid.UUID), new(*uuid.UUID), new(time.Time), new([]byte), new([]byte)); err != nil {
+		if err := pageRows.Scan(&pageTotal, &id, &document, &rev, new(string), new(string), new(string), new(*string), new([]byte), new(*string), new(*time.Time), new(*uuid.UUID), new(*uuid.UUID), new(time.Time), new([]byte), new([]byte)); err != nil {
 			pageRows.Close()
 			t.Fatal(err)
 		}
@@ -475,8 +473,26 @@ func TestPhase3TaskDOC03ProductLifecyclePostgresAcceptance(t *testing.T) {
 		t.Fatal(err)
 	}
 	pageRows.Close()
-	if len(page) != 2 || page[0] != 5 || page[1] != 4 {
-		t.Fatalf("revision offset page=%v, want [5 4]", page)
+	if pageTotal != 7 || len(page) != 2 || page[0] != 5 || page[1] != 4 {
+		t.Fatalf("revision offset total/page=%d/%v, want 7/[5 4]", pageTotal, page)
+	}
+	emptyRows, err := p.Query(ctx, list, doc03KeyedProductArgs(t, list, pgx.StrictNamedArgs{"document_id": public, "row_limit": int32(1), "row_offset": int32(20)}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !emptyRows.Next() {
+		emptyRows.Close()
+		t.Fatal("revision past-end missing total row")
+	}
+	var emptyTotal int64
+	var emptyID *uuid.UUID
+	if err := emptyRows.Scan(&emptyTotal, &emptyID, new(*uuid.UUID), new(*int32), new(*string), new(*string), new(*string), new(*string), new([]byte), new(*string), new(*time.Time), new(*uuid.UUID), new(*uuid.UUID), new(*time.Time), new([]byte), new([]byte)); err != nil {
+		emptyRows.Close()
+		t.Fatal(err)
+	}
+	emptyRows.Close()
+	if emptyTotal != 7 || emptyID != nil {
+		t.Fatalf("revision past-end total/id=%d/%v, want 7/nil", emptyTotal, emptyID)
 	}
 }
 
@@ -681,7 +697,6 @@ func TestPhase3TaskDOC03ProductFiltersAndPagesPostgresAcceptance(t *testing.T) {
 	}
 	viewer := pgx.StrictNamedArgs{"viewer_id": authorID, "viewer_roles": []string{"player"}, "viewer_handle": "doc03-filter", "viewer_admin": false, "viewer_live_dm": false}
 	listSQL := doc03ProductSQL(t, "ListProductDocuments", ":many")
-	countSQL := doc03ProductSQL(t, "CountProductDocuments", ":one")
 	filter := func(search any) pgx.StrictNamedArgs {
 		args := pgx.StrictNamedArgs{"kind": nil, "category": "lore", "status": "published", "visibility": "public", "author_id": authorID, "search": search, "region_id": nil}
 		for k, v := range viewer {
@@ -689,54 +704,47 @@ func TestPhase3TaskDOC03ProductFiltersAndPagesPostgresAcceptance(t *testing.T) {
 		}
 		return args
 	}
-	countArgs := doc03KeyedProductArgs(t, countSQL, filter(nil))
-	var count int64
-	var override bool
-	if err := p.QueryRow(ctx, countSQL, countArgs).Scan(&count, &override); err != nil {
-		t.Fatal(err)
+	scanDocPage := func(rows pgx.Rows) (int64, bool, []uuid.UUID) {
+		t.Helper()
+		defer rows.Close()
+		var total int64
+		var countOverride bool
+		var ids []uuid.UUID
+		for rows.Next() {
+			var id *uuid.UUID
+			if err := rows.Scan(&total, &countOverride, &id, new(*string), new(*string), new(*string), new(*string), new(*string), new(*string), new(*string), new([]byte), new([]byte), new(*uuid.UUID), new(*time.Time), new(*time.Time), new(*time.Time), new(*int32), new(*time.Time), new(any)); err != nil {
+				t.Fatal(err)
+			}
+			if id != nil {
+				ids = append(ids, *id)
+			}
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatal(err)
+		}
+		return total, countOverride, ids
 	}
-	if count != 4 || override {
-		t.Fatalf("filtered count=(%d,%v), want (4,false)", count, override)
-	}
-	searchArgs := filter(`50%_\`)
-	searchCountArgs := doc03KeyedProductArgs(t, countSQL, searchArgs)
-	if err := p.QueryRow(ctx, countSQL, searchCountArgs).Scan(&count, &override); err != nil {
-		t.Fatal(err)
-	}
-	if count != 1 {
-		t.Fatalf("escaped literal search count=%d, want 1", count)
-	}
-	searchListArgs := searchArgs
-	searchListArgs["row_limit"] = int32(10)
-	searchListArgs["row_offset"] = int32(0)
-	rows, err := p.Query(ctx, listSQL, doc03KeyedProductArgs(t, listSQL, searchListArgs))
+	countArgs := filter(nil)
+	countArgs["row_limit"] = int32(10)
+	countArgs["row_offset"] = int32(0)
+	rows, err := p.Query(ctx, listSQL, doc03KeyedProductArgs(t, listSQL, countArgs))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var found []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		var kind, slug, title string
-		var category *string
-		var status, visibility, body string
-		var fm, policy []byte
-		var authorOut *uuid.UUID
-		var published, deleted, updated, created *time.Time
-		var version int32
-		var adminOverride bool
-		if err := rows.Scan(&id, &kind, &slug, &title, &category, &status, &visibility, &body, &fm, &policy, &authorOut, &published, &deleted, &updated, &version, &created, &adminOverride); err != nil {
-			rows.Close()
-			t.Fatal(err)
-		}
-		found = append(found, id)
+	count, override, _ := scanDocPage(rows)
+	if count != 4 || override {
+		t.Fatalf("filtered count=(%d,%v), want (4,false)", count, override)
 	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
+	searchListArgs := filter(`50%_\`)
+	searchListArgs["row_limit"] = int32(10)
+	searchListArgs["row_offset"] = int32(0)
+	rows, err = p.Query(ctx, listSQL, doc03KeyedProductArgs(t, listSQL, searchListArgs))
+	if err != nil {
 		t.Fatal(err)
 	}
-	rows.Close()
-	if len(found) != 1 || found[0] != docs[2].public {
-		t.Fatalf("escaped search returned %v, want literal-percent/underscore/backslash document %s", found, docs[2].public)
+	count, _, found := scanDocPage(rows)
+	if count != 1 || len(found) != 1 || found[0] != docs[2].public {
+		t.Fatalf("escaped search total/page=%d/%v, want 1/[%s]", count, found, docs[2].public)
 	}
 	pageArgs := filter(nil)
 	pageArgs["row_limit"] = int32(1)
@@ -745,53 +753,91 @@ func TestPhase3TaskDOC03ProductFiltersAndPagesPostgresAcceptance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !rows.Next() {
-		rows.Close()
-		t.Fatal("first document page empty")
+	count, _, pageIDs := scanDocPage(rows)
+	if count != 4 || len(pageIDs) != 1 || pageIDs[0] != docs[0].public {
+		t.Fatalf("equal-timestamp list tie total/page=%d/%v, want 4/[%s]", count, pageIDs, docs[0].public)
 	}
-	var first uuid.UUID
-	if err := rows.Scan(&first, new(string), new(string), new(string), new(*string), new(string), new(string), new(string), new([]byte), new([]byte), new(*uuid.UUID), new(*time.Time), new(*time.Time), new(*time.Time), new(int32), new(*time.Time), new(bool)); err != nil {
-		rows.Close()
+	pageArgs["row_offset"] = int32(10)
+	rows, err = p.Query(ctx, listSQL, doc03KeyedProductArgs(t, listSQL, pageArgs))
+	if err != nil {
 		t.Fatal(err)
 	}
-	rows.Close()
-	if first != docs[0].public {
-		t.Fatalf("equal-timestamp list tie returned %s, want higher public UUID %s despite lower internal id", first, docs[0].public)
-	}
-	trashCount := doc03ProductSQL(t, "CountProductDocumentsTrash", ":one")
-	if err := p.QueryRow(ctx, trashCount).Scan(&count); err != nil {
-		t.Fatal(err)
-	}
-	if count != 2 {
-		t.Fatalf("trash count=%d, want 2", count)
+	count, _, pageIDs = scanDocPage(rows)
+	if count != 4 || len(pageIDs) != 0 {
+		t.Fatalf("documents past-end total/page=%d/%v, want 4/[]", count, pageIDs)
 	}
 	trashList := doc03ProductSQL(t, "ListProductDocumentsTrash", ":many")
+	scanTrashPage := func(rows pgx.Rows) (int64, []uuid.UUID) {
+		t.Helper()
+		defer rows.Close()
+		var total int64
+		var ids []uuid.UUID
+		for rows.Next() {
+			var id *uuid.UUID
+			if err := rows.Scan(&total, &id, new(*string), new(*string), new(*string), new(*string), new(*string), new(*string), new(*string), new([]byte), new([]byte), new(*uuid.UUID), new(*time.Time), new(*uuid.UUID), new(*time.Time), new(*int32), new(*time.Time)); err != nil {
+				t.Fatal(err)
+			}
+			if id != nil {
+				ids = append(ids, *id)
+			}
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatal(err)
+		}
+		return total, ids
+	}
 	rows, err = p.Query(ctx, trashList, doc03KeyedProductArgs(t, trashList, pgx.StrictNamedArgs{"row_limit": int32(1), "row_offset": int32(0)}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !rows.Next() {
-		rows.Close()
-		t.Fatal("trash page empty")
+	trashTotal, trashIDs := scanTrashPage(rows)
+	if trashTotal != 2 || len(trashIDs) != 1 || trashIDs[0] != docs[4].public {
+		t.Fatalf("trash tie total/page=%d/%v, want 2/[%s]", trashTotal, trashIDs, docs[4].public)
 	}
-	var trashID uuid.UUID
-	if err := rows.Scan(&trashID, new(string), new(string), new(string), new(*string), new(string), new(string), new(string), new([]byte), new([]byte), new(*uuid.UUID), new(*time.Time), new(*uuid.UUID), new(*time.Time), new(int32), new(*time.Time)); err != nil {
-		rows.Close()
+	rows, err = p.Query(ctx, trashList, doc03KeyedProductArgs(t, trashList, pgx.StrictNamedArgs{"row_limit": int32(1), "row_offset": int32(10)}))
+	if err != nil {
 		t.Fatal(err)
 	}
-	rows.Close()
-	if trashID != docs[4].public {
-		t.Fatalf("trash tie returned %s, want higher UUID %s", trashID, docs[4].public)
+	trashTotal, trashIDs = scanTrashPage(rows)
+	if trashTotal != 2 || len(trashIDs) != 0 {
+		t.Fatalf("trash past-end total/page=%d/%v, want 2/[]", trashTotal, trashIDs)
 	}
-	directoryCount := doc03ProductSQL(t, "CountProductCodexDirectory", ":one")
 	directoryList := doc03ProductSQL(t, "ListProductCodexDirectory", ":many")
 	dirArgs := func(prefix string) pgx.StrictNamedArgs {
 		return pgx.StrictNamedArgs{"category_prefix": prefix, "search": nil, "viewer_id": authorID, "viewer_roles": []string{"player"}, "viewer_handle": "doc03-filter", "viewer_admin": false, "viewer_live_dm": false}
 	}
-	var directoryTotal int64
-	if err := p.QueryRow(ctx, directoryCount, doc03KeyedProductArgs(t, directoryCount, dirArgs("rules"))).Scan(&directoryTotal); err != nil {
+	scanDirectoryPage := func(rows pgx.Rows) (int64, []uuid.UUID, []string) {
+		t.Helper()
+		defer rows.Close()
+		var total int64
+		var ids []uuid.UUID
+		var categories []string
+		for rows.Next() {
+			var id *uuid.UUID
+			var category *string
+			if err := rows.Scan(&total, &id, new(*string), new(*string), new(*string), &category, new(*string), new(*string), new(*string), new([]byte), new([]byte), new(*uuid.UUID), new(*time.Time), new(*int32)); err != nil {
+				t.Fatal(err)
+			}
+			if id != nil {
+				ids = append(ids, *id)
+			}
+			if category != nil {
+				categories = append(categories, *category)
+			}
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatal(err)
+		}
+		return total, ids, categories
+	}
+	rulesArgs := dirArgs("rules")
+	rulesArgs["row_limit"] = int32(10)
+	rulesArgs["row_offset"] = int32(0)
+	rows, err = p.Query(ctx, directoryList, doc03KeyedProductArgs(t, directoryList, rulesArgs))
+	if err != nil {
 		t.Fatal(err)
 	}
+	directoryTotal, _, _ := scanDirectoryPage(rows)
 	if directoryTotal != 2 {
 		t.Fatalf("rules category-prefix count=%d, want root and path child only", directoryTotal)
 	}
@@ -802,42 +848,14 @@ func TestPhase3TaskDOC03ProductFiltersAndPagesPostgresAcceptance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var categories []string
-	for rows.Next() {
-		var id uuid.UUID
-		var kind, slug, title string
-		var category *string
-		var status, visibility, body string
-		var fm, policy []byte
-		var authorOut *uuid.UUID
-		var updated time.Time
-		var version int32
-		if err := rows.Scan(&id, &kind, &slug, &title, &category, &status, &visibility, &body, &fm, &policy, &authorOut, &updated, &version); err != nil {
-			rows.Close()
-			t.Fatal(err)
-		}
-		if category != nil {
-			categories = append(categories, *category)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		t.Fatal(err)
-	}
-	rows.Close()
+	_, _, categories := scanDirectoryPage(rows)
 	if len(categories) != 2 || categories[0] != `literal%_\/child` || categories[1] != `literal%_\` {
 		t.Fatalf("escaped category-prefix results=%q", categories)
 	}
 	directorySearchArgs := dirArgs("")
 	directorySearchArgs["category_prefix"] = nil
 	directorySearchArgs["search"] = "directory order"
-	if err := p.QueryRow(ctx, directoryCount, doc03KeyedProductArgs(t, directoryCount, directorySearchArgs)).Scan(&directoryTotal); err != nil {
-		t.Fatal(err)
-	}
-	if directoryTotal != int64(len(directoryDocs)) {
-		t.Fatalf("directory search count=%d, want %d", directoryTotal, len(directoryDocs))
-	}
-	listDirectoryPage := func(offset int32) []uuid.UUID {
+	listDirectoryPage := func(offset int32) (int64, []uuid.UUID) {
 		args := directorySearchArgs
 		args["row_limit"] = int32(1)
 		args["row_offset"] = offset
@@ -845,28 +863,18 @@ func TestPhase3TaskDOC03ProductFiltersAndPagesPostgresAcceptance(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer page.Close()
-		var ids []uuid.UUID
-		for page.Next() {
-			var id uuid.UUID
-			if err := page.Scan(&id, new(string), new(string), new(string), new(*string), new(string), new(string), new(string), new([]byte), new([]byte), new(*uuid.UUID), new(time.Time), new(int32)); err != nil {
-				t.Fatal(err)
-			}
-			ids = append(ids, id)
-		}
-		if err := page.Err(); err != nil {
-			t.Fatal(err)
-		}
-		return ids
+		total, ids, _ := scanDirectoryPage(page)
+		return total, ids
 	}
 	for offset, want := range []uuid.UUID{directoryDocs[1].public, directoryDocs[0].public, directoryDocs[2].public, directoryDocs[3].public} {
-		got := listDirectoryPage(int32(offset))
-		if len(got) != 1 || got[0] != want {
-			t.Fatalf("directory page offset %d ids=%v, want [%s] by updated_at/public_id descending", offset, got, want)
+		total, got := listDirectoryPage(int32(offset))
+		if total != int64(len(directoryDocs)) || len(got) != 1 || got[0] != want {
+			t.Fatalf("directory page offset %d total/ids=%d/%v, want %d/[%s]", offset, total, got, len(directoryDocs), want)
 		}
 	}
-	if got := listDirectoryPage(int32(len(directoryDocs))); len(got) != 0 {
-		t.Fatalf("directory page past end returned %v, want empty page with count %d", got, directoryTotal)
+	directoryTotal, got := listDirectoryPage(int32(len(directoryDocs)))
+	if directoryTotal != int64(len(directoryDocs)) || len(got) != 0 {
+		t.Fatalf("directory page past end total/ids=%d/%v, want %d/[]", directoryTotal, got, len(directoryDocs))
 	}
 	categorySQL := doc03ProductSQL(t, "ListProductCodexCategories", ":many")
 	rows, err = p.Query(ctx, categorySQL, doc03KeyedProductArgs(t, categorySQL, pgx.StrictNamedArgs{"viewer_id": authorID, "viewer_roles": []string{"player"}, "viewer_handle": "doc03-filter", "viewer_admin": false, "viewer_live_dm": false}))
@@ -890,6 +898,60 @@ func TestPhase3TaskDOC03ProductFiltersAndPagesPostgresAcceptance(t *testing.T) {
 	rows.Close()
 	if categoryCounts["rules"] != 1 || categoryCounts["rules/core"] != 1 || categoryCounts["rules_extra/core"] != 1 {
 		t.Fatalf("codex category counts=%v", categoryCounts)
+	}
+}
+
+func TestListProductDocumentsAdminOverrideAuditsCount(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	f := dbtest.NewProductFixture(t)
+	adminID := uuid.MustParse("10000000-0000-4000-8000-00000000a001")
+	authorID := uuid.MustParse("10000000-0000-4000-8000-00000000a002")
+	docID := uuid.MustParse("20000000-0000-4000-8000-00000000a001")
+	if _, err := f.Pool.Exec(ctx, `INSERT INTO members(public_id,discord_id,handle,display_name,roles,status) VALUES
+		($1,'doc-list-admin','doc-list-admin','Admin',ARRAY['admin'],'active'),
+		($2,'doc-list-author','doc-list-author','Author',ARRAY['player'],'active')`, adminID, authorID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Pool.Exec(ctx, `INSERT INTO documents(public_id,kind,slug,title,status,visibility,policy,body,author_id,version)
+		SELECT $1,'community','doc-list-private','Private','published','public','[]'::jsonb,'secret',id,1 FROM members WHERE public_id=$2`, docID, authorID); err != nil {
+		t.Fatal(err)
+	}
+	reader, err := NewProductPostgres(f.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admin, err := auth.NewAuthorityWithHandle(adminID.String(), []auth.Role{auth.Admin}, "active", "", "doc-list-admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+	page, err := reader.ReadDocuments(ctx, admin, DocumentsSpec{Limit: 10, Offset: 0})
+	if err != nil || page.Total != 1 || len(page.Items) != 1 || page.Items[0].Id != docID.String() {
+		t.Fatalf("admin list=%+v err=%v", page, err)
+	}
+	found := map[string]bool{}
+	for _, line := range strings.Split(strings.TrimSpace(output.String()), "\n") {
+		if line == "" {
+			continue
+		}
+		var event map[string]any
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			t.Fatal(err)
+		}
+		if event["msg"] == "audience.admin_override" {
+			found[fmt.Sprintf("%v:%v", event["surface"], event["operation"])] = true
+		}
+	}
+	if !found["documents:count"] || !found["documents:list"] {
+		t.Fatalf("admin override audits=%v output=%s", found, &output)
+	}
+	empty, err := reader.ReadDocuments(ctx, admin, DocumentsSpec{Limit: 1, Offset: 10})
+	if err != nil || empty.Total != 1 || len(empty.Items) != 0 {
+		t.Fatalf("admin past-end list=%+v err=%v", empty, err)
 	}
 }
 

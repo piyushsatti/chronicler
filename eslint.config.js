@@ -196,6 +196,17 @@ export default tseslint.config(
           selector: 'Literal[value="X-Ingest-Secret"]',
           message: 'Set X-Ingest-Secret only in apps/discord/src/api/http.ts',
         },
+        {
+          selector:
+            'CallExpression[callee.property.name=/^(on|once)$/][arguments.0.value=/^shard/]',
+          message:
+            'Listen to shard gateway events only in apps/discord/src/health.ts via GatewayState',
+        },
+        {
+          selector: 'MemberExpression[object.name="Events"][property.name=/^Shard/]',
+          message:
+            'Listen to shard gateway events only in apps/discord/src/health.ts via GatewayState',
+        },
       ],
     },
   },
@@ -206,10 +217,35 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/discord/src/health.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value="X-Ingest-Secret"]',
+          message: 'Set X-Ingest-Secret only in apps/discord/src/api/http.ts',
+        },
+      ],
+    },
+  },
+  {
     files: ['apps/discord/src/api/http.ts'],
     rules: {
       'no-restricted-globals': 'off',
-      'no-restricted-syntax': 'off',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'CallExpression[callee.property.name=/^(on|once)$/][arguments.0.value=/^shard/]',
+          message:
+            'Listen to shard gateway events only in apps/discord/src/health.ts via GatewayState',
+        },
+        {
+          selector: 'MemberExpression[object.name="Events"][property.name=/^Shard/]',
+          message:
+            'Listen to shard gateway events only in apps/discord/src/health.ts via GatewayState',
+        },
+      ],
     },
   },
 );
