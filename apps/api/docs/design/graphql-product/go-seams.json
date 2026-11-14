@@ -13483,6 +13483,10 @@
         {
           "name": "AllowedHexes",
           "go_type": "[]spatial.PointcrawlAdmission"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
         }
       ],
       "owner": "QUE01",
@@ -13585,6 +13589,22 @@
         {
           "name": "ExistingEntitlements",
           "go_type": "[]character.QuestRewardEntitlementView"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
+        },
+        {
+          "name": "FilledCount",
+          "go_type": "int32"
+        },
+        {
+          "name": "SlotsMax",
+          "go_type": "int32"
+        },
+        {
+          "name": "SignupType",
+          "go_type": "*string"
         }
       ],
       "owner": "QUE01",
@@ -14484,6 +14504,22 @@
         {
           "name": "AllowedHexes",
           "go_type": "[]spatial.PointcrawlAdmission"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
+        },
+        {
+          "name": "FilledCount",
+          "go_type": "int32"
+        },
+        {
+          "name": "SlotsMax",
+          "go_type": "int32"
+        },
+        {
+          "name": "SignupType",
+          "go_type": "*string"
         }
       ],
       "owner": "QUE01",
@@ -14991,6 +15027,22 @@
         {
           "name": "Candidates",
           "go_type": "[]character.Admission"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
+        },
+        {
+          "name": "FilledCount",
+          "go_type": "int32"
+        },
+        {
+          "name": "SlotsMax",
+          "go_type": "int32"
+        },
+        {
+          "name": "SignupType",
+          "go_type": "*string"
         }
       ],
       "owner": "QUE01",
@@ -15290,6 +15342,10 @@
         {
           "name": "AllowedHexes",
           "go_type": "[]spatial.PointcrawlAdmission"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
         }
       ],
       "owner": "QUE01",
@@ -15380,6 +15436,10 @@
         {
           "name": "AllowedHexes",
           "go_type": "[]spatial.PointcrawlAdmission"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
         }
       ],
       "owner": "QUE01",
