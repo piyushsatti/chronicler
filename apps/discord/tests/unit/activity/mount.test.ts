@@ -8,6 +8,7 @@ import { ChannelType, Events, PermissionsBitField } from 'discord.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mountActivity } from '@discord/activity/mount.js';
 import { deliverActivity } from '@discord/activity/forward.js';
+import type { GatewayEvent, GatewayState } from '@discord/health.js';
 import { testConfig } from '../../support/config.js';
 
 vi.mock('@discord/log.js', () => ({
@@ -105,13 +106,31 @@ function voiceState(channelId: string | null, id = 'user-9') {
   };
 }
 
+function fakeGateway(): GatewayState & { emit: (event: GatewayEvent) => void } {
+  const listeners = new Set<(event: GatewayEvent) => void>();
+  return {
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => {
+        listeners.delete(fn);
+      };
+    },
+    emit(event) {
+      for (const listener of listeners) {
+        listener(event);
+      }
+    },
+  };
+}
+
 async function mountedGateway() {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-07-01T00:00:00.000Z'));
   const fixture = gatewayFixture();
-  mountActivity(fixture.client as never, enabledConfig);
+  const gateway = fakeGateway();
+  mountActivity(fixture.client as never, enabledConfig, { gateway });
   fixture.client.emit('raw', { t: 'READY', s: 1, d: { session_id: 'session-1' } }, 0);
-  return { ...fixture, deliverActivity };
+  return { ...fixture, gateway, deliverActivity };
 }
 
 describe('mountActivity', () => {
@@ -138,9 +157,10 @@ describe('mountActivity', () => {
         'raw',
         Events.ChannelUpdate,
         Events.GuildRoleUpdate,
+        Events.GuildAvailable,
       ]),
     );
-    expect(registeredEvents).toHaveLength(5);
+    expect(registeredEvents).toHaveLength(6);
   });
 
   it('uses READY session identity to forward a reaction dispatch', async () => {
@@ -360,12 +380,11 @@ describe('mountActivity', () => {
   );
 
   it('reconciles only publicly visible voice channels', async () => {
-    const { client, voiceStates, deliverActivity } = await mountedGateway();
-    const { Events } = await import('discord.js');
+    const { client, voiceStates, gateway, deliverActivity } = await mountedGateway();
     voiceStates.set('public-user', voiceState('public', 'public-user'));
     voiceStates.set('private-user', voiceState('private', 'private-user'));
     voiceStates.set('unknown-user', voiceState('unknown', 'unknown-user'));
-    client.emit(Events.ClientReady, client);
+    gateway.emit({ type: 'ready', first: true });
     vi.advanceTimersByTime(120_000);
     for (const [id, state] of voiceStates) {
       client.emit('voiceStateUpdate', state, voiceState(null, id));
@@ -378,11 +397,10 @@ describe('mountActivity', () => {
   });
 
   it('forwards public recovery intervals during readiness reconciliation', async () => {
-    const { client, deliverActivity } = await mountedGateway();
-    const { Events } = await import('discord.js');
+    const { client, gateway, deliverActivity } = await mountedGateway();
     client.emit('voiceStateUpdate', voiceState(null), voiceState('public'));
     vi.advanceTimersByTime(120_000);
-    client.emit(Events.ClientReady, client);
+    gateway.emit({ type: 'ready', first: true });
     expect(deliverActivity).toHaveBeenCalledTimes(1);
     expect(deliverActivity).toHaveBeenCalledWith(
       enabledConfig,
@@ -395,15 +413,66 @@ describe('mountActivity', () => {
   });
 
   it('discards private recovery intervals during readiness reconciliation', async () => {
-    const { client, channels, deliverActivity } = await mountedGateway();
-    const { Events } = await import('discord.js');
+    const { client, channels, gateway, deliverActivity } = await mountedGateway();
     client.emit('voiceStateUpdate', voiceState(null), voiceState('public'));
     vi.advanceTimersByTime(120_000);
     channels.set('public', channel('public', false));
-    client.emit(Events.ClientReady, client);
+    gateway.emit({ type: 'ready', first: true });
     expect(deliverActivity).not.toHaveBeenCalled();
     channels.set('public', channel('public'));
     client.emit('voiceStateUpdate', voiceState('public'), voiceState(null));
     expect(deliverActivity).not.toHaveBeenCalled();
+  });
+
+  it('reconciles voice on session_lost: opens joins from the gap and closes leaves', async () => {
+    const { client, voiceStates, gateway, deliverActivity } = await mountedGateway();
+    client.emit('voiceStateUpdate', voiceState(null), voiceState('public', 'stale-user'));
+    vi.advanceTimersByTime(120_000);
+    voiceStates.set('gap-joiner', voiceState('public', 'gap-joiner'));
+    gateway.emit({ type: 'session_lost', shardId: 0, gapMs: 500 });
+
+    expect(deliverActivity).toHaveBeenCalledWith(
+      enabledConfig,
+      expect.objectContaining({
+        event_id: expect.stringContaining('voice:recovery:'),
+        channel_id: 'public',
+        discord_user_id: 'stale-user',
+        amount: 2,
+      }),
+    );
+
+    vi.advanceTimersByTime(60_000);
+    const joined = voiceStates.get('gap-joiner');
+    voiceStates.delete('gap-joiner');
+    client.emit('voiceStateUpdate', joined, voiceState(null, 'gap-joiner'));
+    expect(deliverActivity).toHaveBeenCalledWith(
+      enabledConfig,
+      expect.objectContaining({
+        channel_id: 'public',
+        discord_user_id: 'gap-joiner',
+        amount: 1,
+      }),
+    );
+  });
+
+  it('defers session_lost reconcile until GuildAvailable when the guild is unavailable', async () => {
+    const { client, gateway, deliverActivity } = await mountedGateway();
+    const guild = client.guilds.cache.get('test-guild-id')!;
+    Object.assign(guild, { available: false });
+    client.emit('voiceStateUpdate', voiceState(null), voiceState('public', 'stale-user'));
+    vi.advanceTimersByTime(120_000);
+    gateway.emit({ type: 'session_lost', shardId: 0, gapMs: 500 });
+    expect(deliverActivity).not.toHaveBeenCalled();
+
+    client.emit(Events.GuildAvailable, guild);
+    expect(deliverActivity).toHaveBeenCalledWith(
+      enabledConfig,
+      expect.objectContaining({
+        event_id: expect.stringContaining('voice:recovery:'),
+        channel_id: 'public',
+        discord_user_id: 'stale-user',
+        amount: 2,
+      }),
+    );
   });
 });
