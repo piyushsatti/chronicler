@@ -56,6 +56,18 @@ describe('settings synchronization', () => {
     'blocks clicks and form submission on %s until saved preferences finish loading',
     async (section) => {
       const user = userEvent.setup();
+      savePrefs(
+        {
+          ...DEFAULT_PREFERENCES,
+          timezone: 'UTC',
+          notifyCharacterVerification: true,
+          notifyQuestSignup: true,
+          notifyDocumentActivity: true,
+          notifyQuestScheduled: true,
+          notifyDmMentioned: true,
+        },
+        'member-a',
+      );
       const persisted = {
         ...good.settings,
         theme: 'MIDNIGHT',
@@ -113,8 +125,19 @@ describe('settings synchronization', () => {
         await waitFor(() => expect(save).toBeEnabled());
         expect(store.getState().preferences.prefs).toMatchObject({
           theme: 'midnight', mode: 'dark', density: 'compact',
-          timezone: 'America/Toronto', colorblindSafe: true,
-          reducedMotion: true, notifyQuestSignup: false,
+          colorblindSafe: true, reducedMotion: true,
+        });
+        expect(store.getState().preferences.prefs.timezone).not.toBe(
+          'America/Toronto',
+        );
+        expect(store.getState().preferences.prefs.notifyQuestSignup).toBe(true);
+        expect(loadPrefs('member-a')).toMatchObject({
+          timezone: 'UTC',
+          notifyCharacterVerification: true,
+          notifyQuestSignup: true,
+          notifyDocumentActivity: true,
+          notifyQuestScheduled: true,
+          notifyDmMentioned: true,
         });
         await user.click(save);
         await screen.findByText('Settings saved.');
@@ -246,7 +269,6 @@ describe('settings synchronization', () => {
     expect(attempts).toBe(2);
     expect(loadPrefs('member-a')).toMatchObject({
       theme: 'vegan',
-      timezone: 'America/Toronto',
       reducedMotion: true,
     });
   });

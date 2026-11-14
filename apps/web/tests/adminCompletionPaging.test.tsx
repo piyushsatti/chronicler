@@ -11,23 +11,10 @@ import { renderWithProviders } from './test-utils.js';
 import { signIn } from './features/admin/authority-test-utils.js';
 import { server } from '../src/mocks/server.js';
 import goodMe from './fixtures/wire/me/good.json';
-import { useTheme } from '../src/context/ThemeContext.js';
+import goodPersonalization from './fixtures/wire/personalize/good.json';
+import { queryKeys } from '../src/api/queryKeys.js';
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-
-function DashboardTimezoneControl() {
-  const { setPreferences } = useTheme();
-  return (
-    <>
-      <button onClick={() => setPreferences({ timezone: 'America/New_York' })}>
-        Show New York time
-      </button>
-      <button onClick={() => setPreferences({ timezone: 'Asia/Kolkata' })}>
-        Show Kolkata time
-      </button>
-    </>
-  );
-}
 
 describe('Retained admin pagination and persisted readback', () => {
   it('uses server pages and role filters and starts a changed filter at its first page', async () => {
@@ -201,7 +188,17 @@ describe('Retained admin pagination and persisted readback', () => {
   it('formats cached DM quest instants in the saved timezone and keeps null schedules unscheduled', async () => {
     signIn(['dm']);
     let reads = 0;
+    let timezone: string | null = 'America/New_York';
     server.use(
+      graphql.query('MyPersonalization', () =>
+        HttpResponse.json({
+          data: {
+            myPersonalization: {
+              settings: { ...goodPersonalization.settings, timezone },
+            },
+          },
+        }),
+      ),
       graphql.query('DmDashboard', () => {
         reads++;
         return HttpResponse.json({
@@ -236,27 +233,23 @@ describe('Retained admin pagination and persisted readback', () => {
         });
       }),
     );
-    renderWithProviders(
-      <>
-        <DMDashboardPage />
-        <DashboardTimezoneControl />
-      </>,
-      { route: '/dm' },
-    );
+    const { queryClient } = renderWithProviders(<DMDashboardPage />, {
+      route: '/dm',
+    });
     expect(await screen.findByRole('link', { name: 'Night quest' })).toHaveAttribute(
       'href',
       '/quests/Q-NIGHT',
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Show New York time' }));
-    const scheduled = screen.getByText(/Sat 7 Mar 2026, 23:30/);
+    const scheduled = await screen.findByText(/Sat 7 Mar 2026, 23:30/);
     expect(scheduled.tagName).toBe('TIME');
     expect(scheduled).toHaveAttribute('datetime', '2026-03-08T04:30:00Z');
     const unscheduled = screen.getByRole('row', { name: /Unscheduled quest/ });
     expect(within(unscheduled).getByText('Unscheduled', { exact: true })).toBeVisible();
     expect(unscheduled.querySelector('time')).toBeNull();
     const before = reads;
-    await userEvent.click(screen.getByRole('button', { name: 'Show Kolkata time' }));
-    expect(screen.getByText(/Sun 8 Mar 2026, 10:00/)).toHaveAttribute(
+    timezone = 'Asia/Kolkata';
+    await queryClient.invalidateQueries({ queryKey: queryKeys.personalization });
+    expect(await screen.findByText(/Sun 8 Mar 2026, 10:00/)).toHaveAttribute(
       'datetime',
       '2026-03-08T04:30:00Z',
     );
