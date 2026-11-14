@@ -52,6 +52,9 @@ export function useNotificationsPage({ markOnView = true, enabled = true }: { ma
         session: { token: active.token, signal },
       });
       requireCurrent(active);
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.notificationsUnread,
+      });
       return page;
     },
     enabled: enabled && session !== null,
@@ -65,13 +68,6 @@ export function useNotificationsPage({ markOnView = true, enabled = true }: { ma
     failedIds: markReadFailureIds,
     succeededIds,
   } = useMarkNotificationsRead();
-
-  useEffect(() => {
-    if (!q.dataUpdatedAt || !isCurrent(session)) return;
-    void queryClient.invalidateQueries({
-      queryKey: queryKeys.notificationsUnread,
-    });
-  }, [q.dataUpdatedAt, queryClient, isCurrent, session]);
 
   const items = useMemo(() => {
     const unique = new Map<string, NotificationView>();
