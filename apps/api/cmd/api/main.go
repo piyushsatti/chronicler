@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -16,8 +17,12 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/workerrun"
 )
 
+func newDefaultLogger(w io.Writer) *slog.Logger {
+	return slog.New(httpserver.ContextHandler(slog.NewJSONHandler(w, nil)))
+}
+
 func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	slog.SetDefault(newDefaultLogger(os.Stdout))
 	if len(os.Args) > 1 {
 		os.Exit(runSubcommand(os.Args[1:], os.Stdout, os.Stderr))
 	}
@@ -81,6 +86,7 @@ func main() {
 func apiHandler(mux http.Handler, cfg config.Config, authority auth.AuthorityResolver) http.Handler {
 	return httpserver.Chain(
 		mux,
+		httpserver.RequestID,
 		httpserver.Recover,
 		httpserver.RequestLog,
 		func(next http.Handler) http.Handler {
