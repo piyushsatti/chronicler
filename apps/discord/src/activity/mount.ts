@@ -15,6 +15,7 @@ import { createHttp } from '../api/http.js';
 import { createIngest } from '../api/ingest.js';
 import type { BotConfig } from '../config.js';
 import type { GatewayState } from '../health.js';
+import type { Stoppable } from '../lifecycle.js';
 import { logger } from '../log.js';
 import { ActivityForwarder } from './forward.js';
 import {
@@ -28,7 +29,11 @@ import type { SniffedEvent } from './types.js';
 export interface MountActivityOptions {
   voiceTracker?: VoiceSessionTracker;
   gateway?: GatewayState;
-  forwarder?: { enqueue(e: SniffedEvent): void };
+  forwarder?: { enqueue(e: SniffedEvent): void; drain?(deadlineAt: number): Promise<unknown> };
+}
+
+export interface MountedActivity extends Stoppable {
+  drain(deadlineAt: number): Promise<void>;
 }
 
 /**
@@ -39,13 +44,21 @@ export function mountActivity(
   client: Client,
   config: BotConfig,
   options: MountActivityOptions = {},
-): void {
+): MountedActivity {
   if (!config.snifferEnabled) {
     logger.info(
       'Sniffer disabled (SNIFFER_ENABLED is not "true") -- gateway activity ' +
         'events will not be forwarded to /v1/ingest/discord-event',
     );
-    return;
+    return {
+      name: 'activity',
+      async stop() {
+        return;
+      },
+      async drain() {
+        return;
+      },
+    };
   }
 
   const forwarder =
@@ -113,13 +126,27 @@ export function mountActivity(
 
   client.on(Events.ChannelUpdate, (_oldChannel, newChannel) => {
     if ('guild' in newChannel && newChannel.guild.id === config.guildId) {
-      reconcileVoiceSessions(newChannel.guild);
+      try {
+        reconcileVoiceSessions(newChannel.guild);
+      } catch (error: unknown) {
+        logger.error('Sniffer voice reconciliation failed', {
+          guildId: newChannel.guild.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   });
 
   client.on(Events.GuildRoleUpdate, (_oldRole, newRole) => {
     if (newRole.guild.id === config.guildId && newRole.id === newRole.guild.id) {
-      reconcileVoiceSessions(newRole.guild);
+      try {
+        reconcileVoiceSessions(newRole.guild);
+      } catch (error: unknown) {
+        logger.error('Sniffer voice reconciliation failed', {
+          guildId: newRole.guild.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   });
 
@@ -202,7 +229,7 @@ export function mountActivity(
     }
   });
 
-  options.gateway?.subscribe((event) => {
+  const unsubscribe = options.gateway?.subscribe((event) => {
     if (event.type === 'ready' || event.type === 'session_lost') {
       reconcileConfiguredGuild();
     }
@@ -212,6 +239,22 @@ export function mountActivity(
     'Sniffer mounted -- forwarding messageCreate/voiceStateUpdate/raw MESSAGE_REACTION_ADD ' +
       'to /v1/ingest/discord-event',
   );
+
+  return {
+    name: 'activity',
+    async stop() {
+      unsubscribe?.();
+      const events = tracker.closeAll(Date.now());
+      for (const event of events) {
+        forwarder.enqueue(event);
+      }
+    },
+    async drain(deadlineAt: number) {
+      if (typeof forwarder.drain === 'function') {
+        await forwarder.drain(deadlineAt);
+      }
+    },
+  };
 }
 
 function trackerSessionCount(tracker: VoiceSessionTracker): number {

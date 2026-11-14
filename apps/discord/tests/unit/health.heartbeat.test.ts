@@ -72,7 +72,7 @@ describe('mountShardHealth heartbeat', () => {
     });
     await vi.advanceTimersByTimeAsync(10);
     expect(poster).not.toHaveBeenCalled();
-    dispose();
+    void dispose.stop();
   });
 
   it('keeps the gateway liveness watchdog active when heartbeat posts are disabled', async () => {
@@ -90,7 +90,7 @@ describe('mountShardHealth heartbeat', () => {
 
     expect(poster).not.toHaveBeenCalled();
     expect(exit).toHaveBeenCalledWith(1);
-    dispose();
+    void dispose.stop();
   });
 
   it('marks the heartbeat unhealthy while the gateway is disconnected and includes identity', async () => {
@@ -125,7 +125,7 @@ describe('mountShardHealth heartbeat', () => {
       host: 'test-host',
       build_sha: 'test-build',
     });
-    dispose();
+    void dispose.stop();
   });
 
   it('polls the injected poster on the given interval', async () => {
@@ -143,7 +143,7 @@ describe('mountShardHealth heartbeat', () => {
     await vi.advanceTimersByTimeAsync(2000);
     expect(poster).toHaveBeenCalledTimes(3);
 
-    dispose();
+    void dispose.stop();
   });
 
   it('the returned disposer stops further polling', async () => {
@@ -156,7 +156,7 @@ describe('mountShardHealth heartbeat', () => {
     await vi.advanceTimersByTimeAsync(1000);
     expect(poster).toHaveBeenCalledTimes(1);
 
-    dispose();
+    void dispose.stop();
 
     await vi.advanceTimersByTimeAsync(5000);
     expect(poster).toHaveBeenCalledTimes(1);
@@ -172,7 +172,7 @@ describe('mountShardHealth heartbeat', () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(poster).toHaveBeenCalledTimes(1);
 
-    dispose();
+    void dispose.stop();
   });
 
   it('does not exit after the watchdog disposer runs', async () => {
@@ -183,7 +183,7 @@ describe('mountShardHealth heartbeat', () => {
       nonReadyExitMs: 2_000,
       exit,
     });
-    dispose();
+    void dispose.stop();
     await vi.advanceTimersByTimeAsync(3_000);
     expect(exit).not.toHaveBeenCalled();
   });
@@ -210,6 +210,6 @@ describe('mountShardHealth heartbeat', () => {
     await vi.advanceTimersByTimeAsync(1_000);
     expect(poster).toHaveBeenCalled();
     expect(exit).not.toHaveBeenCalled();
-    dispose();
+    void dispose.stop();
   });
 });

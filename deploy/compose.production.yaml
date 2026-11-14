@@ -103,6 +103,7 @@ services:
       AGENT_ENABLED: 'false'
       SNIFFER_ENABLED: ${SNIFFER_ENABLED:-}
       BOT_HEARTBEAT_ENABLED: ${BOT_HEARTBEAT_ENABLED:-}
+    stop_grace_period: 15s
     depends_on:
       chronicler-api:
         condition: service_healthy
