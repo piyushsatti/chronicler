@@ -49,12 +49,14 @@ func featureHexFromFields(kind string, category *string, frontmatter map[string]
 	return hex, nil
 }
 
-func frontmatterFromYAML(text pgtype.Text) map[string]any {
+func frontmatterFromYAML(text pgtype.Text) (map[string]any, error) {
 	var value map[string]any
 	if text.Valid {
-		_ = yaml.Unmarshal([]byte(text.String), &value)
+		if err := yaml.Unmarshal([]byte(text.String), &value); err != nil {
+			return nil, err
+		}
 	}
-	return value
+	return value, nil
 }
 
 // syncFeatureHex keeps a Feature's map link in step with the document after
@@ -77,7 +79,11 @@ func (p *ProductPostgres) syncFeatureHex(ctx context.Context, documentID, actorI
 	if deleted || !isFeature {
 		return p.queries().DeleteFeatureLinksOffHex(ctx, unplace)
 	}
-	hex, err := featureHexFromFields(kind, productTextPointer(category), frontmatterFromYAML(frontmatterYAML))
+	frontmatter, err := frontmatterFromYAML(frontmatterYAML)
+	if err != nil {
+		return err
+	}
+	hex, err := featureHexFromFields(kind, productTextPointer(category), frontmatter)
 	if err != nil {
 		return err
 	}

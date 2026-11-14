@@ -1,8 +1,12 @@
 package character
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +14,26 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
+
+func TestFetchSubmissionMirrorLogsFetchFailure(t *testing.T) {
+	var output bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	client := &submissionDdb{flag: &submissionTx{}, err: errors.New("upstream unavailable")}
+	got := fetchSubmissionMirror(context.Background(), client, "https://www.dndbeyond.com/characters/1")
+	if got != nil {
+		t.Fatalf("got payload %s, want nil", got)
+	}
+	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("log lines=%d, want 1: %s", len(lines), &output)
+	}
+	if !strings.Contains(lines[0], "character sheet sync skipped: fetch failed") {
+		t.Fatalf("unexpected log: %s", lines[0])
+	}
+}
 
 func TestCreateCharacterReplaySkipsDdbFetch(t *testing.T) {
 	const (

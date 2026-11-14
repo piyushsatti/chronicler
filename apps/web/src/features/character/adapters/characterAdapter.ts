@@ -118,23 +118,19 @@ const REGION_MAX_PAGES = 25; // 5_000 regions scanned at most
 
 async function loadRegionName(id: string | null): Promise<string | null> {
   if (!id) return null;
-  try {
-    for (let page = 0; page < REGION_MAX_PAGES; page++) {
-      const data = await graphqlRequest<CharacterRegionsQuery>(
-        CHARACTER_REGIONS_QUERY,
-        {
-          limit: REGION_PAGE_SIZE,
-          offset: page * REGION_PAGE_SIZE,
-        },
-      );
-      const match = data.regions.find((r) => r.id === id);
-      if (match) return match.name;
-      if (data.regions.length < REGION_PAGE_SIZE) return null;
-    }
-    return null;
-  } catch {
-    return null;
+  for (let page = 0; page < REGION_MAX_PAGES; page++) {
+    const data = await graphqlRequest<CharacterRegionsQuery>(
+      CHARACTER_REGIONS_QUERY,
+      {
+        limit: REGION_PAGE_SIZE,
+        offset: page * REGION_PAGE_SIZE,
+      },
+    );
+    const match = data.regions.find((r) => r.id === id);
+    if (match) return match.name;
+    if (data.regions.length < REGION_PAGE_SIZE) return null;
   }
+  return null;
 }
 
 export async function loadCharacter(opts: {
