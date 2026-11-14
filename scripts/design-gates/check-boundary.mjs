@@ -14,10 +14,7 @@ const webSrc = join(repoRoot, 'apps', 'web', 'src');
 const featuresRoot = join(webSrc, 'features');
 const allowlistPath = join(__dirname, 'allowlist.json');
 
-const COMPOSITION_ROOTS = new Set([
-  'src/chrome/featureRegistry.ts',
-  'src/routes.tsx',
-]);
+const COMPOSITION_ROOTS = new Set(['src/chrome/featureRegistry.ts', 'src/routes.tsx']);
 
 function walk(dir) {
   const out = [];
@@ -68,7 +65,9 @@ const importFromRe = /from\s+['"]([^'"]+)['"]/g;
 export function scanFile(file, content = readFileSync(file, 'utf8')) {
   const rel = webRel(file);
   const underFeatures = rel.startsWith('src/features/');
-  const selfFeature = underFeatures ? rel.slice('src/features/'.length).split('/')[0] : null;
+  const selfFeature = underFeatures
+    ? rel.slice('src/features/'.length).split('/')[0]
+    : null;
   const violations = [];
   const lines = content.split('\n');
   lines.forEach((line, idx) => {

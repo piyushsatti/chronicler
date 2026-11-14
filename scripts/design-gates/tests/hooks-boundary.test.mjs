@@ -5,8 +5,14 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { scanFile } from '../check-boundary.mjs';
 
-const fixtures = join(fileURLToPath(new URL('.', import.meta.url)), 'fixtures/hooks-boundary');
-const webSrc = join(fileURLToPath(new URL('.', import.meta.url)), '../../../apps/web/src');
+const fixtures = join(
+  fileURLToPath(new URL('.', import.meta.url)),
+  'fixtures/hooks-boundary',
+);
+const webSrc = join(
+  fileURLToPath(new URL('.', import.meta.url)),
+  '../../../apps/web/src',
+);
 
 function hits(name) {
   const source = readFileSync(join(fixtures, name), 'utf8');
