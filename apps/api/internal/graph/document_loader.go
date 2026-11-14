@@ -7,15 +7,9 @@ import (
 )
 
 func loadDocumentByID(ctx context.Context, id string) (*document.DocumentView, error) {
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.Documents, "documents")
-	if err != nil {
-		return nil, err
-	}
-	return loader.Load(ctx, document.DocumentKey{ID: id})
+	return loadOne(ctx, func(l *RequestLoaders) *Loader[document.DocumentKey, document.DocumentView] {
+		return l.Documents
+	}, "documents", document.DocumentKey{ID: id})
 }
 
 func readableDocumentID(ctx context.Context, id *string) (*string, error) {
