@@ -104,6 +104,11 @@ services:
     depends_on:
       chronicler-api:
         condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'bun', 'apps/discord/dist/healthcheck.js']
+      interval: 30s
+      start_period: 90s
+      retries: 3
     restart: unless-stopped
 
   # Production ingress (profile `tunnel`): dials out to Cloudflare, which
