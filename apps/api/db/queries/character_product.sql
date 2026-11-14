@@ -49,78 +49,89 @@ LEFT JOIN LATERAL (
 ) latest ON true
 WHERE c.short_code = sqlc.arg(short_code)::text AND c.deleted_at IS NULL;
 -- name: CharacterProductList :many
-SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
-       c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
-       region.public_id AS region_id, c.description, c.background_text,
-       c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
-       ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
-       c.verification_submitted_at,
-       CASE WHEN c.verification_submitted_at IS NOT NULL
-                  AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
-            THEN 'PENDING'
-            ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status
-FROM characters c
-JOIN members owner ON owner.id = c.owner_id
-LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
-LEFT JOIN documents guild ON guild.id = c.guild_document_id
-LEFT JOIN regions region ON region.id = c.region_id
-LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
-LEFT JOIN LATERAL (
-    SELECT verification.verdict, verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-WHERE c.deleted_at IS NULL
-  AND (sqlc.narg(owner_id)::uuid IS NULL OR owner.public_id = sqlc.narg(owner_id)::uuid)
-  AND (sqlc.narg(character_status)::text IS NULL OR c.status = sqlc.narg(character_status)::text)
-  AND (sqlc.narg(name_prefix)::text IS NULL OR left(lower(c.name), char_length(sqlc.narg(name_prefix)::text)) = lower(sqlc.narg(name_prefix)::text))
-  AND (sqlc.narg(region_id)::uuid IS NULL OR c.region_id = (SELECT id FROM regions WHERE public_id = sqlc.narg(region_id)::uuid))
-  AND (sqlc.narg(guild_id)::uuid IS NULL OR c.guild_document_id = (SELECT id FROM documents WHERE public_id = sqlc.narg(guild_id)::uuid))
-ORDER BY c.created_at DESC, c.public_id DESC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
--- name: CharacterProductCount :one
-SELECT count(*)::int AS total
-FROM characters c
-JOIN members owner ON owner.id = c.owner_id
-WHERE c.deleted_at IS NULL
-  AND (sqlc.narg(owner_id)::uuid IS NULL OR owner.public_id = sqlc.narg(owner_id)::uuid)
-  AND (sqlc.narg(character_status)::text IS NULL OR c.status = sqlc.narg(character_status)::text)
-  AND (sqlc.narg(name_prefix)::text IS NULL OR left(lower(c.name), char_length(sqlc.narg(name_prefix)::text)) = lower(sqlc.narg(name_prefix)::text))
-  AND (sqlc.narg(region_id)::uuid IS NULL OR c.region_id = (SELECT id FROM regions WHERE public_id = sqlc.narg(region_id)::uuid))
-  AND (sqlc.narg(guild_id)::uuid IS NULL OR c.guild_document_id = (SELECT id FROM documents WHERE public_id = sqlc.narg(guild_id)::uuid));
+WITH filtered AS (
+    SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
+           c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
+           region.public_id AS region_id, c.description, c.background_text,
+           c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+           ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
+           c.verification_submitted_at,
+           CASE WHEN c.verification_submitted_at IS NOT NULL
+                      AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
+                THEN 'PENDING'
+                ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status
+    FROM characters c
+    JOIN members owner ON owner.id = c.owner_id
+    LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
+    LEFT JOIN documents guild ON guild.id = c.guild_document_id
+    LEFT JOIN regions region ON region.id = c.region_id
+    LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
+    LEFT JOIN LATERAL (
+        SELECT verification.verdict, verification.created_at
+        FROM verifications verification
+        WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
+        ORDER BY verification.created_at DESC, verification.public_id DESC
+        LIMIT 1
+    ) latest ON true
+    WHERE c.deleted_at IS NULL
+      AND (sqlc.narg(owner_id)::uuid IS NULL OR owner.public_id = sqlc.narg(owner_id)::uuid)
+      AND (sqlc.narg(character_status)::text IS NULL OR c.status = sqlc.narg(character_status)::text)
+      AND (sqlc.narg(name_prefix)::text IS NULL OR left(lower(c.name), char_length(sqlc.narg(name_prefix)::text)) = lower(sqlc.narg(name_prefix)::text))
+      AND (sqlc.narg(region_id)::uuid IS NULL OR c.region_id = (SELECT id FROM regions WHERE public_id = sqlc.narg(region_id)::uuid))
+      AND (sqlc.narg(guild_id)::uuid IS NULL OR c.guild_document_id = (SELECT id FROM documents WHERE public_id = sqlc.narg(guild_id)::uuid))
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY created_at DESC, id DESC
+    LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.short_code, page.name, page.owner_id,
+       page.status, page.backstory_id, page.guild_id, page.region_id,
+       page.description, page.background_text, page.ddb_url, page.image_url,
+       page.pcxp, page.created_at, page.updated_at, page.ddb_payload,
+       page.ddb_synced_at, page.verification_submitted_at, page.verification_status
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.created_at DESC NULLS LAST, page.id DESC NULLS LAST;
 -- name: CharacterProductMyCharacters :many
-SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
-       c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
-       c.description, c.background_text, c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
-       ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
-       c.verification_submitted_at,
-       CASE WHEN c.verification_submitted_at IS NOT NULL
-                  AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
-            THEN 'PENDING'
-            ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status
-FROM characters c
-JOIN members owner ON owner.id = c.owner_id
-LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
-LEFT JOIN documents guild ON guild.id = c.guild_document_id
-LEFT JOIN regions region ON region.id = c.region_id
-LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
-LEFT JOIN LATERAL (
-    SELECT verification.verdict, verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-WHERE c.deleted_at IS NULL AND owner.public_id = sqlc.arg(owner_id)::uuid
-ORDER BY c.created_at DESC, c.public_id DESC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
--- name: CharacterProductCountMyCharacters :one
-SELECT count(*)::int AS total
-FROM characters c
-JOIN members owner ON owner.id = c.owner_id
-WHERE c.deleted_at IS NULL AND owner.public_id = sqlc.arg(owner_id)::uuid;
+WITH filtered AS (
+    SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
+           c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
+           c.description, c.background_text, c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+           ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
+           c.verification_submitted_at,
+           CASE WHEN c.verification_submitted_at IS NOT NULL
+                      AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
+                THEN 'PENDING'
+                ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status
+    FROM characters c
+    JOIN members owner ON owner.id = c.owner_id
+    LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
+    LEFT JOIN documents guild ON guild.id = c.guild_document_id
+    LEFT JOIN regions region ON region.id = c.region_id
+    LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
+    LEFT JOIN LATERAL (
+        SELECT verification.verdict, verification.created_at
+        FROM verifications verification
+        WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
+        ORDER BY verification.created_at DESC, verification.public_id DESC
+        LIMIT 1
+    ) latest ON true
+    WHERE c.deleted_at IS NULL AND owner.public_id = sqlc.arg(owner_id)::uuid
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY created_at DESC, id DESC
+    LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.short_code, page.name, page.owner_id,
+       page.status, page.backstory_id, page.guild_id, page.region_id,
+       page.description, page.background_text, page.ddb_url, page.image_url,
+       page.pcxp, page.created_at, page.updated_at, page.ddb_payload,
+       page.ddb_synced_at, page.verification_submitted_at, page.verification_status
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.created_at DESC NULLS LAST, page.id DESC NULLS LAST;
 -- name: CharacterProductLockByID :one
 SELECT c.id, c.public_id, c.owner_id, c.status, c.updated_at, c.player_xp,
        c.backstory_id, c.guild_document_id, c.region_id, c.deleted_at,
@@ -157,22 +168,27 @@ RETURNING target.public_id AS id, target.short_code, target.name,
           target.created_at, target.updated_at,
           target.verification_submitted_at;
 -- name: CharacterProductListProgression :many
-SELECT ledger.public_id AS id, character.public_id AS character_id,
-       ledger.delta AS amount, ledger.kind, ledger.note,
-       quest.public_id AS quest_id, ledger.created_at AS recorded_at,
-       recorder.public_id AS recorded_by
-FROM character_progression_ledger ledger
-JOIN characters character ON character.id = ledger.character_id
-LEFT JOIN quests quest ON quest.id = ledger.quest_id
-LEFT JOIN members recorder ON recorder.id = ledger.recorded_by
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-ORDER BY ledger.created_at DESC, ledger.public_id DESC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
--- name: CharacterProductCountProgression :one
-SELECT count(*)::int AS total
-FROM character_progression_ledger ledger
-JOIN characters character ON character.id = ledger.character_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid;
+WITH filtered AS (
+    SELECT ledger.public_id AS id, character.public_id AS character_id,
+           ledger.delta AS amount, ledger.kind, ledger.note,
+           quest.public_id AS quest_id, ledger.created_at AS recorded_at,
+           recorder.public_id AS recorded_by
+    FROM character_progression_ledger ledger
+    JOIN characters character ON character.id = ledger.character_id
+    LEFT JOIN quests quest ON quest.id = ledger.quest_id
+    LEFT JOIN members recorder ON recorder.id = ledger.recorded_by
+    WHERE character.public_id = sqlc.arg(character_id)::uuid
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY recorded_at DESC, id DESC
+    LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.character_id, page.amount, page.kind,
+       page.note, page.quest_id, page.recorded_at, page.recorded_by
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.recorded_at DESC NULLS LAST, page.id DESC NULLS LAST;
 -- name: CharacterProductAdjustPCXP :one
 WITH updated AS (
     UPDATE characters
@@ -237,113 +253,124 @@ WHERE q.public_id = @quest_id::uuid AND actor.public_id = @actor_id::uuid
 RETURNING public_id;
 
 -- name: CharacterProductListVerificationHistory :many
-SELECT verification.public_id AS id, verification.subject_type,
-       character.public_id AS subject_id, verification.verdict AS decision,
-       reviewer.public_id AS decided_by, verification.note, verification.created_at,
-       NULL::uuid AS evidence_attempt_id
-FROM verifications verification
-JOIN characters character ON character.id = verification.subject_id
-LEFT JOIN members reviewer ON reviewer.id = verification.decided_by
-WHERE verification.subject_type = 'character' AND character.public_id = sqlc.arg(character_id)::uuid
-ORDER BY verification.created_at DESC, verification.public_id DESC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
--- name: CharacterProductCountVerificationHistory :one
-SELECT count(*)::int AS total
-FROM verifications verification
-JOIN characters character ON character.id = verification.subject_id
-WHERE verification.subject_type = 'character' AND character.public_id = sqlc.arg(character_id)::uuid;
+WITH filtered AS (
+    SELECT verification.public_id AS id, verification.subject_type,
+           character.public_id AS subject_id, verification.verdict AS decision,
+           reviewer.public_id AS decided_by, verification.note, verification.created_at,
+           NULL::uuid AS evidence_attempt_id
+    FROM verifications verification
+    JOIN characters character ON character.id = verification.subject_id
+    LEFT JOIN members reviewer ON reviewer.id = verification.decided_by
+    WHERE verification.subject_type = 'character' AND character.public_id = sqlc.arg(character_id)::uuid
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY created_at DESC, id DESC
+    LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.subject_type, page.subject_id, page.decision,
+       page.decided_by, page.note, page.created_at, page.evidence_attempt_id
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.created_at DESC NULLS LAST, page.id DESC NULLS LAST;
 -- name: CharacterProductAdminDirectory :many
-SELECT character.public_id AS id, character.name, owner.public_id AS owner_id,
-       owner.handle AS owner_handle, owner.display_name AS owner_display_name,
-       owner.avatar_url AS owner_avatar_url, character.short_code, character.status,
-       region.public_id AS region_id, region.name AS region_name,
-       guild.public_id AS guild_id,
-       CASE WHEN character.verification_submitted_at IS NOT NULL
-                  AND (latest.created_at IS NULL OR latest.created_at < character.verification_submitted_at)
-            THEN 'PENDING'
-            ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status,
-       character.verification_submitted_at, character.ddb_url, character.updated_at
-FROM characters character
-JOIN members owner ON owner.id = character.owner_id
-LEFT JOIN regions region ON region.id = character.region_id
-LEFT JOIN documents guild ON guild.id = character.guild_document_id
-LEFT JOIN LATERAL (
-    SELECT verification.verdict, verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character'
-      AND verification.subject_id = character.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-WHERE character.deleted_at IS NULL
-  AND (sqlc.narg(name_prefix)::text IS NULL OR left(lower(character.name), char_length(sqlc.narg(name_prefix)::text)) = lower(sqlc.narg(name_prefix)::text))
-  AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
-  AND (sqlc.narg(character_status)::text IS NULL OR character.status = sqlc.narg(character_status)::text)
-ORDER BY character.name ASC, character.public_id ASC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
+WITH filtered AS (
+    SELECT character.public_id AS id, character.name, owner.public_id AS owner_id,
+           owner.handle AS owner_handle, owner.display_name AS owner_display_name,
+           owner.avatar_url AS owner_avatar_url, character.short_code, character.status,
+           region.public_id AS region_id, region.name AS region_name,
+           guild.public_id AS guild_id,
+           CASE WHEN character.verification_submitted_at IS NOT NULL
+                      AND (latest.created_at IS NULL OR latest.created_at < character.verification_submitted_at)
+                THEN 'PENDING'
+                ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status,
+           character.verification_submitted_at, character.ddb_url, character.updated_at
+    FROM characters character
+    JOIN members owner ON owner.id = character.owner_id
+    LEFT JOIN regions region ON region.id = character.region_id
+    LEFT JOIN documents guild ON guild.id = character.guild_document_id
+    LEFT JOIN LATERAL (
+        SELECT verification.verdict, verification.created_at
+        FROM verifications verification
+        WHERE verification.subject_type = 'character'
+          AND verification.subject_id = character.id
+        ORDER BY verification.created_at DESC, verification.public_id DESC
+        LIMIT 1
+    ) latest ON true
+    WHERE character.deleted_at IS NULL
+      AND (sqlc.narg(name_prefix)::text IS NULL OR left(lower(character.name), char_length(sqlc.narg(name_prefix)::text)) = lower(sqlc.narg(name_prefix)::text))
+      AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
+      AND (sqlc.narg(character_status)::text IS NULL OR character.status = sqlc.narg(character_status)::text)
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY name ASC, id ASC
+    LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.name, page.owner_id, page.owner_handle,
+       page.owner_display_name, page.owner_avatar_url, page.short_code, page.status,
+       page.region_id, page.region_name, page.guild_id, page.verification_status,
+       page.verification_submitted_at, page.ddb_url, page.updated_at
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.name ASC NULLS LAST, page.id ASC NULLS LAST;
 -- name: CharacterProductPendingVerificationDirectory :many
-SELECT c.public_id AS id, c.name, owner.public_id AS owner_id,
-       owner.handle AS owner_handle, owner.display_name AS owner_display_name,
-       owner.avatar_url AS owner_avatar_url, c.short_code, c.status,
-       region.public_id AS region_id, region.name AS region_name,
-       guild.public_id AS guild_id,
-       'PENDING'::text AS verification_status,
-       c.verification_submitted_at, c.ddb_url, ddb.synced_at AS ddb_synced_at, c.updated_at
-FROM characters c
-JOIN members owner ON owner.id = c.owner_id
-LEFT JOIN documents guild ON guild.id = c.guild_document_id
-LEFT JOIN regions region ON region.id = c.region_id
-LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
-LEFT JOIN LATERAL (
-    SELECT verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-WHERE c.deleted_at IS NULL
-  AND c.verification_submitted_at IS NOT NULL
-  AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
-ORDER BY c.verification_submitted_at ASC, c.public_id ASC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
--- name: CharacterProductCountPendingVerifications :one
-SELECT count(*)::int AS total
-FROM characters c
-LEFT JOIN LATERAL (
-    SELECT verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-WHERE c.deleted_at IS NULL
-  AND c.verification_submitted_at IS NOT NULL
-  AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at);
--- name: CharacterProductCountAdminDirectory :one
-SELECT count(*)::int AS total
-FROM characters character
-LEFT JOIN regions region ON region.id = character.region_id
-WHERE character.deleted_at IS NULL
-  AND (sqlc.narg(name_prefix)::text IS NULL OR left(lower(character.name), char_length(sqlc.narg(name_prefix)::text)) = lower(sqlc.narg(name_prefix)::text))
-  AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
-  AND (sqlc.narg(character_status)::text IS NULL OR character.status = sqlc.narg(character_status)::text);
+WITH filtered AS (
+    SELECT c.public_id AS id, c.name, owner.public_id AS owner_id,
+           owner.handle AS owner_handle, owner.display_name AS owner_display_name,
+           owner.avatar_url AS owner_avatar_url, c.short_code, c.status,
+           region.public_id AS region_id, region.name AS region_name,
+           guild.public_id AS guild_id,
+           'PENDING'::text AS verification_status,
+           c.verification_submitted_at, c.ddb_url, ddb.synced_at AS ddb_synced_at, c.updated_at
+    FROM characters c
+    JOIN members owner ON owner.id = c.owner_id
+    LEFT JOIN documents guild ON guild.id = c.guild_document_id
+    LEFT JOIN regions region ON region.id = c.region_id
+    LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
+    LEFT JOIN LATERAL (
+        SELECT verification.created_at
+        FROM verifications verification
+        WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
+        ORDER BY verification.created_at DESC, verification.public_id DESC
+        LIMIT 1
+    ) latest ON true
+    WHERE c.deleted_at IS NULL
+      AND c.verification_submitted_at IS NOT NULL
+      AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY verification_submitted_at ASC, id ASC
+    LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.name, page.owner_id, page.owner_handle,
+       page.owner_display_name, page.owner_avatar_url, page.short_code, page.status,
+       page.region_id, page.region_name, page.guild_id, page.verification_status,
+       page.verification_submitted_at, page.ddb_url, page.ddb_synced_at, page.updated_at
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.verification_submitted_at ASC NULLS LAST, page.id ASC NULLS LAST;
 -- name: CharacterProductCreationCatalog :many
-SELECT entry.public_id AS id, entry.kind, entry.name, entry.available,
-       entry.description, region.public_id AS introduced_by_region_id, entry.retired
-FROM creation_catalog entry
-LEFT JOIN regions region ON region.id = entry.introduced_by_region_id
-WHERE (sqlc.arg(include_all)::bool OR (entry.available AND NOT entry.retired))
-  AND (sqlc.narg(kind)::text IS NULL OR entry.kind = sqlc.narg(kind)::text)
-  AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
-ORDER BY lower(entry.name) ASC, entry.public_id ASC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
--- name: CharacterProductCountCreationCatalog :one
-SELECT count(*)::int AS total
-FROM creation_catalog entry
-LEFT JOIN regions region ON region.id = entry.introduced_by_region_id
-WHERE (sqlc.arg(include_all)::bool OR (entry.available AND NOT entry.retired))
-  AND (sqlc.narg(kind)::text IS NULL OR entry.kind = sqlc.narg(kind)::text)
-  AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid);
+WITH filtered AS (
+    SELECT entry.public_id AS id, entry.kind, entry.name, entry.available,
+           entry.description, region.public_id AS introduced_by_region_id, entry.retired
+    FROM creation_catalog entry
+    LEFT JOIN regions region ON region.id = entry.introduced_by_region_id
+    WHERE (sqlc.arg(include_all)::bool OR (entry.available AND NOT entry.retired))
+      AND (sqlc.narg(kind)::text IS NULL OR entry.kind = sqlc.narg(kind)::text)
+      AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY lower(name) ASC, id ASC
+    LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.kind, page.name, page.available,
+       page.description, page.introduced_by_region_id, page.retired
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY lower(page.name) ASC NULLS LAST, page.id ASC NULLS LAST;
 -- name: CharacterProductLockCreationCatalogEntry :one
 SELECT entry.id, entry.public_id, entry.kind, entry.code, entry.name,
        entry.available, entry.description, entry.introduced_by_region_id, entry.retired
@@ -396,64 +423,72 @@ SELECT updated.public_id AS id, updated.kind, updated.name, updated.available,
        updated.retired
 FROM updated;
 -- name: CharacterProductListParticipations :many
-SELECT quest.public_id AS quest_id, member.public_id AS member_id,
-       character.public_id AS character_id, participant.status, participant.manual,
-       participant.created_at, participant.updated_at, character.name AS character_name,
-       member.handle AS member_handle, member.display_name AS member_display_name,
-       member.avatar_url AS member_avatar_url
-FROM quest_participants participant
-JOIN quests quest ON quest.id = participant.quest_id
-JOIN characters character ON character.id = participant.character_id
-JOIN members member ON member.id = participant.member_id
-WHERE character.public_id = $1
-ORDER BY participant.created_at ASC, character.public_id ASC
-LIMIT $2 OFFSET $3;
--- name: CharacterProductCountParticipations :one
-SELECT count(*)::int AS total
-FROM quest_participants participant
-JOIN characters character ON character.id = participant.character_id
-WHERE character.public_id = $1;
+WITH filtered AS (
+    SELECT quest.public_id AS quest_id, member.public_id AS member_id,
+           character.public_id AS character_id, participant.status, participant.manual,
+           participant.created_at, participant.updated_at, character.name AS character_name,
+           member.handle AS member_handle, member.display_name AS member_display_name,
+           member.avatar_url AS member_avatar_url
+    FROM quest_participants participant
+    JOIN quests quest ON quest.id = participant.quest_id
+    JOIN characters character ON character.id = participant.character_id
+    JOIN members member ON member.id = participant.member_id
+    WHERE character.public_id = sqlc.arg(public_id)
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY created_at ASC, character_id ASC
+    LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset)
+)
+SELECT counted.total, page.quest_id, page.member_id, page.character_id, page.status,
+       page.manual, page.created_at, page.updated_at, page.character_name,
+       page.member_handle, page.member_display_name, page.member_avatar_url
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.created_at ASC NULLS LAST, page.character_id ASC NULLS LAST;
 -- name: CharacterProductListCoPlayers :many
-SELECT character.public_id AS character_id, member.public_id AS member_id,
-       count(DISTINCT participant.quest_id)::int AS quest_count
-FROM quest_participants source
-JOIN quest_participants participant ON participant.quest_id = source.quest_id
-JOIN characters character ON character.id = participant.character_id
-JOIN members member ON member.id = participant.member_id
-WHERE source.character_id = (SELECT c.id FROM characters c WHERE c.public_id = $1)
-  AND participant.status = 'played'
-  AND source.status = 'played'
-  AND participant.character_id <> source.character_id
-  AND participant.member_id <> source.member_id
-GROUP BY character.public_id, member.public_id
-ORDER BY character.public_id, member.public_id
-LIMIT $2 OFFSET $3;
--- name: CharacterProductCountCoPlayers :one
-SELECT count(*)::int AS total
-FROM (
-    SELECT participant.character_id, participant.member_id
+WITH filtered AS (
+    SELECT character.public_id AS character_id, member.public_id AS member_id,
+           count(DISTINCT participant.quest_id)::int AS quest_count
     FROM quest_participants source
     JOIN quest_participants participant ON participant.quest_id = source.quest_id
-    WHERE source.character_id = (SELECT c.id FROM characters c WHERE c.public_id = $1)
-      AND source.status = 'played' AND participant.status = 'played'
+    JOIN characters character ON character.id = participant.character_id
+    JOIN members member ON member.id = participant.member_id
+    WHERE source.character_id = (SELECT c.id FROM characters c WHERE c.public_id = sqlc.arg(public_id))
+      AND participant.status = 'played'
+      AND source.status = 'played'
       AND participant.character_id <> source.character_id
       AND participant.member_id <> source.member_id
-    GROUP BY participant.character_id, participant.member_id
-) pairs;
+    GROUP BY character.public_id, member.public_id
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY character_id, member_id
+    LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset)
+)
+SELECT counted.total, page.character_id, page.member_id, page.quest_count
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.character_id ASC NULLS LAST, page.member_id ASC NULLS LAST;
 -- name: CharacterProductListDowntimeProjects :many
-SELECT project.public_id AS id, character.public_id AS character_id,
-       project.name, project.target, project.goal, project.notes,
-       project.progress, project.status, project.updated_at
-FROM downtime_projects project
-JOIN characters character ON character.id = project.character_id
-WHERE character.public_id = $1
-ORDER BY project.name ASC, project.public_id ASC
-LIMIT $2 OFFSET $3;
--- name: CharacterProductCountDowntimeProjects :one
-SELECT count(*)::int AS total
-FROM downtime_projects project
-JOIN characters character ON character.id = project.character_id
-WHERE character.public_id = $1;
+WITH filtered AS (
+    SELECT project.public_id AS id, character.public_id AS character_id,
+           project.name, project.target, project.goal, project.notes,
+           project.progress, project.status, project.updated_at
+    FROM downtime_projects project
+    JOIN characters character ON character.id = project.character_id
+    WHERE character.public_id = sqlc.arg(public_id)
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY name ASC, id ASC
+    LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset)
+)
+SELECT counted.total, page.id, page.character_id, page.name, page.target,
+       page.goal, page.notes, page.progress, page.status, page.updated_at
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.name ASC NULLS LAST, page.id ASC NULLS LAST;
 -- name: CharacterProductInsertDowntimeProject :one
 WITH inserted AS (
     INSERT INTO downtime_projects (character_id, name, target, goal, notes, progress, status, updated_at)
@@ -526,37 +561,45 @@ WHERE public_id = sqlc.arg(character_id)::uuid
   AND updated_at = sqlc.arg(expected_updated_at)::timestamptz
 RETURNING public_id AS id, verification_submitted_at, updated_at;
 -- name: CharacterProductListLogs :many
-SELECT log.public_id AS id, character.public_id AS character_id, quest.public_id AS quest_id,
-       log.body, log.created_at, creator.public_id AS created_by
-FROM character_logs log
-JOIN characters character ON character.id = log.character_id
-LEFT JOIN quests quest ON quest.id = log.quest_id
-LEFT JOIN members creator ON creator.id = log.created_by
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-ORDER BY log.created_at DESC, log.public_id DESC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
--- name: CharacterProductCountLogs :one
-SELECT count(*)::int AS total
-FROM character_logs log
-JOIN characters character ON character.id = log.character_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid;
+WITH filtered AS (
+    SELECT log.public_id AS id, character.public_id AS character_id, quest.public_id AS quest_id,
+           log.body, log.created_at, creator.public_id AS created_by
+    FROM character_logs log
+    JOIN characters character ON character.id = log.character_id
+    LEFT JOIN quests quest ON quest.id = log.quest_id
+    LEFT JOIN members creator ON creator.id = log.created_by
+    WHERE character.public_id = sqlc.arg(character_id)::uuid
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY created_at DESC, id DESC
+    LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.character_id, page.quest_id, page.body,
+       page.created_at, page.created_by
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.created_at DESC NULLS LAST, page.id DESC NULLS LAST;
 -- name: CharacterProductListBackstories :many
-SELECT backstory.public_id AS id, backstory.name, backstory.lore, backstory.cohort,
-       backstory.retired, region.public_id AS source_region_id
-FROM backstories backstory
-LEFT JOIN regions region ON region.id = backstory.source_region_id
-WHERE (sqlc.arg(include_retired)::bool OR NOT backstory.retired)
-  AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
-  AND (sqlc.narg(cohort)::text IS NULL OR backstory.cohort = sqlc.narg(cohort)::text)
-ORDER BY lower(backstory.name) ASC, backstory.public_id ASC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
--- name: CharacterProductCountBackstories :one
-SELECT count(*)::int AS total
-FROM backstories backstory
-LEFT JOIN regions region ON region.id = backstory.source_region_id
-WHERE (sqlc.arg(include_retired)::bool OR NOT backstory.retired)
-  AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
-  AND (sqlc.narg(cohort)::text IS NULL OR backstory.cohort = sqlc.narg(cohort)::text);
+WITH filtered AS (
+    SELECT backstory.public_id AS id, backstory.name, backstory.lore, backstory.cohort,
+           backstory.retired, region.public_id AS source_region_id
+    FROM backstories backstory
+    LEFT JOIN regions region ON region.id = backstory.source_region_id
+    WHERE (sqlc.arg(include_retired)::bool OR NOT backstory.retired)
+      AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
+      AND (sqlc.narg(cohort)::text IS NULL OR backstory.cohort = sqlc.narg(cohort)::text)
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY lower(name) ASC, id ASC
+    LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.name, page.lore, page.cohort, page.retired,
+       page.source_region_id
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY lower(page.name) ASC NULLS LAST, page.id ASC NULLS LAST;
 -- name: CharacterProductLockBackstory :one
 SELECT backstory.id, backstory.public_id, backstory.name, backstory.lore, backstory.cohort,
        backstory.source_region_id, backstory.retired
@@ -661,38 +704,36 @@ WHERE log.character_id = character.id
   AND log.public_id = sqlc.arg(log_id)::uuid
 RETURNING log.public_id AS id;
 -- name: CharacterProductListSummaries :many
-SELECT document.public_id AS id, document.kind, document.slug, document.title,
-       document.category, document.status, document.visibility, document.policy,
-       document.frontmatter_yaml, author.public_id AS author_id, document.published_at,
-       document.deleted_at, deleted_by.public_id AS deleted_by, document.updated_at,
-       document.version
-FROM document_links link
-JOIN documents document ON document.id = link.source_id
-JOIN characters character ON character.id = link.character_target_id
-JOIN members author ON author.id = document.author_id
-LEFT JOIN members deleted_by ON deleted_by.id = document.deleted_by
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-  AND link.relation = 'summarizes'
-  AND document.kind = 'summary'
-  AND document.deleted_at IS NULL
-  AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
-      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
-      sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
-ORDER BY link.summary_append_order ASC, document.public_id ASC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
--- name: CharacterProductCountSummaries :one
-SELECT count(*)::int AS total
-FROM document_links link
-JOIN documents document ON document.id = link.source_id
-JOIN characters character ON character.id = link.character_target_id
-JOIN members author ON author.id = document.author_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-  AND link.relation = 'summarizes'
-  AND document.kind = 'summary'
-  AND document.deleted_at IS NULL
-  AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
-      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
-      sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[]);
+WITH filtered AS (
+    SELECT document.public_id AS id, document.kind, document.slug, document.title,
+           document.category, document.status, document.visibility, document.policy,
+           document.frontmatter_yaml, author.public_id AS author_id, document.published_at,
+           document.deleted_at, deleted_by.public_id AS deleted_by, document.updated_at,
+           document.version, link.summary_append_order
+    FROM document_links link
+    JOIN documents document ON document.id = link.source_id
+    JOIN characters character ON character.id = link.character_target_id
+    JOIN members author ON author.id = document.author_id
+    LEFT JOIN members deleted_by ON deleted_by.id = document.deleted_by
+    WHERE character.public_id = sqlc.arg(character_id)::uuid
+      AND link.relation = 'summarizes'
+      AND document.kind = 'summary'
+      AND document.deleted_at IS NULL
+      AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
+          sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+          sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY summary_append_order ASC, id ASC
+    LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.kind, page.slug, page.title, page.category,
+       page.status, page.visibility, page.policy, page.frontmatter_yaml, page.author_id,
+       page.published_at, page.deleted_at, page.deleted_by, page.updated_at, page.version
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.summary_append_order ASC NULLS LAST, page.id ASC NULLS LAST;
 -- name: CharacterProductValidateCreationReferences :one
 SELECT
     (sqlc.narg(backstory_id)::uuid IS NULL OR EXISTS (

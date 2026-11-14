@@ -76,34 +76,46 @@ func (q *Queries) CharacterProductAdjustPCXP(ctx context.Context, arg CharacterP
 }
 
 const characterProductAdminDirectory = `-- name: CharacterProductAdminDirectory :many
-SELECT character.public_id AS id, character.name, owner.public_id AS owner_id,
-       owner.handle AS owner_handle, owner.display_name AS owner_display_name,
-       owner.avatar_url AS owner_avatar_url, character.short_code, character.status,
-       region.public_id AS region_id, region.name AS region_name,
-       guild.public_id AS guild_id,
-       CASE WHEN character.verification_submitted_at IS NOT NULL
-                  AND (latest.created_at IS NULL OR latest.created_at < character.verification_submitted_at)
-            THEN 'PENDING'
-            ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status,
-       character.verification_submitted_at, character.ddb_url, character.updated_at
-FROM characters character
-JOIN members owner ON owner.id = character.owner_id
-LEFT JOIN regions region ON region.id = character.region_id
-LEFT JOIN documents guild ON guild.id = character.guild_document_id
-LEFT JOIN LATERAL (
-    SELECT verification.verdict, verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character'
-      AND verification.subject_id = character.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-WHERE character.deleted_at IS NULL
-  AND ($1::text IS NULL OR left(lower(character.name), char_length($1::text)) = lower($1::text))
-  AND ($2::uuid IS NULL OR region.public_id = $2::uuid)
-  AND ($3::text IS NULL OR character.status = $3::text)
-ORDER BY character.name ASC, character.public_id ASC
-LIMIT $5::int OFFSET $4::int
+WITH filtered AS (
+    SELECT character.public_id AS id, character.name, owner.public_id AS owner_id,
+           owner.handle AS owner_handle, owner.display_name AS owner_display_name,
+           owner.avatar_url AS owner_avatar_url, character.short_code, character.status,
+           region.public_id AS region_id, region.name AS region_name,
+           guild.public_id AS guild_id,
+           CASE WHEN character.verification_submitted_at IS NOT NULL
+                      AND (latest.created_at IS NULL OR latest.created_at < character.verification_submitted_at)
+                THEN 'PENDING'
+                ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status,
+           character.verification_submitted_at, character.ddb_url, character.updated_at
+    FROM characters character
+    JOIN members owner ON owner.id = character.owner_id
+    LEFT JOIN regions region ON region.id = character.region_id
+    LEFT JOIN documents guild ON guild.id = character.guild_document_id
+    LEFT JOIN LATERAL (
+        SELECT verification.verdict, verification.created_at
+        FROM verifications verification
+        WHERE verification.subject_type = 'character'
+          AND verification.subject_id = character.id
+        ORDER BY verification.created_at DESC, verification.public_id DESC
+        LIMIT 1
+    ) latest ON true
+    WHERE character.deleted_at IS NULL
+      AND ($1::text IS NULL OR left(lower(character.name), char_length($1::text)) = lower($1::text))
+      AND ($2::uuid IS NULL OR region.public_id = $2::uuid)
+      AND ($3::text IS NULL OR character.status = $3::text)
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, name, owner_id, owner_handle, owner_display_name, owner_avatar_url, short_code, status, region_id, region_name, guild_id, verification_status, verification_submitted_at, ddb_url, updated_at FROM filtered
+    ORDER BY name ASC, id ASC
+    LIMIT $5::int OFFSET $4::int
+)
+SELECT counted.total, page.id, page.name, page.owner_id, page.owner_handle,
+       page.owner_display_name, page.owner_avatar_url, page.short_code, page.status,
+       page.region_id, page.region_name, page.guild_id, page.verification_status,
+       page.verification_submitted_at, page.ddb_url, page.updated_at
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.name ASC NULLS LAST, page.id ASC NULLS LAST
 `
 
 type CharacterProductAdminDirectoryParams struct {
@@ -115,14 +127,15 @@ type CharacterProductAdminDirectoryParams struct {
 }
 
 type CharacterProductAdminDirectoryRow struct {
+	Total                   int64              `json:"total"`
 	ID                      pgtype.UUID        `json:"id"`
-	Name                    string             `json:"name"`
+	Name                    pgtype.Text        `json:"name"`
 	OwnerID                 pgtype.UUID        `json:"owner_id"`
-	OwnerHandle             string             `json:"owner_handle"`
-	OwnerDisplayName        string             `json:"owner_display_name"`
+	OwnerHandle             pgtype.Text        `json:"owner_handle"`
+	OwnerDisplayName        pgtype.Text        `json:"owner_display_name"`
 	OwnerAvatarUrl          pgtype.Text        `json:"owner_avatar_url"`
-	ShortCode               string             `json:"short_code"`
-	Status                  string             `json:"status"`
+	ShortCode               pgtype.Text        `json:"short_code"`
+	Status                  pgtype.Text        `json:"status"`
 	RegionID                pgtype.UUID        `json:"region_id"`
 	RegionName              pgtype.Text        `json:"region_name"`
 	GuildID                 pgtype.UUID        `json:"guild_id"`
@@ -148,6 +161,7 @@ func (q *Queries) CharacterProductAdminDirectory(ctx context.Context, arg Charac
 	for rows.Next() {
 		var i CharacterProductAdminDirectoryRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.Name,
 			&i.OwnerID,
@@ -456,283 +470,26 @@ func (q *Queries) CharacterProductClearGuild(ctx context.Context, arg CharacterP
 	return i, err
 }
 
-const characterProductCount = `-- name: CharacterProductCount :one
-SELECT count(*)::int AS total
-FROM characters c
-JOIN members owner ON owner.id = c.owner_id
-WHERE c.deleted_at IS NULL
-  AND ($1::uuid IS NULL OR owner.public_id = $1::uuid)
-  AND ($2::text IS NULL OR c.status = $2::text)
-  AND ($3::text IS NULL OR left(lower(c.name), char_length($3::text)) = lower($3::text))
-  AND ($4::uuid IS NULL OR c.region_id = (SELECT id FROM regions WHERE public_id = $4::uuid))
-  AND ($5::uuid IS NULL OR c.guild_document_id = (SELECT id FROM documents WHERE public_id = $5::uuid))
-`
-
-type CharacterProductCountParams struct {
-	OwnerID         pgtype.UUID `json:"owner_id"`
-	CharacterStatus pgtype.Text `json:"character_status"`
-	NamePrefix      pgtype.Text `json:"name_prefix"`
-	RegionID        pgtype.UUID `json:"region_id"`
-	GuildID         pgtype.UUID `json:"guild_id"`
-}
-
-func (q *Queries) CharacterProductCount(ctx context.Context, arg CharacterProductCountParams) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCount,
-		arg.OwnerID,
-		arg.CharacterStatus,
-		arg.NamePrefix,
-		arg.RegionID,
-		arg.GuildID,
-	)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountAdminDirectory = `-- name: CharacterProductCountAdminDirectory :one
-SELECT count(*)::int AS total
-FROM characters character
-LEFT JOIN regions region ON region.id = character.region_id
-WHERE character.deleted_at IS NULL
-  AND ($1::text IS NULL OR left(lower(character.name), char_length($1::text)) = lower($1::text))
-  AND ($2::uuid IS NULL OR region.public_id = $2::uuid)
-  AND ($3::text IS NULL OR character.status = $3::text)
-`
-
-type CharacterProductCountAdminDirectoryParams struct {
-	NamePrefix      pgtype.Text `json:"name_prefix"`
-	RegionID        pgtype.UUID `json:"region_id"`
-	CharacterStatus pgtype.Text `json:"character_status"`
-}
-
-func (q *Queries) CharacterProductCountAdminDirectory(ctx context.Context, arg CharacterProductCountAdminDirectoryParams) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountAdminDirectory, arg.NamePrefix, arg.RegionID, arg.CharacterStatus)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountBackstories = `-- name: CharacterProductCountBackstories :one
-SELECT count(*)::int AS total
-FROM backstories backstory
-LEFT JOIN regions region ON region.id = backstory.source_region_id
-WHERE ($1::bool OR NOT backstory.retired)
-  AND ($2::uuid IS NULL OR region.public_id = $2::uuid)
-  AND ($3::text IS NULL OR backstory.cohort = $3::text)
-`
-
-type CharacterProductCountBackstoriesParams struct {
-	IncludeRetired bool        `json:"include_retired"`
-	RegionID       pgtype.UUID `json:"region_id"`
-	Cohort         pgtype.Text `json:"cohort"`
-}
-
-func (q *Queries) CharacterProductCountBackstories(ctx context.Context, arg CharacterProductCountBackstoriesParams) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountBackstories, arg.IncludeRetired, arg.RegionID, arg.Cohort)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountCoPlayers = `-- name: CharacterProductCountCoPlayers :one
-SELECT count(*)::int AS total
-FROM (
-    SELECT participant.character_id, participant.member_id
-    FROM quest_participants source
-    JOIN quest_participants participant ON participant.quest_id = source.quest_id
-    WHERE source.character_id = (SELECT c.id FROM characters c WHERE c.public_id = $1)
-      AND source.status = 'played' AND participant.status = 'played'
-      AND participant.character_id <> source.character_id
-      AND participant.member_id <> source.member_id
-    GROUP BY participant.character_id, participant.member_id
-) pairs
-`
-
-func (q *Queries) CharacterProductCountCoPlayers(ctx context.Context, publicID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountCoPlayers, publicID)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountCreationCatalog = `-- name: CharacterProductCountCreationCatalog :one
-SELECT count(*)::int AS total
-FROM creation_catalog entry
-LEFT JOIN regions region ON region.id = entry.introduced_by_region_id
-WHERE ($1::bool OR (entry.available AND NOT entry.retired))
-  AND ($2::text IS NULL OR entry.kind = $2::text)
-  AND ($3::uuid IS NULL OR region.public_id = $3::uuid)
-`
-
-type CharacterProductCountCreationCatalogParams struct {
-	IncludeAll bool        `json:"include_all"`
-	Kind       pgtype.Text `json:"kind"`
-	RegionID   pgtype.UUID `json:"region_id"`
-}
-
-func (q *Queries) CharacterProductCountCreationCatalog(ctx context.Context, arg CharacterProductCountCreationCatalogParams) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountCreationCatalog, arg.IncludeAll, arg.Kind, arg.RegionID)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountDowntimeProjects = `-- name: CharacterProductCountDowntimeProjects :one
-SELECT count(*)::int AS total
-FROM downtime_projects project
-JOIN characters character ON character.id = project.character_id
-WHERE character.public_id = $1
-`
-
-func (q *Queries) CharacterProductCountDowntimeProjects(ctx context.Context, publicID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountDowntimeProjects, publicID)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountLogs = `-- name: CharacterProductCountLogs :one
-SELECT count(*)::int AS total
-FROM character_logs log
-JOIN characters character ON character.id = log.character_id
-WHERE character.public_id = $1::uuid
-`
-
-func (q *Queries) CharacterProductCountLogs(ctx context.Context, characterID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountLogs, characterID)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountMyCharacters = `-- name: CharacterProductCountMyCharacters :one
-SELECT count(*)::int AS total
-FROM characters c
-JOIN members owner ON owner.id = c.owner_id
-WHERE c.deleted_at IS NULL AND owner.public_id = $1::uuid
-`
-
-func (q *Queries) CharacterProductCountMyCharacters(ctx context.Context, ownerID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountMyCharacters, ownerID)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountParticipations = `-- name: CharacterProductCountParticipations :one
-SELECT count(*)::int AS total
-FROM quest_participants participant
-JOIN characters character ON character.id = participant.character_id
-WHERE character.public_id = $1
-`
-
-func (q *Queries) CharacterProductCountParticipations(ctx context.Context, publicID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountParticipations, publicID)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountPendingVerifications = `-- name: CharacterProductCountPendingVerifications :one
-SELECT count(*)::int AS total
-FROM characters c
-LEFT JOIN LATERAL (
-    SELECT verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-WHERE c.deleted_at IS NULL
-  AND c.verification_submitted_at IS NOT NULL
-  AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
-`
-
-func (q *Queries) CharacterProductCountPendingVerifications(ctx context.Context) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountPendingVerifications)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountProgression = `-- name: CharacterProductCountProgression :one
-SELECT count(*)::int AS total
-FROM character_progression_ledger ledger
-JOIN characters character ON character.id = ledger.character_id
-WHERE character.public_id = $1::uuid
-`
-
-func (q *Queries) CharacterProductCountProgression(ctx context.Context, characterID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountProgression, characterID)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountSummaries = `-- name: CharacterProductCountSummaries :one
-SELECT count(*)::int AS total
-FROM document_links link
-JOIN documents document ON document.id = link.source_id
-JOIN characters character ON character.id = link.character_target_id
-JOIN members author ON author.id = document.author_id
-WHERE character.public_id = $1::uuid
-  AND link.relation = 'summarizes'
-  AND document.kind = 'summary'
-  AND document.deleted_at IS NULL
-  AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
-      $2::uuid, $3::text[], $4::text,
-      $5::boolean, $6::boolean, $7::uuid[])
-`
-
-type CharacterProductCountSummariesParams struct {
-	CharacterID  pgtype.UUID   `json:"character_id"`
-	ViewerID     pgtype.UUID   `json:"viewer_id"`
-	ViewerRoles  []string      `json:"viewer_roles"`
-	ViewerHandle string        `json:"viewer_handle"`
-	ViewerAdmin  bool          `json:"viewer_admin"`
-	ViewerLiveDm bool          `json:"viewer_live_dm"`
-	ReaderIds    []pgtype.UUID `json:"reader_ids"`
-}
-
-func (q *Queries) CharacterProductCountSummaries(ctx context.Context, arg CharacterProductCountSummariesParams) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountSummaries,
-		arg.CharacterID,
-		arg.ViewerID,
-		arg.ViewerRoles,
-		arg.ViewerHandle,
-		arg.ViewerAdmin,
-		arg.ViewerLiveDm,
-		arg.ReaderIds,
-	)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
-const characterProductCountVerificationHistory = `-- name: CharacterProductCountVerificationHistory :one
-SELECT count(*)::int AS total
-FROM verifications verification
-JOIN characters character ON character.id = verification.subject_id
-WHERE verification.subject_type = 'character' AND character.public_id = $1::uuid
-`
-
-func (q *Queries) CharacterProductCountVerificationHistory(ctx context.Context, characterID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountVerificationHistory, characterID)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
 const characterProductCreationCatalog = `-- name: CharacterProductCreationCatalog :many
-SELECT entry.public_id AS id, entry.kind, entry.name, entry.available,
-       entry.description, region.public_id AS introduced_by_region_id, entry.retired
-FROM creation_catalog entry
-LEFT JOIN regions region ON region.id = entry.introduced_by_region_id
-WHERE ($1::bool OR (entry.available AND NOT entry.retired))
-  AND ($2::text IS NULL OR entry.kind = $2::text)
-  AND ($3::uuid IS NULL OR region.public_id = $3::uuid)
-ORDER BY lower(entry.name) ASC, entry.public_id ASC
-LIMIT $5::int OFFSET $4::int
+WITH filtered AS (
+    SELECT entry.public_id AS id, entry.kind, entry.name, entry.available,
+           entry.description, region.public_id AS introduced_by_region_id, entry.retired
+    FROM creation_catalog entry
+    LEFT JOIN regions region ON region.id = entry.introduced_by_region_id
+    WHERE ($1::bool OR (entry.available AND NOT entry.retired))
+      AND ($2::text IS NULL OR entry.kind = $2::text)
+      AND ($3::uuid IS NULL OR region.public_id = $3::uuid)
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, kind, name, available, description, introduced_by_region_id, retired FROM filtered
+    ORDER BY lower(name) ASC, id ASC
+    LIMIT $5::int OFFSET $4::int
+)
+SELECT counted.total, page.id, page.kind, page.name, page.available,
+       page.description, page.introduced_by_region_id, page.retired
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY lower(page.name) ASC NULLS LAST, page.id ASC NULLS LAST
 `
 
 type CharacterProductCreationCatalogParams struct {
@@ -744,13 +501,14 @@ type CharacterProductCreationCatalogParams struct {
 }
 
 type CharacterProductCreationCatalogRow struct {
+	Total                int64       `json:"total"`
 	ID                   pgtype.UUID `json:"id"`
-	Kind                 string      `json:"kind"`
-	Name                 string      `json:"name"`
-	Available            bool        `json:"available"`
+	Kind                 pgtype.Text `json:"kind"`
+	Name                 pgtype.Text `json:"name"`
+	Available            pgtype.Bool `json:"available"`
 	Description          pgtype.Text `json:"description"`
 	IntroducedByRegionID pgtype.UUID `json:"introduced_by_region_id"`
-	Retired              bool        `json:"retired"`
+	Retired              pgtype.Bool `json:"retired"`
 }
 
 func (q *Queries) CharacterProductCreationCatalog(ctx context.Context, arg CharacterProductCreationCatalogParams) ([]CharacterProductCreationCatalogRow, error) {
@@ -769,6 +527,7 @@ func (q *Queries) CharacterProductCreationCatalog(ctx context.Context, arg Chara
 	for rows.Next() {
 		var i CharacterProductCreationCatalogRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.Kind,
 			&i.Name,
@@ -1065,37 +824,50 @@ func (q *Queries) CharacterProductInsertDowntimeProject(ctx context.Context, arg
 }
 
 const characterProductList = `-- name: CharacterProductList :many
-SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
-       c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
-       region.public_id AS region_id, c.description, c.background_text,
-       c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
-       ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
-       c.verification_submitted_at,
-       CASE WHEN c.verification_submitted_at IS NOT NULL
-                  AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
-            THEN 'PENDING'
-            ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status
-FROM characters c
-JOIN members owner ON owner.id = c.owner_id
-LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
-LEFT JOIN documents guild ON guild.id = c.guild_document_id
-LEFT JOIN regions region ON region.id = c.region_id
-LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
-LEFT JOIN LATERAL (
-    SELECT verification.verdict, verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-WHERE c.deleted_at IS NULL
-  AND ($1::uuid IS NULL OR owner.public_id = $1::uuid)
-  AND ($2::text IS NULL OR c.status = $2::text)
-  AND ($3::text IS NULL OR left(lower(c.name), char_length($3::text)) = lower($3::text))
-  AND ($4::uuid IS NULL OR c.region_id = (SELECT id FROM regions WHERE public_id = $4::uuid))
-  AND ($5::uuid IS NULL OR c.guild_document_id = (SELECT id FROM documents WHERE public_id = $5::uuid))
-ORDER BY c.created_at DESC, c.public_id DESC
-LIMIT $7::int OFFSET $6::int
+WITH filtered AS (
+    SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
+           c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
+           region.public_id AS region_id, c.description, c.background_text,
+           c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+           ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
+           c.verification_submitted_at,
+           CASE WHEN c.verification_submitted_at IS NOT NULL
+                      AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
+                THEN 'PENDING'
+                ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status
+    FROM characters c
+    JOIN members owner ON owner.id = c.owner_id
+    LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
+    LEFT JOIN documents guild ON guild.id = c.guild_document_id
+    LEFT JOIN regions region ON region.id = c.region_id
+    LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
+    LEFT JOIN LATERAL (
+        SELECT verification.verdict, verification.created_at
+        FROM verifications verification
+        WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
+        ORDER BY verification.created_at DESC, verification.public_id DESC
+        LIMIT 1
+    ) latest ON true
+    WHERE c.deleted_at IS NULL
+      AND ($1::uuid IS NULL OR owner.public_id = $1::uuid)
+      AND ($2::text IS NULL OR c.status = $2::text)
+      AND ($3::text IS NULL OR left(lower(c.name), char_length($3::text)) = lower($3::text))
+      AND ($4::uuid IS NULL OR c.region_id = (SELECT id FROM regions WHERE public_id = $4::uuid))
+      AND ($5::uuid IS NULL OR c.guild_document_id = (SELECT id FROM documents WHERE public_id = $5::uuid))
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, short_code, name, owner_id, status, backstory_id, guild_id, region_id, description, background_text, ddb_url, image_url, pcxp, created_at, updated_at, ddb_payload, ddb_synced_at, verification_submitted_at, verification_status FROM filtered
+    ORDER BY created_at DESC, id DESC
+    LIMIT $7::int OFFSET $6::int
+)
+SELECT counted.total, page.id, page.short_code, page.name, page.owner_id,
+       page.status, page.backstory_id, page.guild_id, page.region_id,
+       page.description, page.background_text, page.ddb_url, page.image_url,
+       page.pcxp, page.created_at, page.updated_at, page.ddb_payload,
+       page.ddb_synced_at, page.verification_submitted_at, page.verification_status
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.created_at DESC NULLS LAST, page.id DESC NULLS LAST
 `
 
 type CharacterProductListParams struct {
@@ -1109,11 +881,12 @@ type CharacterProductListParams struct {
 }
 
 type CharacterProductListRow struct {
+	Total                   int64              `json:"total"`
 	ID                      pgtype.UUID        `json:"id"`
-	ShortCode               string             `json:"short_code"`
-	Name                    string             `json:"name"`
+	ShortCode               pgtype.Text        `json:"short_code"`
+	Name                    pgtype.Text        `json:"name"`
 	OwnerID                 pgtype.UUID        `json:"owner_id"`
-	Status                  string             `json:"status"`
+	Status                  pgtype.Text        `json:"status"`
 	BackstoryID             pgtype.UUID        `json:"backstory_id"`
 	GuildID                 pgtype.UUID        `json:"guild_id"`
 	RegionID                pgtype.UUID        `json:"region_id"`
@@ -1121,7 +894,7 @@ type CharacterProductListRow struct {
 	BackgroundText          pgtype.Text        `json:"background_text"`
 	DdbUrl                  pgtype.Text        `json:"ddb_url"`
 	ImageUrl                pgtype.Text        `json:"image_url"`
-	Pcxp                    int32              `json:"pcxp"`
+	Pcxp                    pgtype.Int4        `json:"pcxp"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 	DdbPayload              []byte             `json:"ddb_payload"`
@@ -1148,6 +921,7 @@ func (q *Queries) CharacterProductList(ctx context.Context, arg CharacterProduct
 	for rows.Next() {
 		var i CharacterProductListRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.ShortCode,
 			&i.Name,
@@ -1179,15 +953,25 @@ func (q *Queries) CharacterProductList(ctx context.Context, arg CharacterProduct
 }
 
 const characterProductListBackstories = `-- name: CharacterProductListBackstories :many
-SELECT backstory.public_id AS id, backstory.name, backstory.lore, backstory.cohort,
-       backstory.retired, region.public_id AS source_region_id
-FROM backstories backstory
-LEFT JOIN regions region ON region.id = backstory.source_region_id
-WHERE ($1::bool OR NOT backstory.retired)
-  AND ($2::uuid IS NULL OR region.public_id = $2::uuid)
-  AND ($3::text IS NULL OR backstory.cohort = $3::text)
-ORDER BY lower(backstory.name) ASC, backstory.public_id ASC
-LIMIT $5::int OFFSET $4::int
+WITH filtered AS (
+    SELECT backstory.public_id AS id, backstory.name, backstory.lore, backstory.cohort,
+           backstory.retired, region.public_id AS source_region_id
+    FROM backstories backstory
+    LEFT JOIN regions region ON region.id = backstory.source_region_id
+    WHERE ($1::bool OR NOT backstory.retired)
+      AND ($2::uuid IS NULL OR region.public_id = $2::uuid)
+      AND ($3::text IS NULL OR backstory.cohort = $3::text)
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, name, lore, cohort, retired, source_region_id FROM filtered
+    ORDER BY lower(name) ASC, id ASC
+    LIMIT $5::int OFFSET $4::int
+)
+SELECT counted.total, page.id, page.name, page.lore, page.cohort, page.retired,
+       page.source_region_id
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY lower(page.name) ASC NULLS LAST, page.id ASC NULLS LAST
 `
 
 type CharacterProductListBackstoriesParams struct {
@@ -1199,11 +983,12 @@ type CharacterProductListBackstoriesParams struct {
 }
 
 type CharacterProductListBackstoriesRow struct {
+	Total          int64       `json:"total"`
 	ID             pgtype.UUID `json:"id"`
-	Name           string      `json:"name"`
-	Lore           string      `json:"lore"`
-	Cohort         string      `json:"cohort"`
-	Retired        bool        `json:"retired"`
+	Name           pgtype.Text `json:"name"`
+	Lore           pgtype.Text `json:"lore"`
+	Cohort         pgtype.Text `json:"cohort"`
+	Retired        pgtype.Bool `json:"retired"`
 	SourceRegionID pgtype.UUID `json:"source_region_id"`
 }
 
@@ -1223,6 +1008,7 @@ func (q *Queries) CharacterProductListBackstories(ctx context.Context, arg Chara
 	for rows.Next() {
 		var i CharacterProductListBackstoriesRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.Name,
 			&i.Lore,
@@ -1241,36 +1027,46 @@ func (q *Queries) CharacterProductListBackstories(ctx context.Context, arg Chara
 }
 
 const characterProductListCoPlayers = `-- name: CharacterProductListCoPlayers :many
-SELECT character.public_id AS character_id, member.public_id AS member_id,
-       count(DISTINCT participant.quest_id)::int AS quest_count
-FROM quest_participants source
-JOIN quest_participants participant ON participant.quest_id = source.quest_id
-JOIN characters character ON character.id = participant.character_id
-JOIN members member ON member.id = participant.member_id
-WHERE source.character_id = (SELECT c.id FROM characters c WHERE c.public_id = $1)
-  AND participant.status = 'played'
-  AND source.status = 'played'
-  AND participant.character_id <> source.character_id
-  AND participant.member_id <> source.member_id
-GROUP BY character.public_id, member.public_id
-ORDER BY character.public_id, member.public_id
-LIMIT $2 OFFSET $3
+WITH filtered AS (
+    SELECT character.public_id AS character_id, member.public_id AS member_id,
+           count(DISTINCT participant.quest_id)::int AS quest_count
+    FROM quest_participants source
+    JOIN quest_participants participant ON participant.quest_id = source.quest_id
+    JOIN characters character ON character.id = participant.character_id
+    JOIN members member ON member.id = participant.member_id
+    WHERE source.character_id = (SELECT c.id FROM characters c WHERE c.public_id = $1)
+      AND participant.status = 'played'
+      AND source.status = 'played'
+      AND participant.character_id <> source.character_id
+      AND participant.member_id <> source.member_id
+    GROUP BY character.public_id, member.public_id
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT character_id, member_id, quest_count FROM filtered
+    ORDER BY character_id, member_id
+    LIMIT $3 OFFSET $2
+)
+SELECT counted.total, page.character_id, page.member_id, page.quest_count
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.character_id ASC NULLS LAST, page.member_id ASC NULLS LAST
 `
 
 type CharacterProductListCoPlayersParams struct {
-	PublicID pgtype.UUID `json:"public_id"`
-	Limit    int32       `json:"limit"`
-	Offset   int32       `json:"offset"`
+	PublicID  pgtype.UUID `json:"public_id"`
+	RowOffset int32       `json:"row_offset"`
+	RowLimit  int32       `json:"row_limit"`
 }
 
 type CharacterProductListCoPlayersRow struct {
+	Total       int64       `json:"total"`
 	CharacterID pgtype.UUID `json:"character_id"`
 	MemberID    pgtype.UUID `json:"member_id"`
-	QuestCount  int32       `json:"quest_count"`
+	QuestCount  pgtype.Int4 `json:"quest_count"`
 }
 
 func (q *Queries) CharacterProductListCoPlayers(ctx context.Context, arg CharacterProductListCoPlayersParams) ([]CharacterProductListCoPlayersRow, error) {
-	rows, err := q.db.Query(ctx, characterProductListCoPlayers, arg.PublicID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, characterProductListCoPlayers, arg.PublicID, arg.RowOffset, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -1278,7 +1074,12 @@ func (q *Queries) CharacterProductListCoPlayers(ctx context.Context, arg Charact
 	items := []CharacterProductListCoPlayersRow{}
 	for rows.Next() {
 		var i CharacterProductListCoPlayersRow
-		if err := rows.Scan(&i.CharacterID, &i.MemberID, &i.QuestCount); err != nil {
+		if err := rows.Scan(
+			&i.Total,
+			&i.CharacterID,
+			&i.MemberID,
+			&i.QuestCount,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1290,36 +1091,47 @@ func (q *Queries) CharacterProductListCoPlayers(ctx context.Context, arg Charact
 }
 
 const characterProductListDowntimeProjects = `-- name: CharacterProductListDowntimeProjects :many
-SELECT project.public_id AS id, character.public_id AS character_id,
-       project.name, project.target, project.goal, project.notes,
-       project.progress, project.status, project.updated_at
-FROM downtime_projects project
-JOIN characters character ON character.id = project.character_id
-WHERE character.public_id = $1
-ORDER BY project.name ASC, project.public_id ASC
-LIMIT $2 OFFSET $3
+WITH filtered AS (
+    SELECT project.public_id AS id, character.public_id AS character_id,
+           project.name, project.target, project.goal, project.notes,
+           project.progress, project.status, project.updated_at
+    FROM downtime_projects project
+    JOIN characters character ON character.id = project.character_id
+    WHERE character.public_id = $1
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, character_id, name, target, goal, notes, progress, status, updated_at FROM filtered
+    ORDER BY name ASC, id ASC
+    LIMIT $3 OFFSET $2
+)
+SELECT counted.total, page.id, page.character_id, page.name, page.target,
+       page.goal, page.notes, page.progress, page.status, page.updated_at
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.name ASC NULLS LAST, page.id ASC NULLS LAST
 `
 
 type CharacterProductListDowntimeProjectsParams struct {
-	PublicID pgtype.UUID `json:"public_id"`
-	Limit    int32       `json:"limit"`
-	Offset   int32       `json:"offset"`
+	PublicID  pgtype.UUID `json:"public_id"`
+	RowOffset int32       `json:"row_offset"`
+	RowLimit  int32       `json:"row_limit"`
 }
 
 type CharacterProductListDowntimeProjectsRow struct {
+	Total       int64              `json:"total"`
 	ID          pgtype.UUID        `json:"id"`
 	CharacterID pgtype.UUID        `json:"character_id"`
-	Name        string             `json:"name"`
+	Name        pgtype.Text        `json:"name"`
 	Target      pgtype.Int4        `json:"target"`
 	Goal        pgtype.Text        `json:"goal"`
 	Notes       pgtype.Text        `json:"notes"`
-	Progress    int32              `json:"progress"`
-	Status      string             `json:"status"`
+	Progress    pgtype.Int4        `json:"progress"`
+	Status      pgtype.Text        `json:"status"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 func (q *Queries) CharacterProductListDowntimeProjects(ctx context.Context, arg CharacterProductListDowntimeProjectsParams) ([]CharacterProductListDowntimeProjectsRow, error) {
-	rows, err := q.db.Query(ctx, characterProductListDowntimeProjects, arg.PublicID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, characterProductListDowntimeProjects, arg.PublicID, arg.RowOffset, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -1328,6 +1140,7 @@ func (q *Queries) CharacterProductListDowntimeProjects(ctx context.Context, arg 
 	for rows.Next() {
 		var i CharacterProductListDowntimeProjectsRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.CharacterID,
 			&i.Name,
@@ -1349,15 +1162,25 @@ func (q *Queries) CharacterProductListDowntimeProjects(ctx context.Context, arg 
 }
 
 const characterProductListLogs = `-- name: CharacterProductListLogs :many
-SELECT log.public_id AS id, character.public_id AS character_id, quest.public_id AS quest_id,
-       log.body, log.created_at, creator.public_id AS created_by
-FROM character_logs log
-JOIN characters character ON character.id = log.character_id
-LEFT JOIN quests quest ON quest.id = log.quest_id
-LEFT JOIN members creator ON creator.id = log.created_by
-WHERE character.public_id = $1::uuid
-ORDER BY log.created_at DESC, log.public_id DESC
-LIMIT $3::int OFFSET $2::int
+WITH filtered AS (
+    SELECT log.public_id AS id, character.public_id AS character_id, quest.public_id AS quest_id,
+           log.body, log.created_at, creator.public_id AS created_by
+    FROM character_logs log
+    JOIN characters character ON character.id = log.character_id
+    LEFT JOIN quests quest ON quest.id = log.quest_id
+    LEFT JOIN members creator ON creator.id = log.created_by
+    WHERE character.public_id = $1::uuid
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, character_id, quest_id, body, created_at, created_by FROM filtered
+    ORDER BY created_at DESC, id DESC
+    LIMIT $3::int OFFSET $2::int
+)
+SELECT counted.total, page.id, page.character_id, page.quest_id, page.body,
+       page.created_at, page.created_by
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.created_at DESC NULLS LAST, page.id DESC NULLS LAST
 `
 
 type CharacterProductListLogsParams struct {
@@ -1367,10 +1190,11 @@ type CharacterProductListLogsParams struct {
 }
 
 type CharacterProductListLogsRow struct {
+	Total       int64              `json:"total"`
 	ID          pgtype.UUID        `json:"id"`
 	CharacterID pgtype.UUID        `json:"character_id"`
 	QuestID     pgtype.UUID        `json:"quest_id"`
-	Body        string             `json:"body"`
+	Body        pgtype.Text        `json:"body"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	CreatedBy   pgtype.UUID        `json:"created_by"`
 }
@@ -1385,6 +1209,7 @@ func (q *Queries) CharacterProductListLogs(ctx context.Context, arg CharacterPro
 	for rows.Next() {
 		var i CharacterProductListLogsRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.CharacterID,
 			&i.QuestID,
@@ -1403,42 +1228,54 @@ func (q *Queries) CharacterProductListLogs(ctx context.Context, arg CharacterPro
 }
 
 const characterProductListParticipations = `-- name: CharacterProductListParticipations :many
-SELECT quest.public_id AS quest_id, member.public_id AS member_id,
-       character.public_id AS character_id, participant.status, participant.manual,
-       participant.created_at, participant.updated_at, character.name AS character_name,
-       member.handle AS member_handle, member.display_name AS member_display_name,
-       member.avatar_url AS member_avatar_url
-FROM quest_participants participant
-JOIN quests quest ON quest.id = participant.quest_id
-JOIN characters character ON character.id = participant.character_id
-JOIN members member ON member.id = participant.member_id
-WHERE character.public_id = $1
-ORDER BY participant.created_at ASC, character.public_id ASC
-LIMIT $2 OFFSET $3
+WITH filtered AS (
+    SELECT quest.public_id AS quest_id, member.public_id AS member_id,
+           character.public_id AS character_id, participant.status, participant.manual,
+           participant.created_at, participant.updated_at, character.name AS character_name,
+           member.handle AS member_handle, member.display_name AS member_display_name,
+           member.avatar_url AS member_avatar_url
+    FROM quest_participants participant
+    JOIN quests quest ON quest.id = participant.quest_id
+    JOIN characters character ON character.id = participant.character_id
+    JOIN members member ON member.id = participant.member_id
+    WHERE character.public_id = $1
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT quest_id, member_id, character_id, status, manual, created_at, updated_at, character_name, member_handle, member_display_name, member_avatar_url FROM filtered
+    ORDER BY created_at ASC, character_id ASC
+    LIMIT $3 OFFSET $2
+)
+SELECT counted.total, page.quest_id, page.member_id, page.character_id, page.status,
+       page.manual, page.created_at, page.updated_at, page.character_name,
+       page.member_handle, page.member_display_name, page.member_avatar_url
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.created_at ASC NULLS LAST, page.character_id ASC NULLS LAST
 `
 
 type CharacterProductListParticipationsParams struct {
-	PublicID pgtype.UUID `json:"public_id"`
-	Limit    int32       `json:"limit"`
-	Offset   int32       `json:"offset"`
+	PublicID  pgtype.UUID `json:"public_id"`
+	RowOffset int32       `json:"row_offset"`
+	RowLimit  int32       `json:"row_limit"`
 }
 
 type CharacterProductListParticipationsRow struct {
+	Total             int64              `json:"total"`
 	QuestID           pgtype.UUID        `json:"quest_id"`
 	MemberID          pgtype.UUID        `json:"member_id"`
 	CharacterID       pgtype.UUID        `json:"character_id"`
-	Status            string             `json:"status"`
-	Manual            bool               `json:"manual"`
+	Status            pgtype.Text        `json:"status"`
+	Manual            pgtype.Bool        `json:"manual"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
-	CharacterName     string             `json:"character_name"`
-	MemberHandle      string             `json:"member_handle"`
-	MemberDisplayName string             `json:"member_display_name"`
+	CharacterName     pgtype.Text        `json:"character_name"`
+	MemberHandle      pgtype.Text        `json:"member_handle"`
+	MemberDisplayName pgtype.Text        `json:"member_display_name"`
 	MemberAvatarUrl   pgtype.Text        `json:"member_avatar_url"`
 }
 
 func (q *Queries) CharacterProductListParticipations(ctx context.Context, arg CharacterProductListParticipationsParams) ([]CharacterProductListParticipationsRow, error) {
-	rows, err := q.db.Query(ctx, characterProductListParticipations, arg.PublicID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, characterProductListParticipations, arg.PublicID, arg.RowOffset, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -1447,6 +1284,7 @@ func (q *Queries) CharacterProductListParticipations(ctx context.Context, arg Ch
 	for rows.Next() {
 		var i CharacterProductListParticipationsRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.QuestID,
 			&i.MemberID,
 			&i.CharacterID,
@@ -1470,17 +1308,27 @@ func (q *Queries) CharacterProductListParticipations(ctx context.Context, arg Ch
 }
 
 const characterProductListProgression = `-- name: CharacterProductListProgression :many
-SELECT ledger.public_id AS id, character.public_id AS character_id,
-       ledger.delta AS amount, ledger.kind, ledger.note,
-       quest.public_id AS quest_id, ledger.created_at AS recorded_at,
-       recorder.public_id AS recorded_by
-FROM character_progression_ledger ledger
-JOIN characters character ON character.id = ledger.character_id
-LEFT JOIN quests quest ON quest.id = ledger.quest_id
-LEFT JOIN members recorder ON recorder.id = ledger.recorded_by
-WHERE character.public_id = $1::uuid
-ORDER BY ledger.created_at DESC, ledger.public_id DESC
-LIMIT $3::int OFFSET $2::int
+WITH filtered AS (
+    SELECT ledger.public_id AS id, character.public_id AS character_id,
+           ledger.delta AS amount, ledger.kind, ledger.note,
+           quest.public_id AS quest_id, ledger.created_at AS recorded_at,
+           recorder.public_id AS recorded_by
+    FROM character_progression_ledger ledger
+    JOIN characters character ON character.id = ledger.character_id
+    LEFT JOIN quests quest ON quest.id = ledger.quest_id
+    LEFT JOIN members recorder ON recorder.id = ledger.recorded_by
+    WHERE character.public_id = $1::uuid
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, character_id, amount, kind, note, quest_id, recorded_at, recorded_by FROM filtered
+    ORDER BY recorded_at DESC, id DESC
+    LIMIT $3::int OFFSET $2::int
+)
+SELECT counted.total, page.id, page.character_id, page.amount, page.kind,
+       page.note, page.quest_id, page.recorded_at, page.recorded_by
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.recorded_at DESC NULLS LAST, page.id DESC NULLS LAST
 `
 
 type CharacterProductListProgressionParams struct {
@@ -1490,10 +1338,11 @@ type CharacterProductListProgressionParams struct {
 }
 
 type CharacterProductListProgressionRow struct {
+	Total       int64              `json:"total"`
 	ID          pgtype.UUID        `json:"id"`
 	CharacterID pgtype.UUID        `json:"character_id"`
-	Amount      int32              `json:"amount"`
-	Kind        string             `json:"kind"`
+	Amount      pgtype.Int4        `json:"amount"`
+	Kind        pgtype.Text        `json:"kind"`
 	Note        pgtype.Text        `json:"note"`
 	QuestID     pgtype.UUID        `json:"quest_id"`
 	RecordedAt  pgtype.Timestamptz `json:"recorded_at"`
@@ -1510,6 +1359,7 @@ func (q *Queries) CharacterProductListProgression(ctx context.Context, arg Chara
 	for rows.Next() {
 		var i CharacterProductListProgressionRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.CharacterID,
 			&i.Amount,
@@ -1530,25 +1380,36 @@ func (q *Queries) CharacterProductListProgression(ctx context.Context, arg Chara
 }
 
 const characterProductListSummaries = `-- name: CharacterProductListSummaries :many
-SELECT document.public_id AS id, document.kind, document.slug, document.title,
-       document.category, document.status, document.visibility, document.policy,
-       document.frontmatter_yaml, author.public_id AS author_id, document.published_at,
-       document.deleted_at, deleted_by.public_id AS deleted_by, document.updated_at,
-       document.version
-FROM document_links link
-JOIN documents document ON document.id = link.source_id
-JOIN characters character ON character.id = link.character_target_id
-JOIN members author ON author.id = document.author_id
-LEFT JOIN members deleted_by ON deleted_by.id = document.deleted_by
-WHERE character.public_id = $1::uuid
-  AND link.relation = 'summarizes'
-  AND document.kind = 'summary'
-  AND document.deleted_at IS NULL
-  AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
-      $2::uuid, $3::text[], $4::text,
-      $5::boolean, $6::boolean, $7::uuid[])
-ORDER BY link.summary_append_order ASC, document.public_id ASC
-LIMIT $9::int OFFSET $8::int
+WITH filtered AS (
+    SELECT document.public_id AS id, document.kind, document.slug, document.title,
+           document.category, document.status, document.visibility, document.policy,
+           document.frontmatter_yaml, author.public_id AS author_id, document.published_at,
+           document.deleted_at, deleted_by.public_id AS deleted_by, document.updated_at,
+           document.version, link.summary_append_order
+    FROM document_links link
+    JOIN documents document ON document.id = link.source_id
+    JOIN characters character ON character.id = link.character_target_id
+    JOIN members author ON author.id = document.author_id
+    LEFT JOIN members deleted_by ON deleted_by.id = document.deleted_by
+    WHERE character.public_id = $1::uuid
+      AND link.relation = 'summarizes'
+      AND document.kind = 'summary'
+      AND document.deleted_at IS NULL
+      AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
+          $2::uuid, $3::text[], $4::text,
+          $5::boolean, $6::boolean, $7::uuid[])
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, kind, slug, title, category, status, visibility, policy, frontmatter_yaml, author_id, published_at, deleted_at, deleted_by, updated_at, version, summary_append_order FROM filtered
+    ORDER BY summary_append_order ASC, id ASC
+    LIMIT $9::int OFFSET $8::int
+)
+SELECT counted.total, page.id, page.kind, page.slug, page.title, page.category,
+       page.status, page.visibility, page.policy, page.frontmatter_yaml, page.author_id,
+       page.published_at, page.deleted_at, page.deleted_by, page.updated_at, page.version
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.summary_append_order ASC NULLS LAST, page.id ASC NULLS LAST
 `
 
 type CharacterProductListSummariesParams struct {
@@ -1564,13 +1425,14 @@ type CharacterProductListSummariesParams struct {
 }
 
 type CharacterProductListSummariesRow struct {
+	Total           int64              `json:"total"`
 	ID              pgtype.UUID        `json:"id"`
-	Kind            string             `json:"kind"`
-	Slug            string             `json:"slug"`
-	Title           string             `json:"title"`
+	Kind            pgtype.Text        `json:"kind"`
+	Slug            pgtype.Text        `json:"slug"`
+	Title           pgtype.Text        `json:"title"`
 	Category        pgtype.Text        `json:"category"`
-	Status          string             `json:"status"`
-	Visibility      string             `json:"visibility"`
+	Status          pgtype.Text        `json:"status"`
+	Visibility      pgtype.Text        `json:"visibility"`
 	Policy          []byte             `json:"policy"`
 	FrontmatterYaml pgtype.Text        `json:"frontmatter_yaml"`
 	AuthorID        pgtype.UUID        `json:"author_id"`
@@ -1578,7 +1440,7 @@ type CharacterProductListSummariesRow struct {
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
 	DeletedBy       pgtype.UUID        `json:"deleted_by"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	Version         int32              `json:"version"`
+	Version         pgtype.Int4        `json:"version"`
 }
 
 func (q *Queries) CharacterProductListSummaries(ctx context.Context, arg CharacterProductListSummariesParams) ([]CharacterProductListSummariesRow, error) {
@@ -1601,6 +1463,7 @@ func (q *Queries) CharacterProductListSummaries(ctx context.Context, arg Charact
 	for rows.Next() {
 		var i CharacterProductListSummariesRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.Kind,
 			&i.Slug,
@@ -1628,16 +1491,26 @@ func (q *Queries) CharacterProductListSummaries(ctx context.Context, arg Charact
 }
 
 const characterProductListVerificationHistory = `-- name: CharacterProductListVerificationHistory :many
-SELECT verification.public_id AS id, verification.subject_type,
-       character.public_id AS subject_id, verification.verdict AS decision,
-       reviewer.public_id AS decided_by, verification.note, verification.created_at,
-       NULL::uuid AS evidence_attempt_id
-FROM verifications verification
-JOIN characters character ON character.id = verification.subject_id
-LEFT JOIN members reviewer ON reviewer.id = verification.decided_by
-WHERE verification.subject_type = 'character' AND character.public_id = $1::uuid
-ORDER BY verification.created_at DESC, verification.public_id DESC
-LIMIT $3::int OFFSET $2::int
+WITH filtered AS (
+    SELECT verification.public_id AS id, verification.subject_type,
+           character.public_id AS subject_id, verification.verdict AS decision,
+           reviewer.public_id AS decided_by, verification.note, verification.created_at,
+           NULL::uuid AS evidence_attempt_id
+    FROM verifications verification
+    JOIN characters character ON character.id = verification.subject_id
+    LEFT JOIN members reviewer ON reviewer.id = verification.decided_by
+    WHERE verification.subject_type = 'character' AND character.public_id = $1::uuid
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, subject_type, subject_id, decision, decided_by, note, created_at, evidence_attempt_id FROM filtered
+    ORDER BY created_at DESC, id DESC
+    LIMIT $3::int OFFSET $2::int
+)
+SELECT counted.total, page.id, page.subject_type, page.subject_id, page.decision,
+       page.decided_by, page.note, page.created_at, page.evidence_attempt_id
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.created_at DESC NULLS LAST, page.id DESC NULLS LAST
 `
 
 type CharacterProductListVerificationHistoryParams struct {
@@ -1647,10 +1520,11 @@ type CharacterProductListVerificationHistoryParams struct {
 }
 
 type CharacterProductListVerificationHistoryRow struct {
+	Total             int64              `json:"total"`
 	ID                pgtype.UUID        `json:"id"`
-	SubjectType       string             `json:"subject_type"`
+	SubjectType       pgtype.Text        `json:"subject_type"`
 	SubjectID         pgtype.UUID        `json:"subject_id"`
-	Decision          string             `json:"decision"`
+	Decision          pgtype.Text        `json:"decision"`
 	DecidedBy         pgtype.UUID        `json:"decided_by"`
 	Note              pgtype.Text        `json:"note"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
@@ -1667,6 +1541,7 @@ func (q *Queries) CharacterProductListVerificationHistory(ctx context.Context, a
 	for rows.Next() {
 		var i CharacterProductListVerificationHistoryRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.SubjectType,
 			&i.SubjectID,
@@ -1861,31 +1736,44 @@ func (q *Queries) CharacterProductLockQuestRoster(ctx context.Context, questID p
 }
 
 const characterProductMyCharacters = `-- name: CharacterProductMyCharacters :many
-SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
-       c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
-       c.description, c.background_text, c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
-       ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
-       c.verification_submitted_at,
-       CASE WHEN c.verification_submitted_at IS NOT NULL
-                  AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
-            THEN 'PENDING'
-            ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status
-FROM characters c
-JOIN members owner ON owner.id = c.owner_id
-LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
-LEFT JOIN documents guild ON guild.id = c.guild_document_id
-LEFT JOIN regions region ON region.id = c.region_id
-LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
-LEFT JOIN LATERAL (
-    SELECT verification.verdict, verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-WHERE c.deleted_at IS NULL AND owner.public_id = $1::uuid
-ORDER BY c.created_at DESC, c.public_id DESC
-LIMIT $3::int OFFSET $2::int
+WITH filtered AS (
+    SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
+           c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
+           c.description, c.background_text, c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+           ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
+           c.verification_submitted_at,
+           CASE WHEN c.verification_submitted_at IS NOT NULL
+                      AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
+                THEN 'PENDING'
+                ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status
+    FROM characters c
+    JOIN members owner ON owner.id = c.owner_id
+    LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
+    LEFT JOIN documents guild ON guild.id = c.guild_document_id
+    LEFT JOIN regions region ON region.id = c.region_id
+    LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
+    LEFT JOIN LATERAL (
+        SELECT verification.verdict, verification.created_at
+        FROM verifications verification
+        WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
+        ORDER BY verification.created_at DESC, verification.public_id DESC
+        LIMIT 1
+    ) latest ON true
+    WHERE c.deleted_at IS NULL AND owner.public_id = $1::uuid
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, short_code, name, owner_id, status, backstory_id, guild_id, region_id, description, background_text, ddb_url, image_url, pcxp, created_at, updated_at, ddb_payload, ddb_synced_at, verification_submitted_at, verification_status FROM filtered
+    ORDER BY created_at DESC, id DESC
+    LIMIT $3::int OFFSET $2::int
+)
+SELECT counted.total, page.id, page.short_code, page.name, page.owner_id,
+       page.status, page.backstory_id, page.guild_id, page.region_id,
+       page.description, page.background_text, page.ddb_url, page.image_url,
+       page.pcxp, page.created_at, page.updated_at, page.ddb_payload,
+       page.ddb_synced_at, page.verification_submitted_at, page.verification_status
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.created_at DESC NULLS LAST, page.id DESC NULLS LAST
 `
 
 type CharacterProductMyCharactersParams struct {
@@ -1895,11 +1783,12 @@ type CharacterProductMyCharactersParams struct {
 }
 
 type CharacterProductMyCharactersRow struct {
+	Total                   int64              `json:"total"`
 	ID                      pgtype.UUID        `json:"id"`
-	ShortCode               string             `json:"short_code"`
-	Name                    string             `json:"name"`
+	ShortCode               pgtype.Text        `json:"short_code"`
+	Name                    pgtype.Text        `json:"name"`
 	OwnerID                 pgtype.UUID        `json:"owner_id"`
-	Status                  string             `json:"status"`
+	Status                  pgtype.Text        `json:"status"`
 	BackstoryID             pgtype.UUID        `json:"backstory_id"`
 	GuildID                 pgtype.UUID        `json:"guild_id"`
 	RegionID                pgtype.UUID        `json:"region_id"`
@@ -1907,7 +1796,7 @@ type CharacterProductMyCharactersRow struct {
 	BackgroundText          pgtype.Text        `json:"background_text"`
 	DdbUrl                  pgtype.Text        `json:"ddb_url"`
 	ImageUrl                pgtype.Text        `json:"image_url"`
-	Pcxp                    int32              `json:"pcxp"`
+	Pcxp                    pgtype.Int4        `json:"pcxp"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 	DdbPayload              []byte             `json:"ddb_payload"`
@@ -1926,6 +1815,7 @@ func (q *Queries) CharacterProductMyCharacters(ctx context.Context, arg Characte
 	for rows.Next() {
 		var i CharacterProductMyCharactersRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.ShortCode,
 			&i.Name,
@@ -1957,30 +1847,42 @@ func (q *Queries) CharacterProductMyCharacters(ctx context.Context, arg Characte
 }
 
 const characterProductPendingVerificationDirectory = `-- name: CharacterProductPendingVerificationDirectory :many
-SELECT c.public_id AS id, c.name, owner.public_id AS owner_id,
-       owner.handle AS owner_handle, owner.display_name AS owner_display_name,
-       owner.avatar_url AS owner_avatar_url, c.short_code, c.status,
-       region.public_id AS region_id, region.name AS region_name,
-       guild.public_id AS guild_id,
-       'PENDING'::text AS verification_status,
-       c.verification_submitted_at, c.ddb_url, ddb.synced_at AS ddb_synced_at, c.updated_at
-FROM characters c
-JOIN members owner ON owner.id = c.owner_id
-LEFT JOIN documents guild ON guild.id = c.guild_document_id
-LEFT JOIN regions region ON region.id = c.region_id
-LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
-LEFT JOIN LATERAL (
-    SELECT verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-WHERE c.deleted_at IS NULL
-  AND c.verification_submitted_at IS NOT NULL
-  AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
-ORDER BY c.verification_submitted_at ASC, c.public_id ASC
-LIMIT $2::int OFFSET $1::int
+WITH filtered AS (
+    SELECT c.public_id AS id, c.name, owner.public_id AS owner_id,
+           owner.handle AS owner_handle, owner.display_name AS owner_display_name,
+           owner.avatar_url AS owner_avatar_url, c.short_code, c.status,
+           region.public_id AS region_id, region.name AS region_name,
+           guild.public_id AS guild_id,
+           'PENDING'::text AS verification_status,
+           c.verification_submitted_at, c.ddb_url, ddb.synced_at AS ddb_synced_at, c.updated_at
+    FROM characters c
+    JOIN members owner ON owner.id = c.owner_id
+    LEFT JOIN documents guild ON guild.id = c.guild_document_id
+    LEFT JOIN regions region ON region.id = c.region_id
+    LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
+    LEFT JOIN LATERAL (
+        SELECT verification.created_at
+        FROM verifications verification
+        WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
+        ORDER BY verification.created_at DESC, verification.public_id DESC
+        LIMIT 1
+    ) latest ON true
+    WHERE c.deleted_at IS NULL
+      AND c.verification_submitted_at IS NOT NULL
+      AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, name, owner_id, owner_handle, owner_display_name, owner_avatar_url, short_code, status, region_id, region_name, guild_id, verification_status, verification_submitted_at, ddb_url, ddb_synced_at, updated_at FROM filtered
+    ORDER BY verification_submitted_at ASC, id ASC
+    LIMIT $2::int OFFSET $1::int
+)
+SELECT counted.total, page.id, page.name, page.owner_id, page.owner_handle,
+       page.owner_display_name, page.owner_avatar_url, page.short_code, page.status,
+       page.region_id, page.region_name, page.guild_id, page.verification_status,
+       page.verification_submitted_at, page.ddb_url, page.ddb_synced_at, page.updated_at
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.verification_submitted_at ASC NULLS LAST, page.id ASC NULLS LAST
 `
 
 type CharacterProductPendingVerificationDirectoryParams struct {
@@ -1989,18 +1891,19 @@ type CharacterProductPendingVerificationDirectoryParams struct {
 }
 
 type CharacterProductPendingVerificationDirectoryRow struct {
+	Total                   int64              `json:"total"`
 	ID                      pgtype.UUID        `json:"id"`
-	Name                    string             `json:"name"`
+	Name                    pgtype.Text        `json:"name"`
 	OwnerID                 pgtype.UUID        `json:"owner_id"`
-	OwnerHandle             string             `json:"owner_handle"`
-	OwnerDisplayName        string             `json:"owner_display_name"`
+	OwnerHandle             pgtype.Text        `json:"owner_handle"`
+	OwnerDisplayName        pgtype.Text        `json:"owner_display_name"`
 	OwnerAvatarUrl          pgtype.Text        `json:"owner_avatar_url"`
-	ShortCode               string             `json:"short_code"`
-	Status                  string             `json:"status"`
+	ShortCode               pgtype.Text        `json:"short_code"`
+	Status                  pgtype.Text        `json:"status"`
 	RegionID                pgtype.UUID        `json:"region_id"`
 	RegionName              pgtype.Text        `json:"region_name"`
 	GuildID                 pgtype.UUID        `json:"guild_id"`
-	VerificationStatus      string             `json:"verification_status"`
+	VerificationStatus      pgtype.Text        `json:"verification_status"`
 	VerificationSubmittedAt pgtype.Timestamptz `json:"verification_submitted_at"`
 	DdbUrl                  pgtype.Text        `json:"ddb_url"`
 	DdbSyncedAt             pgtype.Timestamptz `json:"ddb_synced_at"`
@@ -2017,6 +1920,7 @@ func (q *Queries) CharacterProductPendingVerificationDirectory(ctx context.Conte
 	for rows.Next() {
 		var i CharacterProductPendingVerificationDirectoryRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.Name,
 			&i.OwnerID,
