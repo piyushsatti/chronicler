@@ -5,10 +5,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mountShardHealth, postHeartbeat } from '@discord/health.js';
+import { testConfig } from '../support/config.js';
 
 vi.mock('@discord/log.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
+
+const config = testConfig();
 
 function fakeClient(): import('discord.js').Client {
   const client = { on: vi.fn() };
@@ -16,7 +20,6 @@ function fakeClient(): import('discord.js').Client {
 }
 
 beforeEach(() => {
-  vi.resetModules();
   vi.clearAllMocks();
   vi.useFakeTimers();
 });
@@ -27,17 +30,18 @@ afterEach(() => {
 
 describe('postHeartbeat', () => {
   it('POSTs JSON to /v1/ingest/heartbeat with X-Ingest-Secret', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
-    vi.stubGlobal('fetch', fetchMock);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
 
-    const { postHeartbeat } = await import('@discord/health.js');
-    const { config } = await import('@discord/config.js');
-    await postHeartbeat({
-      gateway_ready: true,
-      shard_state: { '0': 'ready' },
-      host: 'test-host',
-      build_sha: 'test-build',
-    });
+    await postHeartbeat(
+      config,
+      {
+        gateway_ready: true,
+        shard_state: { '0': 'ready' },
+        host: 'test-host',
+        build_sha: 'test-build',
+      },
+      { fetch: fetchMock as unknown as typeof fetch },
+    );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -60,9 +64,8 @@ describe('postHeartbeat', () => {
 
 describe('mountShardHealth heartbeat', () => {
   it('can disable only the periodic ingest heartbeat for an isolated agent process', async () => {
-    const { mountShardHealth } = await import('@discord/health.js');
     const poster = vi.fn().mockResolvedValue(undefined);
-    const dispose = mountShardHealth(fakeClient(), {
+    const dispose = mountShardHealth(fakeClient(), config, {
       heartbeatEnabled: false,
       heartbeatPoster: poster,
       heartbeatIntervalMs: 1,
@@ -73,10 +76,9 @@ describe('mountShardHealth heartbeat', () => {
   });
 
   it('keeps the gateway liveness watchdog active when heartbeat posts are disabled', async () => {
-    const { mountShardHealth } = await import('@discord/health.js');
     const poster = vi.fn().mockResolvedValue(undefined);
     const exit = vi.fn();
-    const dispose = mountShardHealth(fakeClient(), {
+    const dispose = mountShardHealth(fakeClient(), config, {
       heartbeatEnabled: false,
       heartbeatPoster: poster,
       heartbeatIntervalMs: 1_000,
@@ -92,7 +94,6 @@ describe('mountShardHealth heartbeat', () => {
   });
 
   it('marks the heartbeat unhealthy while the gateway is disconnected and includes identity', async () => {
-    const { mountShardHealth } = await import('@discord/health.js');
     const handlers = new Map<string, (...args: unknown[]) => void>();
     const client = {
       on: (event: string, handler: (...args: unknown[]) => void) => {
@@ -100,7 +101,7 @@ describe('mountShardHealth heartbeat', () => {
       },
     } as unknown as import('discord.js').Client;
     const poster = vi.fn().mockResolvedValue(undefined);
-    const dispose = mountShardHealth(client, {
+    const dispose = mountShardHealth(client, config, {
       heartbeatPoster: poster,
       heartbeatIntervalMs: 1000,
       host: 'test-host',
@@ -128,9 +129,8 @@ describe('mountShardHealth heartbeat', () => {
   });
 
   it('polls the injected poster on the given interval', async () => {
-    const { mountShardHealth } = await import('@discord/health.js');
     const poster = vi.fn().mockResolvedValue(undefined);
-    const dispose = mountShardHealth(fakeClient(), {
+    const dispose = mountShardHealth(fakeClient(), config, {
       heartbeatPoster: poster,
       heartbeatIntervalMs: 1000,
     });
@@ -147,9 +147,8 @@ describe('mountShardHealth heartbeat', () => {
   });
 
   it('the returned disposer stops further polling', async () => {
-    const { mountShardHealth } = await import('@discord/health.js');
     const poster = vi.fn().mockResolvedValue(undefined);
-    const dispose = mountShardHealth(fakeClient(), {
+    const dispose = mountShardHealth(fakeClient(), config, {
       heartbeatPoster: poster,
       heartbeatIntervalMs: 1000,
     });
@@ -164,9 +163,8 @@ describe('mountShardHealth heartbeat', () => {
   });
 
   it('defaults to a 60s interval when none is given', async () => {
-    const { mountShardHealth } = await import('@discord/health.js');
     const poster = vi.fn().mockResolvedValue(undefined);
-    const dispose = mountShardHealth(fakeClient(), { heartbeatPoster: poster });
+    const dispose = mountShardHealth(fakeClient(), config, { heartbeatPoster: poster });
 
     await vi.advanceTimersByTimeAsync(59_999);
     expect(poster).not.toHaveBeenCalled();
@@ -178,9 +176,8 @@ describe('mountShardHealth heartbeat', () => {
   });
 
   it('does not exit after the watchdog disposer runs', async () => {
-    const { mountShardHealth } = await import('@discord/health.js');
     const exit = vi.fn();
-    const dispose = mountShardHealth(fakeClient(), {
+    const dispose = mountShardHealth(fakeClient(), config, {
       heartbeatEnabled: false,
       heartbeatIntervalMs: 1_000,
       nonReadyExitMs: 2_000,
@@ -192,7 +189,6 @@ describe('mountShardHealth heartbeat', () => {
   });
 
   it('does not exit when the heartbeat poster rejects', async () => {
-    const { mountShardHealth } = await import('@discord/health.js');
     const handlers = new Map<string, (...args: unknown[]) => void>();
     const client = {
       on: (event: string, handler: (...args: unknown[]) => void) => {
@@ -204,7 +200,7 @@ describe('mountShardHealth heartbeat', () => {
     } as unknown as import('discord.js').Client;
     const exit = vi.fn();
     const poster = vi.fn().mockRejectedValue(new Error('api down'));
-    const dispose = mountShardHealth(client, {
+    const dispose = mountShardHealth(client, config, {
       heartbeatPoster: poster,
       heartbeatIntervalMs: 1_000,
       nonReadyExitMs: 60_000,

@@ -34,7 +34,7 @@ type HTTPDeps struct {
 	Ingest        *ingest.Handler
 	Agent         *agent.Service
 	SpatialTime   spatial.TimeMap
-	SpatialRead   spatial.ReadAPI
+	Introspection bool
 }
 
 // Mount registers the HTTP surface used by cmd/api (health, auth, GraphQL, /v1).
@@ -42,7 +42,9 @@ func Mount(mux httpserver.Router, d HTTPDeps) {
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
-	mux.Handle("POST /v1/graphql", graphql.NewHandler(d.Resolver, graphql.DefaultLimits(), d.Authority))
+	limits := graphql.DefaultLimits()
+	limits.Introspection = d.Introspection
+	mux.Handle("POST /v1/graphql", graphql.NewHandler(d.Resolver, limits, d.Authority))
 
 	if d.Login != nil {
 		d.Login.Routes(mux)
@@ -70,8 +72,6 @@ func Mount(mux httpserver.Router, d HTTPDeps) {
 	member.Routes(mux, me)
 	notification.Routes(mux, d.Notifications)
 
-	withSpatialReadStubs(d.SpatialRead).Routes(mux)
-
 	if d.Ingest != nil {
 		d.Ingest.Routes(mux)
 	}
@@ -88,15 +88,9 @@ func MountFromAPI(mux httpserver.Router, runtime API, cfg config.Config) {
 	}
 
 	timeMap := spatial.TimeMap(spatial.EmptyTimeMap{})
-	spatialRead := spatial.ReadAPI{}
 	if runtime.Pool != nil {
 		spatialPG := spatial.NewPostgresQueries(runtime.Pool.Pool)
 		timeMap = spatial.PostgresTimeMap{Queries: spatialPG}
-		spatialRead = spatial.ReadAPI{
-			HexHistory:   spatialPG.HexHistory,
-			RegionCounts: spatialPG.RegionCounts,
-			MapActivity:  spatialPG.MapActivity,
-		}
 	}
 
 	Mount(mux, HTTPDeps{
@@ -118,28 +112,9 @@ func MountFromAPI(mux httpserver.Router, runtime API, cfg config.Config) {
 			JWTSecret:     cfg.JWTSecret,
 			AllowDevLogin: cfg.Env != config.EnvProduction,
 		}, memberStore),
-		Ingest:      ingest.New(cfg.IngestSecret, runtime.Ingest),
-		Agent:       runtime.Agent,
-		SpatialTime: timeMap,
-		SpatialRead: spatialRead,
+		Ingest:        ingest.New(cfg.IngestSecret, runtime.Ingest),
+		Agent:         runtime.Agent,
+		SpatialTime:   timeMap,
+		Introspection: cfg.Env != config.EnvProduction,
 	})
-}
-
-func withSpatialReadStubs(a spatial.ReadAPI) spatial.ReadAPI {
-	if a.HexHistory == nil {
-		a.HexHistory = func(context.Context, string, int) ([]spatial.HexChange, error) {
-			return nil, apierr.New(apierr.NotFound, "hex not found")
-		}
-	}
-	if a.RegionCounts == nil {
-		a.RegionCounts = func(context.Context, string) (spatial.RegionCounts, error) {
-			return spatial.RegionCounts{}, apierr.New(apierr.NotFound, "region not found")
-		}
-	}
-	if a.MapActivity == nil {
-		a.MapActivity = func(context.Context, string) (spatial.MapActivity, error) {
-			return spatial.MapActivity{}, apierr.New(apierr.NotFound, "map not found")
-		}
-	}
-	return a
 }

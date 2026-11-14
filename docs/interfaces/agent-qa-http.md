@@ -6,17 +6,18 @@
 
 ## Rule
 
-Discord and the Python agent worker exchange grounded Q&A jobs only through ingest-secret REST on the API. No message broker is required on this path. The API persists jobs; the agent answers; Discord polls for the result.
+Discord and the Python agent worker exchange grounded Q&A jobs only through secret-gated REST on the API. Discord uses `INGEST_SECRET` for submit and read; the worker uses `AGENT_WORKER_SECRET` for claim, complete, renew and retry. Both send the value in `X-Ingest-Secret`. No message broker is required on this path. The API persists jobs; the agent answers; Discord polls for the result.
 
 ## Enforcement
 
-| Mechanism                      | Location                          | Status                                                      |
-| ------------------------------ | --------------------------------- | ----------------------------------------------------------- |
-| OpenAPI agent question schemas | `packages/contracts/openapi.yaml` | defined (submit/get/claim/renew/retry/complete)             |
-| OpenAPI ↔ mux contract test    | `apps/api/test/contract`          | enforced                                                    |
-| Discord broker unit tests      | `apps/discord/tests/unit/agent/`  | enforced (HTTP submit/parse)                                |
-| API agent handler tests        | `apps/api/internal/agent`         | unit-tested (protocol, bounds, receipt and replay behavior) |
-| Agent worker HTTP tests        | `apps/agent/tests/`               | enforced (`bun run test:agent` / `agent.yml`)               |
+| Mechanism                      | Location                                    | Status                                                      |
+| ------------------------------ | ------------------------------------------- | ----------------------------------------------------------- |
+| OpenAPI agent question schemas | `packages/contracts/openapi.yaml`           | defined (submit/get/claim/renew/retry/complete)             |
+| OpenAPI ↔ mux contract test    | `apps/api/test/contract`                    | enforced                                                    |
+| Discord broker unit tests      | `apps/discord/tests/unit/agent/`            | enforced (HTTP submit/parse)                                |
+| Discord agent contract test    | `apps/discord/tests/unit/interface/agent.test.ts` | enforced (limits, WAIT_MS vs deadline)                |
+| API agent handler tests        | `apps/api/internal/agent`                   | unit-tested (protocol, bounds, receipt and replay behavior) |
+| Agent worker HTTP tests        | `apps/agent/tests/`                         | enforced (`bun run test:agent` / `agent.yml`)               |
 
 ## Provider
 

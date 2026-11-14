@@ -60,7 +60,7 @@ func newMemberProfileFixture(t *testing.T) *memberProfileFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.services, err = wireProductServices(f.db.Pool, f.db.Pool, f.store, []byte("synthetic-member-profile-test-key-32"), graph.Services{})
+	f.services, err = wireProductServices(f.db.Pool, f.db.Pool, f.store, []byte("synthetic-member-profile-test-key-32"), graph.Services{}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -285,7 +285,7 @@ func TestAdminWorldBrowserPreservationAndGalleryAuthority(t *testing.T) {
 	}
 	cfg := config.Config{DatabaseURL: fixture.databaseURL, RequireDatabase: true, JWTSecret: "synthetic-admin-world-fixture-key", PlatformOwnerMemberID: actors["owner"].publicID, CORSOrigins: []string{fmt.Sprintf("http://127.0.0.1:%d", port)}}
 	rows.cfg = cfg
-	runtime = app.Wire(ctx, cfg)
+	runtime = wireForTest(ctx, cfg)
 	if runtime.Pool == nil || runtime.Authority == nil {
 		t.Fatal("production Wire did not bind fixture")
 	}

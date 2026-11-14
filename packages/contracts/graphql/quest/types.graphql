@@ -137,6 +137,7 @@ input QuestFiltersInput {
   tag: String = null
   genre: String = null
   shortCodes: [String!] = null
+  ids: [ID!] = null
   search: String = null
   displayStatus: String = null
   scheduledFrom: DateTime = null

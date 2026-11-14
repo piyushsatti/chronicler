@@ -402,6 +402,7 @@ type Quest struct {
 	DeletedBy              pgtype.Int8        `json:"deleted_by"`
 	DiscordVoiceChannelID  pgtype.Text        `json:"discord_voice_channel_id"`
 	DiscordThreadID        pgtype.Text        `json:"discord_thread_id"`
+	DiscordChannelID       pgtype.Text        `json:"discord_channel_id"`
 }
 
 type QuestArc struct {

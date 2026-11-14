@@ -26,9 +26,13 @@
  * backfill in D23, which belongs here later and is deliberately not built yet.
  */
 
+import { writeFileSync } from 'node:fs';
 import os from 'node:os';
 import type { Client, CloseEvent } from 'discord.js';
-import { config } from './config.js';
+import { createHttp, type FetchFn } from './api/http.js';
+import { createIngest, type IngestPort } from './api/ingest.js';
+import type { BotConfig } from './config.js';
+import { BOT_ALIVE_PATH } from './healthcheck.js';
 import { logger } from './log.js';
 
 /** Injectable clock, so tests do not depend on wall time. */
@@ -49,41 +53,59 @@ export type ProcessExit = (code: number) => void;
 /** Stops the heartbeat interval started by {@link mountShardHealth}. */
 export type HeartbeatDisposer = () => void;
 
-const HEARTBEAT_PATH = '/v1/ingest/heartbeat';
+export type GatewayEvent =
+  | { type: 'ready'; first: boolean }
+  | { type: 'resumed'; shardId: number }
+  | { type: 'session_lost'; shardId: number; gapMs: number }
+  | { type: 'disconnected'; shardId: number; code: number };
+
+export interface GatewayState {
+  subscribe(fn: (e: GatewayEvent) => void): () => void;
+}
+
+export type MountedShardHealth = HeartbeatDisposer & GatewayState;
+
 // Default 60s matches the retained ingest heartbeat watch cadence (OP-040).
 // The bot does not read API config; keep this literal aligned by hand.
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 60_000;
+
+export type HeartbeatApiDeps = {
+  ingest?: IngestPort;
+  fetch?: FetchFn;
+};
 
 /**
  * POSTs `/v1/ingest/heartbeat` with the shared ingest secret.
  * Errors are logged, never thrown -- a failed heartbeat POST must not exit.
  */
-export async function postHeartbeat(status?: HeartbeatStatus): Promise<void> {
-  try {
-    const response = await fetch(`${config.apiUrl}${HEARTBEAT_PATH}`, {
-      method: 'POST',
-      headers: {
-        'X-Ingest-Secret': config.ingestSecret,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(
-        status ?? {
-          gateway_ready: false,
-          shard_state: {},
-          host: os.hostname(),
-          build_sha: config.build,
-        },
-      ),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!response.ok) {
-      logger.warn('Heartbeat POST failed', { status: response.status });
-    }
-  } catch (err: unknown) {
-    logger.warn('Heartbeat POST errored', {
-      error: err instanceof Error ? err.message : String(err),
-    });
+export async function postHeartbeat(
+  config: BotConfig,
+  status?: HeartbeatStatus,
+  deps?: HeartbeatApiDeps,
+): Promise<void> {
+  const ingest =
+    deps?.ingest ??
+    createIngest(
+      createHttp({
+        apiUrl: config.apiUrl,
+        secret: config.ingestSecret,
+        fetch: deps?.fetch,
+      }),
+    );
+  const result = await ingest.postHeartbeat(
+    status ?? {
+      gateway_ready: false,
+      shard_state: {},
+      host: os.hostname(),
+      build_sha: config.build,
+    },
+  );
+  if (result.ok) return;
+  if (result.status !== undefined) {
+    logger.warn('Heartbeat POST failed', { status: result.status });
+    return;
   }
+  logger.warn('Heartbeat POST errored', { error: result.detail });
 }
 
 export interface ShardHealthOptions {
@@ -115,15 +137,17 @@ export interface ShardHealthOptions {
  * on a fixed cadence so the API can detect a wedged/dead bot process.
  * Returns a disposer that stops the interval -- callers that don't need it
  * (production bootstrap) can ignore the return value; tests use it to avoid
- * leaking timers.
+ * leaking timers. The disposer is also a {@link GatewayState}.
  */
 export function mountShardHealth(
   client: Client,
+  config: BotConfig,
   options: ShardHealthOptions = {},
-): HeartbeatDisposer {
+): MountedShardHealth {
   const now = options.now ?? Date.now;
   const poster =
-    options.heartbeatPoster ?? ((status?: HeartbeatStatus) => postHeartbeat(status));
+    options.heartbeatPoster ??
+    ((status?: HeartbeatStatus) => postHeartbeat(config, status));
   const intervalMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
   const host = options.host ?? config.host ?? os.hostname();
   const buildSha = options.build ?? config.build;
@@ -133,10 +157,24 @@ export function mountShardHealth(
   let gatewayReady = false;
   let nonReadySince = now();
   let terminal = false;
+  let emittedReady = false;
   const shardStates = new Map<number, HeartbeatStatus['shard_state'][string]>();
   for (const shardId of client.ws?.shards.keys() ?? []) {
     shardStates.set(Number(shardId), 'unknown');
   }
+
+  const listeners = new Set<(e: GatewayEvent) => void>();
+  const subscribe: GatewayState['subscribe'] = (fn) => {
+    listeners.add(fn);
+    return () => {
+      listeners.delete(fn);
+    };
+  };
+  const emit = (event: GatewayEvent): void => {
+    for (const listener of listeners) {
+      listener(event);
+    }
+  };
 
   const isHealthy = (): boolean => {
     if (!gatewayReady || terminal) {
@@ -181,7 +219,14 @@ export function mountShardHealth(
     void poster(heartbeatStatus());
   };
 
+  const touchAlive = (): void => {
+    writeFileSync(BOT_ALIVE_PATH, '');
+  };
+
+  touchAlive();
+
   const timer = setInterval(() => {
+    touchAlive();
     if (options.heartbeatEnabled === false) {
       checkGatewayLiveness();
       return;
@@ -217,6 +262,7 @@ export function mountShardHealth(
       gapMs: gap,
       eventsLost: false,
     });
+    emit({ type: 'resumed', shardId });
   });
 
   client.on(
@@ -231,6 +277,8 @@ export function mountShardHealth(
           shardId,
           unavailableGuilds: unavailableGuilds?.size ?? 0,
         });
+        emit({ type: 'ready', first: !emittedReady });
+        emittedReady = true;
         return;
       }
       reconnectingSince.delete(shardId);
@@ -245,6 +293,7 @@ export function mountShardHealth(
           eventsLost: true,
         },
       );
+      emit({ type: 'session_lost', shardId, gapMs: gap });
     },
   );
 
@@ -266,6 +315,7 @@ export function mountShardHealth(
       shardId,
       code: closeEvent.code,
     });
+    emit({ type: 'disconnected', shardId, code: closeEvent.code });
     if (exitOnTerminal) {
       exit(1);
     }
@@ -284,7 +334,8 @@ export function mountShardHealth(
     });
   }
 
-  return () => {
+  const dispose: HeartbeatDisposer = () => {
     if (timer !== undefined) clearInterval(timer);
   };
+  return Object.assign(dispose, { subscribe });
 }

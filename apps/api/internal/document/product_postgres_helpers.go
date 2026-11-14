@@ -363,15 +363,37 @@ func mapGetProductDocumentSlugRow(row dbgen.GetProductDocumentBySlugRow, scope V
 	return mapReadableDocumentRow(row.Readable, row.AdminOverride, row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, row.PublishedAt, row.DeletedAt, row.DeletedBy, row.UpdatedAt, row.Version, scope, ctx, "document")
 }
 
+func documentListFromPageRows(ctx context.Context, scope ViewerScope, rows []dbgen.ListProductDocumentsRow) (DocumentListResult, error) {
+	var total int32
+	items := make([]DocumentView, 0, len(rows))
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+			if override, _ := row.CountAdminOverride.(bool); override {
+				AuditSQLOverride(ctx, scope, true, "documents", "count")
+			}
+		}
+		if !row.ID.Valid {
+			continue
+		}
+		view, err := mapListProductDocumentRow(row, scope, ctx)
+		if err != nil {
+			return DocumentListResult{}, err
+		}
+		items = append(items, view)
+	}
+	return DocumentListResult{Items: items, Total: total}, nil
+}
+
 func mapListProductDocumentRow(row dbgen.ListProductDocumentsRow, scope ViewerScope, ctx context.Context) (DocumentView, error) {
-	view, err := documentFromParts(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, row.PublishedAt, row.DeletedAt, pgtype.UUID{}, row.UpdatedAt, row.Version)
+	view, err := documentFromParts(row.ID, row.Kind.String, row.Slug.String, row.Title.String, row.Status.String, row.Visibility.String, row.Body.String, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, row.PublishedAt, row.DeletedAt, pgtype.UUID{}, row.UpdatedAt, row.Version.Int32)
 	if err != nil {
 		return DocumentView{}, err
 	}
 	if adminOverride, _ := row.AdminOverride.(bool); adminOverride {
 		AuditSQLOverride(ctx, scope, true, "documents", "list")
 	}
-	return ProjectDocumentView(ctx, scope, view, row.Body)
+	return ProjectDocumentView(ctx, scope, view, row.Body.String)
 }
 
 func mapLockRow(row dbgen.LockProductDocumentByIDRow) (DocumentView, error) {
@@ -415,10 +437,10 @@ func mapRevision(row dbgen.ListProductDocumentRevisionsRow) (DocumentRevisionVie
 	return DocumentRevisionView{
 		Id:          db.UUIDString(row.ID),
 		DocumentId:  db.UUIDString(row.DocumentID),
-		Rev:         row.Rev,
-		Reason:      row.Reason,
-		Title:       row.Title,
-		Body:        row.Body,
+		Rev:         row.Rev.Int32,
+		Reason:      row.Reason.String,
+		Title:       row.Title.String,
+		Body:        row.Body.String,
 		Frontmatter: fm,
 		PublishedAt: productTimePointer(row.PublishedAt),
 		PublishedBy: productUUIDPointer(row.PublishedBy),

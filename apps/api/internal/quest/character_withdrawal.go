@@ -153,7 +153,10 @@ func (p *ProductPostgres) promoteQuestWaitlist(ctx context.Context, effects *cha
 		if candidate.Status != "waitlisted" || candidate.CharacterId == plan.OwnedCharacterID || !eligibleWithdrawalCandidate(admissions, candidate.CharacterId) {
 			continue
 		}
-		selected, err := p.StoreSelectQuestParticipants(ctx, SelectQuestParticipantsWrite{ActorID: actorID, At: at, ValidatedInput: SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: []string{candidate.CharacterId}, AsOf: at}, Locked: SelectQuestParticipantsState{Exists: true, Before: locked.Before, Roster: locked.Roster, Candidates: admissions}})
+		selected, err := p.StoreSelectQuestParticipants(ctx, SelectQuestParticipantsWrite{ActorID: actorID, At: at, ValidatedInput: SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: []string{candidate.CharacterId}, AsOf: at}, Locked: SelectQuestParticipantsState{
+			Exists: true, Before: locked.Before, Roster: locked.Roster, Candidates: admissions,
+			QuestRowID: locked.QuestRowID, FilledCount: locked.FilledCount - 1, SlotsMax: locked.SlotsMax, SignupType: locked.SignupType,
+		}})
 		if err != nil {
 			return err
 		}

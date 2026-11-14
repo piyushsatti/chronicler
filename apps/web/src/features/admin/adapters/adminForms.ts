@@ -47,10 +47,8 @@ export type CalendarPeriodDraft = {
   type: 'month' | 'festival';
   days: string;
 };
-let periodDraftCount = 0;
 export function newCalendarPeriodDraft(): CalendarPeriodDraft {
-  periodDraftCount += 1;
-  return { id: `period-${periodDraftCount}`, name: '', type: 'month', days: '' };
+  return { id: crypto.randomUUID(), name: '', type: 'month', days: '' };
 }
 export type CalendarForm = {
   eraName: string;

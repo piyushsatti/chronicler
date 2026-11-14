@@ -144,6 +144,7 @@ func TestSearchKindsAndPages(t *testing.T) {
 		{name: "document only", kinds: []string{"rule"}, limit: 1, documents: true},
 		{name: "unknown rejected", kinds: []string{"hex"}, limit: 1, invalid: true},
 		{name: "zero limit", limit: 0, invalid: true},
+		{name: "above maximum", limit: 101, invalid: true},
 		{name: "negative offset", limit: 1, offset: -1, invalid: true},
 		{name: "overflow limit", limit: 1 << 32, invalid: true},
 		{name: "overflow offset", limit: 1, offset: 1 << 32, invalid: true},
@@ -192,7 +193,7 @@ func TestSearchRejectsInvalidQueryAndKindsBeforeReaders(t *testing.T) {
 			repo := &searchSiteRepo{}
 			discovery := &searchDiscovery{out: document.DiscoveryPage{Items: []document.DocumentSearchHitView{}, Order: "rank_desc_updated_at_desc_id_desc"}}
 			r := testHybridSearchResolver(t, repo, discovery)
-			got, err := r.Query().Search(anonymousSearchContext(t), tc.query, tc.kinds, 101, 0)
+			got, err := r.Query().Search(anonymousSearchContext(t), tc.query, tc.kinds, 100, 0)
 			if tc.invalid {
 				failure, ok := errors.AsType[*apierr.Error](err)
 				if !ok || failure.Code != apierr.Invalid {
@@ -206,7 +207,7 @@ func TestSearchRejectsInvalidQueryAndKindsBeforeReaders(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if repo.calls != 1 || discovery.calls != 1 || discovery.query != tc.query || repo.last.Query != tc.query || got.Query != tc.query || discovery.page.Limit != 101 || repo.last.Limit != 101 {
+			if repo.calls != 1 || discovery.calls != 1 || discovery.query != tc.query || repo.last.Query != tc.query || got.Query != tc.query || discovery.page.Limit != 100 || repo.last.Limit != 100 {
 				t.Fatalf("valid boundary not forwarded unchanged docs=%+v members=%+v result=%+v", discovery, repo, got)
 			}
 		})

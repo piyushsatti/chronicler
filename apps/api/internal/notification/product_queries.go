@@ -2,6 +2,7 @@ package notification
 
 import (
 	"context"
+	"errors"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -96,11 +97,11 @@ func visibleNotificationItems(ctx context.Context, audience DocumentAudienceRead
 		return items, nil
 	}
 	if audience == nil {
-		return nil, opaqueNotificationProofError()
+		return nil, opaqueNotificationProofError(errors.New("document audience reader required"))
 	}
 	readable, err := audience.ReadableDocumentIDs(ctx, actor, documentIDs)
 	if err != nil {
-		return nil, opaqueNotificationProofError()
+		return nil, opaqueNotificationProofError(err)
 	}
 	visible := make([]NotificationView, 0, len(items))
 	for _, item := range items {

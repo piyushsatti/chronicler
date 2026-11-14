@@ -71,21 +71,6 @@ const flatRoutes = SLICES.flatMap((slice) => slice.routes).filter((route) =>
 
 export const routes = orderRoutesByManifest(flatRoutes);
 
-export const featureHandlers = SLICES.flatMap((slice) => slice.handlers);
-
-export const featureGraphql = SLICES.reduce<Record<string, FeatureSlice['graphql'][string]>>(
-  (acc, slice) => {
-    for (const [name, handler] of Object.entries(slice.graphql)) {
-      if (name in acc) {
-        throw new Error(`Duplicate GraphQL operation handler: ${name}`);
-      }
-      acc[name] = handler;
-    }
-    return acc;
-  },
-  {},
-);
-
 export const featureQueryKeys = mergeQueryKeySlices(SLICES);
 
 export const featureEndpoints = mergeEndpointSlices(SLICES);

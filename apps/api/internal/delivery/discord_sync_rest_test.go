@@ -15,6 +15,7 @@ import (
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/delivery"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
 )
 
 const (
@@ -43,10 +44,11 @@ func (f *fakeQuests) LoadAnnounceQuest(context.Context, string) (delivery.Announ
 	return f.quest, nil
 }
 
-func (f *fakeQuests) SetDiscordMessageID(_ context.Context, _ string, id string) error {
+func (f *fakeQuests) SetDiscordMessageID(_ context.Context, _ string, id, channelID string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.quest.MessageID = id
+	f.quest.ChannelID = channelID
 	f.msgs++
 	return nil
 }
@@ -430,6 +432,38 @@ func TestThreadFailureDoesNotBlockEventOrRevision(t *testing.T) {
 	}
 }
 
+func TestProcessOnePlayerListMissingThreadEndsDead(t *testing.T) {
+	body := jobs.QuestPlayerListPayload{
+		PublicID: testQuestID, Fingerprint: "123456789012345678",
+		DiscordIDs: []string{"123456789012345678"},
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := newFakeDiscord(t)
+	sync := newSync(f, &fakeQuests{quest: baseQuest(testVoice)}, fullSettings, nil)
+	sync.Players = &memPlayerLists{target: delivery.PlayerListTarget{Found: true, Status: "open"}}
+	store := &delivery.MemoryStore{Jobs: []jobs.Job{{
+		ID: "1", Key: jobs.QuestPlayerListKey(body.PublicID, body.Fingerprint), Kind: delivery.KindQuestPlayerList,
+		Lane: delivery.LaneDiscord, State: jobs.Queued, Payload: payload, NextRunAt: time.Now(),
+	}}}
+	ok, err := delivery.NewHandler(store, sync).ProcessOne(context.Background())
+	if err != nil || !ok {
+		t.Fatalf("ok=%v err=%v", ok, err)
+	}
+	job := store.Jobs[0]
+	if job.State != jobs.Dead || job.Attempts != 1 {
+		t.Fatalf("state=%s attempts=%d want dead/1", job.State, job.Attempts)
+	}
+	if job.SafeErrorCode != delivery.SafeCodeDiscordThreadMissing {
+		t.Fatalf("safe error code=%q want %q", job.SafeErrorCode, delivery.SafeCodeDiscordThreadMissing)
+	}
+	if n := len(f.summary()); n != 0 {
+		t.Fatalf("discord calls=%v want none", f.summary())
+	}
+}
+
 func TestEventDetails(t *testing.T) {
 	f := newFakeDiscord(t)
 	quest := baseQuest(testVoice)
@@ -647,6 +681,60 @@ func TestAnnounceChannelSettingBeatsEnvFallback(t *testing.T) {
 	}
 	if got := f.summary()[0]; got != "POST /channels/"+testChannel+"/messages" {
 		t.Fatalf("first call=%s", got)
+	}
+}
+
+func TestAnnouncedQuestStaysOnStoredChannelAfterSettingSwitch(t *testing.T) {
+	const channelB = "666666666666666666"
+	f := newFakeDiscord(t)
+	quests := &fakeQuests{quest: baseQuest(testVoice)}
+	if err := newSync(f, quests, fullSettings, nil).SyncQuest(context.Background(), testQuestID, 1); err != nil {
+		t.Fatal(err)
+	}
+	settings := fullSettings
+	settings.AnnounceChannelID = channelB
+	f2 := newFakeDiscord(t)
+	if err := newSync(f2, quests, settings, nil).SyncQuest(context.Background(), testQuestID, 2); err != nil {
+		t.Fatal(err)
+	}
+	wantPatch := "PATCH /channels/" + testChannel + "/messages/" + quests.quest.MessageID
+	if got := f2.summary()[0]; got != wantPatch {
+		t.Fatalf("edit call=%s want %s", got, wantPatch)
+	}
+	events := f2.find(http.MethodPatch, "/scheduled-events/"+quests.quest.EventID)
+	if len(events) == 0 {
+		t.Fatal("expected event patch")
+	}
+	desc, _ := events[0].Body["description"].(string)
+	wantLink := "https://discord.com/channels/" + testGuild + "/" + testChannel + "/" + quests.quest.MessageID
+	if !strings.Contains(desc, wantLink) {
+		t.Fatalf("event description=%q want link %s", desc, wantLink)
+	}
+	newQuests := &fakeQuests{quest: baseQuest(testVoice)}
+	f3 := newFakeDiscord(t)
+	if err := newSync(f3, newQuests, settings, nil).SyncQuest(context.Background(), testQuestID, 1); err != nil {
+		t.Fatal(err)
+	}
+	if got := f3.summary()[0]; got != "POST /channels/"+channelB+"/messages" {
+		t.Fatalf("new quest first call=%s", got)
+	}
+}
+
+func TestLegacyNullChannelUsesCurrentSetting(t *testing.T) {
+	const channelB = "666666666666666666"
+	f := newFakeDiscord(t)
+	quests := &fakeQuests{quest: baseQuest(testVoice)}
+	quests.quest.MessageID = "777777777777777777"
+	quests.quest.EventID = "888888888888888888"
+	quests.quest.AppliedRevision = 1
+	settings := fullSettings
+	settings.AnnounceChannelID = channelB
+	if err := newSync(f, quests, settings, nil).SyncQuest(context.Background(), testQuestID, 2); err != nil {
+		t.Fatal(err)
+	}
+	wantPatch := "PATCH /channels/" + channelB + "/messages/" + quests.quest.MessageID
+	if got := f.summary()[0]; got != wantPatch {
+		t.Fatalf("edit call=%s want %s", got, wantPatch)
 	}
 }
 

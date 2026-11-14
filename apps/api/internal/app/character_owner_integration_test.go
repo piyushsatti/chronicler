@@ -43,7 +43,7 @@ func TestCharacterCommandBindingPreservesConfiguredOwner(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(ctx)
-	repos, err := bindCharacterCommandRepos(tx, ownerID)
+	repos, err := bindCharacterCommandRepos(tx, ownerID, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

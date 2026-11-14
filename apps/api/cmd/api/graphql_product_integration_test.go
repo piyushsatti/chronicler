@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/pressly/goose/v3"
 
-	"github.com/piyushsatti/chronicler/apps/api/internal/app"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/config"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 )
@@ -102,7 +101,7 @@ func TestProductFixtureFoundation(t *testing.T) {
 	if err := runner.Do(ctx, func(tx pgx.Tx) error { _, err := tx.Exec(ctx, insert, publicID); return err }); err != nil {
 		t.Fatal(err)
 	}
-	runtime := app.Wire(ctx, config.Config{DatabaseURL: first.databaseURL, RequireDatabase: true, JWTSecret: "synthetic-product-fixture-key"})
+	runtime := wireForTest(ctx, config.Config{DatabaseURL: first.databaseURL, RequireDatabase: true, JWTSecret: "synthetic-product-fixture-key"})
 	if runtime.Pool == nil || runtime.Members == nil || runtime.Authority == nil {
 		t.Fatal("Wire did not select real PostgreSQL dependencies")
 	}

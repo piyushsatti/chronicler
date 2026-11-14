@@ -23,9 +23,9 @@ name: deploy-release
 #   shared by caller and called workflow cancels the run, so none is set here.
 #
 # Required in the GitHub environment named by `environment`:
-#   Secrets, both environments: JWT_SECRET, INGEST_SECRET, DISCORD_CLIENT_ID,
+#   Secrets, both environments: JWT_SECRET, INGEST_SECRET, AGENT_WORKER_SECRET, DISCORD_CLIENT_ID,
 #            DISCORD_CLIENT_SECRET, DISCORD_BOT_TOKEN (API worker REST),
-#            BOT_DISCORD_TOKEN (gateway bot), BOT_CLIENT_ID, GUILD_ID,
+#            BOT_DISCORD_TOKEN (gateway bot), GUILD_ID,
 #            DISCORD_ANNOUNCE_CHANNEL_ID (secret or variable),
 #            VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
 #   local_database: POSTGRES_PASSWORD (URL-safe); optional variables
@@ -35,6 +35,8 @@ name: deploy-release
 #   tunnel: CLOUDFLARE_TUNNEL_TOKEN
 #   Optional secret: PLATFORM_OWNER_DISCORD_ID (set only after the owner has
 #            signed in once; see deploy/docs/deploy-runbook.md)
+#   Optional variables (empty, true, or false; unset keeps today's defaults):
+#            SNIFFER_ENABLED (default off), BOT_HEARTBEAT_ENABLED (default on)
 # Missing required values fail the job before anything is deployed.
 
 on:
@@ -156,6 +158,8 @@ jobs:
       # Compose prefers the shell over the env file, so a DATABASE_URL in the
       # runner's environment would win. Pin it: empty selects the local-db URL.
       DATABASE_URL: ${{ !inputs.local_database && secrets.DATABASE_URL || '' }}
+      SNIFFER_ENABLED: ${{ vars.SNIFFER_ENABLED }}
+      BOT_HEARTBEAT_ENABLED: ${{ vars.BOT_HEARTBEAT_ENABLED }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -170,12 +174,12 @@ jobs:
           CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
+          AGENT_WORKER_SECRET: ${{ secrets.AGENT_WORKER_SECRET }}
           DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
           DISCORD_CLIENT_SECRET: ${{ secrets.DISCORD_CLIENT_SECRET }}
           PLATFORM_OWNER_DISCORD_ID: ${{ secrets.PLATFORM_OWNER_DISCORD_ID }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           BOT_DISCORD_TOKEN: ${{ secrets.BOT_DISCORD_TOKEN }}
-          BOT_CLIENT_ID: ${{ secrets.BOT_CLIENT_ID }}
           GUILD_ID: ${{ secrets.GUILD_ID }}
           DISCORD_ANNOUNCE_CHANNEL_ID: ${{ secrets.DISCORD_ANNOUNCE_CHANNEL_ID || vars.DISCORD_ANNOUNCE_CHANNEL_ID }}
         run: |
@@ -209,9 +213,9 @@ jobs:
           else
             names+=(DATABASE_URL)
           fi
-          names+=(JWT_SECRET INGEST_SECRET \
+          names+=(JWT_SECRET INGEST_SECRET AGENT_WORKER_SECRET \
             DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET DISCORD_BOT_TOKEN \
-            BOT_DISCORD_TOKEN BOT_CLIENT_ID GUILD_ID DISCORD_ANNOUNCE_CHANNEL_ID \
+            BOT_DISCORD_TOKEN GUILD_ID DISCORD_ANNOUNCE_CHANNEL_ID \
             CORS_ORIGINS DISCORD_REDIRECT_URI API_PORT)
           services+=(chronicler-api chronicler-discord-bot)
           if [[ "$TUNNEL" == true ]]; then
@@ -227,6 +231,17 @@ jobs:
           if [[ -n "${PLATFORM_OWNER_DISCORD_ID:-}" ]]; then
             write PLATFORM_OWNER_DISCORD_ID
           fi
+          for name in SNIFFER_ENABLED BOT_HEARTBEAT_ENABLED; do
+            value="${!name-}"
+            if [[ -z "$value" ]]; then
+              continue
+            fi
+            if [[ "$value" != true && "$value" != false ]]; then
+              echo "$name must be empty, true, or false" >&2
+              exit 1
+            fi
+            write "$name"
+          done
           if (( ${#missing[@]} )); then
             rm -f "$tmp"
             echo "Missing required $ENVIRONMENT values: ${missing[*]}" >&2
@@ -249,6 +264,8 @@ jobs:
             echo "DISCORD_IMAGE=chronicler-discord:$TAG"
           } >> "$GITHUB_ENV"
       - name: Build images
+        env:
+          BOT_BUILD_ID: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           # One at a time: Compose builds in parallel, and the production VM has 2 GiB.

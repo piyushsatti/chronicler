@@ -216,50 +216,72 @@ func (q *Queries) CharacterProductApplyVerification(ctx context.Context, arg Cha
 	return public_id, err
 }
 
-const characterProductAwardQuestPCXP = `-- name: CharacterProductAwardQuestPCXP :one
-WITH updated AS (
+const characterProductAwardQuestPCXP = `-- name: CharacterProductAwardQuestPCXP :many
+WITH awards AS (
+    SELECT ids.character_id, amounts.amount, notes.note
+    FROM unnest($4::uuid[]) WITH ORDINALITY AS ids(character_id, ordinality)
+    JOIN unnest($5::integer[]) WITH ORDINALITY AS amounts(amount, ordinality)
+      ON amounts.ordinality = ids.ordinality
+    JOIN unnest($6::text[]) WITH ORDINALITY AS notes(note, ordinality)
+      ON notes.ordinality = ids.ordinality
+),
+updated AS (
     UPDATE characters c
-    SET player_xp = c.player_xp + $1::integer, updated_at = $3::timestamptz
-    WHERE c.public_id = $6::uuid
-      AND c.player_xp::bigint + $1::integer <= 2147483647::bigint
-      AND (SELECT COALESCE(sum(ledger.delta), 0) + $1::integer
+    SET player_xp = c.player_xp + awards.amount, updated_at = $1::timestamptz
+    FROM awards
+    WHERE c.public_id = awards.character_id
+      AND c.player_xp::bigint + awards.amount <= 2147483647::bigint
+      AND (SELECT COALESCE(sum(ledger.delta), 0) + awards.amount
            FROM character_progression_ledger ledger WHERE ledger.character_id = c.id)
           BETWEEN -2147483648::bigint AND 2147483647::bigint
       AND EXISTS (
           SELECT 1 FROM quest_participants participant JOIN quests q ON q.id = participant.quest_id
-          WHERE participant.character_id = c.id AND q.public_id = $4::uuid
+          WHERE participant.character_id = c.id AND q.public_id = $2::uuid
             AND q.status = 'closed' AND participant.status = 'played'
       )
-    RETURNING c.id
+    RETURNING c.id, awards.amount, awards.note
 )
 INSERT INTO character_progression_ledger(character_id, delta, reason, kind, note, quest_id, recorded_by, created_at)
-SELECT updated.id, $1::integer, 'quest_reward', 'pcxp', $2::text, q.id, actor.id, $3::timestamptz
+SELECT updated.id, updated.amount, 'quest_reward', 'pcxp', NULLIF(updated.note, ''), q.id, actor.id, $1::timestamptz
 FROM updated CROSS JOIN quests q CROSS JOIN members actor
-WHERE q.public_id = $4::uuid AND actor.public_id = $5::uuid
+WHERE q.public_id = $2::uuid AND actor.public_id = $3::uuid
 RETURNING public_id
 `
 
 type CharacterProductAwardQuestPCXPParams struct {
-	Amount      int32              `json:"amount"`
-	Note        pgtype.Text        `json:"note"`
-	At          pgtype.Timestamptz `json:"at"`
-	QuestID     pgtype.UUID        `json:"quest_id"`
-	ActorID     pgtype.UUID        `json:"actor_id"`
-	CharacterID pgtype.UUID        `json:"character_id"`
+	At           pgtype.Timestamptz `json:"at"`
+	QuestID      pgtype.UUID        `json:"quest_id"`
+	ActorID      pgtype.UUID        `json:"actor_id"`
+	CharacterIds []pgtype.UUID      `json:"character_ids"`
+	Amounts      []int32            `json:"amounts"`
+	Notes        []string           `json:"notes"`
 }
 
-func (q *Queries) CharacterProductAwardQuestPCXP(ctx context.Context, arg CharacterProductAwardQuestPCXPParams) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, characterProductAwardQuestPCXP,
-		arg.Amount,
-		arg.Note,
+func (q *Queries) CharacterProductAwardQuestPCXP(ctx context.Context, arg CharacterProductAwardQuestPCXPParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, characterProductAwardQuestPCXP,
 		arg.At,
 		arg.QuestID,
 		arg.ActorID,
-		arg.CharacterID,
+		arg.CharacterIds,
+		arg.Amounts,
+		arg.Notes,
 	)
-	var public_id pgtype.UUID
-	err := row.Scan(&public_id)
-	return public_id, err
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var public_id pgtype.UUID
+		if err := rows.Scan(&public_id); err != nil {
+			return nil, err
+		}
+		items = append(items, public_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const characterProductByID = `-- name: CharacterProductByID :one

@@ -80,7 +80,8 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status, q.dm_id,
        q.discord_desired_revision, q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.event_url,
        q.created_by, q.created_at, q.updated_at, q.closed_at, q.deleted_at,
-       q.deleted_by, q.discord_voice_channel_id, q.discord_thread_id
+       q.deleted_by, q.discord_voice_channel_id, q.discord_thread_id,
+       q.discord_channel_id
 FROM quests q
 WHERE q.public_id = @quest_id::uuid
 FOR UPDATE OF q;
@@ -137,6 +138,7 @@ WITH filtered AS (
       AND (NOT @tag_filter_set::boolean OR q.tags && @tag_variants::text[])
       AND (NOT @genre_filter_set::boolean OR q.genres && @genre_variants::text[])
       AND (cardinality(@short_codes::text[]) = 0 OR q.short_code = ANY(@short_codes::text[]))
+      AND (cardinality(@ids::uuid[]) = 0 OR q.public_id = ANY(@ids::uuid[]))
       AND (@scheduled_from::timestamptz IS NULL OR q.scheduled_at >= @scheduled_from::timestamptz)
       AND (@scheduled_to::timestamptz IS NULL OR q.scheduled_at < @scheduled_to::timestamptz)
       AND (sqlc.narg(search)::text IS NULL OR q.short_code ILIKE '%' || replace(replace(replace(sqlc.narg(search)::text, E'\\', E'\\\\'), '%', E'\\%'), '_', E'\\_') || '%' ESCAPE E'\\')
@@ -275,6 +277,7 @@ WITH filtered AS (
     WHERE m.public_id = @member_id::uuid
       AND qp.status <> 'withdrawn'
       AND q.deleted_at IS NULL
+      AND (@scheduled_from::timestamptz IS NULL OR q.scheduled_at >= @scheduled_from::timestamptz)
 ), counted AS (
     SELECT count(*)::bigint AS total FROM filtered
 ), page AS (
@@ -434,6 +437,17 @@ UPDATE quest_participants SET status = @status::text, manual = @manual::boolean,
        updated_at = @at::timestamptz
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
+
+-- name: ProductQuestUpdateParticipantsByPublicID :many
+UPDATE quest_participants qp
+SET status = statuses.status, manual = true, updated_at = @at::timestamptz
+FROM unnest(@character_ids::uuid[]) WITH ORDINALITY AS input(character_id, ordinality)
+JOIN unnest(@statuses::text[]) WITH ORDINALITY AS statuses(status, ordinality)
+  ON statuses.ordinality = input.ordinality
+JOIN characters c ON c.public_id = input.character_id AND c.deleted_at IS NULL
+JOIN members owner ON owner.id = c.owner_id
+WHERE qp.quest_id = @quest_id::bigint AND qp.character_id = c.id
+RETURNING c.public_id AS character_id, owner.public_id AS owner_id, qp.status;
 
 -- name: ProductQuestRejoinParticipant :one
 -- Rejoining is always an ordinary signup, never a DM pick: clear any dm_picked left over

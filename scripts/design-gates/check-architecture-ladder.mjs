@@ -213,6 +213,7 @@ export function scanSource(
         'fetchQuery',
         'prefetchQuery',
         'ensureQueryData',
+        'invalidateQueries',
       ].includes(info.name)
     );
   };

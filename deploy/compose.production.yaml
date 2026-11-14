@@ -57,6 +57,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER-}:${POSTGRES_PASSWORD-}@chronicler-postgres:5432/${POSTGRES_DB-}?sslmode=disable&pool_max_conns=10}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       INGEST_SECRET: ${INGEST_SECRET:?set INGEST_SECRET}
+      AGENT_WORKER_SECRET: ${AGENT_WORKER_SECRET:?set AGENT_WORKER_SECRET}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
       DISCORD_REDIRECT_URI: ${DISCORD_REDIRECT_URI:-}
@@ -89,9 +90,10 @@ services:
     build:
       context: ..
       dockerfile: apps/discord/Dockerfile
+      args:
+        BOT_BUILD_ID: ${BOT_BUILD_ID:-unknown}
     environment:
       BOT_DISCORD_TOKEN: ${BOT_DISCORD_TOKEN:?set BOT_DISCORD_TOKEN}
-      BOT_CLIENT_ID: ${BOT_CLIENT_ID:?set BOT_CLIENT_ID}
       GUILD_ID: ${GUILD_ID:?set GUILD_ID}
       INGEST_SECRET: ${INGEST_SECRET:?set INGEST_SECRET}
       # Container-network traffic only; the bot refuses http unless allowed.
@@ -104,6 +106,11 @@ services:
     depends_on:
       chronicler-api:
         condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'bun', 'apps/discord/dist/healthcheck.js']
+      interval: 30s
+      start_period: 90s
+      retries: 3
     restart: unless-stopped
 
   # Production ingress (profile `tunnel`): dials out to Cloudflare, which

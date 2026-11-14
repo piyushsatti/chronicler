@@ -14,8 +14,8 @@ import { SegmentedNav } from '../components/primitives/SegmentedNav.js';
 import { useMe } from '../hooks/useMe.js';
 import { personName, roleLabel } from '../utils/format.js';
 import { useMemberHub, type MemberHub } from '../features/member/hooks/useMemberHub.js';
-import type { MemberViewModel } from '../features/member/adapters/memberAdapter.js';
-import styles from '../features/member/pages/me.module.css';
+import type { MemberViewModel } from '../view-models/member.js';
+import styles from './MeShell.module.css';
 
 /** Account sections. Every section is a /me route, so the page never hands the member off to a global list. */
 const ACCOUNT_SECTIONS = [

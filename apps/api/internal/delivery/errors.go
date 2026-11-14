@@ -17,6 +17,10 @@ var ErrBadPayload = errors.New("invalid quest discord job payload")
 // Retrying cannot shrink it.
 var ErrPlayerListTooLong = errors.New("player list exceeds discord message limit")
 
+// ErrPlayerListNoThread means the quest has no Discord thread to post into.
+// The first announcement opens the thread once; if that failed, retries cannot help.
+var ErrPlayerListNoThread = errors.New("quest has no discord thread")
+
 // ErrDiscordForbidden marks a Discord 403: the bot lacks a permission or
 // channel access. Retrying cannot fix it, so the job is parked for repair.
 var ErrDiscordForbidden = errors.New("discord forbidden")
@@ -28,9 +32,13 @@ var ErrDiscordEventState = errors.New("discord event state requires repair")
 // parked for a Discord 403. The web maps it to an operator sentence.
 const SafeCodeDiscordPermission = "DISCORD_PERMISSION"
 
-// Operator codes for the other delivery failures. The worker stores these
-// only for a 403; every other failure leaves the code empty and keeps the
-// reason in error_message. The admin read derives the code from that text.
+// SafeCodeDiscordThreadMissing is stored when a roster post has no quest thread.
+const SafeCodeDiscordThreadMissing = "DISCORD_THREAD_MISSING"
+
+// Operator codes for other delivery failures. The worker stores a code for
+// 403 and a missing quest thread; every other failure leaves the code empty
+// and keeps the reason in error_message. The admin read derives the code
+// from that text when none is stored.
 const (
 	SafeCodeDiscordUnauthorized  = "DISCORD_UNAUTHORIZED"
 	SafeCodeDiscordNotFound      = "DISCORD_NOT_FOUND"

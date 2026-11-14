@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,10 +15,31 @@ type Pool struct {
 	*pgxpool.Pool
 }
 
-func Connect(ctx context.Context, databaseURL string) (*Pool, error) {
+type ConnectOption func(*pgxpool.Config)
+
+func WithStatementTimeout(d time.Duration) ConnectOption {
+	return func(cfg *pgxpool.Config) {
+		if cfg.ConnConfig.RuntimeParams == nil {
+			cfg.ConnConfig.RuntimeParams = map[string]string{}
+		}
+		cfg.ConnConfig.RuntimeParams["statement_timeout"] = d.String()
+	}
+}
+
+func ConnectOptions(env string) []ConnectOption {
+	if env != "production" {
+		return nil
+	}
+	return []ConnectOption{WithStatementTimeout(10 * time.Second)}
+}
+
+func Connect(ctx context.Context, databaseURL string, opts ...ConnectOption) (*Pool, error) {
 	cfg, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse database url: %w", err)
+	}
+	for _, opt := range opts {
+		opt(cfg)
 	}
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
@@ -46,7 +68,7 @@ func (r *TxRunner[R]) Do(ctx context.Context, fn func(repos R) error) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck
+	defer tx.Rollback(context.WithoutCancel(ctx)) //nolint:errcheck
 
 	if err := fn(r.bind(tx)); err != nil {
 		return err

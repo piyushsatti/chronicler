@@ -1,14 +1,83 @@
 package httpserver
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 )
+
+const requestIDHeader = "X-Request-Id"
+const maxRequestIDLen = 128
+
+type requestIDKey struct{}
+
+func RequestIDFromContext(ctx context.Context) (string, bool) {
+	id, ok := ctx.Value(requestIDKey{}).(string)
+	return id, ok && id != ""
+}
+
+func withRequestID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, requestIDKey{}, id)
+}
+
+func validRequestID(id string) bool {
+	if id == "" || len(id) > maxRequestIDLen {
+		return false
+	}
+	for i := 0; i < len(id); i++ {
+		c := id[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func RequestID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := r.Header.Get(requestIDHeader)
+		if !validRequestID(id) {
+			id = uuid.NewString()
+		}
+		w.Header().Set(requestIDHeader, id)
+		next.ServeHTTP(w, r.WithContext(withRequestID(r.Context(), id)))
+	})
+}
+
+func ContextHandler(next slog.Handler) slog.Handler {
+	return contextHandler{next: next}
+}
+
+type contextHandler struct {
+	next slog.Handler
+}
+
+func (h contextHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.next.Enabled(ctx, level)
+}
+
+func (h contextHandler) Handle(ctx context.Context, r slog.Record) error {
+	if id, ok := RequestIDFromContext(ctx); ok {
+		r.AddAttrs(slog.String("request_id", id))
+	}
+	return h.next.Handle(ctx, r)
+}
+
+func (h contextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return contextHandler{next: h.next.WithAttrs(attrs)}
+}
+
+func (h contextHandler) WithGroup(name string) slog.Handler {
+	return contextHandler{next: h.next.WithGroup(name)}
+}
 
 // CORS wraps the next handler so app errors still get ACAO headers.
 func CORS(origins []string, next http.Handler) http.Handler {
@@ -86,6 +155,23 @@ func MaxBody(n int64, prefixes ...string) func(http.Handler) http.Handler {
 			for _, p := range prefixes {
 				if strings.HasPrefix(r.URL.Path, p) {
 					r.Body = http.MaxBytesReader(w, r.Body, n)
+					break
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// Deadline gives matching paths a deadline above the 10s outbound budgets.
+func Deadline(d time.Duration, prefixes ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			for _, p := range prefixes {
+				if strings.HasPrefix(r.URL.Path, p) {
+					ctx, cancel := context.WithTimeout(r.Context(), d)
+					defer cancel()
+					r = r.WithContext(ctx)
 					break
 				}
 			}

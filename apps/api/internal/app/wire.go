@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/agent"
+	"github.com/piyushsatti/chronicler/apps/api/internal/character"
 	"github.com/piyushsatti/chronicler/apps/api/internal/delivery"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
@@ -22,6 +23,16 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/site"
 )
+
+type WireOption func(*wireOptions)
+
+type wireOptions struct {
+	ddbClient character.DdbClient
+}
+
+func WithDdbClient(client character.DdbClient) WireOption {
+	return func(o *wireOptions) { o.ddbClient = client }
+}
 
 type API struct {
 	Authority     auth.AuthorityResolver
@@ -38,7 +49,11 @@ type API struct {
 	MemberMe      func(string) (member.Member, error)
 }
 
-func Wire(ctx context.Context, cfg config.Config) API {
+func Wire(ctx context.Context, cfg config.Config, opts ...WireOption) API {
+	var options wireOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
 	mem := API{
 		QuestCmd: quest.NewCommands(quest.MemoryRunner(), time.Now),
 		SiteStats: func(context.Context) (site.Stats, error) {
@@ -48,12 +63,12 @@ func Wire(ctx context.Context, cfg config.Config) API {
 			return member.Member{ID: id, Handle: "me", DisplayName: "Me", Status: member.StatusActive}, nil
 		},
 		Ingest:   &ingest.MemoryStore{},
-		Agent:    agent.New(cfg.IngestSecret, nil, cfg.Agent.InlineComplete),
+		Agent:    agent.New(cfg.IngestSecret, cfg.AgentWorkerSecret, nil, cfg.Agent.InlineComplete),
 		JobStore: &delivery.MemoryStore{},
 	}
 	mem.Resolver = &graph.Resolver{Services: emptyServices(mem.QuestCmd)}
 
-	pool, err := db.Connect(ctx, cfg.DatabaseURL)
+	pool, err := db.Connect(ctx, cfg.DatabaseURL, db.ConnectOptions(string(cfg.Env))...)
 	if err != nil {
 		if cfg.RequireDatabase {
 			slog.Error("database required but unavailable", "env", cfg.Env, "error", err)
@@ -66,14 +81,14 @@ func Wire(ctx context.Context, cfg config.Config) API {
 		slog.Warn("database unavailable; using in-memory stores", "error", err)
 		return mem
 	}
-	return wirePostgres(ctx, cfg, pool, mem)
+	return wirePostgres(ctx, cfg, pool, mem, options.ddbClient)
 }
 
 func emptyServices(_ quest.Commands) graph.Services {
 	return graph.Services{}
 }
 
-func wirePostgres(ctx context.Context, cfg config.Config, pool *db.Pool, base API) API {
+func wirePostgres(ctx context.Context, cfg config.Config, pool *db.Pool, base API, ddbClient character.DdbClient) API {
 	pgxPool := pool.Pool
 	q := dbgen.New(pgxPool)
 	jobStore := jobs.NewPostgresStore(pgxPool)
@@ -109,7 +124,7 @@ func wirePostgres(ctx context.Context, cfg config.Config, pool *db.Pool, base AP
 	}
 	sitePG := site.NewPostgresStats(pgxPool)
 
-	services, err := wireProductServices(pgxPool, pool, memStore, []byte(cfg.JWTSecret), graph.Services{})
+	services, err := wireProductServices(pgxPool, pool, memStore, []byte(cfg.JWTSecret), graph.Services{}, ddbClient)
 	if err != nil {
 		slog.Error("product GraphQL wiring failed", "error", err)
 		panic("product GraphQL wiring: " + err.Error())
@@ -126,7 +141,7 @@ func wirePostgres(ctx context.Context, cfg config.Config, pool *db.Pool, base AP
 	base.Documents = docQ
 	base.Notifications = notification.Queries{Repo: notification.NewPostgresRepository(q)}
 	base.Ingest = ingest.NewPostgresStore(pgxPool)
-	base.Agent = agent.New(cfg.IngestSecret, agent.NewPostgresStore(pgxPool), cfg.Agent.InlineComplete)
+	base.Agent = agent.New(cfg.IngestSecret, cfg.AgentWorkerSecret, agent.NewPostgresStore(pgxPool), cfg.Agent.InlineComplete)
 	base.JobStore = jobStore
 	base.Members = memStore
 	base.SiteStats = sitePG.Stats

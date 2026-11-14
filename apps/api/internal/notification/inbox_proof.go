@@ -108,8 +108,11 @@ func (p *ProductPostgres) InsertInbox(ctx context.Context, event Event, ids []st
 	first := rows[0]
 	requests := []proofRequest{notificationProofRequest(db.UUIDString(first.PublicID), payload)}
 	proofRows, err := p.readProofRows(ctx, db.UUIDString(first.RecipientID), requests)
-	if err != nil || len(proofRows) != 1 {
-		return opaqueNotificationProofError()
+	if err != nil {
+		return opaqueNotificationProofError(err)
+	}
+	if len(proofRows) != 1 {
+		return opaqueNotificationProofError(errors.New("notification proof row count mismatch"))
 	}
 	var source sourceProof
 	if err := strictNotificationJSON(proofRows[0].SourceProof, &source); err != nil {
@@ -167,15 +170,18 @@ func (p *ProductPostgres) proveNotifications(ctx context.Context, memberID strin
 		return projections, nil
 	}
 	if len(rows) > maxAckLimit {
-		return nil, opaqueNotificationProofError()
+		return nil, opaqueNotificationProofError(errors.New("notification proof batch exceeds limit"))
 	}
 	payloads, requests, err := notificationProofRequests(memberID, rows)
 	if err != nil {
 		return nil, err
 	}
 	proofRows, err := p.readProofRows(ctx, memberID, requests)
-	if err != nil || len(proofRows) != len(rows) {
-		return nil, opaqueNotificationProofError()
+	if err != nil {
+		return nil, opaqueNotificationProofError(err)
+	}
+	if len(proofRows) != len(rows) {
+		return nil, opaqueNotificationProofError(errors.New("notification proof row count mismatch"))
 	}
 	byID, err := uniqueNotificationProofRows(proofRows)
 	if err != nil {
@@ -197,7 +203,7 @@ func notificationProofRequests(memberID string, rows []storedNotification) ([]in
 	for i, row := range rows {
 		payload := &payloads[i]
 		if !canonicalNotificationID(row.ID) || len(row.Body) > maxNotificationPayloadBytes || strictNotificationJSON([]byte(row.Body), payload) != nil || validatePayload(*payload) != nil || row.Kind != payload.Event.Kind || row.SubjectType != payload.Event.SubjectType || (row.SubjectID != "" && row.SubjectID != payload.Event.SubjectID) || !row.CreatedAt.Equal(payload.Event.OccurredAt) || !slices.Contains(payload.Recipients, memberID) {
-			return nil, nil, opaqueNotificationProofError()
+			return nil, nil, opaqueNotificationProofError(errors.New("stored notification failed proof request checks"))
 		}
 		requests[i] = notificationProofRequest(row.ID, *payload)
 	}
@@ -209,7 +215,7 @@ func uniqueNotificationProofRows(rows []dbgen.ProductNotificationProofsRow) (map
 	for _, row := range rows {
 		id := db.UUIDString(row.NotificationID)
 		if _, duplicate := byID[id]; duplicate {
-			return nil, opaqueNotificationProofError()
+			return nil, opaqueNotificationProofError(errors.New("duplicate notification proof row"))
 		}
 		byID[id] = row
 	}
@@ -219,7 +225,7 @@ func uniqueNotificationProofRows(rows []dbgen.ProductNotificationProofsRow) (map
 func proveStoredNotification(memberID string, row storedNotification, payload inboxPayload, byID map[string]dbgen.ProductNotificationProofsRow) (SubjectProjection, error) {
 	proofRow, ok := byID[row.ID]
 	if !ok {
-		return SubjectProjection{}, opaqueNotificationProofError()
+		return SubjectProjection{}, opaqueNotificationProofError(errors.New("notification proof row missing"))
 	}
 	var proofs []inboxProof
 	if err := strictNotificationJSON(proofRow.CommandProofs, &proofs); err != nil {
@@ -231,13 +237,13 @@ func proveStoredNotification(memberID string, row storedNotification, payload in
 			continue
 		}
 		if found || proof.RecipientID != memberID || !samePayload(proof.Payload, payload) {
-			return SubjectProjection{}, opaqueNotificationProofError()
+			return SubjectProjection{}, opaqueNotificationProofError(errors.New("notification command proof mismatch"))
 		}
 		found = true
 	}
 	var source sourceProof
 	if !found || strictNotificationJSON(proofRow.SourceProof, &source) != nil || validateSourceProof(payload, source) != nil {
-		return SubjectProjection{}, opaqueNotificationProofError()
+		return SubjectProjection{}, opaqueNotificationProofError(errors.New("notification source proof failed"))
 	}
 	label := notificationLabel(payload.Event)
 	return SubjectProjection{SubjectType: row.SubjectType, SubjectID: payload.Event.SubjectID, Visible: source.SubjectExists, Code: source.SubjectCode, Label: label, Title: &label, Facts: payload.Event.Facts}, nil
@@ -256,10 +262,10 @@ func validateSourceProof(payload inboxPayload, source sourceProof) error {
 		return validateDocumentSourceProof(payload, source, same, at)
 	case QuestScheduled:
 		if !source.SubjectExists {
-			return opaqueNotificationProofError()
+			return opaqueNotificationProofError(errors.New("quest scheduled subject missing"))
 		}
 	default:
-		return opaqueNotificationProofError()
+		return opaqueNotificationProofError(errors.New("unsupported notification source proof kind"))
 	}
 	return nil
 }
@@ -267,7 +273,7 @@ func validateSourceProof(payload inboxPayload, source sourceProof) error {
 func validateVerificationSourceProof(payload inboxPayload, source sourceProof, same func(*string, string) bool, at func(*time.Time) bool) error {
 	event, facts := payload.Event, payload.Event.Facts
 	if !source.SubjectExists || !same(source.VerificationID, *facts.VerificationID) || !same(source.VerificationCharacterID, event.SubjectID) || !same(source.Verdict, *facts.Verdict) || !same(source.DeciderID, event.ActorID) || !at(source.VerificationAt) || source.CharacterOwnerID == nil || !slices.Equal(payload.Recipients, []string{*source.CharacterOwnerID}) {
-		return opaqueNotificationProofError()
+		return opaqueNotificationProofError(errors.New("verification source proof mismatch"))
 	}
 	return nil
 }
@@ -275,7 +281,7 @@ func validateVerificationSourceProof(payload inboxPayload, source sourceProof, s
 func validateQuestSourceProof(payload inboxPayload, source sourceProof, same func(*string, string) bool) error {
 	facts := payload.Event.Facts
 	if !source.SubjectExists || !source.ParticipantExists || !same(source.CharacterID, *facts.CharacterID) || source.CharacterOwnerID == nil || !slices.Equal(payload.Recipients, []string{*source.CharacterOwnerID}) {
-		return opaqueNotificationProofError()
+		return opaqueNotificationProofError(errors.New("quest source proof mismatch"))
 	}
 	return nil
 }
@@ -283,18 +289,18 @@ func validateQuestSourceProof(payload inboxPayload, source sourceProof, same fun
 func validateDocumentSourceProof(payload inboxPayload, source sourceProof, same func(*string, string) bool, at func(*time.Time) bool) error {
 	event, facts := payload.Event, payload.Event.Facts
 	if !same(source.RevisionID, *facts.RevisionID) || !same(source.RevisionDocumentID, event.SubjectID) || !same(source.RevisionActorID, event.ActorID) || !at(source.RevisionAt) {
-		return opaqueNotificationProofError()
+		return opaqueNotificationProofError(errors.New("document source proof mismatch"))
 	}
 	if event.Kind == DMMentioned {
 		recorded := slices.Clone(source.RevisionMentionMemberIDs)
 		slices.Sort(recorded)
 		if !slices.Equal(recorded, facts.NewMentionMemberIDs) {
-			return opaqueNotificationProofError()
+			return opaqueNotificationProofError(errors.New("document mention proof mismatch"))
 		}
 		return nil
 	}
 	if source.DocumentAuthorID == nil || !slices.Equal(payload.Recipients, []string{*source.DocumentAuthorID}) || *source.DocumentAuthorID == event.ActorID {
-		return opaqueNotificationProofError()
+		return opaqueNotificationProofError(errors.New("document author proof mismatch"))
 	}
 	return nil
 }

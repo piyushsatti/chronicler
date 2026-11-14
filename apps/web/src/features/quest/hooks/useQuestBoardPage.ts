@@ -21,6 +21,7 @@ import { loadQuestAuthoringAuthority } from '../adapters/questOptionsAdapter.js'
 import { useQuestMutations } from './useQuestMutations.js';
 import { useInfiniteScroll } from '../../../components/primitives/useInfiniteScroll.js';
 import { dayRangeInZone, personLabels } from '../../../utils/format.js';
+import { hasActiveSignup } from '../../../utils/questVocabulary.js';
 import {
   filterQuestBoardItems,
   type BoardSegment,
@@ -93,8 +94,7 @@ export function useQuestBoardPage() {
   const mine = (quest: QuestBoardItemView) =>
     quest.participants.filter(
       (participant) =>
-        ids.has(participant.characterId) &&
-        (participant.status === 'signed_up' || participant.status === 'waitlisted'),
+        ids.has(participant.characterId) && hasActiveSignup(participant.status),
     );
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
   // A specific date narrows the API read to that day and overrides the quick date segment.

@@ -88,7 +88,7 @@ describe('useHomePage', () => {
             },
             questBoard: { items: [], total: 0 },
             quests: { items: [], total: 0 },
-            recentlyClosedQuests: { items: [], total: 0 },
+            recentlyClosedQuests: { total: 0 },
             communityDirectory: { entries: [], total: 0 },
           },
         }),

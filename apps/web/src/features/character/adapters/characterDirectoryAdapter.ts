@@ -70,11 +70,11 @@ export async function loadCharacterDirectory(
 
 export async function loadCharacterRegionNames(): Promise<Record<string, string>> {
   const names: Record<string, string> = {};
-  for (let offset = 0; ; offset += 200) {
-    const data = await graphqlRequest<CharacterRegionsQuery>(REGIONS, { limit: 200, offset });
+  for (let offset = 0; ; offset += 100) {
+    const data = await graphqlRequest<CharacterRegionsQuery>(REGIONS, { limit: 100, offset });
     const page = z.array(namedOption).parse(data.regions);
     for (const region of page) names[region.id] = region.name;
-    if (page.length < 200) return names;
+    if (page.length < 100) return names;
   }
 }
 
@@ -111,12 +111,12 @@ export async function loadCreationOptions(regionId: string): Promise<CreationOpt
       const items: z.infer<typeof namedOption>[] = [];
       for (;;) {
         const data = await graphqlRequest<CharacterRegionsQuery>(REGIONS, {
-          limit: 200,
+          limit: 100,
           offset: items.length,
         });
         const page = z.array(namedOption).parse(data.regions);
         items.push(...page);
-        if (page.length < 200) return items;
+        if (page.length < 100) return items;
       }
     })(),
   ]);

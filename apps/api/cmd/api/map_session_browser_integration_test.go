@@ -234,7 +234,7 @@ func TestMapBrowserCurrentSession(t *testing.T) {
 	}
 	inventory := map[string]any{"database": fixture.databaseName, "actors": actorIDs, "regions": regionIDs, "maps": maps, "nodes": nodes, "edgeId": edgeID, "documents": documents, "initialRows": map[string]int{"members": 4, "regions": 2, "assignments": 4, "maps": 2, "nodes": 3, "edges": 1, "documents": 2, "links": 2, "regionDocumentReferences": 2}, "maximumNewRows": map[string]int{"maps": 2, "nodes": 2, "edges": 1}}
 	write("native-inventory.json", inventory)
-	runtime = app.Wire(ctx, cfg)
+	runtime = wireForTest(ctx, cfg)
 	if runtime.Pool == nil || runtime.Authority == nil {
 		t.Fatal("real Wire did not bind the fixture")
 	}

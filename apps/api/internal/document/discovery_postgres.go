@@ -87,7 +87,7 @@ type discoverySearchProjection struct {
 }
 
 func (p *ProductPostgres) SearchDiscovery(ctx context.Context, actor auth.Authority, query string, kinds []string, page product.Page) (DiscoveryPage, error) {
-	if page.Limit <= 0 || page.Offset < 0 {
+	if !product.ValidPage(page.Limit, page.Offset) {
 		return DiscoveryPage{}, apierr.New(apierr.Invalid, "invalid search page")
 	}
 	docKinds, err := documentDiscoveryKinds(kinds)

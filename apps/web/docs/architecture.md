@@ -56,6 +56,7 @@ Each adapter PR adds at least one bad-wire test.
 - TanStack Query: server cache; `queryFn` calls adapters
 - Auth Context: JWT storage and expiry; `queryClient.clear()` on login, logout, and new token
 - `useMe`: the typed `MemberMe` GraphQL operation supplies current member identity and roles. Staff routes also require their current server access proof. JWT role claims never grant UI or API authority.
+- Accepted: `useMotionCollapse` reads preferences from Redux (`selectPreferences`) rather than `ThemeContext`, because `ThemeProvider` itself calls `useMotionCollapse` while building context and cannot consume that context.
 
 ## Responsive layout
 

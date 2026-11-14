@@ -55,42 +55,6 @@ func (q *Queries) CountOtherFeaturesOnHex(ctx context.Context, arg CountOtherFea
 	return count, err
 }
 
-const countProductCodexDirectory = `-- name: CountProductCodexDirectory :one
-SELECT count(*)::bigint AS total FROM documents d LEFT JOIN members author ON author.id=d.author_id
-WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
-  AND ($1::text IS NULL OR d.category=$1::text OR d.category LIKE replace(replace(replace($1::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'/%' ESCAPE chr(92))
-  AND ($2::text IS NULL OR d.title ILIKE '%'||replace(replace(replace($2::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'%' ESCAPE chr(92))
-  AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
-      $3::uuid,$4::text[],$5::text,
-      $6::boolean,$7::boolean,
-      COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$3::uuid),ARRAY[]::uuid[]))
-`
-
-type CountProductCodexDirectoryParams struct {
-	CategoryPrefix pgtype.Text `json:"category_prefix"`
-	Search         pgtype.Text `json:"search"`
-	ViewerID       pgtype.UUID `json:"viewer_id"`
-	ViewerRoles    []string    `json:"viewer_roles"`
-	ViewerHandle   string      `json:"viewer_handle"`
-	ViewerAdmin    bool        `json:"viewer_admin"`
-	ViewerLiveDm   bool        `json:"viewer_live_dm"`
-}
-
-func (q *Queries) CountProductCodexDirectory(ctx context.Context, arg CountProductCodexDirectoryParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countProductCodexDirectory,
-		arg.CategoryPrefix,
-		arg.Search,
-		arg.ViewerID,
-		arg.ViewerRoles,
-		arg.ViewerHandle,
-		arg.ViewerAdmin,
-		arg.ViewerLiveDm,
-	)
-	var total int64
-	err := row.Scan(&total)
-	return total, err
-}
-
 const countProductDocumentBacklinks = `-- name: CountProductDocumentBacklinks :one
 SELECT count(*)::bigint AS total,
        COALESCE(bool_or($1::boolean AND (
@@ -131,97 +95,6 @@ func (q *Queries) CountProductDocumentBacklinks(ctx context.Context, arg CountPr
 	var i CountProductDocumentBacklinksRow
 	err := row.Scan(&i.Total, &i.AdminOverride)
 	return i, err
-}
-
-const countProductDocumentRevisions = `-- name: CountProductDocumentRevisions :one
-SELECT count(*)::bigint AS total FROM document_revisions r JOIN documents d ON d.id=r.document_id
-WHERE d.public_id=$1::uuid
-`
-
-func (q *Queries) CountProductDocumentRevisions(ctx context.Context, documentID pgtype.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, countProductDocumentRevisions, documentID)
-	var total int64
-	err := row.Scan(&total)
-	return total, err
-}
-
-const countProductDocuments = `-- name: CountProductDocuments :one
-WITH population AS (
- SELECT d.id, d.public_id, d.kind, d.slug, d.title, d.category, d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id, d.published_at, d.deleted_at, d.created_at, d.updated_at, d.deleted_by, d.published_by, d.version, author.public_id AS author_public_id,
-        COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
-                       WHERE dr.document_id=d.id AND reader.public_id=$2::uuid), ARRAY[]::uuid[]) AS readable_document_ids
- FROM documents d LEFT JOIN members author ON author.id=d.author_id
- WHERE d.deleted_at IS NULL
-   AND ($6::text IS NULL OR d.kind=$6::text)
-   AND ($7::text IS NULL OR d.category=$7::text)
-   AND ($8::text IS NULL OR d.status=$8::text)
-   AND ($9::text IS NULL OR d.visibility=$9::text)
-   AND ($10::uuid IS NULL OR author.public_id=$10::uuid)
-   AND ($11::text IS NULL OR d.title ILIKE '%'||replace(replace(replace($11::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'%' ESCAPE chr(92))
-   AND ($12::uuid IS NULL OR EXISTS (
-       SELECT 1 FROM document_links dl JOIN regions r ON r.id=dl.region_target_id
-       WHERE dl.source_id=d.id AND r.public_id=$12::uuid))
-)
-SELECT count(*)::bigint AS total,
-       COALESCE(bool_or($1::boolean AND NOT document_readable(
-         d.public_id,d.author_public_id,d.status,d.visibility,d.policy,$2::uuid,
-         $3::text[],$4::text,FALSE,
-         $5::boolean,d.readable_document_ids)),FALSE) AS admin_override
-FROM population d
-WHERE document_readable(d.public_id,d.author_public_id,d.status,d.visibility,d.policy,
-      $2::uuid,$3::text[],$4::text,
-      $1::boolean,$5::boolean,d.readable_document_ids)
-`
-
-type CountProductDocumentsParams struct {
-	ViewerAdmin  bool        `json:"viewer_admin"`
-	ViewerID     pgtype.UUID `json:"viewer_id"`
-	ViewerRoles  []string    `json:"viewer_roles"`
-	ViewerHandle string      `json:"viewer_handle"`
-	ViewerLiveDm bool        `json:"viewer_live_dm"`
-	Kind         pgtype.Text `json:"kind"`
-	Category     pgtype.Text `json:"category"`
-	Status       pgtype.Text `json:"status"`
-	Visibility   pgtype.Text `json:"visibility"`
-	AuthorID     pgtype.UUID `json:"author_id"`
-	Search       pgtype.Text `json:"search"`
-	RegionID     pgtype.UUID `json:"region_id"`
-}
-
-type CountProductDocumentsRow struct {
-	Total         int64       `json:"total"`
-	AdminOverride interface{} `json:"admin_override"`
-}
-
-func (q *Queries) CountProductDocuments(ctx context.Context, arg CountProductDocumentsParams) (CountProductDocumentsRow, error) {
-	row := q.db.QueryRow(ctx, countProductDocuments,
-		arg.ViewerAdmin,
-		arg.ViewerID,
-		arg.ViewerRoles,
-		arg.ViewerHandle,
-		arg.ViewerLiveDm,
-		arg.Kind,
-		arg.Category,
-		arg.Status,
-		arg.Visibility,
-		arg.AuthorID,
-		arg.Search,
-		arg.RegionID,
-	)
-	var i CountProductDocumentsRow
-	err := row.Scan(&i.Total, &i.AdminOverride)
-	return i, err
-}
-
-const countProductDocumentsTrash = `-- name: CountProductDocumentsTrash :one
-SELECT count(*)::bigint AS total FROM documents d WHERE d.deleted_at IS NOT NULL
-`
-
-func (q *Queries) CountProductDocumentsTrash(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countProductDocumentsTrash)
-	var total int64
-	err := row.Scan(&total)
-	return total, err
 }
 
 const countProductLieutenantAssignments = `-- name: CountProductLieutenantAssignments :one
@@ -676,6 +549,120 @@ func (q *Queries) GetProductDocumentRevisionParent(ctx context.Context, arg GetP
 	return i, err
 }
 
+const getProductDocumentsByIDs = `-- name: GetProductDocumentsByIDs :many
+SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.category,
+       d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id AS author_internal_id,
+       author.public_id AS author_id, d.published_at, publisher.public_id AS published_by,
+       d.deleted_at, deleter.public_id AS deleted_by, d.created_at, d.updated_at, d.version,
+       COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
+                      WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids,
+       document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
+         $2::text[],$3::text,$4::boolean,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])) AS readable,
+       COALESCE($4::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
+         $2::text[],$3::text,FALSE,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override,
+       COALESCE(ARRAY(SELECT member.public_id FROM lieutenant_assignments la JOIN members member ON member.id=la.member_id
+                      WHERE la.npc_document_id=d.id ORDER BY member.public_id), ARRAY[]::uuid[]) AS lieutenant_ids,
+       COALESCE(ARRAY(SELECT q.public_id FROM document_links l JOIN quests q ON q.id=l.quest_target_id
+                      WHERE l.source_id=d.id AND l.target_type='quest' ORDER BY q.public_id), ARRAY[]::uuid[]) AS linked_quest_ids
+FROM documents d
+LEFT JOIN members author ON author.id=d.author_id
+LEFT JOIN members publisher ON publisher.id=d.published_by
+LEFT JOIN members deleter ON deleter.id=d.deleted_by
+WHERE d.public_id = ANY($6::uuid[]) AND d.deleted_at IS NULL
+`
+
+type GetProductDocumentsByIDsParams struct {
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	DocumentIds  []pgtype.UUID `json:"document_ids"`
+}
+
+type GetProductDocumentsByIDsRow struct {
+	InternalID       int64              `json:"internal_id"`
+	ID               pgtype.UUID        `json:"id"`
+	Kind             string             `json:"kind"`
+	Slug             string             `json:"slug"`
+	Title            string             `json:"title"`
+	Category         pgtype.Text        `json:"category"`
+	Status           string             `json:"status"`
+	Visibility       string             `json:"visibility"`
+	Policy           []byte             `json:"policy"`
+	Body             string             `json:"body"`
+	FrontmatterYaml  pgtype.Text        `json:"frontmatter_yaml"`
+	AuthorInternalID pgtype.Int8        `json:"author_internal_id"`
+	AuthorID         pgtype.UUID        `json:"author_id"`
+	PublishedAt      pgtype.Timestamptz `json:"published_at"`
+	PublishedBy      pgtype.UUID        `json:"published_by"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	DeletedBy        pgtype.UUID        `json:"deleted_by"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Version          int32              `json:"version"`
+	ReaderIds        interface{}        `json:"reader_ids"`
+	Readable         bool               `json:"readable"`
+	AdminOverride    interface{}        `json:"admin_override"`
+	LieutenantIds    interface{}        `json:"lieutenant_ids"`
+	LinkedQuestIds   interface{}        `json:"linked_quest_ids"`
+}
+
+func (q *Queries) GetProductDocumentsByIDs(ctx context.Context, arg GetProductDocumentsByIDsParams) ([]GetProductDocumentsByIDsRow, error) {
+	rows, err := q.db.Query(ctx, getProductDocumentsByIDs,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerAdmin,
+		arg.ViewerLiveDm,
+		arg.DocumentIds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetProductDocumentsByIDsRow{}
+	for rows.Next() {
+		var i GetProductDocumentsByIDsRow
+		if err := rows.Scan(
+			&i.InternalID,
+			&i.ID,
+			&i.Kind,
+			&i.Slug,
+			&i.Title,
+			&i.Category,
+			&i.Status,
+			&i.Visibility,
+			&i.Policy,
+			&i.Body,
+			&i.FrontmatterYaml,
+			&i.AuthorInternalID,
+			&i.AuthorID,
+			&i.PublishedAt,
+			&i.PublishedBy,
+			&i.DeletedAt,
+			&i.DeletedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Version,
+			&i.ReaderIds,
+			&i.Readable,
+			&i.AdminOverride,
+			&i.LieutenantIds,
+			&i.LinkedQuestIds,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertFeatureHexLink = `-- name: InsertFeatureHexLink :exec
 INSERT INTO pointcrawl_entry_links(map_id,node_id,document_id,relation,created_at,created_by)
 SELECT $1,$2,d.id,'subject',$3,actor.id
@@ -921,17 +908,28 @@ func (q *Queries) ListProductCodexCategories(ctx context.Context, arg ListProduc
 }
 
 const listProductCodexDirectory = `-- name: ListProductCodexDirectory :many
-SELECT d.public_id AS id,d.kind,d.slug,d.title,d.category,d.status,d.visibility,d.body,
-       d.frontmatter_yaml,d.policy,author.public_id AS author_id,d.updated_at,d.version
-FROM documents d LEFT JOIN members author ON author.id=d.author_id
-WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
-  AND ($1::text IS NULL OR d.category=$1::text OR d.category LIKE replace(replace(replace($1::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'/%' ESCAPE chr(92))
-  AND ($2::text IS NULL OR d.title ILIKE '%'||replace(replace(replace($2::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'%' ESCAPE chr(92))
-  AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
-      $3::uuid,$4::text[],$5::text,
-      $6::boolean,$7::boolean,
-      COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$3::uuid),ARRAY[]::uuid[]))
-ORDER BY d.updated_at DESC,d.public_id DESC LIMIT $9::int OFFSET $8::int
+WITH filtered AS (
+ SELECT d.public_id AS id,d.kind,d.slug,d.title,d.category,d.status,d.visibility,d.body,
+        d.frontmatter_yaml,d.policy,author.public_id AS author_id,d.updated_at,d.version
+ FROM documents d LEFT JOIN members author ON author.id=d.author_id
+ WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
+   AND ($1::text IS NULL OR d.category=$1::text OR d.category LIKE replace(replace(replace($1::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'/%' ESCAPE chr(92))
+   AND ($2::text IS NULL OR d.title ILIKE '%'||replace(replace(replace($2::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'%' ESCAPE chr(92))
+   AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+       $3::uuid,$4::text[],$5::text,
+       $6::boolean,$7::boolean,
+       COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$3::uuid),ARRAY[]::uuid[]))
+), counted AS (
+ SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+ SELECT id, kind, slug, title, category, status, visibility, body, frontmatter_yaml, policy, author_id, updated_at, version FROM filtered
+ ORDER BY updated_at DESC, id DESC
+ LIMIT $9::int OFFSET $8::int
+)
+SELECT counted.total, page.id, page.kind, page.slug, page.title, page.category, page.status, page.visibility,
+       page.body, page.frontmatter_yaml, page.policy, page.author_id, page.updated_at, page.version
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.updated_at DESC NULLS LAST, page.id DESC NULLS LAST
 `
 
 type ListProductCodexDirectoryParams struct {
@@ -947,19 +945,20 @@ type ListProductCodexDirectoryParams struct {
 }
 
 type ListProductCodexDirectoryRow struct {
+	Total           int64              `json:"total"`
 	ID              pgtype.UUID        `json:"id"`
-	Kind            string             `json:"kind"`
-	Slug            string             `json:"slug"`
-	Title           string             `json:"title"`
+	Kind            pgtype.Text        `json:"kind"`
+	Slug            pgtype.Text        `json:"slug"`
+	Title           pgtype.Text        `json:"title"`
 	Category        pgtype.Text        `json:"category"`
-	Status          string             `json:"status"`
-	Visibility      string             `json:"visibility"`
-	Body            string             `json:"body"`
+	Status          pgtype.Text        `json:"status"`
+	Visibility      pgtype.Text        `json:"visibility"`
+	Body            pgtype.Text        `json:"body"`
 	FrontmatterYaml pgtype.Text        `json:"frontmatter_yaml"`
 	Policy          []byte             `json:"policy"`
 	AuthorID        pgtype.UUID        `json:"author_id"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	Version         int32              `json:"version"`
+	Version         pgtype.Int4        `json:"version"`
 }
 
 func (q *Queries) ListProductCodexDirectory(ctx context.Context, arg ListProductCodexDirectoryParams) ([]ListProductCodexDirectoryRow, error) {
@@ -982,6 +981,7 @@ func (q *Queries) ListProductCodexDirectory(ctx context.Context, arg ListProduct
 	for rows.Next() {
 		var i ListProductCodexDirectoryRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.Kind,
 			&i.Slug,
@@ -1078,14 +1078,26 @@ func (q *Queries) ListProductDocumentBacklinks(ctx context.Context, arg ListProd
 }
 
 const listProductDocumentRevisions = `-- name: ListProductDocumentRevisions :many
-SELECT r.public_id AS id,d.public_id AS document_id,r.rev,r.reason,r.title,r.body,r.frontmatter_yaml,
-       r.policy,r.visibility,r.published_at,publisher.public_id AS published_by,
-       actor.public_id AS recorded_by,r.created_at AS recorded_at,r.old_value,r.new_value
-FROM document_revisions r JOIN documents d ON d.id=r.document_id
-LEFT JOIN members publisher ON publisher.id=r.published_by
-LEFT JOIN members actor ON actor.id=r.created_by
-WHERE d.public_id=$1::uuid
-ORDER BY r.rev DESC LIMIT $3::int OFFSET $2::int
+WITH filtered AS (
+ SELECT r.public_id AS id,d.public_id AS document_id,r.rev,r.reason,r.title,r.body,r.frontmatter_yaml,
+        r.policy,r.visibility,r.published_at,publisher.public_id AS published_by,
+        actor.public_id AS recorded_by,r.created_at AS recorded_at,r.old_value,r.new_value
+ FROM document_revisions r JOIN documents d ON d.id=r.document_id
+ LEFT JOIN members publisher ON publisher.id=r.published_by
+ LEFT JOIN members actor ON actor.id=r.created_by
+ WHERE d.public_id=$1::uuid
+), counted AS (
+ SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+ SELECT id, document_id, rev, reason, title, body, frontmatter_yaml, policy, visibility, published_at, published_by, recorded_by, recorded_at, old_value, new_value FROM filtered
+ ORDER BY rev DESC
+ LIMIT $3::int OFFSET $2::int
+)
+SELECT counted.total, page.id, page.document_id, page.rev, page.reason, page.title, page.body, page.frontmatter_yaml,
+       page.policy, page.visibility, page.published_at, page.published_by,
+       page.recorded_by, page.recorded_at, page.old_value, page.new_value
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.rev DESC NULLS LAST
 `
 
 type ListProductDocumentRevisionsParams struct {
@@ -1095,12 +1107,13 @@ type ListProductDocumentRevisionsParams struct {
 }
 
 type ListProductDocumentRevisionsRow struct {
+	Total           int64              `json:"total"`
 	ID              pgtype.UUID        `json:"id"`
 	DocumentID      pgtype.UUID        `json:"document_id"`
-	Rev             int32              `json:"rev"`
-	Reason          string             `json:"reason"`
-	Title           string             `json:"title"`
-	Body            string             `json:"body"`
+	Rev             pgtype.Int4        `json:"rev"`
+	Reason          pgtype.Text        `json:"reason"`
+	Title           pgtype.Text        `json:"title"`
+	Body            pgtype.Text        `json:"body"`
 	FrontmatterYaml pgtype.Text        `json:"frontmatter_yaml"`
 	Policy          []byte             `json:"policy"`
 	Visibility      pgtype.Text        `json:"visibility"`
@@ -1122,6 +1135,7 @@ func (q *Queries) ListProductDocumentRevisions(ctx context.Context, arg ListProd
 	for rows.Next() {
 		var i ListProductDocumentRevisionsRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.DocumentID,
 			&i.Rev,
@@ -1222,42 +1236,50 @@ const listProductDocuments = `-- name: ListProductDocuments :many
 WITH population AS (
  SELECT d.id, d.public_id, d.kind, d.slug, d.title, d.category, d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id, d.published_at, d.deleted_at, d.created_at, d.updated_at, d.deleted_by, d.published_by, d.version, author.public_id AS author_public_id,
         COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
-                       WHERE dr.document_id=d.id AND reader.public_id=$2::uuid), ARRAY[]::uuid[]) AS readable_document_ids
+                       WHERE dr.document_id=d.id AND reader.public_id=$1::uuid), ARRAY[]::uuid[]) AS readable_document_ids
  FROM documents d LEFT JOIN members author ON author.id=d.author_id
  WHERE d.deleted_at IS NULL
-   AND ($8::text IS NULL OR d.kind=$8::text)
-   AND ($9::text IS NULL OR d.category=$9::text)
-   AND ($10::text IS NULL OR d.status=$10::text)
-   AND ($11::text IS NULL OR d.visibility=$11::text)
-   AND ($12::uuid IS NULL OR author.public_id=$12::uuid)
-   AND ($13::text IS NULL OR d.title ILIKE '%'||replace(replace(replace($13::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'%' ESCAPE chr(92))
-   AND ($14::uuid IS NULL OR EXISTS (
+   AND ($2::text IS NULL OR d.kind=$2::text)
+   AND ($3::text IS NULL OR d.category=$3::text)
+   AND ($4::text IS NULL OR d.status=$4::text)
+   AND ($5::text IS NULL OR d.visibility=$5::text)
+   AND ($6::uuid IS NULL OR author.public_id=$6::uuid)
+   AND ($7::text IS NULL OR d.title ILIKE '%'||replace(replace(replace($7::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'%' ESCAPE chr(92))
+   AND ($8::uuid IS NULL OR EXISTS (
        SELECT 1 FROM document_links dl JOIN regions r ON r.id=dl.region_target_id
-       WHERE dl.source_id=d.id AND r.public_id=$14::uuid))
+       WHERE dl.source_id=d.id AND r.public_id=$8::uuid))
+), filtered AS (
+ SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility,
+        d.body, d.frontmatter_yaml, d.policy, d.author_public_id AS author_id,
+        d.published_at, d.deleted_at, d.updated_at, d.version, d.created_at,
+        COALESCE($9::boolean AND NOT document_readable(
+          d.public_id,d.author_public_id,d.status,d.visibility,d.policy,$1::uuid,
+          $10::text[],$11::text,FALSE,
+          $12::boolean,d.readable_document_ids),FALSE) AS admin_override
+ FROM population d
+ WHERE document_readable(d.public_id,d.author_public_id,d.status,d.visibility,d.policy,
+       $1::uuid,$10::text[],$11::text,
+       $9::boolean,$12::boolean,d.readable_document_ids)
+), counted AS (
+ SELECT count(*)::bigint AS total,
+        COALESCE(bool_or(admin_override),FALSE) AS count_admin_override
+ FROM filtered
+), page AS (
+ SELECT id, kind, slug, title, category, status, visibility, body, frontmatter_yaml, policy, author_id, published_at, deleted_at, updated_at, version, created_at, admin_override FROM filtered
+ ORDER BY updated_at DESC, id DESC
+ LIMIT $14::int OFFSET $13::int
 )
-SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility,
-       d.body, d.frontmatter_yaml, d.policy, d.author_public_id AS author_id,
-       d.published_at, d.deleted_at, d.updated_at, d.version, d.created_at,
-       COALESCE($1::boolean AND NOT document_readable(
-         d.public_id,d.author_public_id,d.status,d.visibility,d.policy,$2::uuid,
-         $3::text[],$4::text,FALSE,
-         $5::boolean,d.readable_document_ids),FALSE) AS admin_override
-FROM population d
-WHERE document_readable(d.public_id,d.author_public_id,d.status,d.visibility,d.policy,
-      $2::uuid,$3::text[],$4::text,
-      $1::boolean,$5::boolean,d.readable_document_ids)
-ORDER BY d.updated_at DESC,d.public_id DESC
-LIMIT $7::int OFFSET $6::int
+SELECT counted.total, counted.count_admin_override,
+       page.id, page.kind, page.slug, page.title, page.category, page.status, page.visibility,
+       page.body, page.frontmatter_yaml, page.policy, page.author_id,
+       page.published_at, page.deleted_at, page.updated_at, page.version, page.created_at,
+       page.admin_override
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.updated_at DESC NULLS LAST, page.id DESC NULLS LAST
 `
 
 type ListProductDocumentsParams struct {
-	ViewerAdmin  bool        `json:"viewer_admin"`
 	ViewerID     pgtype.UUID `json:"viewer_id"`
-	ViewerRoles  []string    `json:"viewer_roles"`
-	ViewerHandle string      `json:"viewer_handle"`
-	ViewerLiveDm bool        `json:"viewer_live_dm"`
-	RowOffset    int32       `json:"row_offset"`
-	RowLimit     int32       `json:"row_limit"`
 	Kind         pgtype.Text `json:"kind"`
 	Category     pgtype.Text `json:"category"`
 	Status       pgtype.Text `json:"status"`
@@ -1265,37 +1287,39 @@ type ListProductDocumentsParams struct {
 	AuthorID     pgtype.UUID `json:"author_id"`
 	Search       pgtype.Text `json:"search"`
 	RegionID     pgtype.UUID `json:"region_id"`
+	ViewerAdmin  bool        `json:"viewer_admin"`
+	ViewerRoles  []string    `json:"viewer_roles"`
+	ViewerHandle string      `json:"viewer_handle"`
+	ViewerLiveDm bool        `json:"viewer_live_dm"`
+	RowOffset    int32       `json:"row_offset"`
+	RowLimit     int32       `json:"row_limit"`
 }
 
 type ListProductDocumentsRow struct {
-	ID              pgtype.UUID        `json:"id"`
-	Kind            string             `json:"kind"`
-	Slug            string             `json:"slug"`
-	Title           string             `json:"title"`
-	Category        pgtype.Text        `json:"category"`
-	Status          string             `json:"status"`
-	Visibility      string             `json:"visibility"`
-	Body            string             `json:"body"`
-	FrontmatterYaml pgtype.Text        `json:"frontmatter_yaml"`
-	Policy          []byte             `json:"policy"`
-	AuthorID        pgtype.UUID        `json:"author_id"`
-	PublishedAt     pgtype.Timestamptz `json:"published_at"`
-	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	Version         int32              `json:"version"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	AdminOverride   interface{}        `json:"admin_override"`
+	Total              int64              `json:"total"`
+	CountAdminOverride interface{}        `json:"count_admin_override"`
+	ID                 pgtype.UUID        `json:"id"`
+	Kind               pgtype.Text        `json:"kind"`
+	Slug               pgtype.Text        `json:"slug"`
+	Title              pgtype.Text        `json:"title"`
+	Category           pgtype.Text        `json:"category"`
+	Status             pgtype.Text        `json:"status"`
+	Visibility         pgtype.Text        `json:"visibility"`
+	Body               pgtype.Text        `json:"body"`
+	FrontmatterYaml    pgtype.Text        `json:"frontmatter_yaml"`
+	Policy             []byte             `json:"policy"`
+	AuthorID           pgtype.UUID        `json:"author_id"`
+	PublishedAt        pgtype.Timestamptz `json:"published_at"`
+	DeletedAt          pgtype.Timestamptz `json:"deleted_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	Version            pgtype.Int4        `json:"version"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	AdminOverride      interface{}        `json:"admin_override"`
 }
 
 func (q *Queries) ListProductDocuments(ctx context.Context, arg ListProductDocumentsParams) ([]ListProductDocumentsRow, error) {
 	rows, err := q.db.Query(ctx, listProductDocuments,
-		arg.ViewerAdmin,
 		arg.ViewerID,
-		arg.ViewerRoles,
-		arg.ViewerHandle,
-		arg.ViewerLiveDm,
-		arg.RowOffset,
-		arg.RowLimit,
 		arg.Kind,
 		arg.Category,
 		arg.Status,
@@ -1303,6 +1327,12 @@ func (q *Queries) ListProductDocuments(ctx context.Context, arg ListProductDocum
 		arg.AuthorID,
 		arg.Search,
 		arg.RegionID,
+		arg.ViewerAdmin,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerLiveDm,
+		arg.RowOffset,
+		arg.RowLimit,
 	)
 	if err != nil {
 		return nil, err
@@ -1312,6 +1342,8 @@ func (q *Queries) ListProductDocuments(ctx context.Context, arg ListProductDocum
 	for rows.Next() {
 		var i ListProductDocumentsRow
 		if err := rows.Scan(
+			&i.Total,
+			&i.CountAdminOverride,
 			&i.ID,
 			&i.Kind,
 			&i.Slug,
@@ -1341,13 +1373,25 @@ func (q *Queries) ListProductDocuments(ctx context.Context, arg ListProductDocum
 }
 
 const listProductDocumentsTrash = `-- name: ListProductDocumentsTrash :many
-SELECT d.public_id AS id,d.kind,d.slug,d.title,d.category,d.status,d.visibility,d.body,
-       d.frontmatter_yaml,d.policy,author.public_id AS author_id,d.deleted_at,deleter.public_id AS deleted_by,
-       d.updated_at,d.version,d.created_at
-FROM documents d LEFT JOIN members author ON author.id=d.author_id
-LEFT JOIN members deleter ON deleter.id=d.deleted_by
-WHERE d.deleted_at IS NOT NULL
-ORDER BY d.deleted_at DESC,d.public_id DESC LIMIT $2::int OFFSET $1::int
+WITH filtered AS (
+ SELECT d.public_id AS id,d.kind,d.slug,d.title,d.category,d.status,d.visibility,d.body,
+        d.frontmatter_yaml,d.policy,author.public_id AS author_id,d.deleted_at,deleter.public_id AS deleted_by,
+        d.updated_at,d.version,d.created_at
+ FROM documents d LEFT JOIN members author ON author.id=d.author_id
+ LEFT JOIN members deleter ON deleter.id=d.deleted_by
+ WHERE d.deleted_at IS NOT NULL
+), counted AS (
+ SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+ SELECT id, kind, slug, title, category, status, visibility, body, frontmatter_yaml, policy, author_id, deleted_at, deleted_by, updated_at, version, created_at FROM filtered
+ ORDER BY deleted_at DESC, id DESC
+ LIMIT $2::int OFFSET $1::int
+)
+SELECT counted.total, page.id, page.kind, page.slug, page.title, page.category, page.status, page.visibility,
+       page.body, page.frontmatter_yaml, page.policy, page.author_id, page.deleted_at, page.deleted_by,
+       page.updated_at, page.version, page.created_at
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.deleted_at DESC NULLS LAST, page.id DESC NULLS LAST
 `
 
 type ListProductDocumentsTrashParams struct {
@@ -1356,21 +1400,22 @@ type ListProductDocumentsTrashParams struct {
 }
 
 type ListProductDocumentsTrashRow struct {
+	Total           int64              `json:"total"`
 	ID              pgtype.UUID        `json:"id"`
-	Kind            string             `json:"kind"`
-	Slug            string             `json:"slug"`
-	Title           string             `json:"title"`
+	Kind            pgtype.Text        `json:"kind"`
+	Slug            pgtype.Text        `json:"slug"`
+	Title           pgtype.Text        `json:"title"`
 	Category        pgtype.Text        `json:"category"`
-	Status          string             `json:"status"`
-	Visibility      string             `json:"visibility"`
-	Body            string             `json:"body"`
+	Status          pgtype.Text        `json:"status"`
+	Visibility      pgtype.Text        `json:"visibility"`
+	Body            pgtype.Text        `json:"body"`
 	FrontmatterYaml pgtype.Text        `json:"frontmatter_yaml"`
 	Policy          []byte             `json:"policy"`
 	AuthorID        pgtype.UUID        `json:"author_id"`
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
 	DeletedBy       pgtype.UUID        `json:"deleted_by"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	Version         int32              `json:"version"`
+	Version         pgtype.Int4        `json:"version"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
@@ -1384,6 +1429,7 @@ func (q *Queries) ListProductDocumentsTrash(ctx context.Context, arg ListProduct
 	for rows.Next() {
 		var i ListProductDocumentsTrashRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.Kind,
 			&i.Slug,

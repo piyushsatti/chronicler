@@ -19,7 +19,7 @@ Long-form historical text (gitignored): `.local/docs-quarry/decisions-longform/`
 | ---------------------- | -------------------------------------------------------------------------------------- |
 | Boundary (this folder) | D1, D3, D4, D10–D15, D18–D20, D22–D24, D27–D31, D33, D45, D46, D47, D48, D49, D50, D51 |
 | Local → API            | D2, D5–D9, D16, D17, D25, D26, D32                                                     |
-| Local → Web            | D21                                                                                    |
+| Local → Web            | D21, D52, D53                                                                          |
 
 ## Index (boundary)
 

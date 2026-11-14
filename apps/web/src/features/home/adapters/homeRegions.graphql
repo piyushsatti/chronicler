@@ -1,0 +1,6 @@
+query HomeRegions($offset: Int!) {
+  regions(limit: 100, offset: $offset) {
+    id
+    name
+  }
+}

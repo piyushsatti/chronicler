@@ -36,7 +36,7 @@ describe('Home adapters', () => {
             ...good,
             questBoard: { items: [quest], total: 1 },
             quests: { items: [quest], total: 1 },
-            recentlyClosedQuests: { items: [], total: 0 },
+            recentlyClosedQuests: { total: 3 },
           },
         }),
       ),
@@ -47,6 +47,8 @@ describe('Home adapters', () => {
     );
     const loaded = await loadHomeLanes();
     expect(offsets).toEqual([100]);
+    expect(loaded.totals.recentlyClosed).toBe(3);
+    expect(loaded).not.toHaveProperty('recentlyClosed');
     expect(loaded.recruiting[0]?.participants).toHaveLength(101);
     expect(loaded.upcoming[0]?.participants).toHaveLength(101);
     expect(loaded.recruiting[0]?.waitlistCount).toBe(1);
@@ -61,6 +63,28 @@ describe('Home adapters', () => {
         memberId: '22222222-2222-4222-8222-222222222222',
       }),
     ).toMatchObject({ mine: false });
+  });
+
+  it('loads recently closed as a total without roster completion requests', async () => {
+    let participantRequests = 0;
+    server.use(
+      graphql.query('HomeWarRoom', () =>
+        HttpResponse.json({
+          data: {
+            ...good,
+            recentlyClosedQuests: { total: 12 },
+          },
+        }),
+      ),
+      graphql.query('HomeQuestParticipants', () => {
+        participantRequests += 1;
+        return HttpResponse.json({ data: { quest: { participants: [] } } });
+      }),
+    );
+    const loaded = await loadHomeLanes();
+    expect(loaded.totals.recentlyClosed).toBe(12);
+    expect(loaded).not.toHaveProperty('recentlyClosed');
+    expect(participantRequests).toBe(0);
   });
 
   it('rejects a mismatched withdrawal receipt and transmits the caller-owned replay key', async () => {

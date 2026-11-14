@@ -3,8 +3,10 @@ package graphql
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
@@ -44,6 +46,37 @@ func TestDepthLimitExpandsFragmentsAndUsesSelectedOperation(t *testing.T) {
 					t.Fatalf("status=%d body=%s", w.Code, w.Body)
 				}
 			} else if w.Code != http.StatusOK || bytes.Contains(w.Body.Bytes(), []byte(`"errors"`)) {
+				t.Fatalf("status=%d body=%s", w.Code, w.Body)
+			}
+		})
+	}
+}
+
+func TestAliasLimitCountsRootAliasesAndFragments(t *testing.T) {
+	aliases := func(n int) string {
+		parts := make([]string, n)
+		for i := range parts {
+			parts[i] = fmt.Sprintf("a%d:_contractLayoutStub", i)
+		}
+		return strings.Join(parts, " ")
+	}
+	for _, tc := range []struct {
+		name, query string
+		wantError   bool
+	}{
+		{"21 aliased roots rejected", "query Q{" + aliases(21) + "}", true},
+		{"20 aliased roots pass", "query Q{" + aliases(20) + "}", false},
+		{"fragment spread aliases count", `query Q{...F} fragment F on Query{` + aliases(21) + `}`, true},
+		{"21 unaliased roots allowed", `query Q{_contractLayoutStub characters{__typename} myCharacters{__typename} character{__typename} adminCharacterDirectory{__typename} quest{__typename} questBoard{__typename} questArcs{__typename} questGenreOptions questStateCounts{__typename} regions{__typename} timeAnchors{__typename} home{__typename} adminCommunityStats{__typename} searchableKinds{__typename} siteStats{__typename} discordDeliveryMode homeBanner{__typename} questAnnouncementRoleSetting{__typename} discordSettings{__typename} questVoiceChannels{__typename}}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := NewHandler(&graph.Resolver{}, Limits{MaxAliases: 20}, nil)
+			w := graphQLRequest(t, handler, tc.query, "Q", nil)
+			if tc.wantError {
+				if w.Code != http.StatusOK || !bytes.Contains(w.Body.Bytes(), []byte(`"code":"ALIAS_LIMIT_EXCEEDED"`)) {
+					t.Fatalf("status=%d body=%s", w.Code, w.Body)
+				}
+			} else if w.Code != http.StatusOK || bytes.Contains(w.Body.Bytes(), []byte(`"code":"ALIAS_LIMIT_EXCEEDED"`)) {
 				t.Fatalf("status=%d body=%s", w.Code, w.Body)
 			}
 		})

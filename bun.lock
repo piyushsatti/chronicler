@@ -21,7 +21,6 @@
       "name": "@pi/discord",
       "version": "0.1.0",
       "dependencies": {
-        "@pi/contracts": "workspace:*",
         "discord.js": "^14.16.0",
         "dotenv": "^16.4.0",
       },

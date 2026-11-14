@@ -12,7 +12,7 @@ The worker loop (`apps/api/internal/workerrun`) consumes Postgres-backed jobs wh
 
 Without token + channel **and** without dry-run, sync returns an error; the job retries then dead-letters. Applied revision does **not** advance.
 
-Idempotency: the first successful POST stores `quests.discord_message_id`; later deliveries `PATCH` that message instead of posting again.
+Idempotency: the first successful POST stores `quests.discord_message_id` and `quests.discord_channel_id`; later deliveries `PATCH` that message instead of posting again.
 
 ### Coalesce while running
 
@@ -27,7 +27,7 @@ Local stack: [deploy/compose.yaml](/deploy/compose.yaml).
 | Service   | Token               | Role                                                                                                                            |
 | --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `worker`  | `DISCORD_BOT_TOKEN` | Discord REST announce (or dry-run)                                                                                              |
-| `discord` | `BOT_DISCORD_TOKEN` | Gateway sensor only; posts to `/v1/ingest/*`. Does not announce quests ([D1](/docs/decisions/D1-Discord-Announce-Ownership.md)) |
+| `discord` | `BOT_DISCORD_TOKEN` | Gateway sensor; opt-in agent replies; posts to `/v1/ingest/*`. Does not announce quests ([D1](/docs/decisions/D1-Discord-Announce-Ownership.md)) |
 
 Staging E2E against a live channel needs a real worker token + channel id and `DISCORD_DELIVERY_DRY_RUN` unset/false. No live Discord test runs in CI (httptest mocks).
 

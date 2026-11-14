@@ -63,17 +63,17 @@ The original `mounted-http-013` through `mounted-http-017`, `mounted-http-025` t
 | mounted-http-017    | `POST /v1/quests/{id}/close`                        | GraphQL Mutation.closeQuest                         | OP-051    |
 | mounted-http-018    | `GET /v1/me/notifications/unread-count`             | GraphQL Query.myUnreadNotificationCount             | OP-052    |
 | mounted-http-019    | `POST /v1/me/notifications/read` (retired)          | GraphQL Mutation.markNotificationsRead              | OP-053    |
-| mounted-http-020    | `POST /v1/me/notifications/acknowledge-suppressed`  | GraphQL Mutation.acknowledgeSuppressedNotifications | OP-054    |
-| mounted-http-021    | `POST /v1/me/personalization/reconcile`             | Retired                                             | OP-055    |
+| mounted-http-020    | `POST /v1/me/notifications/acknowledge-suppressed` (retired) | GraphQL Mutation.acknowledgeSuppressedNotifications | OP-054    |
+| mounted-http-021    | `POST /v1/me/personalization/reconcile` (retired)            | Retired                                             | OP-055    |
 | mounted-http-022    | `GET /v1/stats`                                     | GraphQL Query.siteStats                             | OP-056    |
 | mounted-http-023    | `GET /v1/search/kinds`                              | GraphQL Query.searchableKinds                       | OP-057    |
 | mounted-http-024    | `GET /v1/time/game-date`                            | GraphQL Query.gameDate                              | OP-058    |
 | mounted-http-025    | `GET /v1/members/by-discord/{discordId}`            | GraphQL Query.memberByDiscordId                     | OP-059    |
 | mounted-http-026    | `GET /v1/members/{id}/role-history`                 | GraphQL Query.memberRoleHistory                     | OP-060    |
 | mounted-http-027    | `GET /v1/members/{id}/availability`                 | GraphQL Query.memberAvailability                    | OP-061    |
-| mounted-http-028    | `GET /v1/hexes/{id}/history`                        | GraphQL Query.hexHistory                            | OP-062    |
-| mounted-http-029    | `GET /v1/regions/{id}/counts`                       | GraphQL Query.regionCounts                          | OP-063    |
-| mounted-http-030    | `GET /v1/maps/{atlasCode}/activity`                 | GraphQL Query.regionActivity                        | OP-064    |
+| mounted-http-028    | `GET /v1/hexes/{id}/history` (retired)              | Retired                                             | OP-062    |
+| mounted-http-029    | `GET /v1/regions/{id}/counts` (retired)             | GraphQL Query.regionCounts                          | OP-063    |
+| mounted-http-030    | `GET /v1/maps/{atlasCode}/activity` (retired)       | GraphQL Query.regionActivity                        | OP-064    |
 | mounted-http-031    | `GET /v1/characters/{id}/progression`               | GraphQL Query.characterProgression                  | OP-065    |
 | mounted-http-032    | `GET /v1/characters/{id}/logs`                      | GraphQL Query.characterLogs                         | OP-066    |
 | mounted-http-033    | `GET /v1/characters/{id}/verification-history`      | GraphQL Query.characterVerificationHistory          | OP-067    |

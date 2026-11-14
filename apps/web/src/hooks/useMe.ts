@@ -3,10 +3,8 @@ import { queryKeys } from '../api/queryKeys.js';
 import { useAuth } from '../auth/AuthContext.js';
 import { toAppError } from '../errors/toAppError.js';
 import type { AppError } from '../errors/types.js';
-import {
-  loadMe,
-  type MemberViewModel,
-} from '../features/member/adapters/memberAdapter.js';
+import { loadMe } from '../features/member/adapters/memberAdapter.js';
+import type { MemberViewModel } from '../view-models/member.js';
 
 export function useMe(): UseQueryResult<MemberViewModel, AppError> {
   const { isAuthenticated, isCurrentSession, sessionReady, token } = useAuth();

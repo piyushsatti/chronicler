@@ -1,5 +1,3 @@
-import type { HttpHandler } from 'msw';
-import type { HttpResponse } from 'msw';
 import type { ReactElement } from 'react';
 
 export type FeatureRoute = {
@@ -12,14 +10,6 @@ export type GraphqlRequestBody = {
   variables?: Record<string, unknown>;
 };
 
-export type FeatureGraphqlHandler = (
-  body: GraphqlRequestBody,
-) => ReturnType<typeof HttpResponse.json>;
-
-export type FeatureGraphql = Readonly<Record<string, FeatureGraphqlHandler>>;
-
-export type FeatureHandlers = readonly HttpHandler[];
-
 export type QueryKeyFactory = {
   readonly [key: string]:
     | readonly unknown[]
@@ -28,8 +18,6 @@ export type QueryKeyFactory = {
 
 export type FeatureSlice = {
   readonly routes: readonly FeatureRoute[];
-  readonly handlers: FeatureHandlers;
-  readonly graphql: FeatureGraphql;
   readonly queryKeys: QueryKeyFactory;
   readonly endpoints?: Readonly<Record<string, unknown>>;
 };

@@ -24,6 +24,8 @@ Domains: `member/`, `document/`, `quest/`, `spatial/`, `character/`, `site/`, `n
 
 Do not reintroduce duplicate flat copies such as `member.graphql` at this directory root.
 
+For **new** fields, follow [Conventions for new fields](../../../docs/interfaces/graphql-schema.md#conventions-for-new-fields): closed sets are enums; paged lists use `<Thing>ListResult` with `items`/`total`. Existing fields stay as-is.
+
 ## Spatial / pointcrawl (C3)
 
 The `spatial/` domain declares **pointcrawl** map SDL only. Hex-grid types, map-view helpers, and hex mutations were removed at M1 per owner decision **C3** (details in `PHASE2-NOTES.md`). Quest ↔ map linkage uses pointcrawl junction fields per **N5** (`setQuestPointcrawlLinks`, `Quest.pointcrawlLinks`).

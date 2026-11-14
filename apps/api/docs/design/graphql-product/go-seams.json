@@ -7452,6 +7452,15 @@
           "owner": "QUE01"
         },
         {
+          "name": "Ids",
+          "wire_name": "ids",
+          "go_type": "[]string",
+          "wire_type": "[ID!]",
+          "resolver_args": [],
+          "kind": "INPUT_OBJECT",
+          "owner": "QUE01"
+        },
+        {
           "name": "Kind",
           "wire_name": "kind",
           "go_type": "*string",
@@ -12484,6 +12493,14 @@
       "package": "quest",
       "fields": [
         {
+          "name": "ScheduledFrom",
+          "wire_name": "scheduledFrom",
+          "go_type": "*time.Time",
+          "sdl_type": "DateTime",
+          "default": "null",
+          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
+        },
+        {
           "name": "Limit",
           "wire_name": "limit",
           "go_type": "int32",
@@ -13466,6 +13483,10 @@
         {
           "name": "AllowedHexes",
           "go_type": "[]spatial.PointcrawlAdmission"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
         }
       ],
       "owner": "QUE01",
@@ -13568,6 +13589,22 @@
         {
           "name": "ExistingEntitlements",
           "go_type": "[]character.QuestRewardEntitlementView"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
+        },
+        {
+          "name": "FilledCount",
+          "go_type": "int32"
+        },
+        {
+          "name": "SlotsMax",
+          "go_type": "int32"
+        },
+        {
+          "name": "SignupType",
+          "go_type": "*string"
         }
       ],
       "owner": "QUE01",
@@ -14467,6 +14504,22 @@
         {
           "name": "AllowedHexes",
           "go_type": "[]spatial.PointcrawlAdmission"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
+        },
+        {
+          "name": "FilledCount",
+          "go_type": "int32"
+        },
+        {
+          "name": "SlotsMax",
+          "go_type": "int32"
+        },
+        {
+          "name": "SignupType",
+          "go_type": "*string"
         }
       ],
       "owner": "QUE01",
@@ -14974,6 +15027,22 @@
         {
           "name": "Candidates",
           "go_type": "[]character.Admission"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
+        },
+        {
+          "name": "FilledCount",
+          "go_type": "int32"
+        },
+        {
+          "name": "SlotsMax",
+          "go_type": "int32"
+        },
+        {
+          "name": "SignupType",
+          "go_type": "*string"
         }
       ],
       "owner": "QUE01",
@@ -15273,6 +15342,10 @@
         {
           "name": "AllowedHexes",
           "go_type": "[]spatial.PointcrawlAdmission"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
         }
       ],
       "owner": "QUE01",
@@ -15363,6 +15436,10 @@
         {
           "name": "AllowedHexes",
           "go_type": "[]spatial.PointcrawlAdmission"
+        },
+        {
+          "name": "QuestRowID",
+          "go_type": "int64"
         }
       ],
       "owner": "QUE01",

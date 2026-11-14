@@ -4,6 +4,7 @@ import { queryKeys } from '../../../src/api/queryKeys.js';
 import listGood from '../../fixtures/wire/quest/list-good.json';
 import { describe, expect, it } from 'vitest';
 import {
+  mapToBoardCardProps,
   parseQuestBoard,
   parseQuestList,
   loadQuestList,
@@ -59,6 +60,14 @@ describe('parseQuestBoard', () => {
                 memberAvatarUrl: null,
                 status: 'waitlisted',
               },
+              {
+                memberId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+                characterId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+                characterName: 'Ghost',
+                memberHandle: 'ghost',
+                memberAvatarUrl: null,
+                status: 'no_show',
+              },
             ],
           },
         ],
@@ -72,7 +81,10 @@ describe('parseQuestBoard', () => {
       regionName: 'The Marches',
       waitlistCount: 1,
     });
-    expect(result.data[0]?.participants).toHaveLength(2);
+    expect(result.data[0]?.participants).toHaveLength(3);
+    expect(mapToBoardCardProps(result.data[0]!).party).toEqual([
+      { characterName: 'Rook', characterId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', avatarUrl: null },
+    ]);
   });
 
   it('preserves all six recruiting identities, order, and distinct display labels', () => {
@@ -234,6 +246,34 @@ describe('generic quest list', () => {
     });
   });
 
+  it('pages quest regions by 100 until a short page', async () => {
+    const regions = Array.from({ length: 101 }, (_, index) => ({
+      id: `11111111-1111-4111-8111-${String(index).padStart(12, '0')}`,
+      name: `Region ${index}`,
+    }));
+    const requested: unknown[] = [];
+    server.use(
+      graphql.query('QuestList', () =>
+        HttpResponse.json({
+          data: { quests: { items: [listGood.items[7]], total: 1 } },
+        }),
+      ),
+      graphql.query('QuestRegions', ({ variables }) => {
+        requested.push(variables);
+        const offset = Number(variables.offset ?? 0);
+        const limit = Number(variables.limit ?? 100);
+        return HttpResponse.json({
+          data: { regions: regions.slice(offset, offset + limit) },
+        });
+      }),
+    );
+    await loadQuestList({ filters: {}, limit: 50, offset: 0 });
+    expect(requested).toEqual([
+      { limit: 100, offset: 0 },
+      { limit: 100, offset: 100 },
+    ]);
+  });
+
   it('uses the declared generic query with exact filter and paging variables', async () => {
     let body: { query: string; variables: unknown } | undefined;
     server.use(
@@ -243,6 +283,9 @@ describe('generic quest list', () => {
           data: { quests: { items: [listGood.items[7]], total: 81 } },
         });
       }),
+      graphql.query('QuestRegions', () =>
+        HttpResponse.json({ data: { regions: [] } }),
+      ),
     );
     const request = { filters: { displayStatus: 'scheduled' }, limit: 50, offset: 50 };
     expect(await loadQuestList(request)).toMatchObject({
@@ -267,6 +310,9 @@ describe('generic quest list', () => {
     server.use(
       graphql.query('QuestList', () =>
         HttpResponse.json({ data: { quests: { items: [], total: 3 } } }),
+      ),
+      graphql.query('QuestRegions', () =>
+        HttpResponse.json({ data: { regions: [] } }),
       ),
     );
     await expect(loadQuestList(request)).resolves.toEqual({ items: [], total: 3 });

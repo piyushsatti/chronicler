@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import { testConfig } from '../support/config.js';
 
 const close = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const disposeHealth = vi.hoisted(() => vi.fn());
@@ -11,13 +12,6 @@ const { client, mountShardHealth } = vi.hoisted(() => ({
   mountShardHealth: vi.fn(() => disposeHealth),
 }));
 
-vi.mock('@discord/config.js', () => ({
-  config: {
-    token: 'test-token',
-    heartbeatEnabled: true,
-    snifferEnabled: false,
-  },
-}));
 vi.mock('@discord/client.js', () => ({ createClient: () => client }));
 vi.mock('@discord/activity/mount.js', () => ({ mountActivity: vi.fn() }));
 vi.mock('@discord/agent/mount.js', () => ({
@@ -26,15 +20,20 @@ vi.mock('@discord/agent/mount.js', () => ({
 vi.mock('@discord/health.js', () => ({ mountShardHealth }));
 vi.mock('@discord/log.js', () => ({ logger: { info: vi.fn() } }));
 
+import { mountActivity } from '@discord/activity/mount.js';
+import { mountAgent } from '@discord/agent/mount.js';
 import { start } from '@discord/session.js';
 
 it('logs in with heartbeat enabled and returns stop', async () => {
-  const session = await start();
-  expect(mountShardHealth).toHaveBeenCalledWith(client, {
+  const config = testConfig({ token: 'test-token', heartbeatEnabled: true });
+  const session = await start({ config, installSignalHandlers: false });
+  expect(mountShardHealth).toHaveBeenCalledWith(client, config, {
     heartbeatEnabled: true,
     exitOnTerminal: true,
     exit: undefined,
   });
+  expect(mountActivity).toHaveBeenCalledWith(client, config, { gateway: disposeHealth });
+  expect(mountAgent).toHaveBeenCalledWith(client, config, disposeHealth);
   expect(client.login).toHaveBeenCalledWith('test-token');
   await session.stop();
   expect(disposeHealth).toHaveBeenCalledOnce();

@@ -7,15 +7,11 @@ import type { AdapterResult } from '../../../errors/types.js';
 import { memberMeWireSchema } from './member.wire.schema.js';
 import MEMBER_ME_QUERY from './memberMe.graphql?raw';
 import { z } from 'zod';
+import type { MemberViewModel } from '../../../view-models/member.js';
+
+export type { MemberViewModel };
 
 const authCallbackWireSchema = z.object({ token: z.string().min(1) });
-
-export type MemberViewModel = {
-  id: string;
-  handle: string;
-  displayName: string;
-  roles: string[];
-};
 
 export function parseAuthCallback(wire: unknown): AdapterResult<string> {
   const parsed = authCallbackWireSchema.safeParse(wire);

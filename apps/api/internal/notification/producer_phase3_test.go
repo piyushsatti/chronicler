@@ -24,20 +24,19 @@ const (
 )
 
 type producerPorts struct {
-	owner, author                                                   string
-	questRecipients                                                 []string
-	parties                                                         RequestParties
-	err, preferenceErr, eventErr, recipientErr                      error
-	missingPreference, duplicatePreference, foreignPreference       bool
-	eventID                                                         string
-	events                                                          []Event
-	recipientIDs                                                    []string
-	recipientEvent                                                  string
-	recipientAt                                                     time.Time
-	preferenceReads                                                 int
-	preferredIDs                                                    []string
-	characterLookups, documentLookups, questLookups, requestLookups int
-	lookedCharacter, lookedQuest, lookedChange, lookedRequest       string
+	owner, author                                             string
+	questRecipients                                           []string
+	err, preferenceErr, eventErr, recipientErr                error
+	missingPreference, duplicatePreference, foreignPreference bool
+	eventID                                                   string
+	events                                                    []Event
+	recipientIDs                                              []string
+	recipientEvent                                            string
+	recipientAt                                               time.Time
+	preferenceReads                                           int
+	preferredIDs                                              []string
+	characterLookups, documentLookups, questLookups           int
+	lookedCharacter, lookedQuest, lookedChange                string
 }
 
 func (p *producerPorts) CharacterOwner(_ context.Context, id string) (string, error) {
@@ -54,11 +53,6 @@ func (p *producerPorts) QuestRecipientIDs(_ context.Context, quest, change strin
 	p.lookedQuest = quest
 	p.lookedChange = change
 	return append([]string(nil), p.questRecipients...), p.err
-}
-func (p *producerPorts) RequestParties(_ context.Context, id string) (RequestParties, error) {
-	p.requestLookups++
-	p.lookedRequest = id
-	return p.parties, p.err
 }
 func (p *producerPorts) ReadPreferences(_ context.Context, ids []string) ([]Preferences, error) {
 	p.preferenceReads++
@@ -92,7 +86,7 @@ func (p *producerPorts) InsertInbox(_ context.Context, event Event, ids []string
 	return p.recipientErr
 }
 func (p *producerPorts) repos() ProducerRepos {
-	return ProducerRepos{Writer: p, Preferences: p, Recipients: RecipientComposition{Character: p, Document: p, Quest: p, Social: p}}
+	return ProducerRepos{Writer: p, Preferences: p, Recipients: RecipientComposition{Character: p, Document: p, Quest: p}}
 }
 func producerPointer(s string) *string { return &s }
 func producerInput(kind EventKind) Event {
@@ -155,7 +149,7 @@ func TestPhase3TaskNOT08Acceptance(t *testing.T) {
 		{QuestScheduled, "", []string{producerA, producerB}},
 	} {
 		t.Run(string(tc.kind), func(t *testing.T) {
-			ports := &producerPorts{owner: tc.owner, author: producerA, questRecipients: []string{producerB, producerA, producerC, producerB}, parties: RequestParties{RequesterID: producerA, TargetDMID: producerC}, eventID: producerEvent}
+			ports := &producerPorts{owner: tc.owner, author: producerA, questRecipients: []string{producerB, producerA, producerC, producerB}, eventID: producerEvent}
 			event := producerInput(tc.kind)
 			before := append([]string(nil), event.Facts.NewMentionMemberIDs...)
 			if err := NewProducer().Record(context.Background(), ports.repos(), event); err != nil {
@@ -176,11 +170,8 @@ func TestPhase3TaskNOT08Acceptance(t *testing.T) {
 			if tc.kind == QuestScheduled && ports.questLookups != 0 {
 				t.Fatal("schedule must use the originating participant snapshot")
 			}
-			if tc.kind == DMMentioned && ports.characterLookups+ports.documentLookups+ports.questLookups+ports.requestLookups != 0 {
+			if tc.kind == DMMentioned && ports.characterLookups+ports.documentLookups+ports.questLookups != 0 {
 				t.Fatal("resolved mentions must not be filtered through current roles/audience or another recipient lookup")
-			}
-			if tc.kind == DMRequestDecided && ports.lookedRequest != producerRequest {
-				t.Fatal("request recipient lookup must use immutable request identity")
 			}
 		})
 	}
@@ -190,7 +181,7 @@ func TestProducerActorRules(t *testing.T) {
 		t.Run(string(kind), func(t *testing.T) {
 			event := producerInput(kind)
 			event.ActorID = producerA
-			ports := &producerPorts{owner: producerA, author: producerA, parties: RequestParties{RequesterID: producerA, TargetDMID: producerB}, eventID: producerEvent}
+			ports := &producerPorts{owner: producerA, author: producerA, eventID: producerEvent}
 			if kind == DMMentioned {
 				event.Facts.NewMentionMemberIDs = []string{producerA}
 			}

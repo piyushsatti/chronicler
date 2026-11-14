@@ -228,6 +228,7 @@ type QuestFiltersFields struct {
 	DisplayStatus *string
 	DmId          *string
 	Genre         *string
+	Ids           []string
 	Kind          *string
 	RegionId      *string
 	ScheduledFrom *time.Time
@@ -395,9 +396,10 @@ type DmSummariesSpec struct {
 }
 
 type MyQuestSignupsSpec struct {
-	Limit  int32
-	Offset int32
-	AsOf   time.Time
+	ScheduledFrom *time.Time
+	Limit         int32
+	Offset        int32
+	AsOf          time.Time
 }
 
 type OpenQuestSeatsSpec struct {
@@ -482,6 +484,7 @@ type AttestQuestParticipationState struct {
 	Roster       []QuestParticipantView
 	BriefVersion int64
 	AllowedHexes []spatial.PointcrawlAdmission
+	QuestRowID   int64
 }
 
 type CloseQuestState struct {
@@ -496,6 +499,10 @@ type CloseQuestState struct {
 	BriefVersion         int64
 	AllowedHexes         []spatial.PointcrawlAdmission
 	ExistingEntitlements []character.QuestRewardEntitlementView
+	QuestRowID           int64
+	FilledCount          int32
+	SlotsMax             int32
+	SignupType           *string
 }
 
 type CreateQuestState struct {
@@ -535,6 +542,10 @@ type WithdrawFromQuestState struct {
 	Roster       []QuestParticipantView
 	BriefVersion int64
 	AllowedHexes []spatial.PointcrawlAdmission
+	QuestRowID   int64
+	FilledCount  int32
+	SlotsMax     int32
+	SignupType   *string
 }
 
 type RemoveQuestFromArcState struct {
@@ -575,6 +586,10 @@ type SelectQuestParticipantsState struct {
 	BriefVersion int64
 	AllowedHexes []spatial.PointcrawlAdmission
 	Candidates   []character.Admission
+	QuestRowID   int64
+	FilledCount  int32
+	SlotsMax     int32
+	SignupType   *string
 }
 
 type SetQuestHexesState struct {
@@ -588,6 +603,7 @@ type SetQuestHexesState struct {
 	Roster       []QuestParticipantView
 	BriefVersion int64
 	AllowedHexes []spatial.PointcrawlAdmission
+	QuestRowID   int64
 }
 
 type SignupForQuestState struct {
@@ -601,6 +617,7 @@ type SignupForQuestState struct {
 	Roster       []QuestParticipantView
 	BriefVersion int64
 	AllowedHexes []spatial.PointcrawlAdmission
+	QuestRowID   int64
 }
 
 type SyncQuestDiscordState struct {
@@ -873,6 +890,7 @@ type CorrectQuestRosterWrite struct {
 	Roster         []QuestParticipantView
 	Candidates     []character.Admission
 	Staff          bool
+	QuestRowID     int64
 }
 
 type ArcQuestsKey struct {

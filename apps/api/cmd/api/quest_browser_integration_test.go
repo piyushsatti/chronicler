@@ -467,7 +467,7 @@ func runQuestBrowserJourneys(t *testing.T, withComposition bool) {
 		t.Fatal(err)
 	}
 	cfg := config.Config{DatabaseURL: fixture.databaseURL, RequireDatabase: true, JWTSecret: "synthetic-quest-browser-fixture-key", CORSOrigins: []string{fmt.Sprintf("http://127.0.0.1:%d", port)}}
-	runtime := app.Wire(ctx, cfg)
+	runtime := wireForTest(ctx, cfg)
 	if runtime.Pool == nil || runtime.Authority == nil {
 		t.Fatal("actual Wire did not bind fixture")
 	}

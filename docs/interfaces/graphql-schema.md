@@ -14,7 +14,17 @@ There is one product GraphQL SDL source under packages/contracts/graphql, recurs
 | ---------------------------------------------- | ---------------------------------------------------- | --------------------------------- |
 | Full recursive discovery and schema validation | scripts/merge-graphql-schema and TestSchemaDiscovery | implemented/tested                |
 | Aggregate drift vs source                      | bun run check-schema                                 | enforced                          |
+| New-field convention ratchet                   | scripts/check-schema-conventions.mjs via check-schema | enforced                          |
 | Generated/executable field/argument parity     | TestGraphQLContract and mounted product tests        | not enforced until implementation |
+
+## Conventions for new fields
+
+These rules apply to **new** fields only. Existing fields keep their current types; converting one is a breaking wire change and needs its own decision.
+
+- A closed set of values (status, kind, role, visibility, and similar) is a GraphQL `enum`, not `String`. Copy the style of existing enums such as `Theme`, `ColorMode`, `Density`, and `BodySpanKind`.
+- A paged list returns `{ items: [T!]!, total: Int! }` named `<Thing>ListResult`, takes `limit` and `offset`, and documents the maximum page size on the field. Cursor paging stays only where it already exists (notifications) unless a decision record says otherwise.
+
+`scripts/check-schema-conventions.mjs` ratchets today's counts of String-typed closed-set field names and of `limit`/`offset` fields that do not return `*ListResult`; counts may only fall.
 
 ## Provider
 

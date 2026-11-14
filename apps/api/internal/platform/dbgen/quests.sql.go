@@ -518,7 +518,7 @@ func (q *Queries) MemberInternalID(ctx context.Context, publicID pgtype.UUID) (i
 const questDiscordAnnounceSnapshot = `-- name: QuestDiscordAnnounceSnapshot :one
 SELECT q.id, q.public_id, q.short_code, q.status, q.deleted_at, q.scheduled_at, q.duration_hours, q.avg_party_level,
        q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.discord_thread_id,
+       q.discord_message_id, q.discord_channel_id, q.discord_event_id, q.discord_thread_id,
        q.discord_voice_channel_id,
        dm.discord_id AS dm_discord_id,
        d.public_id AS document_public_id, d.kind AS document_kind, d.slug AS document_slug,
@@ -543,6 +543,7 @@ type QuestDiscordAnnounceSnapshotRow struct {
 	AvgPartyLevel          pgtype.Int4        `json:"avg_party_level"`
 	DiscordAppliedRevision int32              `json:"discord_applied_revision"`
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
+	DiscordChannelID       pgtype.Text        `json:"discord_channel_id"`
 	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
 	DiscordThreadID        pgtype.Text        `json:"discord_thread_id"`
 	DiscordVoiceChannelID  pgtype.Text        `json:"discord_voice_channel_id"`
@@ -574,6 +575,7 @@ func (q *Queries) QuestDiscordAnnounceSnapshot(ctx context.Context, publicID pgt
 		&i.AvgPartyLevel,
 		&i.DiscordAppliedRevision,
 		&i.DiscordMessageID,
+		&i.DiscordChannelID,
 		&i.DiscordEventID,
 		&i.DiscordThreadID,
 		&i.DiscordVoiceChannelID,
@@ -674,17 +676,19 @@ func (q *Queries) SetQuestDiscordEvent(ctx context.Context, arg SetQuestDiscordE
 
 const setQuestDiscordMessageID = `-- name: SetQuestDiscordMessageID :exec
 UPDATE quests
-SET discord_message_id = $1
-WHERE public_id = $2
+SET discord_message_id = $1,
+    discord_channel_id = $2
+WHERE public_id = $3
 `
 
 type SetQuestDiscordMessageIDParams struct {
 	DiscordMessageID pgtype.Text `json:"discord_message_id"`
+	DiscordChannelID pgtype.Text `json:"discord_channel_id"`
 	PublicID         pgtype.UUID `json:"public_id"`
 }
 
 func (q *Queries) SetQuestDiscordMessageID(ctx context.Context, arg SetQuestDiscordMessageIDParams) error {
-	_, err := q.db.Exec(ctx, setQuestDiscordMessageID, arg.DiscordMessageID, arg.PublicID)
+	_, err := q.db.Exec(ctx, setQuestDiscordMessageID, arg.DiscordMessageID, arg.DiscordChannelID, arg.PublicID)
 	return err
 }
 
