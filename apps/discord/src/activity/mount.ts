@@ -83,8 +83,7 @@ export function mountActivity(
     if (guildId !== config.guildId) {
       return;
     }
-    const event = tracker.handleVoiceStateUpdate(oldState, newState);
-    if (event !== null) {
+    for (const event of tracker.handleVoiceStateUpdate(oldState, newState)) {
       deliverActivity(event);
     }
   });

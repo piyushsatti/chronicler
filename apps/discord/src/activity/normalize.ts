@@ -98,13 +98,48 @@ export interface VoiceSessionTrackerOptions {
   getChannel: (channelId: string) => Channel | undefined;
 }
 
+const MAX_VOICE_SEGMENT_MINUTES = 1440;
+const SEGMENT_MS = MAX_VOICE_SEGMENT_MINUTES * 60_000;
+
+function splitVoiceSegments(args: {
+  userId: string;
+  channelId: string;
+  joinedAtMs: number;
+  atMs: number;
+  recovery: boolean;
+}): SniffedEvent[] {
+  const totalMinutes = Math.round((args.atMs - args.joinedAtMs) / 60_000);
+  if (totalMinutes < 1) {
+    return [];
+  }
+  const events: SniffedEvent[] = [];
+  let remaining = totalMinutes;
+  let segment = 0;
+  while (remaining > 0) {
+    const amount = Math.min(remaining, MAX_VOICE_SEGMENT_MINUTES);
+    const segmentStartMs = args.joinedAtMs + segment * SEGMENT_MS;
+    events.push({
+      event_id: args.recovery
+        ? `voice:recovery:${args.userId}:${args.channelId}:${segmentStartMs}:${args.atMs}`
+        : `voice:${args.userId}:${segmentStartMs}`,
+      kind: 'voice',
+      discord_user_id: args.userId,
+      channel_id: args.channelId,
+      occurred_at: new Date(args.atMs).toISOString(),
+      amount,
+    });
+    remaining -= amount;
+    segment += 1;
+  }
+  return events;
+}
+
 /**
  * Tracks per-user voice-channel join times and turns VOICE_STATE_UPDATE
  * transitions into voice-minute SniffedEvents on channel leave/switch.
  *
  * Join times live in memory for this process. A restart forgets open
- * sessions. The API receives one voice event when someone leaves, with the
- * minutes spent in the channel.
+ * sessions. The API receives voice segment events when someone leaves.
  */
 export class VoiceSessionTracker {
   private readonly sessions = new Map<string, PersistedVoiceSession>();
@@ -121,22 +156,22 @@ export class VoiceSessionTracker {
   }
 
   /**
-   * Feed one VOICE_STATE_UPDATE transition. Returns a SniffedEvent when a
+   * Feed one VOICE_STATE_UPDATE transition. Returns voice segments when a
    * session closed (leave or channel switch) with >=1 minute elapsed;
-   * null on join, mute/deaf-only changes, or sub-minute sessions.
+   * empty on join, mute/deaf-only changes, or sub-minute sessions.
    */
   handleVoiceStateUpdate(
     oldState: VoiceState,
     newState: VoiceState,
-  ): SniffedEvent | null {
+  ): SniffedEvent[] {
     const isBot = newState.member?.user?.bot ?? oldState.member?.user?.bot ?? false;
     if (isBot) {
-      return null;
+      return [];
     }
 
     const userId = newState.id ?? oldState.id;
     if (!userId) {
-      return null;
+      return [];
     }
 
     const session = this.sessions.get(userId);
@@ -159,7 +194,7 @@ export class VoiceSessionTracker {
         channelId: newState.channelId as string,
         joinedAtMs: this.now(),
       });
-      return null;
+      return [];
     }
 
     if (wasInChannel && !isInChannel) {
@@ -173,53 +208,42 @@ export class VoiceSessionTracker {
         channelId: newState.channelId as string,
         joinedAtMs: atMs,
       };
-      const event = this.closeSession(userId, replacement, atMs);
-      if (event === null && !this.sessions.has(userId)) {
+      const events = this.closeSession(userId, replacement, atMs);
+      if (events.length === 0 && !this.sessions.has(userId)) {
         this.sessions.set(userId, replacement);
       }
-      return event;
+      return events;
     }
 
-    return null;
+    return [];
   }
 
   private closeSession(
     userId: string,
     replacement: PersistedVoiceSession | undefined,
     atMs: number,
-  ): SniffedEvent | null {
+  ): SniffedEvent[] {
     const session = this.sessions.get(userId);
     if (!session) {
       if (replacement !== undefined) {
         this.sessions.set(userId, replacement);
       }
-      return null;
+      return [];
     }
 
-    const minutes = Math.round((atMs - session.joinedAtMs) / 60_000);
-    if (minutes < 1) {
-      if (replacement === undefined) {
-        this.sessions.delete(userId);
-      } else {
-        this.sessions.set(userId, replacement);
-      }
-      return null;
-    }
-
-    const event: SniffedEvent = {
-      event_id: `voice:${userId}:${session.joinedAtMs}`,
-      kind: 'voice',
-      discord_user_id: userId,
-      channel_id: session.channelId,
-      occurred_at: new Date(atMs).toISOString(),
-      amount: minutes,
-    };
+    const events = splitVoiceSegments({
+      userId,
+      channelId: session.channelId,
+      joinedAtMs: session.joinedAtMs,
+      atMs,
+      recovery: false,
+    });
     if (replacement === undefined) {
       this.sessions.delete(userId);
     } else {
       this.sessions.set(userId, replacement);
     }
-    return event;
+    return events;
   }
 
   /**
@@ -250,20 +274,18 @@ export class VoiceSessionTracker {
       }
       const state = current.get(session.userId);
       if (state === undefined) {
-        const event = this.closePersistedSession(session, atMs, true);
+        events.push(...this.closePersistedSession(session, atMs, true));
         this.sessions.delete(session.userId);
-        if (event !== null) events.push(event);
         continue;
       }
       current.delete(session.userId);
       if (state.channelId !== session.channelId) {
-        const event = this.closePersistedSession(session, atMs, true);
+        events.push(...this.closePersistedSession(session, atMs, true));
         this.sessions.set(session.userId, {
           userId: session.userId,
           channelId: state.channelId as string,
           joinedAtMs: atMs,
         });
-        if (event !== null) events.push(event);
       }
     }
 
@@ -281,20 +303,13 @@ export class VoiceSessionTracker {
     session: PersistedVoiceSession,
     atMs: number,
     recovery: boolean,
-  ): SniffedEvent | null {
-    const minutes = Math.round((atMs - session.joinedAtMs) / 60_000);
-    if (minutes < 1) {
-      return null;
-    }
-    return {
-      event_id: recovery
-        ? `voice:recovery:${session.userId}:${session.channelId}:${session.joinedAtMs}:${atMs}`
-        : `voice:${session.userId}:${session.joinedAtMs}`,
-      kind: 'voice',
-      discord_user_id: session.userId,
-      channel_id: session.channelId,
-      occurred_at: new Date(atMs).toISOString(),
-      amount: minutes,
-    };
+  ): SniffedEvent[] {
+    return splitVoiceSegments({
+      userId: session.userId,
+      channelId: session.channelId,
+      joinedAtMs: session.joinedAtMs,
+      atMs,
+      recovery,
+    });
   }
 }

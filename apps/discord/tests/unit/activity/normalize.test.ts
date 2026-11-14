@@ -152,16 +152,16 @@ describe('VoiceSessionTracker', () => {
     };
   }
 
-  it('returns null on join (opens a session, nothing to forward yet)', async () => {
+  it('returns empty on join (opens a session, nothing to forward yet)', async () => {
     const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
     const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
 
-    const event = tracker.handleVoiceStateUpdate(
+    const events = tracker.handleVoiceStateUpdate(
       fakeVoiceState(null) as never,
       fakeVoiceState('voice-1') as never,
     );
 
-    expect(event).toBeNull();
+    expect(events).toEqual([]);
   });
 
   it('emits a voice SniffedEvent on leave with rounded elapsed minutes', async () => {
@@ -174,21 +174,22 @@ describe('VoiceSessionTracker', () => {
     );
     vi.advanceTimersByTime(90_000); // 90s -> rounds to 2 minutes
 
-    const event = tracker.handleVoiceStateUpdate(
+    const events = tracker.handleVoiceStateUpdate(
       fakeVoiceState('voice-1') as never,
       fakeVoiceState(null) as never,
     );
 
-    expect(event).toMatchObject({
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
       kind: 'voice',
       discord_user_id: 'user-1',
       channel_id: 'voice-1',
       amount: 2,
     });
-    expect(event?.event_id).toContain('voice:user-1:');
+    expect(events[0]?.event_id).toContain('voice:user-1:');
   });
 
-  it('returns null for a sub-minute session', async () => {
+  it('returns empty for a sub-minute session', async () => {
     const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
     const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
 
@@ -198,12 +199,12 @@ describe('VoiceSessionTracker', () => {
     );
     vi.advanceTimersByTime(10_000); // 10s -> rounds to 0 minutes
 
-    const event = tracker.handleVoiceStateUpdate(
+    const events = tracker.handleVoiceStateUpdate(
       fakeVoiceState('voice-1') as never,
       fakeVoiceState(null) as never,
     );
 
-    expect(event).toBeNull();
+    expect(events).toEqual([]);
   });
 
   it('closes the old session and opens a new one on channel switch', async () => {
@@ -216,20 +217,20 @@ describe('VoiceSessionTracker', () => {
     );
     vi.advanceTimersByTime(120_000); // 2 minutes in voice-1
 
-    const switchEvent = tracker.handleVoiceStateUpdate(
+    const switchEvents = tracker.handleVoiceStateUpdate(
       fakeVoiceState('voice-1') as never,
       fakeVoiceState('voice-2') as never,
     );
 
-    expect(switchEvent).toMatchObject({ channel_id: 'voice-1', amount: 2 });
+    expect(switchEvents).toMatchObject([{ channel_id: 'voice-1', amount: 2 }]);
 
     vi.advanceTimersByTime(60_000); // 1 minute in voice-2
-    const leaveEvent = tracker.handleVoiceStateUpdate(
+    const leaveEvents = tracker.handleVoiceStateUpdate(
       fakeVoiceState('voice-2') as never,
       fakeVoiceState(null) as never,
     );
 
-    expect(leaveEvent).toMatchObject({ channel_id: 'voice-2', amount: 1 });
+    expect(leaveEvents).toMatchObject([{ channel_id: 'voice-2', amount: 1 }]);
   });
 
   it('ignores mute/deaf-only updates (no channel transition)', async () => {
@@ -240,12 +241,12 @@ describe('VoiceSessionTracker', () => {
       fakeVoiceState(null) as never,
       fakeVoiceState('voice-1') as never,
     );
-    const event = tracker.handleVoiceStateUpdate(
+    const events = tracker.handleVoiceStateUpdate(
       fakeVoiceState('voice-1') as never,
       fakeVoiceState('voice-1') as never,
     );
 
-    expect(event).toBeNull();
+    expect(events).toEqual([]);
   });
 
   it('ignores bot voice states entirely', async () => {
@@ -257,12 +258,12 @@ describe('VoiceSessionTracker', () => {
       fakeVoiceState('voice-1', 'bot-1', true) as never,
     );
     vi.advanceTimersByTime(120_000);
-    const event = tracker.handleVoiceStateUpdate(
+    const events = tracker.handleVoiceStateUpdate(
       fakeVoiceState('voice-1', 'bot-1', true) as never,
       fakeVoiceState(null, 'bot-1', true) as never,
     );
 
-    expect(event).toBeNull();
+    expect(events).toEqual([]);
   });
 
   it('starts empty and emits nothing for time it did not see', async () => {
@@ -274,6 +275,126 @@ describe('VoiceSessionTracker', () => {
       fakeVoiceState('voice-1') as never,
       fakeVoiceState(null) as never,
     );
-    expect(leave).toBeNull();
+    expect(leave).toEqual([]);
+  });
+
+  it('splits a 25-hour leave into 1440 and 60 minute segments', async () => {
+    const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
+    const joinMs = Date.parse('2026-07-01T12:00:00.000Z');
+    const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
+
+    tracker.handleVoiceStateUpdate(
+      fakeVoiceState(null) as never,
+      fakeVoiceState('voice-1') as never,
+    );
+    vi.advanceTimersByTime(25 * 60 * 60_000);
+
+    const events = tracker.handleVoiceStateUpdate(
+      fakeVoiceState('voice-1') as never,
+      fakeVoiceState(null) as never,
+    );
+
+    expect(events).toEqual([
+      {
+        event_id: `voice:user-1:${joinMs}`,
+        kind: 'voice',
+        discord_user_id: 'user-1',
+        channel_id: 'voice-1',
+        occurred_at: new Date(joinMs + 25 * 60 * 60_000).toISOString(),
+        amount: 1440,
+      },
+      {
+        event_id: `voice:user-1:${joinMs + 1440 * 60_000}`,
+        kind: 'voice',
+        discord_user_id: 'user-1',
+        channel_id: 'voice-1',
+        occurred_at: new Date(joinMs + 25 * 60 * 60_000).toISOString(),
+        amount: 60,
+      },
+    ]);
+  });
+
+  it('keeps a 30-minute leave as one event with the join id', async () => {
+    const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
+    const joinMs = Date.parse('2026-07-01T12:00:00.000Z');
+    const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
+
+    tracker.handleVoiceStateUpdate(
+      fakeVoiceState(null) as never,
+      fakeVoiceState('voice-1') as never,
+    );
+    vi.advanceTimersByTime(30 * 60_000);
+
+    const events = tracker.handleVoiceStateUpdate(
+      fakeVoiceState('voice-1') as never,
+      fakeVoiceState(null) as never,
+    );
+
+    expect(events).toEqual([
+      {
+        event_id: `voice:user-1:${joinMs}`,
+        kind: 'voice',
+        discord_user_id: 'user-1',
+        channel_id: 'voice-1',
+        occurred_at: new Date(joinMs + 30 * 60_000).toISOString(),
+        amount: 30,
+      },
+    ]);
+  });
+
+  it('splits a 25-hour recovery close the same way', async () => {
+    const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
+    const joinMs = Date.parse('2026-07-01T12:00:00.000Z');
+    const closeMs = joinMs + 25 * 60 * 60_000;
+    const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
+
+    tracker.handleVoiceStateUpdate(
+      fakeVoiceState(null) as never,
+      fakeVoiceState('voice-1') as never,
+    );
+
+    const events = tracker.reconcile([], closeMs);
+
+    expect(events).toEqual([
+      {
+        event_id: `voice:recovery:user-1:voice-1:${joinMs}:${closeMs}`,
+        kind: 'voice',
+        discord_user_id: 'user-1',
+        channel_id: 'voice-1',
+        occurred_at: new Date(closeMs).toISOString(),
+        amount: 1440,
+      },
+      {
+        event_id: `voice:recovery:user-1:voice-1:${joinMs + 1440 * 60_000}:${closeMs}`,
+        kind: 'voice',
+        discord_user_id: 'user-1',
+        channel_id: 'voice-1',
+        occurred_at: new Date(closeMs).toISOString(),
+        amount: 60,
+      },
+    ]);
+  });
+
+  it('keeps a 30-minute recovery close as one event', async () => {
+    const { VoiceSessionTracker } = await import('@discord/activity/normalize.js');
+    const joinMs = Date.parse('2026-07-01T12:00:00.000Z');
+    const closeMs = joinMs + 30 * 60_000;
+    const tracker = new VoiceSessionTracker({ getChannel: publicChannel });
+
+    tracker.handleVoiceStateUpdate(
+      fakeVoiceState(null) as never,
+      fakeVoiceState('voice-1') as never,
+    );
+
+    expect(tracker.reconcile([], closeMs)).toEqual([
+      {
+        event_id: `voice:recovery:user-1:voice-1:${joinMs}:${closeMs}`,
+        kind: 'voice',
+        discord_user_id: 'user-1',
+        channel_id: 'voice-1',
+        occurred_at: new Date(closeMs).toISOString(),
+        amount: 30,
+      },
+    ]);
   });
 });
