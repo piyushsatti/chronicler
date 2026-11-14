@@ -223,3 +223,44 @@ for (const [kind, operation, field, receipt] of [
     });
   });
 }
+
+describe('Character session remount', () => {
+  it('shows no prior create or owner feedback on the first render after a login switch', async () => {
+    server.use(
+      graphql.mutation('CreateCharacter', () =>
+        HttpResponse.json({
+          data: {
+            createCharacter: { id: character.id, shortCode: 'C-CREATED' },
+          },
+        }),
+      ),
+      graphql.mutation('UpdateCharacterProfile', () =>
+        HttpResponse.json({
+          data: {
+            updateCharacterProfile: {
+              id: character.id,
+              description: 'Saved',
+              updatedAt: character.updatedAt,
+            },
+          },
+        }),
+      ),
+    );
+    const { result, client } = setup();
+    await ready(client);
+    act(() => result.current.execute('create'));
+    await waitFor(() => expect(result.current.feedback('create').success).toBe(true));
+    act(() => result.current.owner.saveProfile());
+    await waitFor(() => expect(result.current.feedback('owner').success).toBe(true));
+    const other = { ...characterActor, id: '22222222-2222-4222-8222-222222222222' };
+    server.use(
+      graphql.query('MemberMe', () =>
+        HttpResponse.json({ data: { memberMe: other } }),
+      ),
+    );
+    act(() => result.current.auth.storeToken(characterToken('character-second')));
+    expect(result.current.feedback('create')).toEqual({ error: null, success: false });
+    expect(result.current.feedback('owner')).toEqual({ error: null, success: false });
+    await ready(client, other.id);
+  });
+});

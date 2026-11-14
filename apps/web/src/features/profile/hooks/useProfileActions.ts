@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { useAuth } from '../../../auth/AuthContext.js';
@@ -69,17 +69,7 @@ export function useProfileActions(handle: string) {
       if (current(attempt)) busy.current = false;
     },
   });
-  const resetMutation = mutation.reset;
   const memberId = me.data?.id;
-  useEffect(() => {
-    replay.current = null;
-    busy.current = false;
-    authorityRefreshed.current = false;
-    setMessage(null);
-    setReloadError(null);
-    setReloading(false);
-    resetMutation();
-  }, [token, memberId, resetMutation]);
   const execute = (command: ProfileCommand) => {
     const session = { token, memberId: command.memberId };
     if (busy.current || memberId !== command.memberId || !current(session)) return;

@@ -8,6 +8,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
+import { useState } from 'react';
 import { graphql, HttpResponse } from 'msw';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../src/auth/AuthContext.js';
@@ -540,7 +541,7 @@ describe('MapPage', () => {
           target: { value: 'A draft' },
         });
         fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
-        expect(save).toHaveBeenCalledTimes(1);
+        await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
         fireEvent.click(screen.getByText('Account B', { selector: 'button' }));
         await waitFor(() =>
           expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
@@ -625,10 +626,13 @@ describe('MapPage', () => {
       const form = screen.getByRole('button', { name: 'Save' }).closest('form')!;
       fireEvent.submit(form);
       fireEvent.submit(form);
-      expect(save).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
       await act(async () => {
         held.reject(new Error('lost'));
       });
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled(),
+      );
       fireEvent.submit(form);
       await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
       expect(save.mock.calls[1]?.[2]).toBe(save.mock.calls[0]?.[2]);
@@ -816,12 +820,66 @@ describe('MapPage', () => {
       const { unmount, queryClient } = renderMap();
       fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
       fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
+      await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
       unmount();
       const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
       await act(async () => {
         held.resolve({ id: good.pointcrawlNodes[1]!.id });
       });
       expect(invalidate).not.toHaveBeenCalled();
+      invalidate.mockRestore();
+    } finally {
+      save.mockRestore();
+    }
+  });
+  it('does not navigate or select when reload refresh finishes after unmount', async () => {
+    session();
+    const node0 = good.pointcrawlNodes[0]!.id;
+    const node1 = good.pointcrawlNodes[1]!.id;
+    const held = deferred<void>();
+    const save = vi.spyOn(adapter, 'saveNode').mockResolvedValueOnce({ id: node1 });
+    let hideMap = () => {};
+    function Path() {
+      const location = useLocation();
+      return (
+        <output aria-label="Current path">
+          {location.pathname}
+          {location.search}
+        </output>
+      );
+    }
+    function Harness() {
+      const [show, setShow] = useState(true);
+      hideMap = () => setShow(false);
+      return (
+        <>
+          <Controls />
+          <Path />
+          {show ? (
+            <Routes>
+              <Route path="/map" element={<MapPage />} />
+              <Route path="/map/:atlasCode" element={<MapPage />} />
+            </Routes>
+          ) : null}
+        </>
+      );
+    }
+    try {
+      const { queryClient } = renderWithProviders(<Harness />, {
+        route: `/map/LFC?node=${node0}`,
+      });
+      fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+      const invalidate = vi
+        .spyOn(queryClient, 'invalidateQueries')
+        .mockImplementation(() => held.promise as Promise<unknown>);
+      fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
+      await waitFor(() => expect(invalidate).toHaveBeenCalled());
+      expect(screen.getByLabelText('Current path')).toHaveTextContent(`/map/LFC?node=${node0}`);
+      act(() => hideMap());
+      await act(async () => {
+        held.resolve();
+      });
+      expect(screen.getByLabelText('Current path')).toHaveTextContent(`/map/LFC?node=${node0}`);
       invalidate.mockRestore();
     } finally {
       save.mockRestore();
@@ -877,7 +935,9 @@ describe('MapPage', () => {
           );
         }
         fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
-        expect(kind === 'create' ? create : link).toHaveBeenCalledTimes(1);
+        await waitFor(() =>
+          expect(kind === 'create' ? create : link).toHaveBeenCalledTimes(1),
+        );
         fireEvent.click(screen.getByText('Account B', { selector: 'button' }));
         await waitFor(() =>
           expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),

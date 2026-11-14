@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLayoutEffect } from 'react';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { useAuth } from '../../../context/AuthContext.js';
 import {
@@ -37,10 +36,6 @@ export function usePersonalizePage() {
       );
     },
   });
-  const { reset } = settingsMutation;
-  useLayoutEffect(() => {
-    reset();
-  }, [token, reset]);
 
   const retryLoading = (): void => {
     void personalization.refetch();

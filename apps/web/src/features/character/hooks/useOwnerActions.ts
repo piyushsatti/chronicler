@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -132,15 +132,7 @@ export function useOwnerActions({ character }: { character: CharacterViewModel }
       }
     },
   });
-  const reset = write.reset;
   const memberId = me.data?.id;
-  useEffect(() => {
-    replay.current = null;
-    busy.current = false;
-    authorityRefreshed.current = false;
-    setMessage(null);
-    reset();
-  }, [token, memberId, character.id, reset]);
   const submit = (command: OwnerCommand) => {
     if (!memberId || busy.current || !canRun({ token, memberId }, command.kind)) return;
     const identity = JSON.stringify(

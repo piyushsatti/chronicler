@@ -311,6 +311,45 @@ describe('editor command dispatch', () => {
   });
 });
 
+it('does not call onSuccess when a write resolves after unmount', async () => {
+  let finish!: (value: adapters.EditorPublishResult) => void;
+  vi.mocked(adapters.updateQuest).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const hook = setup();
+  act(() => {
+    void hook.result.current.mutateAsync();
+  });
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(finish).toEqual(expect.any(Function));
+  const errors: unknown[] = [];
+  const error = vi.spyOn(console, 'error').mockImplementation((...args) => {
+    errors.push(args);
+  });
+  hook.unmount();
+  await act(async () => {
+    finish({
+      id: 'quest-id',
+      slug: 'quest',
+      version: 2,
+      redirectPath: '/quests/quest',
+    });
+    await Promise.resolve();
+  });
+  expect(hook.onSuccess).not.toHaveBeenCalled();
+  expect(
+    errors.filter((args) =>
+      String(args).includes("Can't perform a React state update on a component"),
+    ),
+  ).toEqual([]);
+  error.mockRestore();
+});
+
 it('does not publish or navigate a created draft after the account/record scope changes', async () => {
   let finish!: (value: adapters.EditorPublishResult) => void;
   vi.mocked(adapters.createDocument).mockImplementation(

@@ -393,3 +393,90 @@ describe('creating a quest with marker typos', () => {
     expect(created[0]).toMatchObject({ briefBody: TYPO_BODY });
   });
 });
+
+describe('editor writes after unmount', () => {
+  it('does not proceed or open the typo dialog when the marker check resolves after unmount', async () => {
+    const writes = countWrites();
+    let release!: () => void;
+    auditBody.mockImplementation(
+      () =>
+        new Promise<BodySpanAudit[]>((resolve) => {
+          release = () => resolve([]);
+        }),
+    );
+    const { result, unmount } = renderHook(
+      () =>
+        useEditorWorkspace({
+          typeKey: 'guide',
+          mode: 'edit',
+          initial: { ...source, body: 'Clean body' },
+          enabled: true,
+          timeZone: 'UTC',
+          actorId: 'unmount-marker-owner',
+        }),
+      editorHarness('/rules/guides/published-guide/edit', '*'),
+    );
+    act(() => result.current.onPublish());
+    await waitFor(() => expect(result.current.checkingMarkers).toBe(true));
+    unmount();
+    await act(async () => {
+      release();
+      await Promise.resolve();
+    });
+    expect(writes).toHaveLength(0);
+  });
+
+  it('does not reload or refetch when a lifecycle write resolves after unmount', async () => {
+    let finish!: () => void;
+    server.use(
+      graphql.mutation('EditorUnpublish', () =>
+        new Promise((resolve) => {
+          finish = () =>
+            resolve(
+              HttpResponse.json({
+                data: {
+                  unpublishDocument: {
+                    id: source.documentId,
+                    slug: 'published-guide',
+                    version: 8,
+                  },
+                },
+              }),
+            );
+        }),
+      ),
+    );
+    const onReload = vi.fn(async () => {});
+    const { result, unmount } = renderHook(
+      () =>
+        useEditorWorkspace({
+          typeKey: 'guide',
+          mode: 'edit',
+          initial: source,
+          enabled: true,
+          timeZone: 'UTC',
+          actorId: 'unmount-lifecycle-owner',
+          onReload,
+        }),
+      editorHarness('/rules/guides/published-guide/edit', '*'),
+    );
+    act(() => result.current.onLifecycle({ action: 'unpublish' }));
+    await waitFor(() => expect(finish).toEqual(expect.any(Function)));
+    const errors: unknown[] = [];
+    const error = vi.spyOn(console, 'error').mockImplementation((...args) => {
+      errors.push(args);
+    });
+    unmount();
+    await act(async () => {
+      finish();
+      await Promise.resolve();
+    });
+    expect(onReload).not.toHaveBeenCalled();
+    expect(
+      errors.filter((args) =>
+        String(args).includes("Can't perform a React state update on a component"),
+      ),
+    ).toEqual([]);
+    error.mockRestore();
+  });
+});

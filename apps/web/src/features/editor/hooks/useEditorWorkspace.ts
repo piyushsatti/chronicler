@@ -232,9 +232,6 @@ export function useEditorWorkspace({
     body: string;
     proceed: () => void;
   } | null>(null);
-  const checkingTypos = useRef(false);
-  /** A publish check is waiting for the audit: saving and publishing wait with it. */
-  const [checkingMarkers, setCheckingMarkers] = useState(false);
   /** The body as last rendered, to tell whether the checked text is still the text. */
   const liveBody = useRef(body);
   liveBody.current = body;
@@ -249,13 +246,8 @@ export function useEditorWorkspace({
     !draft.stale &&
     sessionIsCurrent();
   const leavingAfterSave = useRef(false);
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
+  const onReloadRef = useRef(onReload);
+  onReloadRef.current = onReload;
   const publish = useEditorPublish({
     typeKey,
     mode,
@@ -276,7 +268,7 @@ export function useEditorWorkspace({
       if (published || typeKey === 'quest') navigate(result.redirectPath);
       else if (mode === 'new')
         navigate(editorEditPath(typeKey, result.id), { replace: true });
-      else void onReload();
+      else void onReloadRef.current();
     },
   });
   const lifecycleKeys = useRef(new Map<string, string>());
@@ -315,22 +307,36 @@ export function useEditorWorkspace({
       );
       return { command, recordId: initial.recordId, actorId };
     },
-    onSuccess: ({ command, recordId, actorId: originalActor }) => {
-      if (
-        !mounted.current ||
-        recordId !== initial.recordId ||
-        originalActor !== actorId ||
-        !sessionIsCurrent()
-      )
-        return;
-      setTrashedRecord(command.action === 'delete' ? recordScope : null);
-      setStatusMessage(
-        command.action === 'delete'
-          ? 'Moved to trash. Restore is available here.'
-          : 'Document updated.',
-      );
-      if (command.action !== 'delete') void onReload();
-      void history.refetch();
+  });
+  const runLifecycle = (command: LifecycleAction) => {
+    lifecycle.mutate(command, {
+      onSuccess: ({ command: next, recordId, actorId: originalActor }) => {
+        if (
+          recordId !== initial.recordId ||
+          originalActor !== actorId ||
+          !sessionIsCurrent()
+        )
+          return;
+        setTrashedRecord(next.action === 'delete' ? recordScope : null);
+        setStatusMessage(
+          next.action === 'delete'
+            ? 'Moved to trash. Restore is available here.'
+            : 'Document updated.',
+        );
+        if (next.action !== 'delete') void onReloadRef.current();
+        void history.refetch();
+      },
+    });
+  };
+  const markerCheck = useMutation({
+    mutationFn: async (proceed: () => void) => {
+      let source = liveBody.current;
+      let spans = await bodyAudit.latest(source);
+      while (liveBody.current !== source) {
+        source = liveBody.current;
+        spans = await bodyAudit.latest(source);
+      }
+      return { spans, body: source, proceed };
     },
   });
   const busy = publish.isPending || lifecycle.isPending;
@@ -372,24 +378,16 @@ export function useEditorWorkspace({
    * published.
    */
   const checkTyposThen = (submit: () => void) => {
-    if (checkingTypos.current) return;
-    checkingTypos.current = true;
-    setCheckingMarkers(true);
-    void (async () => {
-      let source = liveBody.current;
-      let spans = await bodyAudit.latest(source);
-      while (mounted.current && liveBody.current !== source) {
-        source = liveBody.current;
-        spans = await bodyAudit.latest(source);
-      }
-      checkingTypos.current = false;
-      if (!mounted.current) return;
-      setCheckingMarkers(false);
-      const typos = spans ? auditTypos(spans) : [];
-      if (typos.length === 0) submit();
-      else setTypoCheck({ spans: typos, body: source, proceed: submit });
-    })();
+    if (markerCheck.isPending) return;
+    markerCheck.mutate(submit, {
+      onSuccess: ({ spans, body: source, proceed }) => {
+        const typos = spans ? auditTypos(spans) : [];
+        if (typos.length === 0) proceed();
+        else setTypoCheck({ spans: typos, body: source, proceed });
+      },
+    });
   };
+  const checkingMarkers = markerCheck.isPending;
   /** Saving and publishing wait while markers are checked or the typo dialog is open. */
   const submitBusy = busy || checkingMarkers || typoCheck !== null;
   /** Client-side checks: on failure show the field hints and never call the API. */
@@ -590,7 +588,7 @@ export function useEditorWorkspace({
     lifecycleDisabled: busy || isDirty || !admit(),
     trashed,
     published: initial.briefPublished,
-    onLifecycle: (command: LifecycleAction) => lifecycle.mutate(command),
+    onLifecycle: (command: LifecycleAction) => runLifecycle(command),
     audience,
     saveAudience: () => {
       const nextPolicy =
@@ -600,7 +598,7 @@ export function useEditorWorkspace({
               .split(',')
               .map((value) => value.trim())
               .filter(Boolean);
-      lifecycle.mutate({
+      runLifecycle({
         action: 'audience',
         visibility,
         ...(JSON.stringify(nextPolicy) !== JSON.stringify(initial.policy)

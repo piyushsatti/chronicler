@@ -1,18 +1,24 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { useState, type ReactNode } from 'react';
 import { graphql, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
 import { server } from '../../../src/mocks/server.js';
+import { AuthProvider, useAuth } from '../../../src/auth/AuthContext.js';
 import { MapPage } from '../../../src/features/map/pages/MapPage.js';
 import { PointcrawlViewport } from '../../../src/features/map/components/PointcrawlViewport.js';
 import { MapKey } from '../../../src/features/map/components/MapKey.js';
 import nodeStateStyles from '../../../src/features/map/components/nodeState.module.css';
+import * as adapter from '../../../src/features/map/adapters/mapAdapter.js';
 import { setNodeState } from '../../../src/features/map/adapters/mapAdapter.js';
+import { useNodeState } from '../../../src/features/map/hooks/useNodeState.js';
 import { nodeStateLabel, type NodeState } from '../../../src/features/map/nodeState.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
+import { createTestQueryClient } from '../../../src/providers.js';
 import { renderWithProviders } from '../../test-utils.js';
 import good from '../../fixtures/wire/map/goodMap.js';
 import member from '../../fixtures/wire/me/good.json';
@@ -249,5 +255,135 @@ describe('hex state', () => {
     expect(graph.querySelector('[data-node-state]')).toBeNull();
     render(<MapKey edges={good.pointcrawlEdges} />);
     expect(screen.queryByRole('list', { name: 'Hex states' })).toBeNull();
+  });
+});
+
+function nodeToken(sub: string) {
+  return `${btoa('{}')}.${btoa(JSON.stringify({ sub, exp: 4102444800 }))}.test`;
+}
+
+describe('useNodeState session', () => {
+  const hex = {
+    ...good,
+    grid: 'hex' as const,
+    nodes: good.pointcrawlNodes,
+    edges: good.pointcrawlEdges,
+  };
+  const node = hex.nodes[2]!;
+
+  function setup() {
+    const client = createTestQueryClient();
+    function Wrapper({ children }: { children: ReactNode }) {
+      return (
+        <QueryClientProvider client={client}>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryClientProvider>
+      );
+    }
+    localStorage.setItem(TOKEN_KEY, nodeToken('hex-a'));
+    server.use(
+      graphql.query('MemberMe', ({ request }) =>
+        HttpResponse.json({
+          data: {
+            memberMe: {
+              ...member,
+              id: request.headers.get('authorization')?.includes(nodeToken('hex-b'))
+                ? 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+                : member.id,
+              roles: ['admin', 'player'],
+            },
+          },
+        }),
+      ),
+    );
+    return renderHook(
+      () => {
+        const [local, setLocal] = useState('clean');
+        return {
+          auth: useAuth(),
+          node: useNodeState({ map: hex, node, onReload: async () => {} }),
+          local,
+          setLocal,
+        };
+      },
+      { wrapper: Wrapper },
+    );
+  }
+
+  it('shows no prior hex-state error or pending on the first render after a login switch', async () => {
+    let finish!: (value: { id: string; state: NodeState }) => void;
+    const write = vi.spyOn(adapter, 'setNodeState').mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { result } = setup();
+    await waitFor(() => expect(result.current.node.canSet).toBe(true));
+    act(() => result.current.node.set('UNLOCKED'));
+    await waitFor(() => expect(result.current.node.pending).toBe(true));
+    act(() => result.current.setLocal('stale'));
+    expect(result.current.local).toBe('stale');
+    act(() => {
+      result.current.auth.storeToken(nodeToken('hex-b'));
+    });
+    expect(result.current.local).toBe('clean');
+    expect(result.current.node.pending).toBe(false);
+    expect(result.current.node.error).toBe('');
+    await act(async () => {
+      finish({ id: node.id, state: 'UNLOCKED' });
+    });
+    expect(result.current.node.pending).toBe(false);
+    expect(result.current.node.error).toBe('');
+    write.mockRestore();
+  });
+
+  it('does not reload when a write resolves after unmount', async () => {
+    let finish!: (value: { id: string; state: NodeState }) => void;
+    const write = vi.spyOn(adapter, 'setNodeState').mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const onReload = vi.fn(async () => {});
+    const client = createTestQueryClient();
+    function Wrapper({ children }: { children: ReactNode }) {
+      return (
+        <QueryClientProvider client={client}>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryClientProvider>
+      );
+    }
+    localStorage.setItem(TOKEN_KEY, nodeToken('hex-unmount'));
+    server.use(
+      graphql.query('MemberMe', () =>
+        HttpResponse.json({
+          data: { memberMe: { ...member, roles: ['admin', 'player'] } },
+        }),
+      ),
+    );
+    const { result, unmount } = renderHook(
+      () => useNodeState({ map: hex, node, onReload }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(result.current.canSet).toBe(true));
+    act(() => result.current.set('MAPPED'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    const errors: unknown[] = [];
+    const error = vi.spyOn(console, 'error').mockImplementation((...args) => {
+      errors.push(args);
+    });
+    unmount();
+    await act(async () => {
+      finish({ id: node.id, state: 'MAPPED' });
+      await Promise.resolve();
+    });
+    expect(onReload).not.toHaveBeenCalled();
+    expect(
+      errors.filter((args) =>
+        String(args).includes("Can't perform a React state update on a component"),
+      ),
+    ).toEqual([]);
+    error.mockRestore();
+    write.mockRestore();
   });
 });

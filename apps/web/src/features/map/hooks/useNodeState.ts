@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { isAdmin } from '../../../auth/roles.js';
 import { TransportError } from '../../../errors/types.js';
@@ -34,58 +35,58 @@ export function useNodeState({
   if (current.current.token !== token || current.current.scope !== scope)
     current.current = { token, scope, epoch: current.current.epoch + 1 };
   const { epoch } = current.current;
-  const mounted = useRef(true);
-  useLayoutEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
+  const onReloadRef = useRef(onReload);
+  onReloadRef.current = onReload;
   const isCurrent = () =>
-    mounted.current &&
     sessionReady &&
     token !== null &&
     isCurrentSession(token) &&
     current.current.token === token &&
     current.current.epoch === epoch;
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState('');
-  const lock = useRef(false);
   const replay = useRef(new Map<string, string>());
-  useLayoutEffect(() => {
-    lock.current = false;
-    setPending(false);
-    setError('');
-  }, [epoch]);
-  async function set(next: NodeState) {
-    if (next === node.state || lock.current || !canSet || !isCurrent()) return;
-    const identity = `${node.id}:${next}`;
-    const key = replay.current.get(identity) ?? crypto.randomUUID();
-    replay.current.set(identity, key);
-    lock.current = true;
-    setPending(true);
-    setError('');
-    try {
+  const write = useMutation({
+    mutationFn: async (next: NodeState) => {
+      if (!isCurrent() || !canSet || next === node.state)
+        throw new Error('stale');
+      const identity = `${node.id}:${next}`;
+      const key = replay.current.get(identity) ?? crypto.randomUUID();
+      replay.current.set(identity, key);
       await setNodeState(map.id, node.id, next, key);
-      if (!isCurrent()) return;
+      if (!isCurrent()) return { identity, skipped: true as const };
       replay.current.delete(identity);
-      await onReload();
-    } catch (cause) {
-      if (!isCurrent()) return;
-      setError(mapWriteError(cause));
-      if (
-        cause instanceof TransportError &&
-        ['FORBIDDEN', 'UNAUTHENTICATED', 'UNAUTHORIZED', 'NOT_FOUND'].includes(
-          cause.code,
-        )
-      )
-        await onReload();
-    } finally {
-      if (isCurrent()) {
-        lock.current = false;
-        setPending(false);
-      }
-    }
-  }
-  return { hexMap, state: node.state, canSet, pending, error, set };
+      return { identity, skipped: false as const };
+    },
+  });
+  const active =
+    write.variables !== undefined && current.current.epoch === epoch;
+  return {
+    hexMap,
+    state: node.state,
+    canSet,
+    pending: Boolean(active && write.isPending),
+    error:
+      active && write.isError && !(write.error instanceof Error && write.error.message === 'stale')
+        ? mapWriteError(write.error)
+        : '',
+    set: (next: NodeState) => {
+      if (next === node.state || write.isPending || !canSet || !isCurrent()) return;
+      write.mutate(next, {
+        onSuccess: async (result) => {
+          if (result.skipped || !isCurrent()) return;
+          await onReloadRef.current();
+        },
+        onError: async (cause) => {
+          if (
+            !isCurrent() ||
+            !(cause instanceof TransportError) ||
+            !['FORBIDDEN', 'UNAUTHENTICATED', 'UNAUTHORIZED', 'NOT_FOUND'].includes(
+              cause.code,
+            )
+          )
+            return;
+          await onReloadRef.current();
+        },
+      });
+    },
+  };
 }

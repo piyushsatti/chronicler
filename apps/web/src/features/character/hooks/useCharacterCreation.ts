@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   keepPreviousData,
   useMutation,
@@ -61,13 +61,7 @@ export function useCharacterCreation() {
       if (current(attempt)) busy.current = false;
     },
   });
-  const reset = create.reset;
   const memberId = me.data?.id;
-  useEffect(() => {
-    replay.current = null;
-    busy.current = false;
-    reset();
-  }, [token, memberId, reset]);
   const submit = (input: NewCharacterFields) => {
     if (!memberId || busy.current || !current({ token, memberId })) return;
     const payload = JSON.stringify(input);

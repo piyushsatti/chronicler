@@ -1,6 +1,7 @@
 import {
   createContext,
   createElement,
+  Fragment,
   useCallback,
   useContext,
   useEffect,
@@ -351,13 +352,20 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
   );
 
   // No query observer mounts until the initial cache boundary has completed.
+  // Key by authenticated identity so signed-in hooks remount on login switch
+  // instead of resetting in an effect. Logout keeps the key so unrelated local
+  // state under the provider is not remounted.
+  const sessionKeyRef = useRef(token ?? 'guest');
+  if (token !== null) sessionKeyRef.current = token;
   return createElement(
     AuthContext.Provider,
     { value },
     createElement(
       ViewerAudienceContext.Provider,
       { value: audience },
-      sessionReady ? children : null,
+      sessionReady
+        ? createElement(Fragment, { key: sessionKeyRef.current }, children)
+        : null,
     ),
   );
 }
