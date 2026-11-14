@@ -3,8 +3,10 @@ package graphql
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
@@ -41,6 +43,36 @@ func TestDepthLimitExpandsFragmentsAndUsesSelectedOperation(t *testing.T) {
 			w := graphQLRequest(t, handler, tc.query, tc.operation, tc.variables)
 			if tc.wantDepthError {
 				if w.Code != http.StatusOK || !bytes.Contains(w.Body.Bytes(), []byte(`"code":"DEPTH_LIMIT_EXCEEDED"`)) {
+					t.Fatalf("status=%d body=%s", w.Code, w.Body)
+				}
+			} else if w.Code != http.StatusOK || bytes.Contains(w.Body.Bytes(), []byte(`"errors"`)) {
+				t.Fatalf("status=%d body=%s", w.Code, w.Body)
+			}
+		})
+	}
+}
+
+func TestAliasLimitCountsRootAliasesAndFragments(t *testing.T) {
+	aliases := func(n int) string {
+		parts := make([]string, n)
+		for i := range parts {
+			parts[i] = fmt.Sprintf("a%d:_contractLayoutStub", i)
+		}
+		return strings.Join(parts, " ")
+	}
+	for _, tc := range []struct {
+		name, query string
+		wantError   bool
+	}{
+		{"21 aliased roots rejected", "query Q{" + aliases(21) + "}", true},
+		{"20 aliased roots pass", "query Q{" + aliases(20) + "}", false},
+		{"fragment spread aliases count", `query Q{...F} fragment F on Query{` + aliases(21) + `}`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := NewHandler(&graph.Resolver{}, Limits{MaxAliases: 20}, nil)
+			w := graphQLRequest(t, handler, tc.query, "Q", nil)
+			if tc.wantError {
+				if w.Code != http.StatusOK || !bytes.Contains(w.Body.Bytes(), []byte(`"code":"ALIAS_LIMIT_EXCEEDED"`)) {
 					t.Fatalf("status=%d body=%s", w.Code, w.Body)
 				}
 			} else if w.Code != http.StatusOK || bytes.Contains(w.Body.Bytes(), []byte(`"errors"`)) {

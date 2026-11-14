@@ -44,12 +44,17 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 		return apierr.New(apierr.Internal, "Internal error")
 	})
 	srv.AddTransport(transport.POST{})
-	srv.Use(extension.Introspection{})
+	if limits.Introspection {
+		srv.Use(extension.Introspection{})
+	}
 	if limits.MaxDepth > 0 {
 		srv.Use(depthLimit{max: limits.MaxDepth})
 	}
 	if limits.MaxComplexity > 0 {
 		srv.Use(extension.FixedComplexityLimit(limits.MaxComplexity))
+	}
+	if limits.MaxAliases > 0 {
+		srv.Use(aliasLimit{max: limits.MaxAliases})
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

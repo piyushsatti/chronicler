@@ -201,6 +201,32 @@ func TestGraphQLRequestStateFailureAnswersErrorsNotProblemJSON(t *testing.T) {
 	}
 }
 
+func TestIntrospectionRespectsLimitsFlag(t *testing.T) {
+	query := `query I{__schema{queryType{name}}}`
+	for _, tc := range []struct {
+		name string
+		on   bool
+		want string
+	}{
+		{"off rejects", false, `"errors"`},
+		{"on serves", true, `"queryType"`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := NewHandler(&graph.Resolver{}, Limits{Introspection: tc.on}, nil)
+			request := httptest.NewRequest(http.MethodPost, "/v1/graphql", bytes.NewBufferString(`{"query":`+mustJSON(query)+`,"operationName":"I"}`))
+			request.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, request)
+			if w.Code != http.StatusOK || !bytes.Contains(w.Body.Bytes(), []byte(tc.want)) {
+				t.Fatalf("status=%d body=%s", w.Code, w.Body)
+			}
+			if !tc.on && bytes.Contains(w.Body.Bytes(), []byte(`"queryType"`)) {
+				t.Fatalf("introspection served when disabled: %s", w.Body)
+			}
+		})
+	}
+}
+
 func TestSignedInDepthLimitCallsAuthorityResolverZeroTimes(t *testing.T) {
 	calls := 0
 	live, err := auth.NewAuthority("ada", []auth.Role{auth.Player}, "active", "")
