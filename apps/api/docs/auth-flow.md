@@ -21,7 +21,7 @@ The configured redirect must reach the frontend callback on the initiating brows
 
 ## Request authorization
 
-`apiHandler` installs `auth.LiveMiddleware`. A valid member token is resolved against current Postgres authority once per request. Missing or inactive members and authority lookup failures fail closed; changed roles take effect without minting another token. Live DM status and the current handle also feed audience policy. See [live-authority](/docs/interfaces/live-authority.md) and [scoped-body](/docs/interfaces/scoped-body.md).
+`apiHandler` installs `auth.LiveMiddleware` on every route except `POST /v1/graphql`, which keeps identity-only middleware and resolves live authority after GraphQL validation and costing, answering failures as GraphQL `errors[]`. Elsewhere a valid member token is resolved against current Postgres authority once per request. Missing or inactive members and authority lookup failures fail closed; changed roles take effect without minting another token. Live DM status and the current handle also feed audience policy. See [live-authority](/docs/interfaces/live-authority.md) and [scoped-body](/docs/interfaces/scoped-body.md).
 
 The web uses validated member responses for presentation and role-based navigation, and clears caches on account or authority changes. The server makes the authorization decision for every protected request.
 

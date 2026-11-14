@@ -357,7 +357,20 @@ func TestProductionChainPostgresDraftOwnershipAndActiveStatus(t *testing.T) {
 				t.Fatal(err)
 			}
 			w = authorityDBRequest(f.handler, http.MethodPost, "/v1/graphql", token, body)
-			assertAuthorityDBProblem(t, w, http.StatusForbidden, "FORBIDDEN")
+			assertAuthorityDBCORS(t, w)
+			if w.Code != http.StatusOK {
+				t.Fatalf("GraphQL status=%d body=%s", w.Code, w.Body)
+			}
+			var result struct {
+				Errors []struct {
+					Extensions struct {
+						Code string `json:"code"`
+					} `json:"extensions"`
+				} `json:"errors"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || len(result.Errors) != 1 || result.Errors[0].Extensions.Code != "FORBIDDEN" {
+				t.Fatalf("GraphQL failure=%s err=%v", w.Body, err)
+			}
 			if bytes.Contains(w.Body.Bytes(), []byte(owned.body)) {
 				t.Fatal("inactive author response contains draft body")
 			}
