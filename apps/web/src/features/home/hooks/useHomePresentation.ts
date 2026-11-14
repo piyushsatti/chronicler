@@ -43,9 +43,7 @@ export function useHomePresentation(quests: HomeQuestView[]) {
       addToast('Your character has withdrawn.', 'success');
       await Promise.all(
         [
-          queryKeys.home,
           queryKeys.homeLanes,
-          queryKeys.questBoard,
           queryKeys.questLists,
           ['quest'],
           ['questSummary'],
