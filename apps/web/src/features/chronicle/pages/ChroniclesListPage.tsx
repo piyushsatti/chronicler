@@ -35,6 +35,13 @@ const RANGE_OPTIONS = [
   { value: 'month', label: 'This month' },
 ] as const;
 
+const SUMMARY_AUDIENCE_OPTIONS = [
+  { value: 'player', label: 'Player summaries' },
+  { value: 'dm', label: 'DM summaries' },
+] as const;
+
+type SummaryAudience = (typeof SUMMARY_AUDIENCE_OPTIONS)[number]['value'];
+
 function presentationCategory(entry: ChronicleListItemView): string | null {
   return entry.visibility === 'dm_only' ? 'dm' : entry.category;
 }
@@ -53,6 +60,7 @@ export function ChroniclesListPage(): React.JSX.Element {
   const page = useChroniclesPage();
   const canCreate = useCanCreateSummary();
   const [range, setRange] = useState<ChronicleRange>('all');
+  const [summaryAudience, setSummaryAudience] = useState<SummaryAudience>('player');
   const [searchQuery, setSearchQuery] = useState('');
   const { timeZone } = useDateFormatter();
   const now = useMemo(() => new Date(), []);
@@ -72,6 +80,8 @@ export function ChroniclesListPage(): React.JSX.Element {
   const events = useMemo(() => {
     const needle = searchQuery.trim().toLocaleLowerCase();
     return filterChroniclesByRange(allEvents, range, now, timeZone).filter((entry) => {
+      const category = presentationCategory(entry);
+      if (summaryAudience === 'dm' ? category !== 'dm' : category === 'dm') return false;
       if (!needle) return true;
       return [
         entry.title,
@@ -82,7 +92,7 @@ export function ChroniclesListPage(): React.JSX.Element {
         ...entry.tags,
       ].some((value) => value?.toLocaleLowerCase().includes(needle));
     });
-  }, [allEvents, now, range, searchQuery, timeZone]);
+  }, [allEvents, now, range, searchQuery, summaryAudience, timeZone]);
   const groups = useMemo(
     () => groupChroniclesByPublicationDate(events, timeZone),
     [events, timeZone],
@@ -124,6 +134,15 @@ export function ChroniclesListPage(): React.JSX.Element {
             options={RANGE_OPTIONS}
             value={range}
             onValueChange={(value) => setRange(value)}
+          />
+        )}
+        quickFilters={(
+          <PageToolbar.Segments
+            aria-label="Chronicle summary author"
+            size="sm"
+            options={SUMMARY_AUDIENCE_OPTIONS}
+            value={summaryAudience}
+            onValueChange={setSummaryAudience}
           />
         )}
         count={page.status === 'ready' ? `${events.length} ${events.length === 1 ? 'entry' : 'entries'}` : undefined}
