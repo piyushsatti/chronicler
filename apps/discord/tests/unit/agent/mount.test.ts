@@ -1,26 +1,30 @@
 import { EventEmitter } from 'node:events';
 import { ChannelType, MessageReferenceType } from 'discord.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mountAgent } from '@discord/agent/mount.js';
+import { testConfig } from '../../support/config.js';
+
 const state = vi.hoisted(() => ({
   submit: vi.fn(),
 }));
 
-vi.mock('@discord/config.js', () => ({
-  config: {
-    agentEnabled: true,
-    agentMaxConcurrent: 2,
-    agentQueueCapacity: 25,
-    agentAllowedDmUserIds: new Set(['owner']),
-    agentAllowedGuildIds: new Set<string>(),
-    agentAllowedChannelIds: new Set<string>(),
-    agentPublicOrigin: 'https://chronicler.example',
-  },
-}));
 vi.mock('@discord/agent/broker.js', () => ({
-  submitQuestion: (job: unknown) => state.submit(job),
+  submitQuestion: (
+    _config: unknown,
+    job: unknown,
+    signal?: AbortSignal,
+  ) => state.submit(job, signal),
 }));
 
-import { mountAgent } from '@discord/agent/mount.js';
+const agentConfig = testConfig({
+  agentEnabled: true,
+  agentMaxConcurrent: 2,
+  agentQueueCapacity: 25,
+  agentAllowedDmUserIds: new Set(['owner']),
+  agentAllowedGuildIds: new Set<string>(),
+  agentAllowedChannelIds: new Set<string>(),
+  agentPublicOrigin: 'https://chronicler.example',
+});
 
 function fixture() {
   const client = new EventEmitter() as EventEmitter & { user: { id: string } };
@@ -97,7 +101,7 @@ describe('mountAgent', () => {
 
   it('posts the question and replies with the API result', async () => {
     const { client, message, reply } = fixture();
-    const mounted = await mountAgent(client as never);
+    const mounted = await mountAgent(client as never, agentConfig);
     client.emit('messageCreate', message);
     await vi.waitFor(() =>
       expect(reply).toHaveBeenCalledWith(
@@ -124,7 +128,7 @@ describe('mountAgent', () => {
         }),
     );
     const { client, message, reply } = fixture();
-    const mounted = await mountAgent(client as never);
+    const mounted = await mountAgent(client as never, agentConfig);
     client.emit('messageCreate', message);
     await vi.waitFor(() => expect(state.submit).toHaveBeenCalled());
     await mounted.close();
@@ -136,7 +140,7 @@ describe('mountAgent', () => {
   it('shows a failure when the API rejects the question', async () => {
     state.submit.mockRejectedValue(new Error('api down'));
     const { client, message, reply } = fixture();
-    const mounted = await mountAgent(client as never);
+    const mounted = await mountAgent(client as never, agentConfig);
     client.emit('messageCreate', message);
     await vi.waitFor(() =>
       expect(reply).toHaveBeenCalledWith(
@@ -150,7 +154,7 @@ describe('mountAgent', () => {
 
   it('publishes reply ancestry separately from the unchanged question', async () => {
     const { client, message } = replyFixture();
-    const mounted = await mountAgent(client as never);
+    const mounted = await mountAgent(client as never, agentConfig);
     client.emit('messageCreate', message);
     await vi.waitFor(() => expect(state.submit).toHaveBeenCalled());
 
@@ -194,7 +198,7 @@ describe('mountAgent', () => {
       fetchReference: vi.fn().mockResolvedValue(referenced),
     });
 
-    const mounted = await mountAgent(client as never);
+    const mounted = await mountAgent(client as never, agentConfig);
     client.emit('messageCreate', message);
     await vi.waitFor(() => expect(message.fetchReference).toHaveBeenCalledOnce());
     expect(referenced.fetchReference).not.toHaveBeenCalled();
@@ -223,7 +227,7 @@ describe('mountAgent', () => {
       fetchReference: vi.fn().mockResolvedValue(referenced),
     });
 
-    const mounted = await mountAgent(client as never);
+    const mounted = await mountAgent(client as never, agentConfig);
     client.emit('messageCreate', message);
     await vi.waitFor(() => expect(state.submit).toHaveBeenCalledOnce());
     expect(state.submit.mock.calls[0]?.[0]).toMatchObject({
@@ -243,7 +247,7 @@ describe('mountAgent', () => {
       mentions: { users: { has: () => false } },
     });
 
-    const mounted = await mountAgent(client as never);
+    const mounted = await mountAgent(client as never, agentConfig);
     client.emit('messageCreate', message);
     await new Promise((resolve) => setImmediate(resolve));
     expect(message.fetchReference).not.toHaveBeenCalled();
@@ -255,7 +259,7 @@ describe('mountAgent', () => {
     const { client, message } = replyFixture();
     message.author.id = 'not-allowed';
 
-    const mounted = await mountAgent(client as never);
+    const mounted = await mountAgent(client as never, agentConfig);
     client.emit('messageCreate', message);
     await new Promise((resolve) => setImmediate(resolve));
     expect(message.fetchReference).not.toHaveBeenCalled();

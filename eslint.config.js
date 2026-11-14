@@ -108,4 +108,23 @@ export default tseslint.config(
       },
     },
   },
+  {
+    files: ['apps/discord/src/**/*.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'process',
+          property: 'env',
+          message: 'Read process.env only in apps/discord/src/index.ts via loadConfig',
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/discord/src/index.ts'],
+    rules: {
+      'no-restricted-properties': 'off',
+    },
+  },
 );
