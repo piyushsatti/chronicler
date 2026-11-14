@@ -1,0 +1,5 @@
+import { loadMe } from '../../features/member/adapters/memberAdapter.js';
+
+export function useFixture() {
+  return loadMe();
+}

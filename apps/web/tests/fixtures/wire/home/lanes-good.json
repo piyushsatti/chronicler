@@ -50,28 +50,6 @@
     "total": 1
   },
   "recentlyClosedQuests": {
-    "items": [
-      {
-        "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
-        "shortCode": "Q-099",
-        "status": "closed",
-        "scheduledAt": "2026-10-01T19:00:00Z",
-        "slotsMax": 4,
-        "filledCount": 4,
-        "displayStatus": "closed",
-        "dm": { "handle": "mira", "displayName": "Mira" },
-        "briefDocument": {
-          "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
-          "slug": "vault-brief",
-          "title": "Vault Delve"
-        },
-        "discordDelivery": {
-          "desiredRevision": 1,
-          "appliedRevision": 1,
-          "overallStatus": "applied"
-        }
-      }
-    ],
     "total": 1
   },
   "communityDirectory": {

@@ -8,7 +8,6 @@ import type { FetchFn } from '@discord/api/http.js';
 import { testConfig } from '../../support/config.js';
 
 const config = testConfig({
-  apiUrl: 'http://api:8000',
   ingestSecret: 'test-ingest-secret',
 });
 
@@ -34,7 +33,7 @@ describe('postDiscordEvent', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('http://api:8000/v1/ingest/discord-event');
+    expect(url).toBe(`${config.apiUrl}/v1/ingest/discord-event`);
     expect((init.headers as Record<string, string>)['X-Ingest-Secret']).toBe(
       'test-ingest-secret',
     );

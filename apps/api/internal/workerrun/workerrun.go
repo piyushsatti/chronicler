@@ -45,7 +45,7 @@ func configureWorker(ctx context.Context, cfg config.Config, pool *db.Pool) (*wo
 	syncClient := delivery.DiscordSync(delivery.NoopSync{})
 	var err error
 	if pool == nil {
-		pool, err = db.Connect(ctx, cfg.DatabaseURL)
+		pool, err = db.Connect(ctx, cfg.DatabaseURL, db.ConnectOptions(string(cfg.Env))...)
 		runtime.ownsPool = err == nil
 	}
 	if err == nil {
