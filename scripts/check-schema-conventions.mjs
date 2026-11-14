@@ -18,12 +18,14 @@ function namedType(typeNode) {
 }
 
 function isInputObject(ancestors) {
-  return [...ancestors].reverse().some(
-    (a) =>
-      a &&
-      (a.kind === 'InputObjectTypeDefinition' ||
-        a.kind === 'InputObjectTypeExtension'),
-  );
+  return [...ancestors]
+    .reverse()
+    .some(
+      (a) =>
+        a &&
+        (a.kind === 'InputObjectTypeDefinition' ||
+          a.kind === 'InputObjectTypeExtension'),
+    );
 }
 
 const counts = {
