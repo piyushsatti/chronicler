@@ -16,6 +16,12 @@ const QUERY_HOOKS = new Set([
   'useSuspenseInfiniteQuery',
   'useSuspenseQueries',
 ]);
+const QUERY_KEY_OPTION_CALLS = new Set([
+  'useQuery',
+  'useInfiniteQuery',
+  'invalidateQueries',
+]);
+const QUERY_KEY_ARG_CALLS = new Set(['getQueryState', 'setQueryData']);
 const DOM_GLOBALS = new Set([
   'window',
   'document',
@@ -210,6 +216,32 @@ export function scanSource(
       ].includes(info.name)
     );
   };
+  const isInlineQueryKey = (node) => {
+    node = unwrap(node);
+    return Boolean(
+      node &&
+      (ts.isArrayLiteralExpression(node) ||
+        ts.isStringLiteral(node) ||
+        ts.isNoSubstitutionTemplateLiteral(node)),
+    );
+  };
+  const queryKeyFromObjectArg = (arg) => {
+    arg = unwrap(arg);
+    if (!arg || !ts.isObjectLiteralExpression(arg)) return null;
+    for (const prop of arg.properties) {
+      if (!ts.isPropertyAssignment(prop)) continue;
+      const name = prop.name;
+      const key =
+        (ts.isIdentifier(name) && name.text === 'queryKey') ||
+        (ts.isStringLiteral(name) && name.text === 'queryKey');
+      if (key) return prop.initializer;
+    }
+    return null;
+  };
+  const flagInlineQueryKey = (keyNode) => {
+    if (!isInlineQueryKey(keyNode)) return;
+    add(keyNode, 'query-key-origin', keyNode.getText(sf).replace(/\s+/g, ' ').trim());
+  };
   const storedJson = (node, seen = new Set()) => {
     node = unwrap(node);
     if (!node) return false;
@@ -278,6 +310,10 @@ export function scanSource(
     )
       add(node, 'no-generated-wire-in-view', 'dynamic generated-wire import');
     const info = callInfo(node.expression);
+    if (QUERY_KEY_OPTION_CALLS.has(info.name) && node.arguments[0])
+      flagInlineQueryKey(queryKeyFromObjectArg(node.arguments[0]));
+    if (QUERY_KEY_ARG_CALLS.has(info.name) && node.arguments[0])
+      flagInlineQueryKey(node.arguments[0]);
     if (hook && info.name === 'fetch')
       add(node, 'no-transport-in-hook', 'hooks must call adapters, not fetch');
     if (ui && fetchCall(node))
@@ -364,6 +400,10 @@ export function scanScope(webSrc = defaultSrc) {
     }));
   });
 }
+export function originKeyOf(hit) {
+  return `${hit.file}|${hit.rule}|${hit.detail}`;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const hits = scanScope();
   if (process.argv.includes('--list')) console.log(JSON.stringify(hits, null, 2));
@@ -374,14 +414,49 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       console.error(
         'check:architecture-ladder FAILED — architectureLadder must remain empty.',
       );
-    for (const hit of hits)
+    const originBudget = new Map();
+    for (const entry of allowlist.queryKeyOrigin ?? []) {
+      const k = originKeyOf({
+        file: entry.file,
+        rule: entry.rule ?? 'query-key-origin',
+        detail: entry.value ?? entry.detail,
+      });
+      originBudget.set(k, (originBudget.get(k) ?? 0) + 1);
+    }
+    const ladderHits = [];
+    const unlistedOrigin = [];
+    for (const hit of hits) {
+      if (hit.rule !== 'query-key-origin') {
+        ladderHits.push(hit);
+        continue;
+      }
+      const k = originKeyOf(hit);
+      const left = originBudget.get(k) ?? 0;
+      if (left > 0) originBudget.set(k, left - 1);
+      else unlistedOrigin.push(hit);
+    }
+    const staleOrigin = [...originBudget]
+      .filter(([, n]) => n > 0)
+      .map(([k, n]) => `${k}${n > 1 ? ` (x${n})` : ''}`);
+    for (const hit of [...ladderHits, ...unlistedOrigin])
       console.error(`  ${hit.file}:${hit.line} [${hit.rule}] ${hit.detail}`);
-    if (hits.length)
-      console.error(
-        `check:architecture-ladder FAILED — ${hits.length} violation(s); fix their owning layer.`,
+    for (const s of staleOrigin)
+      console.warn(
+        `check:architecture-ladder stale queryKeyOrigin entry (remove it): ${s}`,
       );
-    if (!hits.length && !exceptions.length)
-      console.log('check:architecture-ladder OK — no violations; allowlist empty.');
-    process.exitCode = hits.length || exceptions.length ? 1 : 0;
+    if (ladderHits.length)
+      console.error(
+        `check:architecture-ladder FAILED — ${ladderHits.length} violation(s); fix their owning layer.`,
+      );
+    if (unlistedOrigin.length)
+      console.error(
+        `check:architecture-ladder FAILED — ${unlistedOrigin.length} query-key-origin hit(s) not in queryKeyOrigin allowlist.`,
+      );
+    if (!ladderHits.length && !unlistedOrigin.length && !exceptions.length)
+      console.log(
+        `check:architecture-ladder OK — ladder clean; ${(allowlist.queryKeyOrigin ?? []).length} query-key-origin pending migration.`,
+      );
+    process.exitCode =
+      ladderHits.length || unlistedOrigin.length || exceptions.length ? 1 : 0;
   }
 }

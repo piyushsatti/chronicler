@@ -13,7 +13,6 @@ import goodHomeBanner from '../../../tests/fixtures/wire/admin/home-banner-good.
 export const endpoints = {} as const;
 
 export const queryKeys = {
-  home: ['home'] as const,
   homeLanes: ['homeLanes'] as const,
   siteStats: ['siteStats'] as const,
   homeRecentChronicles: (authenticated: boolean) =>

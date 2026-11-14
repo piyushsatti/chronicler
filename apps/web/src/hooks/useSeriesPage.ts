@@ -75,7 +75,7 @@ export function useSeriesPage(identity: string) {
     enabled: validId,
     retry: false,
   });
-  const authorityKey = ['seriesAuthority', actorIdentity];
+  const authorityKey = queryKeys.seriesAuthority(actorIdentity);
   const authority = useQuery({
     queryKey: authorityKey,
     notifyOnChangeProps: 'all',
@@ -152,8 +152,8 @@ export function useSeriesPage(identity: string) {
         (app.cause instanceof TransportError && app.cause.code === 'FORBIDDEN')
       ) {
         void client.invalidateQueries({ queryKey: queryKeys.me });
-        void client.invalidateQueries({ queryKey: ['seriesAuthority'] });
-        void client.invalidateQueries({ queryKey: ['currentAccess'] });
+        void client.invalidateQueries({ queryKey: queryKeys.seriesAuthority() });
+        void client.invalidateQueries({ queryKey: queryKeys.currentAccess() });
       }
     },
   });
