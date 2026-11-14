@@ -209,6 +209,12 @@
   "pageLayoutPendingMigration": [],
   "idempotencyKeyOrigin": [
     {
+      "file": "src/features/admin/adapters/adminForms.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 51
+    },
+    {
       "file": "src/features/character/hooks/useCharacterActivity.ts",
       "rule": "idempotency-key-origin",
       "value": "crypto.randomUUID",
@@ -303,6 +309,12 @@
       "rule": "idempotency-key-origin",
       "value": "crypto.randomUUID",
       "seenAtLine": 177
+    },
+    {
+      "file": "src/store/toastsSlice.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 52
     }
   ],
   "queryKeyOrigin": [
