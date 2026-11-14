@@ -41,7 +41,7 @@ Optional: set `DATABASE_URL` to reuse an existing Postgres (migrate+seed still a
 
 | Variable           | Purpose                                                                    |
 | ------------------ | -------------------------------------------------------------------------- |
-| `CHRONICLER_ENV`   | `development` (default) or `production`. Production requires Postgres      |
+| `CHRONICLER_ENV`   | `development` (default), `test`, `staging`, or `production`. Anything else refuses to start. Production requires Postgres, bot token, guild, and non-loopback CORS/redirect; dry-run and inline-complete are refused |
 | `REQUIRE_DATABASE` | When truthy, fail startup if Postgres is unavailable (even in development) |
 
 ## Maintenance lane

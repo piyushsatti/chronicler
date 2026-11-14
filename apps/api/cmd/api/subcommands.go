@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/config"
@@ -26,13 +25,16 @@ func runSubcommand(args []string, stdout, stderr io.Writer) int {
 		if len(args) > 1 {
 			action = args[1]
 		}
-		dsn := os.Getenv("DATABASE_URL")
-		var err error
+		cfg, err := config.FromEnv()
+		if err != nil {
+			fmt.Fprintln(stderr, "invalid configuration:", err)
+			return 1
+		}
 		switch action {
 		case "up":
-			err = migrate.Up(ctx, dsn, stdout)
+			err = migrate.Up(ctx, cfg.DatabaseURL, stdout)
 		case "status":
-			err = migrate.Status(ctx, dsn, stdout)
+			err = migrate.Status(ctx, cfg.DatabaseURL, stdout)
 		default:
 			fmt.Fprintln(stderr, "unknown migrate action:", action, "(want up or status)")
 			return 2
@@ -43,7 +45,12 @@ func runSubcommand(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	case "healthcheck":
-		if err := healthcheck(ctx, config.FromEnv().Addr); err != nil {
+		cfg, err := config.FromEnv()
+		if err != nil {
+			fmt.Fprintln(stderr, "invalid configuration:", err)
+			return 1
+		}
+		if err := healthcheck(ctx, cfg.Addr); err != nil {
 			fmt.Fprintln(stderr, "unhealthy:", err)
 			return 1
 		}

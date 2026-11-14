@@ -21,7 +21,11 @@ func main() {
 	if len(os.Args) > 1 {
 		os.Exit(runSubcommand(os.Args[1:], os.Stdout, os.Stderr))
 	}
-	cfg := config.FromEnv()
+	cfg, err := config.FromEnv()
+	if err != nil {
+		slog.Error("invalid configuration", "error", err)
+		os.Exit(1)
+	}
 	if err := cfg.ValidateProduction(); err != nil {
 		slog.Error("invalid configuration", "error", err)
 		os.Exit(1)

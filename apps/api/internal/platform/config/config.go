@@ -3,61 +3,112 @@ package config
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/google/uuid"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 )
 
-type Config struct {
-	PlatformOwnerMemberID     string
-	PlatformOwnerDiscordID    string
-	OperatorDiscordWebhookURL string
-	Addr                      string
-	DatabaseURL               string
-	JWTSecret                 string
-	DiscordClientID           string
-	DiscordSecret             string
-	DiscordRedirect           string
-	IngestSecret              string
-	CORSOrigins               []string
-	ShutdownTimeout           time.Duration
-	// Env is development (default) or production. Production requires Postgres.
-	Env string
-	// RequireDatabase forces Wire to fail when Postgres is unavailable.
-	RequireDatabase bool
+type Env string
+
+const (
+	EnvDevelopment Env = "development"
+	EnvTest        Env = "test"
+	EnvStaging     Env = "staging"
+	EnvProduction  Env = "production"
+)
+
+const defaultJWTSecret = "dev-only-change-me"
+
+type DiscordConfig struct {
+	BotToken                string
+	GuildID                 string
+	AnnounceChannelFallback string
+	DeliveryDryRun          bool
 }
 
-func FromEnv() Config {
-	envName := env("CHRONICLER_ENV", "development")
-	requireDB := envName == "production" || envTruthy("REQUIRE_DATABASE")
-	return Config{
-		PlatformOwnerMemberID:     os.Getenv("PLATFORM_OWNER_MEMBER_ID"),
-		PlatformOwnerDiscordID:    os.Getenv("PLATFORM_OWNER_DISCORD_ID"),
-		OperatorDiscordWebhookURL: os.Getenv("OPERATOR_DISCORD_WEBHOOK_URL"),
-		Addr:                      env("API_ADDR", ":8080"),
-		DatabaseURL:               env("DATABASE_URL", "postgres://chronicler:chronicler@127.0.0.1:5432/chronicler?sslmode=disable&pool_max_conns=10"),
-		JWTSecret:                 env("JWT_SECRET", "dev-only-change-me"),
-		DiscordClientID:           os.Getenv("DISCORD_CLIENT_ID"),
-		DiscordSecret:             os.Getenv("DISCORD_CLIENT_SECRET"),
-		DiscordRedirect:           env("DISCORD_REDIRECT_URI", "http://localhost:8080/auth/discord/callback"),
-		IngestSecret:              os.Getenv("INGEST_SECRET"),
-		CORSOrigins:               splitCSV(env("CORS_ORIGINS", "http://localhost:5173")),
-		ShutdownTimeout:           durationEnv("SHUTDOWN_TIMEOUT", 10*time.Second),
-		Env:                       envName,
-		RequireDatabase:           requireDB,
+type AgentConfig struct {
+	InlineComplete bool
+}
+
+type Config struct {
+	PlatformOwnerMemberID  string
+	PlatformOwnerDiscordID string
+	Addr                   string
+	DatabaseURL            string
+	JWTSecret              string
+	DiscordClientID        string
+	DiscordSecret          string
+	DiscordRedirect        string
+	IngestSecret           string
+	CORSOrigins            []string
+	ShutdownTimeout        time.Duration
+	Env                    Env
+	RequireDatabase        bool
+	Discord                DiscordConfig
+	Agent                  AgentConfig
+}
+
+func FromEnv() (Config, error) {
+	envName := env("CHRONICLER_ENV", string(EnvDevelopment))
+	switch Env(envName) {
+	case EnvDevelopment, EnvTest, EnvStaging, EnvProduction:
+	default:
+		return Config{}, fmt.Errorf("unknown CHRONICLER_ENV")
 	}
+	timeout, err := durationEnv("SHUTDOWN_TIMEOUT", 10*time.Second)
+	if err != nil {
+		return Config{}, err
+	}
+	requireDB := Env(envName) == EnvProduction || envTruthy("REQUIRE_DATABASE")
+	return Config{
+		PlatformOwnerMemberID:  os.Getenv("PLATFORM_OWNER_MEMBER_ID"),
+		PlatformOwnerDiscordID: os.Getenv("PLATFORM_OWNER_DISCORD_ID"),
+		Addr:                   env("API_ADDR", ":8080"),
+		DatabaseURL:            env("DATABASE_URL", "postgres://chronicler:chronicler@127.0.0.1:5432/chronicler?sslmode=disable&pool_max_conns=10"),
+		JWTSecret:              env("JWT_SECRET", defaultJWTSecret),
+		DiscordClientID:        os.Getenv("DISCORD_CLIENT_ID"),
+		DiscordSecret:          os.Getenv("DISCORD_CLIENT_SECRET"),
+		DiscordRedirect:        env("DISCORD_REDIRECT_URI", "http://localhost:8080/auth/discord/callback"),
+		IngestSecret:           os.Getenv("INGEST_SECRET"),
+		CORSOrigins:            splitCSV(env("CORS_ORIGINS", "http://localhost:5173")),
+		ShutdownTimeout:        timeout,
+		Env:                    Env(envName),
+		RequireDatabase:        requireDB,
+		Discord: DiscordConfig{
+			BotToken:                os.Getenv("DISCORD_BOT_TOKEN"),
+			GuildID:                 os.Getenv("GUILD_ID"),
+			AnnounceChannelFallback: os.Getenv("DISCORD_ANNOUNCE_CHANNEL_ID"),
+			DeliveryDryRun:          envTruthy("DISCORD_DELIVERY_DRY_RUN"),
+		},
+		Agent: AgentConfig{
+			InlineComplete: envTruthy("AGENT_INLINE_COMPLETE"),
+		},
+	}, nil
 }
 
 // ValidateProduction requires production credentials and 32-character machine secrets.
 // Errors name the variable, never its value.
 func (c Config) ValidateProduction() error {
-	if c.Env != "production" {
+	if c.Env != EnvDevelopment && c.Env != EnvTest && c.JWTSecret == defaultJWTSecret {
+		return fmt.Errorf("refusing to start: unset or development-default JWT_SECRET")
+	}
+	if c.Env != EnvProduction {
 		return nil
 	}
+	if bad := c.productionMissing(); len(bad) > 0 {
+		return fmt.Errorf("refusing to start in production: unset or development-default %s", strings.Join(bad, ", "))
+	}
+	return nil
+}
+
+func (c Config) productionMissing() []string {
 	var bad []string
 	if c.DiscordSecret == "" || c.DiscordSecret == "dev" {
 		bad = append(bad, "DISCORD_CLIENT_SECRET")
@@ -71,10 +122,47 @@ func (c Config) ValidateProduction() error {
 	if utf8.RuneCountInString(c.IngestSecret) < 32 {
 		bad = append(bad, "INGEST_SECRET")
 	}
-	if len(bad) > 0 {
-		return fmt.Errorf("refusing to start in production: unset or development-default %s", strings.Join(bad, ", "))
+	if c.Discord.BotToken == "" {
+		bad = append(bad, "DISCORD_BOT_TOKEN")
 	}
-	return nil
+	if c.Discord.GuildID == "" {
+		bad = append(bad, "GUILD_ID")
+	}
+	if c.DiscordRedirect == "" || isLoopbackURL(c.DiscordRedirect) {
+		bad = append(bad, "DISCORD_REDIRECT_URI")
+	}
+	if len(c.CORSOrigins) == 0 || hasLoopbackOrigin(c.CORSOrigins) {
+		bad = append(bad, "CORS_ORIGINS")
+	}
+	if c.Discord.DeliveryDryRun {
+		bad = append(bad, "DISCORD_DELIVERY_DRY_RUN")
+	}
+	if c.Agent.InlineComplete {
+		bad = append(bad, "AGENT_INLINE_COMPLETE")
+	}
+	return bad
+}
+
+func hasLoopbackOrigin(origins []string) bool {
+	for _, origin := range origins {
+		if isLoopbackURL(origin) {
+			return true
+		}
+	}
+	return false
+}
+
+func isLoopbackURL(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return true
+	}
+	host := u.Hostname()
+	if host == "localhost" || host == "0.0.0.0" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func envTruthy(key string) bool {
@@ -101,19 +189,19 @@ func splitCSV(s string) []string {
 	return out
 }
 
-func durationEnv(key string, fallback time.Duration) time.Duration {
+func durationEnv(key string, fallback time.Duration) (time.Duration, error) {
 	v := os.Getenv(key)
 	if v == "" {
-		return fallback
+		return fallback, nil
 	}
 	if ms, err := strconv.Atoi(v); err == nil {
-		return time.Duration(ms) * time.Millisecond
+		return time.Duration(ms) * time.Millisecond, nil
 	}
 	d, err := time.ParseDuration(v)
 	if err != nil {
-		return fallback
+		return 0, fmt.Errorf("invalid %s", key)
 	}
-	return d
+	return d, nil
 }
 
 type DiscordOwnerLookup func(context.Context, string) (memberID string, err error)
