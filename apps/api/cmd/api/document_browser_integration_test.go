@@ -275,7 +275,7 @@ func TestDocumentBrowserCurrentBoundaries(t *testing.T) {
 	if err := fixture.pool.QueryRow(ctx, linksQuery, summary).Scan(&initialLinks); err != nil {
 		t.Fatal(err)
 	}
-	runtime = app.Wire(ctx, cfg)
+	runtime = wireForTest(ctx, cfg)
 	if runtime.Pool == nil || runtime.Authority == nil {
 		t.Fatal("actual Wire not bound")
 	}

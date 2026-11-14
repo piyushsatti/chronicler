@@ -267,7 +267,7 @@ func TestAdminBrowserRetainedJourneys(t *testing.T) {
 	}
 	cfg := config.Config{DatabaseURL: fixture.databaseURL, RequireDatabase: true, JWTSecret: "synthetic-admin-browser-fixture-key", PlatformOwnerMemberID: owner.publicID, CORSOrigins: []string{fmt.Sprintf("http://127.0.0.1:%d", port)}}
 	rows.cfg = cfg
-	runtime := app.Wire(ctx, cfg)
+	runtime := wireForTest(ctx, cfg)
 	if runtime.Pool != nil {
 		closeRuntime = runtime.Pool.Close
 	}
