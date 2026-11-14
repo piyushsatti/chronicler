@@ -211,10 +211,6 @@ func (p *ProductPostgres) ReadGameDate(ctx context.Context, _ auth.Authority, sp
 }
 
 func (p *ProductPostgres) ReadRealDates(ctx context.Context, _ auth.Authority, spec RealDatesSpec) (RealDatePage, error) {
-	total, err := p.queries().CountProductRealDates(ctx, spec.GameDay)
-	if err != nil {
-		return RealDatePage{}, err
-	}
 	rows, err := p.queries().ListProductRealDates(ctx, dbgen.ListProductRealDatesParams{
 		GameDay:   spec.GameDay,
 		RowOffset: spec.Offset,
@@ -223,21 +219,21 @@ func (p *ProductPostgres) ReadRealDates(ctx context.Context, _ auth.Authority, s
 	if err != nil {
 		return RealDatePage{}, err
 	}
+	var total int32
 	items := make([]product.Date, 0, len(rows))
-	for _, row := range rows {
-		if !row.Valid {
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.RealDate.Valid {
 			continue
 		}
-		items = append(items, product.Date(row.Time.Format("2006-01-02")))
+		items = append(items, product.Date(row.RealDate.Time.Format("2006-01-02")))
 	}
 	return RealDatePage{Items: items, Total: total}, nil
 }
 
 func (p *ProductPostgres) ReadTimeAnchors(ctx context.Context, _ auth.Authority, spec TimeAnchorsSpec) (TimeAnchorPage, error) {
-	total, err := p.queries().CountProductTimeAnchors(ctx)
-	if err != nil {
-		return TimeAnchorPage{}, err
-	}
 	rows, err := p.queries().ListProductTimeAnchors(ctx, dbgen.ListProductTimeAnchorsParams{
 		RowOffset: spec.Offset,
 		RowLimit:  spec.Limit,
@@ -245,9 +241,16 @@ func (p *ProductPostgres) ReadTimeAnchors(ctx context.Context, _ auth.Authority,
 	if err != nil {
 		return TimeAnchorPage{}, err
 	}
+	var total int32
 	items := make([]TimeAnchorView, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, mapTimeAnchorRow(row.ID, row.RealUtc, row.EpochDay, row.Rate, row.Note))
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
+		items = append(items, mapTimeAnchorRow(row.ID, row.RealUtc, row.EpochDay.Int32, row.Rate.Float64, row.Note))
 	}
 	return TimeAnchorPage{Items: items, Total: total}, nil
 }
