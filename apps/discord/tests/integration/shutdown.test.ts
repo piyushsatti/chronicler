@@ -323,8 +323,10 @@ it('stop signal posts open voice minutes, destroys, then exits', async () => {
   const voice = bodies.find((body) => (body as { kind?: string }).kind === 'voice') as {
     amount: number;
     kind: string;
+    event_id: string;
   };
   expect(voice.amount).toBe(5);
+  expect(voice.event_id).toBe(`voice:user-voice:${Date.parse('2026-07-01T00:00:00.000Z')}`);
 });
 
 it('exits by the drain deadline when ingest never answers', async () => {

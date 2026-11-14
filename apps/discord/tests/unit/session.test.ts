@@ -2,13 +2,11 @@ import { expect, it, vi } from 'vitest';
 import { testConfig } from '../support/config.js';
 
 const close = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-const disposeHealth = vi.hoisted(() =>
-  Object.assign(vi.fn(), {
-    name: 'health',
-    stop: vi.fn().mockResolvedValue(undefined),
-    subscribe: vi.fn(() => () => undefined),
-  }),
-);
+const disposeHealth = vi.hoisted(() => ({
+  name: 'health',
+  stop: vi.fn().mockResolvedValue(undefined),
+  subscribe: vi.fn(() => () => undefined),
+}));
 const activity = vi.hoisted(() => ({
   name: 'activity',
   stop: vi.fn().mockResolvedValue(undefined),
@@ -53,5 +51,6 @@ it('logs in with heartbeat enabled and returns stop', async () => {
   expect(disposeHealth.stop).toHaveBeenCalledOnce();
   expect(close).toHaveBeenCalled();
   expect(client.destroy).toHaveBeenCalled();
+  expect(activity.stop).toHaveBeenCalledOnce();
   expect(activity.drain).toHaveBeenCalled();
 });
