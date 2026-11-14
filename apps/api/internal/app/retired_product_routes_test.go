@@ -34,6 +34,8 @@ func TestRetiredQuestCharacterMemberAndNotificationRoutesReturnNotFound(t *testi
 	for _, authenticated := range []bool{false, true} {
 		for _, route := range []struct{ method, path, body string }{
 			{"POST", "/v1/me/notifications/read", `{"ids":[]}`},
+			{"POST", "/v1/me/personalization/reconcile", ""},
+			{"POST", "/v1/me/notifications/acknowledge-suppressed", ""},
 			{"POST", "/v1/quests", `{"shortCode":"X","kinds":["standard"],"scheduledAt":"2026-12-01T00:00:00Z"}`},
 			{"POST", "/v1/quests/quest/transition", `{"to":"played"}`},
 			{"POST", "/v1/quests/quest/close", ""},
@@ -45,6 +47,9 @@ func TestRetiredQuestCharacterMemberAndNotificationRoutesReturnNotFound(t *testi
 			{"GET", "/v1/members/by-discord/123", ""},
 			{"GET", "/v1/members/member/role-history", ""},
 			{"GET", "/v1/members/member/availability", ""},
+			{"GET", "/v1/hexes/hex/history", ""},
+			{"GET", "/v1/regions/region/counts", ""},
+			{"GET", "/v1/maps/atlas/activity", ""},
 		} {
 			t.Run(fmt.Sprintf("%s %s authenticated=%t", route.method, route.path, authenticated), func(t *testing.T) {
 				req := httptest.NewRequest(route.method, route.path, strings.NewReader(route.body))
