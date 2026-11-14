@@ -1,0 +1,5 @@
+import { isSeriesIdentity } from '../../features/onboarding/seriesIdentity.js';
+
+export function useFixture(value: unknown) {
+  return isSeriesIdentity(value);
+}

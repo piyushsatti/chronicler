@@ -50,6 +50,13 @@ describe('homeLanesAdapter', () => {
                 memberHandle: 'waiter',
                 status: 'waitlisted',
               },
+              {
+                memberId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+                characterId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02',
+                characterName: 'Ghost',
+                memberHandle: 'ghost',
+                status: 'no_show',
+              },
             ],
           },
         ],
@@ -124,8 +131,56 @@ describe('homeLanesAdapter', () => {
       'legacy-custom',
     ]);
     expect(result.data.upcoming).toEqual(original.data.upcoming);
-    expect(result.data.recentlyClosed).toEqual(original.data.recentlyClosed);
+    expect(result.data.totals.recentlyClosed).toBe(original.data.totals.recentlyClosed);
     expect(result.data.dmsAccepting).toEqual(original.data.dmsAccepting);
+  });
+
+  it('keeps brief body on board cards and omits it from upcoming', () => {
+    const result = parseHomeLanesWire({
+      ...good,
+      questBoard: {
+        items: [
+          {
+            ...good.questBoard.items[0],
+            briefDocument: {
+              ...good.questBoard.items[0].briefDocument,
+              effectiveBody: 'Hold the gate until dawn.',
+            },
+          },
+        ],
+        total: 1,
+      },
+      quests: {
+        items: [
+          {
+            ...good.quests.items[0],
+            briefDocument: {
+              id: good.quests.items[0].briefDocument.id,
+              slug: good.quests.items[0].briefDocument.slug,
+              title: good.quests.items[0].briefDocument.title,
+            },
+          },
+        ],
+        total: 1,
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(mapToQuestCardProps(result.data.recruiting[0]!).description).toBe(
+      'Hold the gate until dawn.',
+    );
+    expect(mapToQuestCardProps(result.data.upcoming[0]!).description).toBeNull();
+  });
+
+  it('reads recently closed as a total only', () => {
+    const result = parseHomeLanesWire({
+      ...good,
+      recentlyClosedQuests: { total: 7 },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.totals.recentlyClosed).toBe(7);
+    expect(result.data).not.toHaveProperty('recentlyClosed');
   });
 
   it.each(['absent', 'null'] as const)(
