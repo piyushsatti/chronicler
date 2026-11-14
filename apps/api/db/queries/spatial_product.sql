@@ -303,21 +303,37 @@ FROM (SELECT sqlc.arg(real_date)::date AS real_date) requested
 LEFT JOIN game_time_map mapping ON mapping.real_date=requested.real_date
 LEFT JOIN game_calendar calendar ON calendar.id=1;
 -- name: ListProductRealDates :many
-SELECT real_date FROM game_time_map WHERE game_day=sqlc.arg(game_day)
-ORDER BY real_date LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
--- name: CountProductRealDates :one
-SELECT count(*)::int FROM game_time_map WHERE game_day=sqlc.arg(game_day);
+WITH filtered AS (
+    SELECT real_date FROM game_time_map WHERE game_day=sqlc.arg(game_day)
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY real_date
+    LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset)
+)
+SELECT counted.total, page.real_date
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.real_date ASC NULLS LAST;
 -- name: ListProductCalendarCells :many
 SELECT requested.real_date::date AS real_date,mapping.game_day
 FROM generate_series(sqlc.arg(real_from)::date,sqlc.arg(real_to)::date-1,interval '1 day') requested(real_date)
 LEFT JOIN game_time_map mapping ON mapping.real_date=requested.real_date::date
 ORDER BY requested.real_date;
 -- name: ListProductTimeAnchors :many
-SELECT public_id AS id, real_utc, epoch_day, rate, note
-FROM time_anchors ORDER BY real_utc, public_id
-LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
--- name: CountProductTimeAnchors :one
-SELECT count(*)::int FROM time_anchors;
+WITH filtered AS (
+    SELECT public_id AS id, real_utc, epoch_day, rate, note
+    FROM time_anchors
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY real_utc, id
+    LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset)
+)
+SELECT counted.total, page.id, page.real_utc, page.epoch_day, page.rate, page.note
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.real_utc ASC NULLS LAST, page.id ASC NULLS LAST;
 -- name: ReadProductTimeAnchorAtOrBefore :one
 SELECT public_id AS id,real_utc,epoch_day,rate,note
 FROM time_anchors WHERE real_utc<=sqlc.arg(real_utc)
