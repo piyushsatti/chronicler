@@ -212,6 +212,6 @@ describe('wire omission', () => {
         });
       }),
     );
-    await updateDocument(id, { title: 'Metadata only', expectedRevision: 7 });
+    await updateDocument(id, { title: 'Metadata only', expectedRevision: 7 }, '11111111-1111-4111-8111-111111111111');
   });
 });
