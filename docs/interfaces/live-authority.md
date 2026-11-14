@@ -20,7 +20,7 @@ The per-row read-audience family is documents, revisions and links; public quest
 
 | Mechanism                          | Location                                                         | Status                                                                                |
 | ---------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Verified request Authority         | `apiHandler` → `auth.LiveMiddleware` → Postgres member authority | Implemented; isolated native request tests cover role changes and fail-closed lookups |
+| Verified request Authority         | `apiHandler` → `auth.LiveMiddleware` on every route except `POST /v1/graphql` (identity middleware, then post-validation GraphQL authority) → Postgres member authority | Implemented; GraphQL authority failures are GraphQL errors; REST keeps problem+json; isolated native request tests cover role changes and fail-closed lookups |
 | Account identity and role response | `GET /v1/members/me`                                             | Exactly four fields; roles use that same verified Authority                           |
 
 ### Remaining enforcement boundaries
