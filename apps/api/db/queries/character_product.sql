@@ -230,13 +230,22 @@ WHERE c.public_id = ANY(@character_ids::uuid[]) AND c.deleted_at IS NULL
 ORDER BY c.public_id
 FOR UPDATE OF c;
 
--- name: CharacterProductAwardQuestPCXP :one
-WITH updated AS (
+-- name: CharacterProductAwardQuestPCXP :many
+WITH awards AS (
+    SELECT ids.character_id, amounts.amount, notes.note
+    FROM unnest(@character_ids::uuid[]) WITH ORDINALITY AS ids(character_id, ordinality)
+    JOIN unnest(@amounts::integer[]) WITH ORDINALITY AS amounts(amount, ordinality)
+      ON amounts.ordinality = ids.ordinality
+    JOIN unnest(@notes::text[]) WITH ORDINALITY AS notes(note, ordinality)
+      ON notes.ordinality = ids.ordinality
+),
+updated AS (
     UPDATE characters c
-    SET player_xp = c.player_xp + @amount::integer, updated_at = @at::timestamptz
-    WHERE c.public_id = @character_id::uuid
-      AND c.player_xp::bigint + @amount::integer <= 2147483647::bigint
-      AND (SELECT COALESCE(sum(ledger.delta), 0) + @amount::integer
+    SET player_xp = c.player_xp + awards.amount, updated_at = @at::timestamptz
+    FROM awards
+    WHERE c.public_id = awards.character_id
+      AND c.player_xp::bigint + awards.amount <= 2147483647::bigint
+      AND (SELECT COALESCE(sum(ledger.delta), 0) + awards.amount
            FROM character_progression_ledger ledger WHERE ledger.character_id = c.id)
           BETWEEN -2147483648::bigint AND 2147483647::bigint
       AND EXISTS (
@@ -244,10 +253,10 @@ WITH updated AS (
           WHERE participant.character_id = c.id AND q.public_id = @quest_id::uuid
             AND q.status = 'closed' AND participant.status = 'played'
       )
-    RETURNING c.id
+    RETURNING c.id, awards.amount, awards.note
 )
 INSERT INTO character_progression_ledger(character_id, delta, reason, kind, note, quest_id, recorded_by, created_at)
-SELECT updated.id, @amount::integer, 'quest_reward', 'pcxp', sqlc.narg(note)::text, q.id, actor.id, @at::timestamptz
+SELECT updated.id, updated.amount, 'quest_reward', 'pcxp', NULLIF(updated.note, ''), q.id, actor.id, @at::timestamptz
 FROM updated CROSS JOIN quests q CROSS JOIN members actor
 WHERE q.public_id = @quest_id::uuid AND actor.public_id = @actor_id::uuid
 RETURNING public_id;

@@ -29,6 +29,8 @@
 import { writeFileSync } from 'node:fs';
 import os from 'node:os';
 import type { Client, CloseEvent } from 'discord.js';
+import { createHttp, type FetchFn } from './api/http.js';
+import { createIngest, type IngestPort } from './api/ingest.js';
 import type { BotConfig } from './config.js';
 import { BOT_ALIVE_PATH } from './healthcheck.js';
 import { logger } from './log.js';
@@ -51,10 +53,14 @@ export type ProcessExit = (code: number) => void;
 /** Stops the heartbeat interval started by {@link mountShardHealth}. */
 export type HeartbeatDisposer = () => void;
 
-const HEARTBEAT_PATH = '/v1/ingest/heartbeat';
 // Default 60s matches the retained ingest heartbeat watch cadence (OP-040).
 // The bot does not read API config; keep this literal aligned by hand.
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 60_000;
+
+export type HeartbeatApiDeps = {
+  ingest?: IngestPort;
+  fetch?: FetchFn;
+};
 
 /**
  * POSTs `/v1/ingest/heartbeat` with the shared ingest secret.
@@ -63,32 +69,31 @@ const DEFAULT_HEARTBEAT_INTERVAL_MS = 60_000;
 export async function postHeartbeat(
   config: BotConfig,
   status?: HeartbeatStatus,
+  deps?: HeartbeatApiDeps,
 ): Promise<void> {
-  try {
-    const response = await fetch(`${config.apiUrl}${HEARTBEAT_PATH}`, {
-      method: 'POST',
-      headers: {
-        'X-Ingest-Secret': config.ingestSecret,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(
-        status ?? {
-          gateway_ready: false,
-          shard_state: {},
-          host: os.hostname(),
-          build_sha: config.build,
-        },
-      ),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!response.ok) {
-      logger.warn('Heartbeat POST failed', { status: response.status });
-    }
-  } catch (err: unknown) {
-    logger.warn('Heartbeat POST errored', {
-      error: err instanceof Error ? err.message : String(err),
-    });
+  const ingest =
+    deps?.ingest ??
+    createIngest(
+      createHttp({
+        apiUrl: config.apiUrl,
+        secret: config.ingestSecret,
+        fetch: deps?.fetch,
+      }),
+    );
+  const result = await ingest.postHeartbeat(
+    status ?? {
+      gateway_ready: false,
+      shard_state: {},
+      host: os.hostname(),
+      build_sha: config.build,
+    },
+  );
+  if (result.ok) return;
+  if (result.status !== undefined) {
+    logger.warn('Heartbeat POST failed', { status: result.status });
+    return;
   }
+  logger.warn('Heartbeat POST errored', { error: result.detail });
 }
 
 export interface ShardHealthOptions {

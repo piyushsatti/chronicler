@@ -484,6 +484,7 @@ type AttestQuestParticipationState struct {
 	Roster       []QuestParticipantView
 	BriefVersion int64
 	AllowedHexes []spatial.PointcrawlAdmission
+	QuestRowID   int64
 }
 
 type CloseQuestState struct {
@@ -498,6 +499,10 @@ type CloseQuestState struct {
 	BriefVersion         int64
 	AllowedHexes         []spatial.PointcrawlAdmission
 	ExistingEntitlements []character.QuestRewardEntitlementView
+	QuestRowID           int64
+	FilledCount          int32
+	SlotsMax             int32
+	SignupType           *string
 }
 
 type CreateQuestState struct {
@@ -537,6 +542,10 @@ type WithdrawFromQuestState struct {
 	Roster       []QuestParticipantView
 	BriefVersion int64
 	AllowedHexes []spatial.PointcrawlAdmission
+	QuestRowID   int64
+	FilledCount  int32
+	SlotsMax     int32
+	SignupType   *string
 }
 
 type RemoveQuestFromArcState struct {
@@ -577,6 +586,10 @@ type SelectQuestParticipantsState struct {
 	BriefVersion int64
 	AllowedHexes []spatial.PointcrawlAdmission
 	Candidates   []character.Admission
+	QuestRowID   int64
+	FilledCount  int32
+	SlotsMax     int32
+	SignupType   *string
 }
 
 type SetQuestHexesState struct {
@@ -590,6 +603,7 @@ type SetQuestHexesState struct {
 	Roster       []QuestParticipantView
 	BriefVersion int64
 	AllowedHexes []spatial.PointcrawlAdmission
+	QuestRowID   int64
 }
 
 type SignupForQuestState struct {
@@ -603,6 +617,7 @@ type SignupForQuestState struct {
 	Roster       []QuestParticipantView
 	BriefVersion int64
 	AllowedHexes []spatial.PointcrawlAdmission
+	QuestRowID   int64
 }
 
 type SyncQuestDiscordState struct {
@@ -875,6 +890,7 @@ type CorrectQuestRosterWrite struct {
 	Roster         []QuestParticipantView
 	Candidates     []character.Admission
 	Staff          bool
+	QuestRowID     int64
 }
 
 type ArcQuestsKey struct {
