@@ -1,5 +1,5 @@
 {
-  "_comment": "Allowlists for apps/web design gates. Lengths may only shrink (ratchet). Soft-skipped gates (gallery/motion/effects/cosmetic/orphan) re-arm when their trees land. pageLayout (L5): justified exceptions, each with a reason. pageLayoutPendingMigration: current violations that round-3 page migration removes (entries match on file+rule+value; seenAtLine is informational).",
+  "_comment": "Allowlists for apps/web design gates. Lengths may only shrink (ratchet). Soft-skipped gates (gallery/motion/effects/cosmetic/orphan) re-arm when their trees land. pageLayout (L5): justified exceptions, each with a reason. pageLayoutPendingMigration: current violations that round-3 page migration removes (entries match on file+rule+value; seenAtLine is informational). queryKeyOrigin: inline queryKey sites pending factory migration (match on file+rule+value; seenAtLine informational).",
   "tokens": [],
   "boundary": [],
   "responsive": [],
@@ -84,5 +84,535 @@
       "reason": "Popover content intrinsic-width cap."
     }
   ],
-  "pageLayoutPendingMigration": []
+  "pageLayoutPendingMigration": [],
+  "queryKeyOrigin": [
+    {
+      "file": "src/features/admin/hooks/useAdminOperations.ts",
+      "rule": "query-key-origin",
+      "value": "['adminOperations', authority.cacheKey, deliveryOffset, alertOffset]",
+      "seenAtLine": 23
+    },
+    {
+      "file": "src/features/admin/hooks/useAdminPage.ts",
+      "rule": "query-key-origin",
+      "value": "[...key, authority.cacheKey, filters, offset]",
+      "seenAtLine": 40
+    },
+    {
+      "file": "src/features/admin/hooks/useAdminSectionPage.ts",
+      "rule": "query-key-origin",
+      "value": "['adminCommunityStats', authority.cacheKey]",
+      "seenAtLine": 61
+    },
+    {
+      "file": "src/features/admin/hooks/useBackstoriesPanel.tsx",
+      "rule": "query-key-origin",
+      "value": "['adminRegionOptions', authority.cacheKey]",
+      "seenAtLine": 57
+    },
+    {
+      "file": "src/features/admin/hooks/useCharacterDirectoryPanel.ts",
+      "rule": "query-key-origin",
+      "value": "['adminRegionOptions', authority.cacheKey]",
+      "seenAtLine": 32
+    },
+    {
+      "file": "src/features/admin/hooks/useCreationCatalogPanel.tsx",
+      "rule": "query-key-origin",
+      "value": "['adminRegionOptions', authority.cacheKey]",
+      "seenAtLine": 58
+    },
+    {
+      "file": "src/features/admin/hooks/useDiscordSettingsPanel.tsx",
+      "rule": "query-key-origin",
+      "value": "[...KEY, authority.cacheKey]",
+      "seenAtLine": 24
+    },
+    {
+      "file": "src/features/admin/hooks/useDiscordSettingsPanel.tsx",
+      "rule": "query-key-origin",
+      "value": "['editor', 'voiceChannels']",
+      "seenAtLine": 60
+    },
+    {
+      "file": "src/features/admin/hooks/useGameCalendarPanel.tsx",
+      "rule": "query-key-origin",
+      "value": "[...KEY, authority.cacheKey]",
+      "seenAtLine": 34
+    },
+    {
+      "file": "src/features/admin/hooks/useHomeBannerPanel.tsx",
+      "rule": "query-key-origin",
+      "value": "[...BANNER_KEY, authority.cacheKey]",
+      "seenAtLine": 17
+    },
+    {
+      "file": "src/features/admin/hooks/useRegionsPanel.tsx",
+      "rule": "query-key-origin",
+      "value": "['adminRegionOptions']",
+      "seenAtLine": 82
+    },
+    {
+      "file": "src/features/admin/hooks/useRegionsPanel.tsx",
+      "rule": "query-key-origin",
+      "value": "['adminRegionOptions']",
+      "seenAtLine": 150
+    },
+    {
+      "file": "src/features/admin/hooks/useRegionsPanel.tsx",
+      "rule": "query-key-origin",
+      "value": "[...KEY, authority.cacheKey]",
+      "seenAtLine": 160
+    },
+    {
+      "file": "src/features/admin/hooks/useRegionsPanel.tsx",
+      "rule": "query-key-origin",
+      "value": "['adminRegionOptions', authority.cacheKey]",
+      "seenAtLine": 163
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterActivity.ts",
+      "rule": "query-key-origin",
+      "value": "['characterActivity', characterId, page]",
+      "seenAtLine": 29
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterActivity.ts",
+      "rule": "query-key-origin",
+      "value": "['characterActivity', characterId]",
+      "seenAtLine": 51
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterActivity.ts",
+      "rule": "query-key-origin",
+      "value": "['character']",
+      "seenAtLine": 55
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterCreation.ts",
+      "rule": "query-key-origin",
+      "value": "['characterCreationOptions', regionId]",
+      "seenAtLine": 31
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterCreation.ts",
+      "rule": "query-key-origin",
+      "value": "['characters']",
+      "seenAtLine": 56
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterListPage.ts",
+      "rule": "query-key-origin",
+      "value": "['characterRegions']",
+      "seenAtLine": 44
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterListPage.ts",
+      "rule": "query-key-origin",
+      "value": "['characters', 'directory', filters, page]",
+      "seenAtLine": 58
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterOwner.ts",
+      "rule": "query-key-origin",
+      "value": "['characterOwner', ownerId]",
+      "seenAtLine": 8
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterTabs.ts",
+      "rule": "query-key-origin",
+      "value": "['characterParticipations', characterId]",
+      "seenAtLine": 51
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterTabs.ts",
+      "rule": "query-key-origin",
+      "value": "['characterCoPlayers', characterId]",
+      "seenAtLine": 60
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterTabs.ts",
+      "rule": "query-key-origin",
+      "value": "['characterSummaries', characterId]",
+      "seenAtLine": 69
+    },
+    {
+      "file": "src/features/character/hooks/useOwnerActions.ts",
+      "rule": "query-key-origin",
+      "value": "['characters']",
+      "seenAtLine": 71
+    },
+    {
+      "file": "src/features/chronicle/hooks/useChroniclesPage.ts",
+      "rule": "query-key-origin",
+      "value": "[...queryKeys.chronicleList, authority]",
+      "seenAtLine": 46
+    },
+    {
+      "file": "src/features/codex/hooks/useCodexEntryAliasPage.ts",
+      "rule": "query-key-origin",
+      "value": "['codexEntryById', id]",
+      "seenAtLine": 13
+    },
+    {
+      "file": "src/features/codex/hooks/useCodexPage.ts",
+      "rule": "query-key-origin",
+      "value": "[...queryKeys.codexDirectory(categoryPrefix), search.trim()]",
+      "seenAtLine": 26
+    },
+    {
+      "file": "src/features/community/hooks/useCommunityDirectoryPage.ts",
+      "rule": "query-key-origin",
+      "value": "['communityMembers', role, search, acceptingOnly, page]",
+      "seenAtLine": 39
+    },
+    {
+      "file": "src/features/community/hooks/useCommunityEntryPage.ts",
+      "rule": "query-key-origin",
+      "value": "['communityEntry', slug]",
+      "seenAtLine": 13
+    },
+    {
+      "file": "src/features/community/hooks/useCommunityEntryPage.ts",
+      "rule": "query-key-origin",
+      "value": "['communityEntryRelated', authorId]",
+      "seenAtLine": 29
+    },
+    {
+      "file": "src/features/community/hooks/useCommunityPage.ts",
+      "rule": "query-key-origin",
+      "value": "['communityRegions']",
+      "seenAtLine": 40
+    },
+    {
+      "file": "src/features/community/hooks/useCommunityPage.ts",
+      "rule": "query-key-origin",
+      "value": "['communityCharacters', limit]",
+      "seenAtLine": 45
+    },
+    {
+      "file": "src/features/community/hooks/useCommunityPage.ts",
+      "rule": "query-key-origin",
+      "value": "['communityHallOfFame']",
+      "seenAtLine": 64
+    },
+    {
+      "file": "src/features/editor/hooks/useEditorAudience.ts",
+      "rule": "query-key-origin",
+      "value": "['editor', 'audience-members', scopeKey, search, offset]",
+      "seenAtLine": 31
+    },
+    {
+      "file": "src/features/editor/hooks/useEditorAudience.ts",
+      "rule": "query-key-origin",
+      "value": "['editor', 'audience-readers', scopeKey, ...selectedIds]",
+      "seenAtLine": 36
+    },
+    {
+      "file": "src/features/editor/hooks/useEditorHistory.ts",
+      "rule": "query-key-origin",
+      "value": "['editor', 'revisions', documentId, offset]",
+      "seenAtLine": 14
+    },
+    {
+      "file": "src/features/editor/hooks/useEditorOptions.ts",
+      "rule": "query-key-origin",
+      "value": "[...queryKeys.seriesOptions, viewerMemberId, viewerIsAdmin]",
+      "seenAtLine": 62
+    },
+    {
+      "file": "src/features/editor/hooks/useEditorOptions.ts",
+      "rule": "query-key-origin",
+      "value": "['questOptions', 'maps']",
+      "seenAtLine": 81
+    },
+    {
+      "file": "src/features/editor/hooks/useEditorOptions.ts",
+      "rule": "query-key-origin",
+      "value": "['questOptions', 'nodes', atlasCode]",
+      "seenAtLine": 86
+    },
+    {
+      "file": "src/features/editor/hooks/useEditorSummaryLinks.ts",
+      "rule": "query-key-origin",
+      "value": "['editor', 'summary-quests', scopeKey, page.search, page.questOffset]",
+      "seenAtLine": 45
+    },
+    {
+      "file": "src/features/editor/hooks/useEditorSummaryLinks.ts",
+      "rule": "query-key-origin",
+      "value": "['editor', 'summary-characters', scopeKey, page.characterOffset]",
+      "seenAtLine": 50
+    },
+    {
+      "file": "src/features/home/hooks/useHomeBanner.ts",
+      "rule": "query-key-origin",
+      "value": "['homeBanner']",
+      "seenAtLine": 6
+    },
+    {
+      "file": "src/features/map/hooks/useMapPage.ts",
+      "rule": "query-key-origin",
+      "value": "['me']",
+      "seenAtLine": 131
+    },
+    {
+      "file": "src/features/map/hooks/useMapPage.ts",
+      "rule": "query-key-origin",
+      "value": "['mapContainment']",
+      "seenAtLine": 133
+    },
+    {
+      "file": "src/features/map/hooks/useMapPage.ts",
+      "rule": "query-key-origin",
+      "value": "['mapDocuments']",
+      "seenAtLine": 134
+    },
+    {
+      "file": "src/features/map/hooks/useMapPage.ts",
+      "rule": "query-key-origin",
+      "value": "['mapDocument']",
+      "seenAtLine": 135
+    },
+    {
+      "file": "src/features/member/hooks/useMemberHub.ts",
+      "rule": "query-key-origin",
+      "value": "['memberHub', memberId]",
+      "seenAtLine": 37
+    },
+    {
+      "file": "src/features/member/hooks/useMemberHub.ts",
+      "rule": "query-key-origin",
+      "value": "['characters', 'mine', memberId]",
+      "seenAtLine": 42
+    },
+    {
+      "file": "src/features/member/hooks/useMemberHub.ts",
+      "rule": "query-key-origin",
+      "value": "['quests', 'mine-upcoming', memberId]",
+      "seenAtLine": 47
+    },
+    {
+      "file": "src/features/member/hooks/useOwnsCharacter.ts",
+      "rule": "query-key-origin",
+      "value": "['characters', 'mine', memberId ?? '']",
+      "seenAtLine": 13
+    },
+    {
+      "file": "src/features/notifications/hooks/useLoginNotifications.ts",
+      "rule": "query-key-origin",
+      "value": "[...queryKeys.notificationsPreview(20), session?.authority ?? null]",
+      "seenAtLine": 28
+    },
+    {
+      "file": "src/features/notifications/hooks/useNotificationsPage.ts",
+      "rule": "query-key-origin",
+      "value": "[...queryKeys.notificationsInbox(PAGE_SIZE), session?.authority ?? null]",
+      "seenAtLine": 46
+    },
+    {
+      "file": "src/features/notifications/hooks/useUnreadCount.ts",
+      "rule": "query-key-origin",
+      "value": "[...queryKeys.notificationsUnread, session?.authority ?? null]",
+      "seenAtLine": 9
+    },
+    {
+      "file": "src/features/onboarding/hooks/useCalendarPage.ts",
+      "rule": "query-key-origin",
+      "value": "['calendar', state?.month, state?.day]",
+      "seenAtLine": 20
+    },
+    {
+      "file": "src/features/onboarding/hooks/useCalendarPage.ts",
+      "rule": "query-key-origin",
+      "value": "['calendarQuests', state, timeZone]",
+      "seenAtLine": 29
+    },
+    {
+      "file": "src/features/onboarding/hooks/useCalendarPage.ts",
+      "rule": "query-key-origin",
+      "value": "['calendarRealDates', state?.gameDay, state?.realPage]",
+      "seenAtLine": 38
+    },
+    {
+      "file": "src/features/onboarding/hooks/useRetainedDocument.ts",
+      "rule": "query-key-origin",
+      "value": "['retainedDocument', identity]",
+      "seenAtLine": 6
+    },
+    {
+      "file": "src/features/personalize/hooks/usePersonalizePage.ts",
+      "rule": "query-key-origin",
+      "value": "[...queryKeys.personalization, memberId]",
+      "seenAtLine": 13
+    },
+    {
+      "file": "src/features/personalize/hooks/usePersonalizePage.ts",
+      "rule": "query-key-origin",
+      "value": "[...queryKeys.personalization, result.account]",
+      "seenAtLine": 35
+    },
+    {
+      "file": "src/features/profile/hooks/useDmTableDetailPage.ts",
+      "rule": "query-key-origin",
+      "value": "['dm-table', slug]",
+      "seenAtLine": 11
+    },
+    {
+      "file": "src/features/profile/hooks/useDmTableDetailPage.ts",
+      "rule": "query-key-origin",
+      "value": "['dm-table', 'schedule', memberId, page]",
+      "seenAtLine": 17
+    },
+    {
+      "file": "src/features/profile/hooks/useProfileActions.ts",
+      "rule": "query-key-origin",
+      "value": "['memberProfile', handle]",
+      "seenAtLine": 35
+    },
+    {
+      "file": "src/features/profile/hooks/useProfileActions.ts",
+      "rule": "query-key-origin",
+      "value": "['communityHub']",
+      "seenAtLine": 36
+    },
+    {
+      "file": "src/features/profile/hooks/useProfileActions.ts",
+      "rule": "query-key-origin",
+      "value": "['communityMembers']",
+      "seenAtLine": 37
+    },
+    {
+      "file": "src/features/profile/hooks/useProfileDmDetails.ts",
+      "rule": "query-key-origin",
+      "value": "['profileDmDetails', memberId]",
+      "seenAtLine": 13
+    },
+    {
+      "file": "src/features/profile/hooks/useProfileDmDetails.ts",
+      "rule": "query-key-origin",
+      "value": "['dm-table', 'schedule', memberId, schedulePage]",
+      "seenAtLine": 18
+    },
+    {
+      "file": "src/features/profile/hooks/useProfileDmTier.ts",
+      "rule": "query-key-origin",
+      "value": "['profileDmTier']",
+      "seenAtLine": 9
+    },
+    {
+      "file": "src/features/quest/hooks/useQuestBoardPage.ts",
+      "rule": "query-key-origin",
+      "value": "['quests', 'pages', serverFilters]",
+      "seenAtLine": 62
+    },
+    {
+      "file": "src/features/quest/hooks/useQuestBoardPage.ts",
+      "rule": "query-key-origin",
+      "value": "['questBoardChrome']",
+      "seenAtLine": 77
+    },
+    {
+      "file": "src/features/quest/hooks/useQuestBoardPage.ts",
+      "rule": "query-key-origin",
+      "value": "['questCharacters', me.data?.id]",
+      "seenAtLine": 81
+    },
+    {
+      "file": "src/features/quest/hooks/useQuestBoardPage.ts",
+      "rule": "query-key-origin",
+      "value": "['questAuthority', me.data?.id, me.data?.handle]",
+      "seenAtLine": 87
+    },
+    {
+      "file": "src/features/quest/hooks/useQuestDetailPage.ts",
+      "rule": "query-key-origin",
+      "value": "['questCharacters', me.data?.id]",
+      "seenAtLine": 21
+    },
+    {
+      "file": "src/features/quest/hooks/useQuestMutations.ts",
+      "rule": "query-key-origin",
+      "value": "['questOptions']",
+      "seenAtLine": 32
+    },
+    {
+      "file": "src/features/quest/hooks/useQuestMutations.ts",
+      "rule": "query-key-origin",
+      "value": "['questAuthority']",
+      "seenAtLine": 39
+    },
+    {
+      "file": "src/features/quest/hooks/useRosterCharacterSearch.ts",
+      "rule": "query-key-origin",
+      "value": "['questRosterCharacters', trimmed]",
+      "seenAtLine": 9
+    },
+    {
+      "file": "src/features/rules/hooks/useRulesPage.ts",
+      "rule": "query-key-origin",
+      "value": "[...queryKeys.rulesHub, authority]",
+      "seenAtLine": 49
+    },
+    {
+      "file": "src/hooks/useDmDashboard.ts",
+      "rule": "query-key-origin",
+      "value": "['dmDashboard', authority.cacheKey, questOffset, questScope]",
+      "seenAtLine": 21
+    },
+    {
+      "file": "src/hooks/useLiveDm.ts",
+      "rule": "query-key-origin",
+      "value": "['liveDm', me.data?.id, me.data?.handle]",
+      "seenAtLine": 28
+    },
+    {
+      "file": "src/hooks/useMarkerMemberSearch.ts",
+      "rule": "query-key-origin",
+      "value": "['editor', 'audience-members', 'marker', term]",
+      "seenAtLine": 12
+    },
+    {
+      "file": "src/hooks/useMemberProfile.ts",
+      "rule": "query-key-origin",
+      "value": "['memberProfile', normalized]",
+      "seenAtLine": 7
+    },
+    {
+      "file": "src/hooks/useProfileActivity.ts",
+      "rule": "query-key-origin",
+      "value": "['profileCharacters', memberId, characterPage]",
+      "seenAtLine": 18
+    },
+    {
+      "file": "src/hooks/useProfileActivity.ts",
+      "rule": "query-key-origin",
+      "value": "['profileActivity', memberId]",
+      "seenAtLine": 28
+    },
+    {
+      "file": "src/hooks/useProfileActivity.ts",
+      "rule": "query-key-origin",
+      "value": "['profileHistory', memberId]",
+      "seenAtLine": 33
+    },
+    {
+      "file": "src/hooks/useSeriesPage.ts",
+      "rule": "query-key-origin",
+      "value": "['series', identity]",
+      "seenAtLine": 73
+    },
+    {
+      "file": "src/hooks/useSeriesPage.ts",
+      "rule": "query-key-origin",
+      "value": "['series', identity]",
+      "seenAtLine": 101
+    },
+    {
+      "file": "src/hooks/useSeriesPage.ts",
+      "rule": "query-key-origin",
+      "value": "['series']",
+      "seenAtLine": 144
+    }
+  ]
 }

@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - 'apps/web/**'
+      - 'apps/discord/**'
       - 'packages/contracts/**'
       - 'scripts/design-gates/**'
       - 'package.json'
@@ -39,3 +40,9 @@ jobs:
       - run: bun run --filter @pi/web test:e2e
         env:
           VITE_API_MODE: mock
+      - run: bun run --filter @pi/discord typecheck
+      - run: bun run --filter @pi/discord lint
+      - run: bun run --filter @pi/discord test
+      - name: Discord integration/e2e under Bun runtime
+        working-directory: apps/discord
+        run: bun --bun vitest run --config vitest.config.ts tests/integration tests/e2e
