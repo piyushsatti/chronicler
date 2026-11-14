@@ -11,7 +11,7 @@
 
 import { Events } from 'discord.js';
 import type { Client, Guild, Message, VoiceState } from 'discord.js';
-import { config } from '../config.js';
+import type { BotConfig } from '../config.js';
 import { logger } from '../log.js';
 import {
   isPublicActivityChannel,
@@ -29,6 +29,7 @@ import { deliverActivity } from './forward.js';
  */
 export function mountActivity(
   client: Client,
+  config: BotConfig,
   voiceTracker?: VoiceSessionTracker,
 ): void {
   if (!config.snifferEnabled) {
@@ -48,7 +49,7 @@ export function mountActivity(
   const reconcileVoiceSessions = (guild: Guild) => {
     const events = tracker.reconcile(guild.voiceStates.cache.values());
     for (const event of events) {
-      deliverActivity(event);
+      deliverActivity(config, event);
     }
     return events;
   };
@@ -74,7 +75,7 @@ export function mountActivity(
     }
     const event = normalizeMessageCreate(message);
     if (event !== null) {
-      deliverActivity(event);
+      deliverActivity(config, event);
     }
   });
 
@@ -84,7 +85,7 @@ export function mountActivity(
       return;
     }
     for (const event of tracker.handleVoiceStateUpdate(oldState, newState)) {
-      deliverActivity(event);
+      deliverActivity(config, event);
     }
   });
 
@@ -133,7 +134,7 @@ export function mountActivity(
       rawClient.user?.id,
     );
     if (event !== null) {
-      deliverActivity(event);
+      deliverActivity(config, event);
     }
   });
 
