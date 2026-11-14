@@ -29,7 +29,7 @@
 import { writeFileSync } from 'node:fs';
 import os from 'node:os';
 import type { Client, CloseEvent } from 'discord.js';
-import { config } from './config.js';
+import type { BotConfig } from './config.js';
 import { BOT_ALIVE_PATH } from './healthcheck.js';
 import { logger } from './log.js';
 
@@ -60,7 +60,10 @@ const DEFAULT_HEARTBEAT_INTERVAL_MS = 60_000;
  * POSTs `/v1/ingest/heartbeat` with the shared ingest secret.
  * Errors are logged, never thrown -- a failed heartbeat POST must not exit.
  */
-export async function postHeartbeat(status?: HeartbeatStatus): Promise<void> {
+export async function postHeartbeat(
+  config: BotConfig,
+  status?: HeartbeatStatus,
+): Promise<void> {
   try {
     const response = await fetch(`${config.apiUrl}${HEARTBEAT_PATH}`, {
       method: 'POST',
@@ -121,11 +124,13 @@ export interface ShardHealthOptions {
  */
 export function mountShardHealth(
   client: Client,
+  config: BotConfig,
   options: ShardHealthOptions = {},
 ): HeartbeatDisposer {
   const now = options.now ?? Date.now;
   const poster =
-    options.heartbeatPoster ?? ((status?: HeartbeatStatus) => postHeartbeat(status));
+    options.heartbeatPoster ??
+    ((status?: HeartbeatStatus) => postHeartbeat(config, status));
   const intervalMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
   const host = options.host ?? config.host ?? os.hostname();
   const buildSha = options.build ?? config.build;

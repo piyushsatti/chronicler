@@ -2,7 +2,7 @@
  * One-shot activity handoff. A failed POST is logged and dropped.
  */
 
-import { config } from '../config.js';
+import type { BotConfig } from '../config.js';
 import { logger } from '../log.js';
 import type { SniffedEvent } from './types.js';
 
@@ -15,7 +15,10 @@ let inFlight = 0;
  * POST one normalized event to `/v1/ingest/discord-event`.
  * Resolves on any 2xx. Any other status or network failure throws one Error.
  */
-export async function postDiscordEvent(event: SniffedEvent): Promise<void> {
+export async function postDiscordEvent(
+  config: BotConfig,
+  event: SniffedEvent,
+): Promise<void> {
   let response: Response;
   try {
     response = await fetch(`${config.apiUrl}${INGEST_PATH}`, {
@@ -40,7 +43,7 @@ export async function postDiscordEvent(event: SniffedEvent): Promise<void> {
 }
 
 /** POST one event. A failure is logged and the event is dropped. Cap is 8 in flight. */
-export function deliverActivity(event: SniffedEvent): void {
+export function deliverActivity(config: BotConfig, event: SniffedEvent): void {
   if (inFlight >= MAX_IN_FLIGHT) {
     logger.error('Activity post shed', {
       eventId: event.event_id,
@@ -50,7 +53,7 @@ export function deliverActivity(event: SniffedEvent): void {
     return;
   }
   inFlight += 1;
-  void postDiscordEvent(event)
+  void postDiscordEvent(config, event)
     .catch((err: unknown) => {
       logger.error('Activity post failed', {
         eventId: event.event_id,

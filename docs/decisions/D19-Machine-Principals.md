@@ -1,6 +1,6 @@
 # D19: Machine Principals
 
-**Status:** decided 2026-07-27
+**Status:** decided 2026-07-27; amended 2026-11-14
 **Kind:** boundary
 **Owner:** global (`docs/decisions/`)
 **Interface:** [discord-ingest](/docs/interfaces/discord-ingest.md)
@@ -12,6 +12,8 @@ AUTH-3 asked what the Discord bot may do. AUTH-4 asked whether Postgres RLS sepa
 ## Decision
 
 **AUTH-3 — closed capability set:** the bot has **one route**: `POST /ingest/v2/discord-event`, shared-secret (`X-Ingest-Secret`), append-only writes to idempotency/activity tables. **No GraphQL, no database credential, no domain logic in the bot.** New bot capability = **new declared route**, never widening this one. The bot is **not** a member principal ([D11](/docs/decisions/D11-Live-Authority-At-The-Boundary.md)).
+
+**2026-11-14 amendment:** the route named above no longer exists. The bot's declared routes are now `POST /v1/ingest/discord-event`, `POST /v1/ingest/heartbeat`, `POST /v1/agent/questions` and `GET /v1/agent/questions/{id}`; each was added as a new declared route, as AUTH-3 requires. All four use the shared `X-Ingest-Secret` check, so the accepted limitation below applies to all of them. The bot writes Discord messages only on the opt-in agent reply path.
 
 **AUTH-4 — RLS unchanged, no policies:** RLS is default-deny with **zero policies**; app uses a superuser-equivalent DB role, so RLS does not separate API, bot, CLIs, or scheduler. **Application tier remains the enforcement point** ([D12](/docs/decisions/D12-Scope-Predicate-At-The-Session.md)). Do not build per-principal Postgres roles to answer AUTH-4.
 

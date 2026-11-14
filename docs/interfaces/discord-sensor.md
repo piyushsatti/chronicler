@@ -6,7 +6,7 @@
 
 ## Rule
 
-The Discord bot is a read-only sensor and activity forwarder. It never announces quests, never creates scheduled events, and never authors campaign facts. The API owns Discord announcement and scheduled-event creation. Authoritative records are authored on the website.
+The Discord bot is a sensor and activity forwarder with a declared set of API routes. It never announces quests, never creates scheduled events, and never authors campaign facts; it writes Discord messages only on the opt-in agent reply path. The API owns Discord announcement and scheduled-event creation. Authoritative records are authored on the website.
 
 Gateway activity uses **authorization at the observation boundary**. Messages, raw reactions, voice transitions, and readiness reconciliation require cached `@everyone` `ViewChannel` permission. Unknown channels or permissions and private threads are excluded, with no new setting or Discord fetch. Bot-authored activity and Discord system messages are excluded. A move from public to private closes only the public voice interval. A move from private to public starts a new interval. Channel updates and `@everyone` role updates immediately reconcile cached voice states. Tracked intervals are discarded when their channel becomes private or its permissions become unknown. Newly public channels start fresh intervals.
 
