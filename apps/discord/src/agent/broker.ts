@@ -1,4 +1,4 @@
-import { config } from '../config.js';
+import type { BotConfig } from '../config.js';
 import type { QuestionRequest, QuestionResult } from './types.js';
 
 const MAX_RESULT_BYTES = 64 * 1024;
@@ -105,6 +105,7 @@ function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
 
 /** POST a question, then poll until the API returns a completed or failed result. */
 export async function submitQuestion(
+  config: BotConfig,
   job: QuestionRequest,
   signal?: AbortSignal,
 ): Promise<QuestionResult> {

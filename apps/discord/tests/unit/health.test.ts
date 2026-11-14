@@ -8,13 +8,17 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mountShardHealth } from '@discord/health.js';
+import { logger } from '@discord/log.js';
+import { testConfig } from '../support/config.js';
 
 vi.mock('@discord/log.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
+const config = testConfig();
+
 beforeEach(() => {
-  vi.resetModules();
   vi.clearAllMocks();
 });
 
@@ -53,11 +57,10 @@ function steppingClock(start: number, step: number): () => number {
 }
 
 describe('mountShardHealth', () => {
-  it('subscribes to every shard lifecycle event, not just the attempt', async () => {
-    const { mountShardHealth } = await import('@discord/health.js');
+  it('subscribes to every shard lifecycle event, not just the attempt', () => {
     const { client, events } = fakeClient();
 
-    mountShardHealth(client);
+    mountShardHealth(client, config);
 
     expect(events().sort()).toEqual(
       [
@@ -70,12 +73,10 @@ describe('mountShardHealth', () => {
     );
   });
 
-  it('logs the first shardReady as a plain startup, not a loss', async () => {
-    const { logger } = await import('@discord/log.js');
-    const { mountShardHealth } = await import('@discord/health.js');
+  it('logs the first shardReady as a plain startup, not a loss', () => {
     const { client, emit } = fakeClient();
 
-    mountShardHealth(client);
+    mountShardHealth(client, config);
     emit('shardReady', 0, new Set(['guild-a']));
 
     expect(logger.error).not.toHaveBeenCalled();
@@ -85,12 +86,10 @@ describe('mountShardHealth', () => {
     });
   });
 
-  it('reports a resume as no loss, carrying replayedEvents and the gap', async () => {
-    const { logger } = await import('@discord/log.js');
-    const { mountShardHealth } = await import('@discord/health.js');
+  it('reports a resume as no loss, carrying replayedEvents and the gap', () => {
     const { client, emit } = fakeClient();
 
-    mountShardHealth(client, { now: steppingClock(1000, 250) });
+    mountShardHealth(client, config, { now: steppingClock(1000, 250) });
     emit('shardReconnecting', 0);
     emit('shardResume', 0, 12);
 
@@ -103,12 +102,10 @@ describe('mountShardHealth', () => {
     });
   });
 
-  it('reports a shardReady DURING a reconnect as a lost session', async () => {
-    const { logger } = await import('@discord/log.js');
-    const { mountShardHealth } = await import('@discord/health.js');
+  it('reports a shardReady DURING a reconnect as a lost session', () => {
     const { client, emit } = fakeClient();
 
-    mountShardHealth(client, { now: steppingClock(1000, 500) });
+    mountShardHealth(client, config, { now: steppingClock(1000, 500) });
     emit('shardReconnecting', 0);
     emit('shardReady', 0, undefined);
 
@@ -121,12 +118,10 @@ describe('mountShardHealth', () => {
     expect(meta).toMatchObject({ shardId: 0, gapMs: 500, eventsLost: true });
   });
 
-  it('does not carry a resolved reconnect into the next shardReady', async () => {
-    const { logger } = await import('@discord/log.js');
-    const { mountShardHealth } = await import('@discord/health.js');
+  it('does not carry a resolved reconnect into the next shardReady', () => {
     const { client, emit } = fakeClient();
 
-    mountShardHealth(client, { now: steppingClock(1000, 100) });
+    mountShardHealth(client, config, { now: steppingClock(1000, 100) });
     emit('shardReconnecting', 0);
     emit('shardResume', 0, 3);
     emit('shardReady', 0, undefined);
@@ -135,12 +130,10 @@ describe('mountShardHealth', () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
-  it('tracks shards independently', async () => {
-    const { logger } = await import('@discord/log.js');
-    const { mountShardHealth } = await import('@discord/health.js');
+  it('tracks shards independently', () => {
     const { client, emit } = fakeClient();
 
-    mountShardHealth(client, { now: steppingClock(1000, 100) });
+    mountShardHealth(client, config, { now: steppingClock(1000, 100) });
     emit('shardReconnecting', 1);
     emit('shardReady', 0, undefined); // shard 0 never reconnected
 
@@ -150,12 +143,10 @@ describe('mountShardHealth', () => {
     expect(logger.error).toHaveBeenCalledTimes(1);
   });
 
-  it('logs a terminal disconnect with its close code', async () => {
-    const { logger } = await import('@discord/log.js');
-    const { mountShardHealth } = await import('@discord/health.js');
+  it('logs a terminal disconnect with its close code', () => {
     const { client, emit } = fakeClient();
 
-    mountShardHealth(client);
+    mountShardHealth(client, config);
     emit('shardDisconnect', { code: 4014, reason: '', wasClean: false }, 0);
 
     expect(logger.error).toHaveBeenCalledWith(
@@ -167,23 +158,20 @@ describe('mountShardHealth', () => {
     );
   });
 
-  it('exits on a terminal disconnect when exitOnTerminal is set', async () => {
-    const { mountShardHealth } = await import('@discord/health.js');
+  it('exits on a terminal disconnect when exitOnTerminal is set', () => {
     const { client, emit } = fakeClient();
     const exit = vi.fn();
 
-    mountShardHealth(client, { exitOnTerminal: true, exit });
+    mountShardHealth(client, config, { exitOnTerminal: true, exit });
     emit('shardDisconnect', { code: 4004, reason: '', wasClean: false }, 0);
 
     expect(exit).toHaveBeenCalledWith(1);
   });
 
-  it('logs a shard websocket error', async () => {
-    const { logger } = await import('@discord/log.js');
-    const { mountShardHealth } = await import('@discord/health.js');
+  it('logs a shard websocket error', () => {
     const { client, emit } = fakeClient();
 
-    mountShardHealth(client);
+    mountShardHealth(client, config);
     emit('shardError', new Error('ECONNRESET'), 0);
 
     expect(logger.error).toHaveBeenCalledWith('Shard websocket error', {
