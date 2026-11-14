@@ -16,7 +16,7 @@ func TestHTTPLeasedLifecycle(t *testing.T) {
 	now := time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC)
 	store := newMemoryStore(func() time.Time { return now })
 	mux := http.NewServeMux()
-	New("test", store, false).Routes(mux)
+	New("test", "test", store, false).Routes(mux)
 	send := func(path, body string, want int) *httptest.ResponseRecorder {
 		t.Helper()
 		r := httptest.NewRequest("POST", path, strings.NewReader(body))
@@ -121,7 +121,7 @@ func TestHTTPCompletionAcceptsPostgresLargeIntegerMetadata(t *testing.T) {
 		t.Run(field, func(t *testing.T) {
 			store := newMemoryStore(time.Now)
 			mux := http.NewServeMux()
-			New("test", store, false).Routes(mux)
+			New("test", "test", store, false).Routes(mux)
 			id := "11111111-1111-4111-8111-111111111111"
 			if e := store.Create(context.Background(), QuestionRequested{Version: 1, Type: "question.requested", JobID: id, Question: "large integer"}); e != nil {
 				t.Fatal(e)

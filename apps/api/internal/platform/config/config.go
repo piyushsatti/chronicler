@@ -47,6 +47,7 @@ type Config struct {
 	DiscordSecret          string
 	DiscordRedirect        string
 	IngestSecret           string
+	AgentWorkerSecret      string
 	CORSOrigins            []string
 	ShutdownTimeout        time.Duration
 	Env                    Env
@@ -77,6 +78,7 @@ func FromEnv() (Config, error) {
 		DiscordSecret:          os.Getenv("DISCORD_CLIENT_SECRET"),
 		DiscordRedirect:        env("DISCORD_REDIRECT_URI", "http://localhost:8080/auth/discord/callback"),
 		IngestSecret:           os.Getenv("INGEST_SECRET"),
+		AgentWorkerSecret:      os.Getenv("AGENT_WORKER_SECRET"),
 		CORSOrigins:            splitCSV(env("CORS_ORIGINS", "http://localhost:5173")),
 		ShutdownTimeout:        timeout,
 		Env:                    Env(envName),
@@ -121,6 +123,9 @@ func (c Config) productionMissing() []string {
 	}
 	if utf8.RuneCountInString(c.IngestSecret) < 32 {
 		bad = append(bad, "INGEST_SECRET")
+	}
+	if utf8.RuneCountInString(c.AgentWorkerSecret) < 32 {
+		bad = append(bad, "AGENT_WORKER_SECRET")
 	}
 	if c.Discord.BotToken == "" {
 		bad = append(bad, "DISCORD_BOT_TOKEN")

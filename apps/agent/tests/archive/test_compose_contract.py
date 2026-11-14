@@ -38,7 +38,7 @@ async def test_compose_archive_contract_supplies_required_settings_and_assets(
         "EMBEDDING_MAX_INPUT_TOKENS": "512",
         "EMBEDDING_QUERY_PREFIX": "",
         "API_URL": "http://host.docker.internal:8080",
-        "INGEST_SECRET": "synthetic-ingest",
+        "AGENT_WORKER_SECRET": "synthetic-agent-worker",
         "AGENT_MODEL": "synthetic-agent-alias",
         "AGENT_TOKENIZER_PATH": "/staged/agent-tokenizer",
         "AGENT_TOKENIZER_SHA256": "b" * 64,
