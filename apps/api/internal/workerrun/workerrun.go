@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/delivery"
@@ -56,18 +55,18 @@ func configureWorker(ctx context.Context, cfg config.Config, pool *db.Pool) (*wo
 		syncClient = delivery.RESTSync{
 			// Token and guild are deploy secrets. The announce channel comes from
 			// the admin panel; the env var is only the fallback while it is empty.
-			Token: os.Getenv("DISCORD_BOT_TOKEN"), GuildID: os.Getenv("GUILD_ID"),
-			FallbackChannelID: os.Getenv("DISCORD_ANNOUNCE_CHANNEL_ID"),
+			Token: cfg.Discord.BotToken, GuildID: cfg.Discord.GuildID,
+			FallbackChannelID: cfg.Discord.AnnounceChannelFallback,
 			FallbackOrigin:    firstOrigin(cfg.CORSOrigins),
 			Settings:          applier, Quests: applier, Players: applier,
 			HTTP: &http.Client{Timeout: 30 * time.Second}, Apply: applier,
-			DryRun: envTruthy("DISCORD_DELIVERY_DRY_RUN"),
+			DryRun: cfg.Discord.DeliveryDryRun,
 		}
 		enqueuer := jobs.NewEnqueuer(runtime.store)
 		runtime.delivery = delivery.NewHandler(runtime.store, syncClient).WithReconciler(
 			delivery.NewPostgresReconciler(pool.Pool, enqueuer),
 		)
-		slog.Info("worker using postgres job store", "dry_run", envTruthy("DISCORD_DELIVERY_DRY_RUN"))
+		slog.Info("worker using postgres job store", "dry_run", cfg.Discord.DeliveryDryRun)
 	} else {
 		if cfg.RequireDatabase {
 			return nil, fmt.Errorf("worker requires postgres: %w", err)
@@ -177,9 +176,4 @@ func firstOrigin(origins []string) string {
 		}
 	}
 	return ""
-}
-
-func envTruthy(key string) bool {
-	v := os.Getenv(key)
-	return v == "1" || v == "true" || v == "TRUE" || v == "yes"
 }

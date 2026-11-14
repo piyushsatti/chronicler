@@ -48,7 +48,7 @@ func Wire(ctx context.Context, cfg config.Config) API {
 			return member.Member{ID: id, Handle: "me", DisplayName: "Me", Status: member.StatusActive}, nil
 		},
 		Ingest:   &ingest.MemoryStore{},
-		Agent:    agent.New(cfg.IngestSecret, nil),
+		Agent:    agent.New(cfg.IngestSecret, nil, cfg.Agent.InlineComplete),
 		JobStore: &delivery.MemoryStore{},
 	}
 	mem.Resolver = &graph.Resolver{Services: emptyServices(mem.QuestCmd)}
@@ -126,7 +126,7 @@ func wirePostgres(ctx context.Context, cfg config.Config, pool *db.Pool, base AP
 	base.Documents = docQ
 	base.Notifications = notification.Queries{Repo: notification.NewPostgresRepository(q)}
 	base.Ingest = ingest.NewPostgresStore(pgxPool)
-	base.Agent = agent.New(cfg.IngestSecret, agent.NewPostgresStore(pgxPool))
+	base.Agent = agent.New(cfg.IngestSecret, agent.NewPostgresStore(pgxPool), cfg.Agent.InlineComplete)
 	base.JobStore = jobStore
 	base.Members = memStore
 	base.SiteStats = sitePG.Stats

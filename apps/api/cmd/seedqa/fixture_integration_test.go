@@ -93,7 +93,7 @@ func TestQAFreshPostgresDoubleLoad(t *testing.T) {
 	}
 	job, question := qaQuestion(t)
 	mux := http.NewServeMux()
-	agent.New("qa-test-secret", agent.NewPostgresStore(pool)).Routes(mux)
+	agent.New("qa-test-secret", agent.NewPostgresStore(pool), false).Routes(mux)
 	base := "/v1/agent/questions"
 	id := job.Row["public_id"].(string)
 	assertQAResult(t, qaRequest(mux, "GET", base+"/"+id, nil), question.Row["result"])

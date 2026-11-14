@@ -13,11 +13,10 @@ import (
 )
 
 func TestHTTPLeasedLifecycle(t *testing.T) {
-	t.Setenv("AGENT_INLINE_COMPLETE", "0")
 	now := time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC)
 	store := newMemoryStore(func() time.Time { return now })
 	mux := http.NewServeMux()
-	New("test", store).Routes(mux)
+	New("test", store, false).Routes(mux)
 	send := func(path, body string, want int) *httptest.ResponseRecorder {
 		t.Helper()
 		r := httptest.NewRequest("POST", path, strings.NewReader(body))
@@ -120,10 +119,9 @@ func TestMaximumEscapedClaimResponseFitsConsumerBound(t *testing.T) {
 func TestHTTPCompletionAcceptsPostgresLargeIntegerMetadata(t *testing.T) {
 	for _, field := range []string{"diagnostics", "sources"} {
 		t.Run(field, func(t *testing.T) {
-			t.Setenv("AGENT_INLINE_COMPLETE", "0")
 			store := newMemoryStore(time.Now)
 			mux := http.NewServeMux()
-			New("test", store).Routes(mux)
+			New("test", store, false).Routes(mux)
 			id := "11111111-1111-4111-8111-111111111111"
 			if e := store.Create(context.Background(), QuestionRequested{Version: 1, Type: "question.requested", JobID: id, Question: "large integer"}); e != nil {
 				t.Fatal(e)

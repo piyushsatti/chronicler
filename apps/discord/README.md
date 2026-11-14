@@ -29,6 +29,8 @@ bun run --filter @pi/discord build
 bun run --filter @pi/discord dev
 ```
 
+Unit tests (`tests/unit/`) run only under Node: their `vi.mock` module mocks do not apply under the Bun runtime (`bun --bun vitest`). Integration and e2e suites run under both.
+
 ### Live ingest (opt-in)
 
 Default tests skip live network. With `chronicler-dev` API up (`scripts/dev-stack` or compose postgres+api on `127.0.0.1:8080`):
