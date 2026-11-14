@@ -263,6 +263,8 @@ jobs:
             echo "DISCORD_IMAGE=chronicler-discord:$TAG"
           } >> "$GITHUB_ENV"
       - name: Build images
+        env:
+          BOT_BUILD_ID: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           # One at a time: Compose builds in parallel, and the production VM has 2 GiB.
