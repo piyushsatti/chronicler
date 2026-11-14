@@ -280,7 +280,6 @@ describe('generic quest list', () => {
       queryKeys.questList({ displayStatus: 'live', status: 'open' }, 50, 0),
     ).toEqual(queryKeys.questList({ status: 'open', displayStatus: 'live' }, 50, 0));
     const keys = [
-      queryKeys.questBoard,
       queryKeys.questList({}, 50, 0),
       queryKeys.questList({ status: 'open' }, 50, 0),
       queryKeys.questList({ displayStatus: 'scheduled' }, 50, 0),

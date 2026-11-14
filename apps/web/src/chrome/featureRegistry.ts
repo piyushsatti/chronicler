@@ -23,7 +23,7 @@ import {
   mergeQueryKeySlices,
 } from './featureModule.js';
 
-const SLICES: readonly FeatureSlice[] = [
+const SLICES = [
   home,
   editor,
   quest,
@@ -42,7 +42,7 @@ const SLICES: readonly FeatureSlice[] = [
   admin,
   gallery,
   document,
-];
+] as const satisfies readonly FeatureSlice[];
 
 function orderRoutesByManifest(routes: readonly FeatureRoute[]): FeatureRoute[] {
   const byPath = new Map<string, FeatureRoute>();

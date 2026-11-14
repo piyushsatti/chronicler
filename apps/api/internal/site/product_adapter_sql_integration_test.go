@@ -176,7 +176,7 @@ func TestSiteDeliveryReadsUseTypedPayloadCurrentAudienceAndCausalAudit(t *testin
 	insertJob := func(index int, payload []byte) string {
 		t.Helper()
 		var id string
-		if err := fixture.Pool.QueryRow(ctx, `INSERT INTO background_jobs(job_key,kind,lane,state,attempts,payload,updated_at) VALUES($1,'quest_discord_delivery','discord','dead',$2,$3,$4) RETURNING public_id::text`, fmt.Sprintf("delivery-read-%d", index), jobs.MaxAttempts, payload, base.Add(-time.Duration(index)*time.Minute)).Scan(&id); err != nil {
+		if err := fixture.Pool.QueryRow(ctx, `INSERT INTO background_jobs(job_key,kind,lane,state,attempts,payload,updated_at) VALUES($1,'quest_discord_delivery','discord','dead',$2,$3,$4) RETURNING public_id::text`, fmt.Sprintf("delivery-read-%d", index), jobs.DiscordMaxAttempts, payload, base.Add(-time.Duration(index)*time.Minute)).Scan(&id); err != nil {
 			t.Fatal(err)
 		}
 		return id
@@ -272,7 +272,7 @@ func TestSiteDeliveryReadsUseTypedPayloadCurrentAudienceAndCausalAudit(t *testin
 			t.Fatalf("offset=%d deliveries=%+v", offset, view.Deliveries)
 		}
 		got := view.Deliveries[0]
-		if got.Id != expected.jobID || got.State != "dead" || got.FailureStreak != jobs.MaxAttempts || got.QuestId == nil || *got.QuestId != expected.questID || got.QuestShortCode == nil || *got.QuestShortCode != expected.code || got.QuestLink == nil || *got.QuestLink != "/quests/"+expected.code {
+		if got.Id != expected.jobID || got.State != "dead" || got.FailureStreak != jobs.DiscordMaxAttempts || got.MaxAttempts != jobs.DiscordMaxAttempts || got.QuestId == nil || *got.QuestId != expected.questID || got.QuestShortCode == nil || *got.QuestShortCode != expected.code || got.QuestLink == nil || *got.QuestLink != "/quests/"+expected.code {
 			t.Fatalf("typed payload or internal destination failed: %+v", got)
 		}
 		if visible && (got.QuestTitle == nil || *got.QuestTitle != expected.title) || !visible && got.QuestTitle != nil {

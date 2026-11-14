@@ -11,7 +11,6 @@ const (
 	settingDiscordDeliveryMode     = "discord_delivery_mode"
 	settingPublicOrigin            = "public_origin"
 	defaultDiscordDeliveryMode     = "disabled"
-	deliveryJobMaxAttempts   int32 = 8
 )
 
 func defaultHomeBannerPayload() []byte {

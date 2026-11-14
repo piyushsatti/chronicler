@@ -78,7 +78,14 @@ func TestRemoteIDsPersistAfterWorkContextCancellation(t *testing.T) {
 					if ctx.Err() != nil {
 						afterCancel++
 					}
-					body := io.ReadCloser(io.NopCloser(strings.NewReader(`{"id":"created-id"}`)))
+					payload := `{"id":"created-id"}`
+					switch {
+					case r.Method == http.MethodGet && r.URL.Path == "/users/@me":
+						payload = `{"id":"bot-user-1"}`
+					case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/scheduled-events"):
+						payload = `[]`
+					}
+					body := io.ReadCloser(io.NopCloser(strings.NewReader(payload)))
 					if r.Method == http.MethodPost {
 						created++
 						body = cancelOnClose{ReadCloser: body, cancel: cancel}
@@ -113,7 +120,14 @@ func TestCreateMessageSendsStableEnforcedNonceAcrossRetry(t *testing.T) {
 					return nil, errors.New("response lost")
 				}
 			}
-			return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(`{"id":"created-id"}`))}, nil
+			payload := `{"id":"created-id"}`
+			switch {
+			case r.Method == http.MethodGet && r.URL.Path == "/users/@me":
+				payload = `{"id":"bot-user-1"}`
+			case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/scheduled-events"):
+				payload = `[]`
+			}
+			return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(payload))}, nil
 		})},
 	}
 	if err := sync.SyncQuest(context.Background(), testQuestID, 1); err == nil {
