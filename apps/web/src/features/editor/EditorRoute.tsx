@@ -6,13 +6,15 @@ import { PageShell } from '../../components/foundation/PageShell.js';
 import { StatePanel } from '../../components/foundation/StatePanel.js';
 import { EditorWorkspace } from './EditorWorkspace.js';
 import {
-  useEditorPage,
+  useEditorPageGate,
   type CreateAccess,
   type EditorPageData,
+  type EditorPageGate,
 } from './hooks/useEditorPage.js';
+import { useEditorWorkspace } from './hooks/useEditorWorkspace.js';
 import { useCurrentAccess } from '../../auth/useCurrentAccess.js';
 import type { EditorRouteProps, EditorTypeKey } from './types.js';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { PageHeader } from '../../components/primitives/PageHeader.js';
 import { EDITOR_BACK_LABELS } from './editorConstants.js';
 import { editorCancelPath } from './hooks/useEditorWorkspace.js';
@@ -115,11 +117,47 @@ export function EditorPageView({
   return <EditorWorkspace view={page.view} />;
 }
 
+function EditorWorkspaceSession({
+  gate,
+  typeKey,
+}: {
+  gate: Extract<EditorPageGate, { status: 'ready' }>;
+  typeKey: EditorTypeKey;
+}): React.JSX.Element {
+  const view = useEditorWorkspace(gate.workspace);
+  return (
+    <EditorPageView
+      page={{
+        status: 'ready',
+        view: gate.denied
+          ? { ...view, denied: true, deniedAction: 'create' }
+          : view,
+      }}
+      typeKey={typeKey}
+    />
+  );
+}
+
+function EditorPageBody({
+  reviewAccess,
+  ...props
+}: EditorRouteProps & { reviewAccess?: CreateAccess }): React.JSX.Element {
+  const gate = useEditorPageGate(props, reviewAccess);
+  if (gate.status !== 'ready')
+    return <EditorPageView page={gate} typeKey={props.typeKey} />;
+  return (
+    <EditorWorkspaceSession
+      key={gate.draftKey}
+      gate={gate}
+      typeKey={props.typeKey}
+    />
+  );
+}
+
 function EditorPage({
   reviewAccess,
   ...props
 }: EditorRouteProps & { reviewAccess?: CreateAccess }): React.JSX.Element {
-  const page = useEditorPage(props, reviewAccess);
   const declaration: PageDeclaration = {
     page: `editor-${props.typeKey}-${props.mode}`,
     regions: [{ role: 'body', priority: 1 }],
@@ -129,7 +167,7 @@ function EditorPage({
       <PageHost
         declaration={declaration}
         regions={{
-          body: () => <EditorPageView page={page} typeKey={props.typeKey} />,
+          body: () => <EditorPageBody {...props} reviewAccess={reviewAccess} />,
         }}
       />
     </PageShell>
@@ -151,14 +189,17 @@ function ReviewGatedEditorPage(props: EditorRouteProps): React.JSX.Element {
 /** Protected editor entry used by feature routes. */
 export function EditorRoute(props: EditorRouteProps): React.JSX.Element {
   const { token } = useAuth();
+  const params = useParams();
+  const recordKey = params.code ?? params.id ?? params.slug ?? props.mode;
+  const pageKey = `${token}:${recordKey}`;
   const reviewGated =
     props.mode === 'new' && (props.typeKey === 'guide' || props.typeKey === 'ruling');
   return (
     <ProtectedRoute>
       {reviewGated ? (
-        <ReviewGatedEditorPage key={token} {...props} />
+        <ReviewGatedEditorPage key={pageKey} {...props} />
       ) : (
-        <EditorPage key={token} {...props} />
+        <EditorPage key={pageKey} {...props} />
       )}
     </ProtectedRoute>
   );

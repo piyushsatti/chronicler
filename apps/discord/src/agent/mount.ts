@@ -1,6 +1,7 @@
 import { ChannelType, type Client, type Message } from 'discord.js';
 import type { BotConfig } from '../config.js';
 import type { GatewayState } from '../health.js';
+import type { Stoppable } from '../lifecycle.js';
 import { logger } from '../log.js';
 import { createAgentApi } from './api.js';
 import { createHttp } from '../api/http.js';
@@ -25,9 +26,7 @@ interface PendingQuestion {
   typingTimer: ReturnType<typeof setInterval> | undefined;
 }
 
-export interface MountedAgent {
-  close(): Promise<void>;
-}
+export type MountedAgent = Stoppable & { close(): Promise<void> };
 
 function locallyAllowed(config: BotConfig, message: Message): boolean {
   if (message.guildId === null) {
@@ -52,7 +51,8 @@ export async function mountAgent(
 ): Promise<MountedAgent> {
   if (!config.agentEnabled) {
     logger.info('Agent disabled (AGENT_ENABLED is not "true")');
-    return { close: async () => undefined };
+    const stop = async (): Promise<void> => undefined;
+    return { name: 'agent', stop, close: stop };
   }
 
   const api = createAgentApi(
@@ -215,18 +215,18 @@ export async function mountAgent(
       void replyTo(message, OUTCOME_TEXT.rejected, 'handler_error');
     });
   });
-  gateway?.subscribe((event) => {
+  const unsubscribe = gateway?.subscribe((event) => {
     if (event.type === 'disconnected') {
       for (const jobId of pending.keys()) stopTyping(jobId);
     }
   });
   logger.info('Agent mentions mounted against the API');
 
-  return {
-    async close(): Promise<void> {
-      stopping = true;
-      abortController.abort();
-      failPending();
-    },
+  const stop = async (): Promise<void> => {
+    unsubscribe?.();
+    stopping = true;
+    abortController.abort();
+    failPending();
   };
+  return { name: 'agent', stop, close: stop };
 }

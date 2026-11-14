@@ -88,21 +88,7 @@ export function errorNeedsReload(error: AppError | null): boolean {
 
 export type EditorConfirm = 'discard' | 'reload';
 
-export function useEditorWorkspace({
-  typeKey,
-  mode,
-  initial,
-  paramHint,
-  category,
-  enabled,
-  timeZone,
-  actorId = 'demo',
-  viewerMemberId = null,
-  viewerIsAdmin = false,
-  schemaAccess = NO_SCHEMA_ACCESS,
-  sessionIsCurrent = () => true,
-  onReload = async () => {},
-}: {
+export type EditorWorkspaceProps = {
   typeKey: EditorTypeKey;
   mode: EditorMode;
   initial: EditorLoadResult;
@@ -118,7 +104,23 @@ export function useEditorWorkspace({
   schemaAccess?: SchemaAccess;
   sessionIsCurrent?: () => boolean;
   onReload?: () => Promise<void>;
-}) {
+};
+
+export function useEditorWorkspace({
+  typeKey,
+  mode,
+  initial,
+  paramHint,
+  category,
+  enabled,
+  timeZone,
+  actorId = 'demo',
+  viewerMemberId = null,
+  viewerIsAdmin = false,
+  schemaAccess = NO_SCHEMA_ACCESS,
+  sessionIsCurrent = () => true,
+  onReload = async () => {},
+}: EditorWorkspaceProps) {
   const navigate = useNavigate();
   const entityQuery = useEntityLinkIndex(enabled);
   const draft = useEditorDraft(

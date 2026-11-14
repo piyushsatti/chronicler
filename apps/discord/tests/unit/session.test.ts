@@ -2,10 +2,20 @@ import { expect, it, vi } from 'vitest';
 import { testConfig } from '../support/config.js';
 
 const close = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-const disposeHealth = vi.hoisted(() => vi.fn());
+const disposeHealth = vi.hoisted(() => ({
+  name: 'health',
+  stop: vi.fn().mockResolvedValue(undefined),
+  subscribe: vi.fn(() => () => undefined),
+}));
+const activity = vi.hoisted(() => ({
+  name: 'activity',
+  stop: vi.fn().mockResolvedValue(undefined),
+  drain: vi.fn().mockResolvedValue(undefined),
+}));
 const { client, mountShardHealth } = vi.hoisted(() => ({
   client: {
     once: vi.fn(),
+    on: vi.fn(),
     login: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
   },
@@ -13,12 +23,14 @@ const { client, mountShardHealth } = vi.hoisted(() => ({
 }));
 
 vi.mock('@discord/client.js', () => ({ createClient: () => client }));
-vi.mock('@discord/activity/mount.js', () => ({ mountActivity: vi.fn() }));
+vi.mock('@discord/activity/mount.js', () => ({
+  mountActivity: vi.fn(() => activity),
+}));
 vi.mock('@discord/agent/mount.js', () => ({
-  mountAgent: vi.fn().mockResolvedValue({ close }),
+  mountAgent: vi.fn().mockResolvedValue({ name: 'agent', stop: close, close }),
 }));
 vi.mock('@discord/health.js', () => ({ mountShardHealth }));
-vi.mock('@discord/log.js', () => ({ logger: { info: vi.fn() } }));
+vi.mock('@discord/log.js', () => ({ logger: { info: vi.fn(), error: vi.fn() } }));
 
 import { mountActivity } from '@discord/activity/mount.js';
 import { mountAgent } from '@discord/agent/mount.js';
@@ -30,13 +42,15 @@ it('logs in with heartbeat enabled and returns stop', async () => {
   expect(mountShardHealth).toHaveBeenCalledWith(client, config, {
     heartbeatEnabled: true,
     exitOnTerminal: true,
-    exit: undefined,
+    exit: expect.any(Function),
   });
   expect(mountActivity).toHaveBeenCalledWith(client, config, { gateway: disposeHealth });
   expect(mountAgent).toHaveBeenCalledWith(client, config, disposeHealth);
   expect(client.login).toHaveBeenCalledWith('test-token');
   await session.stop();
-  expect(disposeHealth).toHaveBeenCalledOnce();
+  expect(disposeHealth.stop).toHaveBeenCalledOnce();
   expect(close).toHaveBeenCalled();
   expect(client.destroy).toHaveBeenCalled();
+  expect(activity.stop).toHaveBeenCalledOnce();
+  expect(activity.drain).toHaveBeenCalled();
 });

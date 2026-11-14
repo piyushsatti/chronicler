@@ -64,6 +64,6 @@ describe('alive file from timer', () => {
 
     expect(writeFileSync).toHaveBeenCalledWith(alivePath, '');
     expect(writeFileSync).toHaveBeenCalledTimes(1);
-    dispose();
+    void dispose.stop();
   });
 });
