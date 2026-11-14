@@ -15,6 +15,7 @@ linters:
     - funlen
     - ineffassign
     - unused
+    - forbidigo
   settings:
     gocyclo:
       min-complexity: 15
@@ -27,6 +28,9 @@ linters:
       rules:
         - name: exported
           disabled: true
+    forbidigo:
+      forbid:
+        - pattern: os\.Getenv|os\.LookupEnv
   exclusions:
     generated: lax
     presets:
@@ -40,6 +44,16 @@ linters:
           - funlen
           - gocyclo
           - gocognit
+          - forbidigo
+      - path: internal/platform/config/
+        linters:
+          - forbidigo
+      - path: internal/platform/dbtest/
+        linters:
+          - forbidigo
+      - path: cmd/seedqa/
+        linters:
+          - forbidigo
     paths:
       - third_party$
       - builtin$

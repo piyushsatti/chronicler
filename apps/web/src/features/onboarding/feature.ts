@@ -11,7 +11,12 @@ import retained from '../../../tests/fixtures/wire/onboarding/retained-good.json
 
 export const endpoints = {} as const;
 
-export const queryKeys = {} as const;
+export const queryKeys = {
+  seriesAuthority: (actorIdentity?: string | null) =>
+    actorIdentity === undefined
+      ? (['seriesAuthority'] as const)
+      : (['seriesAuthority', actorIdentity] as const),
+};
 
 export const graphql: FeatureGraphql = {
   RetainedCalendar: ({ variables }) =>
