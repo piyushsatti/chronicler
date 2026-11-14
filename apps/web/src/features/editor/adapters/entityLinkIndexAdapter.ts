@@ -90,15 +90,20 @@ export function parseEntityLinkIndex(wire: {
 /** Aggregate quest codes + codex titles for LiveEditor wikilink autocomplete. */
 export async function loadEntityLinkIndex(): Promise<EntityLinkIndex> {
   try {
-    const [questData, firstCodexData] = await Promise.all([
-      graphqlRequest<EntityLinkQuestBoardQuery>(BOARD_QUERY, {
-        limit: 200,
-      }),
-      graphqlRequest<EntityLinkCodexDirectoryQuery>(CODEX_QUERY, {
-        limit: 50,
-        offset: 0,
-      }),
-    ]);
+    const quests: EntityLinkQuestBoardQuery['questBoard']['items'] = [];
+    for (;;) {
+      const questData = await graphqlRequest<EntityLinkQuestBoardQuery>(BOARD_QUERY, {
+        limit: 100,
+        offset: quests.length,
+      });
+      const page = questData.questBoard?.items ?? [];
+      quests.push(...page);
+      if (page.length < 100) break;
+    }
+    const firstCodexData = await graphqlRequest<EntityLinkCodexDirectoryQuery>(CODEX_QUERY, {
+      limit: 50,
+      offset: 0,
+    });
     let page = codexPageSchema.safeParse(firstCodexData.codexDirectory);
     if (!page.success)
       throw toAppError({ failure: 'InvalidWire' }, 'editor:entity-index');
@@ -119,7 +124,7 @@ export async function loadEntityLinkIndex(): Promise<EntityLinkIndex> {
     if (codex.length !== total || new Set(codex.map((entry) => entry.id)).size !== total)
       throw toAppError({ failure: 'InvalidWire' }, 'editor:entity-index');
     const result = parseEntityLinkIndex({
-      quests: questData.questBoard?.items ?? [],
+      quests,
       codex,
     });
     if (!result.ok) {

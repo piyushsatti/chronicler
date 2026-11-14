@@ -9,6 +9,41 @@ import { parseQuestGenreOptions } from '../../../src/features/editor/adapters/qu
 import { server } from '../../../src/mocks/server.js';
 
 describe('entityLinkIndexAdapter', () => {
+  it('pages the quest board by 100 until a short page', async () => {
+    const quests = Array.from({ length: 101 }, (_, index) => ({
+      id: `quest-${index}`,
+      shortCode: `q-${index}`,
+      briefDocument: { title: `Quest ${index}` },
+    }));
+    const requested: unknown[] = [];
+    server.use(
+      graphql.query('EntityLinkQuestBoard', ({ variables }) => {
+        requested.push(variables);
+        const offset = Number(variables.offset ?? 0);
+        const limit = Number(variables.limit ?? 100);
+        return HttpResponse.json({
+          data: { questBoard: { items: quests.slice(offset, offset + limit) } },
+        });
+      }),
+      graphql.query('EntityLinkCodexDirectory', () =>
+        HttpResponse.json({
+          data: { codexDirectory: { total: 0, items: [] } },
+        }),
+      ),
+    );
+    const index = await loadEntityLinkIndex();
+    expect(index).toContainEqual({
+      id: 'quest-100',
+      label: 'q-100',
+      kind: 'Quest',
+      href: '/quests/q-100',
+    });
+    expect(requested).toEqual([
+      { limit: 100, offset: 0 },
+      { limit: 100, offset: 100 },
+    ]);
+  });
+
   it('loads codex autocomplete beyond the first page', async () => {
     const entries = Array.from({ length: 51 }, (_, index) => ({
       id: `entry-${index}`,

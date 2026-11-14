@@ -16,8 +16,10 @@ export const graphql: FeatureGraphql = {
         quests: goodLanes.quests,
         recentlyClosedQuests: goodLanes.recentlyClosedQuests,
         communityDirectory: goodLanes.communityDirectory,
+        regions: [],
       },
     }),
+  HomeRegions: () => HttpResponse.json({ data: { regions: [] } }),
   SiteStats: () => HttpResponse.json({ data: { siteStats: goodStats } }),
   HomeRecentChronicles: () =>
     HttpResponse.json({ data: { documents: goodRecentChronicles } }),

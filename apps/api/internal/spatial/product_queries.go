@@ -55,7 +55,7 @@ func (s ProductQueries) admit(ctx context.Context, actor auth.Authority, operati
 }
 
 func spatialQueryPage(limit, offset int32) error {
-	if limit <= 0 || offset < 0 {
+	if !product.ValidPage(limit, offset) {
 		return apierr.New(apierr.Invalid, "invalid page")
 	}
 	return nil
