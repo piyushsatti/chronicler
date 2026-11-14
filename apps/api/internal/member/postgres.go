@@ -129,14 +129,6 @@ func (s *PostgresStore) List(ctx context.Context, f ListFilter) ([]Member, int64
 	return out, total, nil
 }
 
-func (s *PostgresStore) RoleHistory(ctx context.Context, memberID string, limit int) ([]RoleChange, error) {
-	if _, err := db.ParseUUID(memberID); err != nil {
-		return nil, ErrNotFound
-	}
-	_ = limit
-	return nil, nil
-}
-
 func (s *PostgresStore) Availability(ctx context.Context, memberID string) ([]AvailabilityWindow, error) {
 	uid, err := db.ParseUUID(memberID)
 	if err != nil {

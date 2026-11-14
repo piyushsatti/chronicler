@@ -128,11 +128,6 @@ type NotificationCandidate struct {
 	EventOccurredAt time.Time
 }
 
-type RequestParties struct {
-	RequesterID string
-	TargetDMID  string
-}
-
 type Event struct {
 	Key         string    `json:"key"`
 	Kind        EventKind `json:"kind"`

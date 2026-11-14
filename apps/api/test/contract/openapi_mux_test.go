@@ -29,19 +29,14 @@ var httpMethods = []string{"get", "post", "put", "patch", "delete"}
 // Shrink this list as REST handlers are deleted.
 var muxOnlyAllowlist = map[string]struct{}{
 	"POST /v1/graphql":                                 {}, // described in openapi info; not a REST path entry
-	"GET /v1/documents/{id}/revisions":                 {},
-	"GET /v1/documents/trash":                          {},
-	"GET /v1/hexes/{id}/history":                       {},
-	"GET /v1/maps/{atlasCode}/activity":                {},
-	"GET /v1/me/notifications/unread-count":            {},
-	"GET /v1/members/me":                               {},
-	"GET /v1/regions/{id}/counts":                      {},
-	"GET /v1/search/kinds":                             {},
-	"GET /v1/stats":                                    {},
-	"GET /v1/time/game-date":                           {},
-	"GET /v1/time/real-dates":                          {},
-	"POST /v1/me/notifications/acknowledge-suppressed": {},
-	"POST /v1/me/personalization/reconcile":            {},
+	"GET /v1/documents/{id}/revisions":      {},
+	"GET /v1/documents/trash":               {},
+	"GET /v1/me/notifications/unread-count": {},
+	"GET /v1/members/me":                    {},
+	"GET /v1/search/kinds":                  {},
+	"GET /v1/stats":                         {},
+	"GET /v1/time/game-date":                {},
+	"GET /v1/time/real-dates":               {},
 }
 
 func TestOpenAPIMatchesMux(t *testing.T) {
