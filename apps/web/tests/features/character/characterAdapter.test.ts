@@ -51,4 +51,23 @@ describe('loadCharacter region lookup', () => {
     const view = await loadCharacter({ id: good.id });
     expect(view.regionName).toBeNull();
   });
+
+  it('pages regions by 100 until a short page', async () => {
+    const full = Array.from({ length: 100 }, (_, index) => ({
+      id: `11111111-1111-4111-8111-${String(index).padStart(12, '0')}`,
+      name: `Region ${index}`,
+    }));
+    vi.mocked(graphqlRequest)
+      .mockResolvedValueOnce({ character: { ...good, regionId } })
+      .mockResolvedValueOnce({ regions: full })
+      .mockResolvedValueOnce({
+        regions: [{ id: regionId, name: 'Found Coast' }],
+      });
+    const view = await loadCharacter({ id: good.id });
+    expect(view.regionName).toBe('Found Coast');
+    expect(vi.mocked(graphqlRequest).mock.calls.slice(1).map((call) => call[1])).toEqual([
+      { limit: 100, offset: 0 },
+      { limit: 100, offset: 100 },
+    ]);
+  });
 });

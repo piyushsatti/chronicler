@@ -119,7 +119,7 @@ func validateSearchSpec(spec SearchSpec) error {
 	if len(spec.Kinds) > 100 {
 		return apierr.New(apierr.Invalid, "search kinds cannot exceed 100 items")
 	}
-	if spec.Limit <= 0 || spec.Offset < 0 {
+	if !product.ValidPage(spec.Limit, spec.Offset) {
 		return apierr.New(apierr.Invalid, "invalid search page")
 	}
 	for _, kind := range spec.Kinds {
@@ -185,7 +185,7 @@ func (s ProductQueries) AdminCommunityStats(ctx context.Context, actor auth.Auth
 }
 
 func (s ProductQueries) AdminOperations(ctx context.Context, actor auth.Authority, spec AdminOperationsSpec) (AdminOperationsView, error) {
-	if spec.Limit <= 0 || spec.Offset < 0 {
+	if !product.ValidPage(spec.Limit, spec.Offset) {
 		return AdminOperationsView{}, apierr.New(apierr.Invalid, "invalid admin operations page")
 	}
 	if err := s.admit(ctx, actor, auth.Operation("Query.adminOperations")); err != nil {

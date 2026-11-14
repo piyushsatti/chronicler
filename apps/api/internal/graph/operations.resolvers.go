@@ -2683,7 +2683,7 @@ func (r *queryResolver) Search(ctx context.Context, query string, kinds []string
 	if r.Services.SiteQueries == nil {
 		return nil, fmt.Errorf("site queries unavailable")
 	}
-	if limit <= 0 || int64(limit) > 2147483647 || offset < 0 || int64(offset) > 2147483647 {
+	if int64(limit) > 2147483647 || int64(offset) > 2147483647 || !product.ValidPage(int32(limit), int32(offset)) {
 		return nil, apierr.New(apierr.Invalid, "invalid search page")
 	}
 	actor, err := LiveAuthority(ctx)

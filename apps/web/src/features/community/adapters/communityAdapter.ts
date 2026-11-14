@@ -146,14 +146,14 @@ export async function loadCommunityRegionNames(): Promise<Record<string, string>
     const regions: Array<{ id: string; name: string }> = [];
     for (;;) {
       const data = await graphqlRequest<CommunityRegionsQuery>(REGIONS_QUERY, {
-        limit: 200,
+        limit: 100,
         offset: regions.length,
       });
       const parsed = communityRegionsWireSchema.safeParse(data.regions);
-      if (!parsed.success || parsed.data.length > 200)
+      if (!parsed.success || parsed.data.length > 100)
         throw toAppError({ failure: 'InvalidWire' }, 'community:regions');
       regions.push(...parsed.data);
-      if (parsed.data.length < 200) break;
+      if (parsed.data.length < 100) break;
     }
     return Object.fromEntries(regions.map(({ id, name }) => [id, name]));
   } catch (err) {

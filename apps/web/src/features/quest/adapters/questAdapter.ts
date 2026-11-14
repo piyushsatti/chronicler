@@ -326,8 +326,17 @@ export function parseQuestRegions(wire: unknown): AdapterResult<Map<string, stri
 
 async function loadQuestRegions(): Promise<Map<string, string>> {
   try {
-    const data = await graphqlRequest<QuestRegionsQuery>(REGIONS_QUERY, { limit: 200 });
-    const result = parseQuestRegions(data.regions);
+    const regions: Array<{ id: string; name: string }> = [];
+    for (;;) {
+      const data = await graphqlRequest<QuestRegionsQuery>(REGIONS_QUERY, {
+        limit: 100,
+        offset: regions.length,
+      });
+      const page = data.regions ?? [];
+      regions.push(...page);
+      if (page.length < 100) break;
+    }
+    const result = parseQuestRegions(regions);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'quest:regions');
     return result.data;
   } catch (err) {

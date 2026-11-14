@@ -113,8 +113,8 @@ export async function loadCharacterBackstory(
 }
 
 /** Contracts expose `regions` list only (no `region(id:)`); page until found or exhausted. */
-const REGION_PAGE_SIZE = 200;
-const REGION_MAX_PAGES = 25; // 5_000 regions scanned at most
+const REGION_PAGE_SIZE = 100;
+const REGION_MAX_PAGES = 50; // 5_000 regions scanned at most
 
 async function loadRegionName(id: string | null): Promise<string | null> {
   if (!id) return null;

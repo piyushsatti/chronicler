@@ -1161,6 +1161,7 @@ export type EntityLinkCodexDirectoryQuery = { codexDirectory: { total: number, i
 
 export type EntityLinkQuestBoardQueryVariables = Exact<{
   limit: number;
+  offset: number;
 }>;
 
 
@@ -1242,6 +1243,13 @@ export type HomeRecentChroniclesQueryVariables = Exact<{
 
 
 export type HomeRecentChroniclesQuery = { documents: { items: Array<{ id: string, slug: string, title: string, visibility: string, publishedAt: string | null, author: { handle: string } | null, summaryDerived: { occurredAt: string | null } | null }> } };
+
+export type HomeRegionsQueryVariables = Exact<{
+  offset: number;
+}>;
+
+
+export type HomeRegionsQuery = { regions: Array<{ id: string, name: string }> };
 
 export type HomeUpcomingQueryVariables = Exact<{
   upcomingFrom: string;
@@ -1798,6 +1806,7 @@ export type PublishQuestPlayerListMutation = { publishQuestPlayerList: { jobId: 
 
 export type QuestRegionsQueryVariables = Exact<{
   limit: number;
+  offset: number;
 }>;
 
 
