@@ -4,14 +4,16 @@ import (
 	"net/http"
 )
 
-// Limits are the Go GraphQL complexity and depth caps.
+// Limits are the Go GraphQL complexity, depth, alias, and introspection caps.
 type Limits struct {
 	MaxDepth      int
 	MaxComplexity int
+	MaxAliases    int
+	Introspection bool
 }
 
 func DefaultLimits() Limits {
-	return Limits{MaxDepth: 12, MaxComplexity: 100000}
+	return Limits{MaxDepth: 12, MaxComplexity: 100000, MaxAliases: 20, Introspection: true}
 }
 
 // PlaceholderHandler answers until gqlgen codegen lands.

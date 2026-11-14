@@ -56,15 +56,24 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 		return next(ctx)
 	})
 	srv.AddTransport(transport.POST{})
-	srv.Use(extension.Introspection{})
+	registerExtensions(srv, limits)
+	if authority != nil {
+		srv.Use(liveAuthority{resolve: authority, providers: resolver.BatchProviders, present: present})
+	}
+	return srv
+}
+
+func registerExtensions(srv *handler.Server, limits Limits) {
+	if limits.Introspection {
+		srv.Use(extension.Introspection{})
+	}
 	if limits.MaxDepth > 0 {
 		srv.Use(depthLimit{max: limits.MaxDepth})
 	}
 	if limits.MaxComplexity > 0 {
 		srv.Use(extension.FixedComplexityLimit(limits.MaxComplexity))
 	}
-	if authority != nil {
-		srv.Use(liveAuthority{resolve: authority, providers: resolver.BatchProviders, present: present})
+	if limits.MaxAliases > 0 {
+		srv.Use(aliasLimit{max: limits.MaxAliases})
 	}
-	return srv
 }
