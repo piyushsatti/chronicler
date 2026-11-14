@@ -3,11 +3,9 @@ import type { BotConfig } from '../../src/config.js';
 export function testConfig(overrides: Partial<BotConfig> = {}): BotConfig {
   return {
     token: 'test-token',
-    clientId: 'test-client-id',
     guildId: 'test-guild-id',
-    apiUrl: 'http://api:8000',
+    apiUrl: 'http://api:8080',
     ingestSecret: 'test-ingest-secret',
-    devGuildId: undefined,
     snifferEnabled: false,
     heartbeatEnabled: true,
     host: undefined,
@@ -16,7 +14,7 @@ export function testConfig(overrides: Partial<BotConfig> = {}): BotConfig {
     agentAllowedGuildIds: new Set(),
     agentAllowedChannelIds: new Set(),
     agentAllowedDmUserIds: new Set(),
-    agentPublicOrigin: 'https://chronicler.smokebombstudios.com',
+    agentPublicOrigin: '',
     agentMaxConcurrent: 2,
     agentQueueCapacity: 25,
     ...overrides,
@@ -28,11 +26,11 @@ export function testEnv(
   overrides: Record<string, string | undefined> = {},
 ): Record<string, string | undefined> {
   return {
-    DISCORD_TOKEN: 'test-token',
-    BOT_CLIENT_ID: 'test-client-id',
+    BOT_DISCORD_TOKEN: 'test-token',
     GUILD_ID: 'test-guild-id',
     INGEST_SECRET: 'test-ingest-secret',
-    BOT_API_ALLOWED_ORIGIN: 'http://api:8000',
+    API_URL: 'http://api:8080',
+    BOT_API_ALLOWED_ORIGIN: 'http://api:8080',
     BOT_ALLOW_INSECURE_API_URL: 'true',
     ...overrides,
   };

@@ -4,8 +4,8 @@ import { testEnv } from '../support/config.js';
 
 describe('loadConfig', () => {
   it.each([
-    ['BOT_DISCORD_TOKEN (or DISCORD_TOKEN)', { DISCORD_TOKEN: '', BOT_DISCORD_TOKEN: '' }],
-    ['BOT_CLIENT_ID', { BOT_CLIENT_ID: '' }],
+    ['BOT_DISCORD_TOKEN', { BOT_DISCORD_TOKEN: '' }],
+    ['API_URL', { API_URL: '' }],
     ['BOT_API_ALLOWED_ORIGIN', { BOT_API_ALLOWED_ORIGIN: '' }],
   ] as const)('names missing required variable %s', (fragment, override) => {
     expect(() => loadConfig(testEnv(override))).toThrow(fragment);
@@ -14,31 +14,70 @@ describe('loadConfig', () => {
   it('uses provided env vars and keeps defaults', () => {
     const config = loadConfig(
       testEnv({
-        API_URL: 'http://localhost:8000',
-        BOT_API_ALLOWED_ORIGIN: 'http://localhost:8000',
-        DEV_GUILD_ID: 'dev-guild-id',
+        API_URL: 'http://localhost:8080',
+        BOT_API_ALLOWED_ORIGIN: 'http://localhost:8080',
         BOT_HOST: 'titan',
-        CHRONICLER_BUILD_SHA: 'abc123',
+        BOT_BUILD_ID: 'abc123',
       }),
     );
     expect(config.token).toBe('test-token');
-    expect(config.clientId).toBe('test-client-id');
     expect(config.guildId).toBe('test-guild-id');
-    expect(config.apiUrl).toBe('http://localhost:8000');
+    expect(config.apiUrl).toBe('http://localhost:8080');
     expect(config.ingestSecret).toBe('test-ingest-secret');
-    expect(config.devGuildId).toBe('dev-guild-id');
     expect(config.host).toBe('titan');
     expect(config.build).toBe('abc123');
   });
 
-  it('falls back to default apiUrl when API_URL is absent', () => {
-    const config = loadConfig(testEnv({ API_URL: '' }));
-    expect(config.apiUrl).toBe('http://api:8000');
+  it('loads with only the current required env names', () => {
+    const config = loadConfig(testEnv());
+    expect(config.token).toBe('test-token');
+    expect(config.apiUrl).toBe('http://api:8080');
   });
 
-  it('devGuildId is undefined when DEV_GUILD_ID is not set', () => {
-    const config = loadConfig(testEnv({ DEV_GUILD_ID: '' }));
-    expect(config.devGuildId).toBeUndefined();
+  it('does not accept the legacy discord token env alone', () => {
+    const legacyToken = ['DISCORD', 'TOKEN'].join('_');
+    expect(() =>
+      loadConfig(testEnv({ BOT_DISCORD_TOKEN: '', [legacyToken]: 'legacy-token' })),
+    ).toThrow('BOT_DISCORD_TOKEN');
+  });
+
+  it('ignores legacy build id aliases', () => {
+    const legacyChronicler = ['CHRONICLER', 'BUILD', 'SHA'].join('_');
+    const legacySha = ['BUILD', 'SHA'].join('_');
+    const legacyVersion = ['BUILD', 'VERSION'].join('_');
+    const config = loadConfig(
+      testEnv({
+        BOT_BUILD_ID: '',
+        [legacyChronicler]: 'legacy-sha',
+        [legacySha]: 'legacy-sha',
+        [legacyVersion]: 'legacy-version',
+      }),
+    );
+    expect(config.build).toBe('unknown');
+  });
+
+  it('requires AGENT_PUBLIC_ORIGIN when the agent is on', () => {
+    expect(() =>
+      loadConfig(
+        testEnv({
+          AGENT_ENABLED: 'true',
+          AGENT_ALLOWED_DM_USER_IDS: '444',
+          AGENT_PUBLIC_ORIGIN: '',
+        }),
+      ),
+    ).toThrow('AGENT_PUBLIC_ORIGIN');
+  });
+
+  it('rejects an http AGENT_PUBLIC_ORIGIN', () => {
+    expect(() =>
+      loadConfig(
+        testEnv({
+          AGENT_ENABLED: 'true',
+          AGENT_ALLOWED_DM_USER_IDS: '444',
+          AGENT_PUBLIC_ORIGIN: 'http://chronicler.example',
+        }),
+      ),
+    ).toThrow('AGENT_PUBLIC_ORIGIN must use HTTPS');
   });
 
   it('throws when INGEST_SECRET is missing with the sensor enabled', () => {
@@ -100,6 +139,7 @@ describe('loadConfig', () => {
           AGENT_ENABLED: 'true',
           AGENT_ALLOWED_GUILD_IDS: '789',
           AGENT_ALLOWED_CHANNEL_IDS: '',
+          AGENT_PUBLIC_ORIGIN: 'https://chronicler.example',
         }),
       ),
     ).toThrow('AGENT_ALLOWED_CHANNEL_IDS');
@@ -110,6 +150,7 @@ describe('loadConfig', () => {
           AGENT_ENABLED: 'true',
           AGENT_ALLOWED_CHANNEL_IDS: '123,456',
           AGENT_ALLOWED_GUILD_IDS: '',
+          AGENT_PUBLIC_ORIGIN: 'https://chronicler.example',
         }),
       ),
     ).toThrow('AGENT_ALLOWED_GUILD_IDS');
@@ -119,10 +160,12 @@ describe('loadConfig', () => {
         AGENT_ENABLED: 'true',
         AGENT_ALLOWED_GUILD_IDS: '789',
         AGENT_ALLOWED_CHANNEL_IDS: '123,456',
+        AGENT_PUBLIC_ORIGIN: 'https://chronicler.example',
       }),
     );
     expect(loaded.agentAllowedChannelIds.has('456')).toBe(true);
     expect(loaded.ingestSecret).toBe('test-ingest-secret');
+    expect(loaded.agentPublicOrigin).toBe('https://chronicler.example');
   });
 
   it('supports DM mentions with an ingest secret and no guild', () => {
@@ -135,6 +178,7 @@ describe('loadConfig', () => {
         AGENT_ALLOWED_GUILD_IDS: '',
         AGENT_ALLOWED_CHANNEL_IDS: '',
         AGENT_ALLOWED_DM_USER_IDS: '444',
+        AGENT_PUBLIC_ORIGIN: 'https://chronicler.example',
       }),
     );
     expect(config.guildId).toBe('');

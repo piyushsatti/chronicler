@@ -162,3 +162,20 @@ func MaxBody(n int64, prefixes ...string) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+// Deadline gives matching paths a deadline above the 10s outbound budgets.
+func Deadline(d time.Duration, prefixes ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			for _, p := range prefixes {
+				if strings.HasPrefix(r.URL.Path, p) {
+					ctx, cancel := context.WithTimeout(r.Context(), d)
+					defer cancel()
+					r = r.WithContext(ctx)
+					break
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}

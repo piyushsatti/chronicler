@@ -80,7 +80,6 @@ services:
       BOT_API_ALLOWED_ORIGIN: http://api:8080
       INGEST_SECRET: ${INGEST_SECRET:-dev-ingest-secret}
       GUILD_ID: ${GUILD_ID:-0}
-      BOT_CLIENT_ID: ${BOT_CLIENT_ID:-0}
       BOT_DISCORD_TOKEN: ${BOT_DISCORD_TOKEN:-dev-token}
     depends_on:
       api:
