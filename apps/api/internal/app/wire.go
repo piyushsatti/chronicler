@@ -53,7 +53,7 @@ func Wire(ctx context.Context, cfg config.Config) API {
 	}
 	mem.Resolver = &graph.Resolver{Services: emptyServices(mem.QuestCmd)}
 
-	pool, err := db.Connect(ctx, cfg.DatabaseURL)
+	pool, err := db.Connect(ctx, cfg.DatabaseURL, db.ConnectOptions(string(cfg.Env))...)
 	if err != nil {
 		if cfg.RequireDatabase {
 			slog.Error("database required but unavailable", "env", cfg.Env, "error", err)

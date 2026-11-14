@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
@@ -86,6 +87,23 @@ func MaxBody(n int64, prefixes ...string) func(http.Handler) http.Handler {
 			for _, p := range prefixes {
 				if strings.HasPrefix(r.URL.Path, p) {
 					r.Body = http.MaxBytesReader(w, r.Body, n)
+					break
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// Deadline gives matching paths a deadline above the 10s outbound budgets.
+func Deadline(d time.Duration, prefixes ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			for _, p := range prefixes {
+				if strings.HasPrefix(r.URL.Path, p) {
+					ctx, cancel := context.WithTimeout(r.Context(), d)
+					defer cancel()
+					r = r.WithContext(ctx)
 					break
 				}
 			}

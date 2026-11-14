@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/app"
 	"github.com/piyushsatti/chronicler/apps/api/internal/login"
@@ -53,7 +54,7 @@ func main() {
 		}
 	}()
 
-	srv := &http.Server{Addr: cfg.Addr, Handler: handler}
+	srv := newServer(cfg, handler)
 	go func() {
 		slog.Info("api listening", "addr", cfg.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -76,6 +77,17 @@ func main() {
 	}
 }
 
+func newServer(cfg config.Config, h http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              cfg.Addr,
+		Handler:           h,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+}
+
 // apiHandler owns production middleware ordering. CORS must wrap every early
 // application rejection so allowed browser clients receive its typed response.
 func apiHandler(mux http.Handler, cfg config.Config, authority auth.AuthorityResolver) http.Handler {
@@ -87,6 +99,7 @@ func apiHandler(mux http.Handler, cfg config.Config, authority auth.AuthorityRes
 			return httpserver.CORS(cfg.CORSOrigins, next)
 		},
 		httpserver.MaxBody(1<<20, "/v1/"),
+		httpserver.Deadline(15*time.Second, "/v1/graphql"),
 		func(next http.Handler) http.Handler {
 			return auth.LiveMiddleware(login.Parser(cfg.JWTSecret), authority, next)
 		},
