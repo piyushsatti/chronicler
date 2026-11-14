@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // ErrBadPayload marks a discord job body the worker cannot run.
@@ -84,8 +85,9 @@ func SafeCodeForErrorText(message string) string {
 // DiscordAPIError is a non-2xx Discord REST response. Its text is the
 // "discord api status N[: body]" form the web matches on.
 type DiscordAPIError struct {
-	Status  int
-	Snippet string
+	Status     int
+	Snippet    string
+	RetryAfter time.Duration
 }
 
 func (e *DiscordAPIError) Error() string {
