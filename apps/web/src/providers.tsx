@@ -4,12 +4,39 @@ import { Provider as ReduxProvider } from 'react-redux';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext.js';
 import { ThemeProvider } from './context/ThemeContext.js';
+import { TransportError, type AppError } from './errors/types.js';
 import { createAppStore } from './store/store.js';
 
 export function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: 0 },
+      mutations: { retry: false },
+    },
+  });
+}
+
+function transportFromError(error: unknown): TransportError | undefined {
+  if (error instanceof TransportError) return error;
+  if (error && typeof error === 'object' && 'cause' in error) {
+    const cause = (error as AppError).cause;
+    if (cause instanceof TransportError) return cause;
+  }
+  return undefined;
+}
+
+function shouldRetryQuery(failureCount: number, error: unknown): boolean {
+  if (failureCount >= 2) return false;
+  const transport = transportFromError(error);
+  if (!transport) return false;
+  if (transport.code === 'NETWORK') return true;
+  return typeof transport.status === 'number' && transport.status >= 500;
+}
+
+export function createAppQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: shouldRetryQuery, staleTime: 30_000 },
       mutations: { retry: false },
     },
   });
@@ -22,7 +49,7 @@ function RoutedContent(): ReactNode {
 
 export function AppProviders({ children }: { children: ReactNode }): React.JSX.Element {
   const [store] = useState(() => createAppStore());
-  const [queryClient] = useState(() => createTestQueryClient());
+  const [queryClient] = useState(() => createAppQueryClient());
   const [router, setRouter] = useState<ReturnType<typeof createBrowserRouter> | null>(
     null,
   );
