@@ -35,7 +35,11 @@ func TestQuestRosterAndDeliveryPreserveEditorVersion(t *testing.T) {
 	}{
 		{"signup", func() error { return nil }},
 		{"message", func() error {
-			return queries.SetQuestDiscordMessageID(ctx, dbgen.SetQuestDiscordMessageIDParams{PublicID: questID, DiscordMessageID: pgtype.Text{String: "123456789", Valid: true}})
+			return queries.SetQuestDiscordMessageID(ctx, dbgen.SetQuestDiscordMessageIDParams{
+				PublicID:         questID,
+				DiscordMessageID: pgtype.Text{String: "123456789", Valid: true},
+				DiscordChannelID: pgtype.Text{String: "987654321", Valid: true},
+			})
 		}},
 		{"revision", func() error {
 			return queries.ApplyQuestDiscordRevision(ctx, dbgen.ApplyQuestDiscordRevisionParams{PublicID: questID, Desired: 1})

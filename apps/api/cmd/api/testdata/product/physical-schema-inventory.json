@@ -1704,6 +1704,11 @@
           "source": "apps/api/db/migrations/0001_init.sql",
           "stage": "squash_a1"
         },
+        "discord_channel_id": {
+          "declaration": "TEXT",
+          "source": "apps/api/db/migrations/0019_quest_discord_channel.sql",
+          "stage": "m19_quest_discord_channel"
+        },
         "discord_event_id": {
           "declaration": "TEXT",
           "source": "apps/api/db/migrations/0001_init.sql",

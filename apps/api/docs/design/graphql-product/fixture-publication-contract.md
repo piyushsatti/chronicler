@@ -2,6 +2,10 @@
 
 **Status:** accepted design. Published schema/config and comment scaffolds do not implement these contracts. Runtime enforcement remains pending the owning implementation tasks and their tests.
 
+## Migration inventory columns (2026-11-14)
+
+A migration may add its own columns to the physical schema inventory in the same change; every other edit to the published fixtures stays with the root-controlled republish.
+
 ## Incremental executable-case amendment (2026-10-16)
 
 Pattern: table-driven behavioral tests with shared explicit fixture data. This amendment supersedes immutable-JSON load/embed requirements below only for a behavior whose replacement has independently reviewed variant and reference closure. It changes representation, not acceptance scope or fixture isolation.
