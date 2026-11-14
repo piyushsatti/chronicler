@@ -4,8 +4,6 @@ export class DuplicateRequestError extends Error {}
 
 interface Pending<T> {
   key: string;
-  userId: string;
-  guildId: string;
   task: () => Promise<T>;
   resolve: (value: T) => void;
   reject: (reason: unknown) => void;
@@ -16,6 +14,7 @@ export class AgentQueue {
   private readonly activeKeys = new Set<string>();
   private readonly userWindows = new Map<string, number[]>();
   private readonly guildWindows = new Map<string, number[]>();
+  private readonly rateLimitNotices = new Map<string, number>();
   private active = 0;
 
   constructor(
@@ -24,14 +23,8 @@ export class AgentQueue {
     private readonly now: () => number = Date.now,
   ) {}
 
-  enqueue<T>(
-    key: string,
-    userId: string,
-    guildId: string,
-    task: () => Promise<T>,
-  ): Promise<T> {
-    if (this.activeKeys.has(key)) throw new DuplicateRequestError('duplicate');
-    if (this.pending.length >= this.capacity) throw new QueueFullError('full');
+  /** Check and reserve rate-limit capacity before typing or history fetch. */
+  reserve(userId: string, guildId: string): void {
     const now = this.now();
     this.pruneExpired(this.userWindows, now);
     this.pruneExpired(this.guildWindows, now);
@@ -44,12 +37,31 @@ export class AgentQueue {
     guildRecent.push(now);
     this.userWindows.set(userId, userRecent);
     this.guildWindows.set(guildId, guildRecent);
+  }
+
+  /** True once per user per rolling window for the "Please wait" reply. */
+  takeRateLimitNotice(userId: string): boolean {
+    const now = this.now();
+    for (const [key, stamp] of this.rateLimitNotices) {
+      if (now - stamp >= 60_000) this.rateLimitNotices.delete(key);
+    }
+    if (this.rateLimitNotices.has(userId)) return false;
+    this.rateLimitNotices.set(userId, now);
+    return true;
+  }
+
+  /** Undo a claim when the "Please wait" reply failed to send. */
+  releaseRateLimitNotice(userId: string): void {
+    this.rateLimitNotices.delete(userId);
+  }
+
+  enqueue<T>(key: string, task: () => Promise<T>): Promise<T> {
+    if (this.activeKeys.has(key)) throw new DuplicateRequestError('duplicate');
+    if (this.pending.length >= this.capacity) throw new QueueFullError('full');
     this.activeKeys.add(key);
     return new Promise<T>((resolve, reject) => {
       this.pending.push({
         key,
-        userId,
-        guildId,
         task,
         resolve: resolve as (value: unknown) => void,
         reject,
