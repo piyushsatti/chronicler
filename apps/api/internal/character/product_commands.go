@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/url"
 	"reflect"
 	"strings"
@@ -505,7 +506,7 @@ func (s ProductCommands) CreateCharacter(ctx context.Context, actor auth.Authori
 	if preview.replay {
 		return preview.view, nil
 	}
-	payload := fetchSubmissionMirror(ctx, s.submissionDdbClient(), ddbURLString(spec.Input.DdbUrl))
+	payload := fetchSubmissionMirror(ctx, s.submissionDdbClient(ctx), ddbURLString(spec.Input.DdbUrl))
 	return runOperationCommand(ctx, s, actor, "Mutation.createCharacter", "createCharacter", spec, meta, actor.Claims().MemberID,
 		func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (CharacterView, error) {
 			if err := validateCharacterGuild(ctx, repos, fresh, spec.Input.GuildId); err != nil {
@@ -566,7 +567,7 @@ func (s ProductCommands) SubmitForVerification(ctx context.Context, actor auth.A
 		return preview.view, nil
 	}
 	// Network stays outside the submission transaction. A failed sync still submits.
-	payload := fetchSubmissionMirror(ctx, s.submissionDdbClient(), preview.ddbURL)
+	payload := fetchSubmissionMirror(ctx, s.submissionDdbClient(ctx), preview.ddbURL)
 	return runOwnedCharacterCommand(ctx, s, actor, "submitForVerification", spec.CharacterId, spec, meta,
 		func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (CharacterView, error) {
 			locked, err := repos.Character.LockSubmitForVerification(ctx, spec)
@@ -650,16 +651,18 @@ func (s ProductCommands) previewSubmit(ctx context.Context, actor auth.Authority
 	return preview, err
 }
 
-func (s ProductCommands) submissionDdbClient() DdbClient {
+func (s ProductCommands) submissionDdbClient(ctx context.Context) DdbClient {
 	if s.Ddb != nil {
 		return s.Ddb
 	}
 	httpClient, err := NewProductionDdbHTTPClient()
 	if err != nil {
+		slog.WarnContext(ctx, "character sheet sync skipped: ddb http client", "error", err)
 		return nil
 	}
 	client, err := NewDdbClient(httpClient, time.Now)
 	if err != nil {
+		slog.WarnContext(ctx, "character sheet sync skipped: ddb client", "error", err)
 		return nil
 	}
 	return client
@@ -679,7 +682,11 @@ func fetchSubmissionMirror(ctx context.Context, client DdbClient, rawURL string)
 		return nil
 	}
 	snapshot, _, err := client.Fetch(ctx, rawURL)
-	if err != nil || len(snapshot.Payload) == 0 {
+	if err != nil {
+		slog.WarnContext(ctx, "character sheet sync skipped: fetch failed", "error", err)
+		return nil
+	}
+	if len(snapshot.Payload) == 0 {
 		return nil
 	}
 	if _, _, err := decodeStoredCharacterDDBMirror("submission", snapshot.Payload, pgTime(time.Unix(1, 0).UTC())); err != nil {

@@ -30,12 +30,6 @@ func productIDs() product.IDGenerator {
 	return func() string { return uuid.NewString() }
 }
 
-// testDdbClient is nil in production, which builds the real sheet client per command.
-var testDdbClient character.DdbClient
-
-// UseTestDdbClient binds the sheet client Wire gives character commands.
-func UseTestDdbClient(client character.DdbClient) { testDdbClient = client }
-
 type productReadStores struct {
 	member       *member.ProductPostgres
 	character    *character.ProductPostgres
@@ -73,7 +67,7 @@ func newProductReadStores(pgxPool dbgen.DBTX) (productReadStores, error) {
 	return stores, nil
 }
 
-func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.PostgresStore, jwtSecret []byte, legacy graph.Services) (graph.Services, error) {
+func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.PostgresStore, jwtSecret []byte, legacy graph.Services, ddbClient character.DdbClient) (graph.Services, error) {
 	policy, err := auth.NewPoolPolicy(pgxPool)
 	if err != nil {
 		return graph.Services{}, err
@@ -150,22 +144,22 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 	legacy.QuestQueries = questQueries
 	legacy.SiteQueries = siteQueries
 	legacy.NotificationQueries = notificationQueries
-	if err := wireProductCommands(pool, memberPool, clock, ids, questQueries, &legacy); err != nil {
+	if err := wireProductCommands(pool, memberPool, clock, ids, questQueries, &legacy, ddbClient); err != nil {
 		return graph.Services{}, err
 	}
 	return legacy, nil
 }
 
-func wireProductCommands(pool *db.Pool, memberPool *member.PostgresStore, clock product.Clock, ids product.IDGenerator, questQueries *quest.ProductQueries, legacy *graph.Services) error {
+func wireProductCommands(pool *db.Pool, memberPool *member.PostgresStore, clock product.Clock, ids product.IDGenerator, questQueries *quest.ProductQueries, legacy *graph.Services, ddbClient character.DdbClient) error {
 	producer := notification.NewProducer()
 	ownerID := memberPool.ConfiguredOwnerID()
-	if err := wireMemberCharacterDocumentCommands(pool, ownerID, producer, clock, ids, legacy); err != nil {
+	if err := wireMemberCharacterDocumentCommands(pool, ownerID, producer, clock, ids, legacy, ddbClient); err != nil {
 		return err
 	}
 	return wireQuestSpatialSiteNotificationCommands(pool, ownerID, producer, clock, ids, questQueries, legacy)
 }
 
-func wireMemberCharacterDocumentCommands(pool *db.Pool, ownerID string, producer *notification.Producer, clock product.Clock, ids product.IDGenerator, legacy *graph.Services) error {
+func wireMemberCharacterDocumentCommands(pool *db.Pool, ownerID string, producer *notification.Producer, clock product.Clock, ids product.IDGenerator, legacy *graph.Services, ddbClient character.DdbClient) error {
 	memberRunner, err := db.NewProductRunner(pool, func(tx pgx.Tx) (member.ProductCommandRepos, error) {
 		return bindMemberCommandRepos(tx, ownerID, producer)
 	})
@@ -178,7 +172,7 @@ func wireMemberCharacterDocumentCommands(pool *db.Pool, ownerID string, producer
 	}
 
 	characterRunner, err := db.NewProductRunner(pool, func(tx pgx.Tx) (character.ProductCommandRepos, error) {
-		return bindCharacterCommandRepos(tx, ownerID)
+		return bindCharacterCommandRepos(tx, ownerID, ddbClient)
 	})
 	if err != nil {
 		return err
@@ -187,7 +181,7 @@ func wireMemberCharacterDocumentCommands(pool *db.Pool, ownerID string, producer
 	if err != nil {
 		return err
 	}
-	characterCommands.Ddb = testDdbClient
+	characterCommands.Ddb = ddbClient
 
 	documentRunner, err := db.NewProductRunner(pool, func(tx pgx.Tx) (document.ProductCommandRepos, error) {
 		return bindDocumentCommandRepos(tx, ownerID, producer)
@@ -316,7 +310,7 @@ func bindMemberCommandRepos(tx pgx.Tx, ownerID string, producer *notification.Pr
 	}, nil
 }
 
-func bindCharacterCommandRepos(tx pgx.Tx, ownerID string) (character.ProductCommandRepos, error) {
+func bindCharacterCommandRepos(tx pgx.Tx, ownerID string, ddbClient character.DdbClient) (character.ProductCommandRepos, error) {
 	core, err := bindCommandCore(tx, ownerID)
 	if err != nil {
 		return character.ProductCommandRepos{}, err
@@ -325,7 +319,7 @@ func bindCharacterCommandRepos(tx pgx.Tx, ownerID string) (character.ProductComm
 	if err != nil {
 		return character.ProductCommandRepos{}, err
 	}
-	pg.Ddb = testDdbClient
+	pg.Ddb = ddbClient
 	memPG, err := member.NewProductPostgres(tx)
 	if err != nil {
 		return character.ProductCommandRepos{}, err

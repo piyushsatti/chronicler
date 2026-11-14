@@ -8,12 +8,14 @@ import {
 import type { AddressInfo } from 'node:net';
 import { ChannelType, PermissionsBitField } from 'discord.js';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { start } from '@discord/session.js';
 import { completedQuestion } from '../fixtures/api.js';
+import { testConfig } from '../support/config.js';
 
 type Handler = (request: IncomingMessage, response: ServerResponse) => void;
 
 let server: Server;
-let baseUrl = '';
+let config = testConfig();
 let handler: Handler = (_request, response) => {
   response.writeHead(404);
   response.end();
@@ -89,7 +91,6 @@ function guildMessage() {
 }
 
 beforeEach(async () => {
-  vi.resetModules();
   posts.length = 0;
   server = createServer((request, response) => {
     posts.push(`${request.method} ${request.url}`);
@@ -99,21 +100,17 @@ beforeEach(async () => {
     server.listen(0, '127.0.0.1', resolve);
   });
   const address = server.address() as AddressInfo;
-  baseUrl = `http://127.0.0.1:${address.port}`;
-  vi.stubEnv('API_URL', baseUrl);
-  vi.stubEnv('DISCORD_TOKEN', 'test-token');
-  vi.stubEnv('BOT_CLIENT_ID', 'test-client-id');
-  vi.stubEnv('GUILD_ID', 'test-guild-id');
-  vi.stubEnv('INGEST_SECRET', 'test-ingest-secret');
-  vi.stubEnv('BOT_HEARTBEAT_ENABLED', 'false');
-  vi.stubEnv('SNIFFER_ENABLED', 'true');
-  vi.stubEnv('AGENT_ENABLED', 'true');
-  vi.stubEnv('AGENT_ALLOWED_DM_USER_IDS', '111');
-  vi.stubEnv('AGENT_PUBLIC_ORIGIN', 'https://chronicler.example');
+  config = testConfig({
+    apiUrl: `http://127.0.0.1:${address.port}`,
+    heartbeatEnabled: false,
+    snifferEnabled: true,
+    agentEnabled: true,
+    agentAllowedDmUserIds: new Set(['111']),
+    agentPublicOrigin: 'https://chronicler.example',
+  });
 });
 
 afterEach(async () => {
-  vi.unstubAllEnvs();
   await new Promise<void>((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   });
@@ -132,8 +129,12 @@ it('stays up when ingest returns 500 and still posts the next message', async ()
   };
   const exit = vi.fn();
   const client = scriptedClient();
-  const { start } = await import('@discord/session.js');
-  const session = await start({ client: client as never, exit });
+  const session = await start({
+    config,
+    client: client as never,
+    exit,
+    installSignalHandlers: false,
+  });
   client.emit('messageCreate', guildMessage());
   await vi.waitFor(() =>
     expect(posts.filter((p) => p.includes('discord-event'))).toHaveLength(1),
@@ -179,8 +180,12 @@ it('replies with failure when questions return 500 and accepts a second mention'
   };
   const exit = vi.fn();
   const client = scriptedClient();
-  const { start } = await import('@discord/session.js');
-  const session = await start({ client: client as never, exit });
+  const session = await start({
+    config,
+    client: client as never,
+    exit,
+    installSignalHandlers: false,
+  });
   const reply = vi.fn().mockResolvedValue(undefined);
   client.emit('messageCreate', mentionMessage(reply));
   await vi.waitFor(() =>
@@ -223,8 +228,12 @@ it('aborts an in-flight poll on stop without a failure reply', async () => {
     response.end();
   };
   const client = scriptedClient();
-  const { start } = await import('@discord/session.js');
-  const session = await start({ client: client as never, exit: vi.fn() });
+  const session = await start({
+    config,
+    client: client as never,
+    exit: vi.fn(),
+    installSignalHandlers: false,
+  });
   const reply = vi.fn().mockResolvedValue(undefined);
   client.emit('messageCreate', mentionMessage(reply));
   await vi.waitFor(() => expect(posts.some((p) => p.startsWith('GET '))).toBe(true));
@@ -251,8 +260,12 @@ it('exits on terminal shardDisconnect without flushing', async () => {
   const exit = vi.fn();
   const reply = vi.fn().mockResolvedValue(undefined);
   const client = scriptedClient();
-  const { start } = await import('@discord/session.js');
-  await start({ client: client as never, exit });
+  await start({
+    config,
+    client: client as never,
+    exit,
+    installSignalHandlers: false,
+  });
   client.emit('messageCreate', mentionMessage(reply));
   await vi.waitFor(() =>
     expect(posts.some((entry) => entry.startsWith('GET '))).toBe(true),

@@ -2,6 +2,7 @@ package notification
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -72,7 +73,7 @@ func (p *ProductPostgres) ReadMyNotifications(ctx context.Context, actor auth.Au
 	}
 	projections, err := p.proveNotifications(ctx, actor.Claims().MemberID, candidates)
 	if err != nil {
-		return NotificationConnection{}, opaqueNotificationProofError()
+		return NotificationConnection{}, opaqueNotificationProofError(err)
 	}
 	items := make([]NotificationView, len(rows))
 	for i, row := range candidates {
@@ -104,22 +105,22 @@ func (p *ProductPostgres) ReadBatchNotificationSubjects(ctx context.Context, act
 		return out, nil
 	}
 	if len(keys) > maxAckLimit {
-		return nil, opaqueNotificationProofError()
+		return nil, opaqueNotificationProofError(errors.New("notification subject batch exceeds limit"))
 	}
 	memberID, err := memberUUID(actor)
 	if err != nil {
-		return nil, opaqueNotificationProofError()
+		return nil, opaqueNotificationProofError(err)
 	}
 	ids := make([]pgtype.UUID, len(keys))
 	for i, key := range keys {
 		if !canonicalNotificationID(key.NotificationID) {
-			return nil, opaqueNotificationProofError()
+			return nil, opaqueNotificationProofError(errors.New("invalid notification id"))
 		}
 		ids[i], _ = db.ParseUUID(key.NotificationID)
 	}
 	rows, err := p.queries().ProductNotificationRowsForProof(ctx, dbgen.ProductNotificationRowsForProofParams{MemberID: memberID, NotificationIds: ids})
 	if err != nil {
-		return nil, opaqueNotificationProofError()
+		return nil, opaqueNotificationProofError(err)
 	}
 	stored := make(map[string]storedNotification, len(rows))
 	for _, row := range rows {
@@ -130,13 +131,13 @@ func (p *ProductPostgres) ReadBatchNotificationSubjects(ctx context.Context, act
 	for i, key := range keys {
 		row, ok := stored[key.NotificationID]
 		if !ok || key.SubjectType != row.SubjectType || (key.SubjectID != row.SubjectID && row.SubjectID != "") {
-			return nil, opaqueNotificationProofError()
+			return nil, opaqueNotificationProofError(errors.New("notification subject key mismatch"))
 		}
 		candidates[i] = row
 	}
 	projections, err := p.proveNotifications(ctx, actor.Claims().MemberID, candidates)
 	if err != nil {
-		return nil, opaqueNotificationProofError()
+		return nil, opaqueNotificationProofError(err)
 	}
 	for i := range keys {
 		projection := projections[i]

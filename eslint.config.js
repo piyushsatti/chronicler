@@ -47,6 +47,7 @@ export default tseslint.config(
   },
   {
     files: ['apps/web/src/components/**/*.{ts,tsx}'],
+    ignores: ['apps/web/src/**/*.mocks.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -56,6 +57,19 @@ export default tseslint.config(
               group: ['**/features/**', '@/features/**'],
               message: 'components must not import features',
             },
+            {
+              group: ['msw', 'msw/**'],
+              message: 'msw belongs in mocks entry points and *.mocks.ts only',
+            },
+            {
+              group: [
+                '**/tests/**',
+                '**/tests/fixtures/**',
+                '*tests/fixtures*',
+                '*tests/*',
+              ],
+              message: 'test fixtures belong in mocks entry points and *.mocks.ts only',
+            },
           ],
         },
       ],
@@ -63,7 +77,10 @@ export default tseslint.config(
   },
   {
     files: ['apps/web/src/features/**/*.{ts,tsx}'],
-    ignores: ['apps/web/src/features/**/adapters/**'],
+    ignores: [
+      'apps/web/src/features/**/adapters/**',
+      'apps/web/src/features/**/*.mocks.ts',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -72,6 +89,53 @@ export default tseslint.config(
             {
               group: ['@pi/contracts', '@pi/contracts/**'],
               message: 'only adapters may import @pi/contracts wire types',
+            },
+            {
+              group: ['msw', 'msw/**'],
+              message: 'msw belongs in mocks entry points and *.mocks.ts only',
+            },
+            {
+              group: [
+                '**/tests/**',
+                '**/tests/fixtures/**',
+                '*tests/fixtures*',
+                '*tests/*',
+              ],
+              message: 'test fixtures belong in mocks entry points and *.mocks.ts only',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    ignores: [
+      'apps/web/src/mocks/**',
+      'apps/web/src/**/*.mocks.ts',
+      'apps/web/src/components/**',
+      // Features (non-adapters) keep their own block so @pi/contracts stays banned;
+      // adapters must still get the msw/fixtures ban from this block.
+      'apps/web/src/features/**',
+      '!apps/web/src/features/**/adapters/**',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['msw', 'msw/**'],
+              message: 'msw belongs in mocks entry points and *.mocks.ts only',
+            },
+            {
+              group: [
+                '**/tests/**',
+                '**/tests/fixtures/**',
+                '*tests/fixtures*',
+                '*tests/*',
+              ],
+              message: 'test fixtures belong in mocks entry points and *.mocks.ts only',
             },
           ],
         },
@@ -106,6 +170,25 @@ export default tseslint.config(
       globals: {
         console: 'readonly',
       },
+    },
+  },
+  {
+    files: ['apps/discord/src/**/*.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'process',
+          property: 'env',
+          message: 'Read process.env only in apps/discord/src/index.ts via loadConfig',
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/discord/src/index.ts'],
+    rules: {
+      'no-restricted-properties': 'off',
     },
   },
 );
