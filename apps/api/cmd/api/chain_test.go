@@ -132,6 +132,38 @@ func TestProductionChainDoesNotGrantDisallowedOrigin(t *testing.T) {
 	}
 }
 
+func TestProductionChainGraphQLHasDeadline(t *testing.T) {
+	cfg, _ := chainTestConfigAndToken(t)
+	var graphqlRemaining time.Duration
+	var graphqlHas, otherHas bool
+	h := apiHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		deadline, ok := r.Context().Deadline()
+		if r.URL.Path == "/v1/graphql" {
+			graphqlHas = ok
+			if ok {
+				graphqlRemaining = time.Until(deadline)
+			}
+		} else {
+			otherHas = ok
+		}
+		w.WriteHeader(http.StatusOK)
+	}), cfg, nil)
+
+	graphql := httptest.NewRequest(http.MethodPost, "/v1/graphql", nil)
+	other := httptest.NewRequest(http.MethodGet, "/v1/documents", nil)
+	h.ServeHTTP(httptest.NewRecorder(), graphql)
+	h.ServeHTTP(httptest.NewRecorder(), other)
+	if !graphqlHas {
+		t.Fatal("graphql path missing deadline")
+	}
+	if graphqlRemaining < 14*time.Second || graphqlRemaining > 15*time.Second {
+		t.Fatalf("graphql deadline remaining=%v want ~15s (above 10s outbound)", graphqlRemaining)
+	}
+	if otherHas {
+		t.Fatal("non-graphql path has deadline")
+	}
+}
+
 func TestDefaultLoggerAddsRequestIDFromContext(t *testing.T) {
 	const wantID = "default-logger-req-1"
 	var logs bytes.Buffer
