@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { AdminReadFailure } from './AdminReadFailure.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Select } from '../../../components/primitives/Select.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import type { useHomeBannerPanel } from '../hooks/useHomeBannerPanel.js';
+import {
+  useHomeBannerForm,
+  type useHomeBannerPanel,
+} from '../hooks/useHomeBannerPanel.js';
+import type { HomeBannerView } from '../adapters/adminAdapter.js';
 import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import styles from './HomeBannerPanel.module.css';
@@ -20,8 +25,36 @@ export function HomeBannerPanel({
 }: {
   view: ReturnType<typeof useHomeBannerPanel>;
 }): React.JSX.Element {
+  const { bannerQ } = view;
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  if (bannerQ.isError) {
+    return <AdminReadFailure error={bannerQ.error} retry={bannerQ.retry} />;
+  }
+  if (bannerQ.isLoading || !bannerQ.data) {
+    return <StatePanel status="loading" />;
+  }
+
+  return (
+    <HomeBannerForm
+      initial={bannerQ.data}
+      saveMessage={saveMessage}
+      setSaveMessage={setSaveMessage}
+    />
+  );
+}
+
+function HomeBannerForm({
+  initial,
+  saveMessage,
+  setSaveMessage,
+}: {
+  initial: HomeBannerView;
+  saveMessage: string | null;
+  setSaveMessage: (message: string | null) => void;
+}): React.JSX.Element {
+  const view = useHomeBannerForm(initial, setSaveMessage);
   const {
-    bannerQ,
     enabled,
     setEnabled,
     title,
@@ -32,16 +65,8 @@ export function HomeBannerPanel({
     setCtaLabel,
     ctaHref,
     setCtaHref,
-    saveMessage,
     save,
   } = view;
-
-  if (bannerQ.isError) {
-    return <AdminReadFailure error={bannerQ.error} retry={bannerQ.retry} />;
-  }
-  if (bannerQ.isLoading) {
-    return <StatePanel status="loading" />;
-  }
 
   const preview = (
     <Card className={`stack ${styles.panel}`} data-gap="2" aria-label="Banner preview">

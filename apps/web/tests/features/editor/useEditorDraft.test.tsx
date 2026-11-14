@@ -36,7 +36,7 @@ describe('useEditorDraft', () => {
     ).toBe('Branched');
   });
 
-  it('bounds snapshots appended by route-pinned metadata changes', () => {
+  it('keeps typed body when route-pinned metadata changes and persists the pin', () => {
     const { result, rerender } = renderHook(
       ({ series }) =>
         useEditorDraft(
@@ -51,13 +51,17 @@ describe('useEditorDraft', () => {
       { initialProps: { series: '0' } },
     );
     act(() => result.current.setBody('Edited'));
-    for (let index = 1; index <= 120; index++) rerender({ series: String(index) });
-    for (let index = 0; index < 120; index++) act(() => result.current.undo());
-    expect(result.current.meta.series).toBe('21');
-    expect(result.current.canUndo).toBe(false);
-    for (let index = 0; index < 120; index++) act(() => result.current.redo());
-    expect(result.current.meta.series).toBe('120');
-    expect(result.current.canRedo).toBe(false);
+    rerender({ series: '99' });
+    expect(result.current.body).toBe('Edited');
+    expect(result.current.meta.series).toBe('99');
+    act(() => result.current.setBody('Edited again'));
+    expect(
+      JSON.parse(
+        localStorage.getItem(
+          draftStorageKey('quest', 'bounded-pinned', 'demo', 'new'),
+        ) ?? '{}',
+      ).meta.series,
+    ).toBe('99');
   });
 
   it('restores the saved local draft and marks it dirty against the loaded record', () => {
@@ -102,6 +106,21 @@ describe('useEditorDraft', () => {
     }
   });
 
+  it('keeps typed body across an unchanged refetch of the same record', () => {
+    const { result, rerender } = renderHook(
+      ({ body }) =>
+        useEditorDraft('guide', 'same-record', {
+          meta: { title: 'Guide' },
+          body,
+        }),
+      { initialProps: { body: 'Body' } },
+    );
+    act(() => result.current.setBody('Typed'));
+    rerender({ body: 'Body' });
+    expect(result.current.body).toBe('Typed');
+    expect(result.current.isDirty).toBe(true);
+  });
+
   it('resets to the new record and its own saved draft when the route changes', () => {
     const { result, rerender } = renderHook(
       ({ id }) => useEditorDraft('quest', id, { meta: { title: id }, body: id }),
@@ -117,15 +136,19 @@ describe('useEditorDraft', () => {
     expect(result.current.isDirty).toBe(true);
   });
 
-  it('clearDraft removes only the selected key and resets its dirty state', () => {
+  it('clearDraft removes only the selected key and keeps accepted values until reload', () => {
     localStorage.setItem('other-draft', 'keep');
-    const { result } = renderHook(() =>
-      useEditorDraft('guide', 'doc-id', { meta: { title: 'Guide' }, body: 'Body' }),
+    const { result, rerender } = renderHook(
+      ({ body }) =>
+        useEditorDraft('guide', 'doc-id', { meta: { title: 'Guide' }, body }),
+      { initialProps: { body: 'Body' } },
     );
     act(() => result.current.setBody('Edited'));
     act(() => result.current.clearDraft());
+    rerender({ body: 'Body' });
     expect(localStorage.getItem(draftStorageKey('guide', 'doc-id'))).toBeNull();
     expect(localStorage.getItem('other-draft')).toBe('keep');
+    expect(result.current.body).toBe('Edited');
     expect(result.current.isDirty).toBe(false);
   });
 });
@@ -182,6 +205,8 @@ it('drops cached body and undo history when body permission is revoked', () => {
   act(() => result.current.setBody('PRIVATE LOCAL CONTENT'));
   rerender({ canEditBody: false });
   expect(result.current.body).toBe('Safe projection');
+  expect(result.current.isDirty).toBe(false);
+  expect(result.current.isTouched).toBe(false);
   expect(localStorage.getItem(draftStorageKey('guide', 'doc', 'actor', 1))).toBeNull();
   act(() => result.current.undo());
   expect(result.current.body).toBe('Safe projection');

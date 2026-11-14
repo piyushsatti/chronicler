@@ -103,6 +103,31 @@ function removeDraft(key: string | null): void {
   }
 }
 
+type DraftState = {
+  identity: string;
+  key: string | null;
+  /** Server signature last loaded; clearDraft advances baseline only, so resync must not use baseline. */
+  applied: string;
+  baseline: string;
+  opened: string;
+  values: Snapshot;
+  history: Snapshot[];
+  cursor: number;
+  editableBody: boolean;
+  restoredAt: string | null;
+  restoredTitle: string;
+  restoredPinned: boolean;
+};
+
+/** Remount key for a draft host. Version and canEditBody are omitted so dirty/recovered edits stay stale-locked instead of resetting. */
+export function editorDraftKey(
+  typeKey: EditorTypeKey,
+  recordId: string,
+  scope: Pick<DraftScope, 'actorId'>,
+): string {
+  return JSON.stringify([scope.actorId, typeKey, recordId]);
+}
+
 export function useEditorDraft(
   typeKey: EditorTypeKey,
   recordId: string,
@@ -117,18 +142,20 @@ export function useEditorDraft(
   const signature = JSON.stringify(server);
   const pinned = scope.pinned;
   const pinnedSignature = JSON.stringify(pinned ?? null);
-  const makeState = () => {
-    const loaded = loadDraftWithTime(key);
+  const remountKey = editorDraftKey(typeKey, recordId, scope);
+  const makeState = (): DraftState => {
+    const loaded = scope.canEditBody ? loadDraftWithTime(key) : null;
     const saved = loaded?.snapshot;
     const value = saved
       ? withPinned(
           { meta: saved.meta, body: scope.canEditBody ? saved.body : server.body },
           pinned,
         )
-      : server;
+      : withPinned(server, pinned);
     return {
       identity,
       key,
+      applied: signature,
       baseline: signature,
       /** What the form showed when it opened: the server copy or a recovered draft. */
       opened: JSON.stringify(value),
@@ -138,7 +165,7 @@ export function useEditorDraft(
       editableBody: scope.canEditBody,
       /** When the recovered draft was saved, if the form opened from one that differs from the server. */
       restoredAt:
-        loaded && JSON.stringify(value) !== signature ? loaded.savedAt : (null as string | null),
+        loaded && JSON.stringify(value) !== signature ? loaded.savedAt : null,
       /** The recovered draft's title, so the notice can say which draft came back. */
       restoredTitle:
         saved && typeof saved.meta.title === 'string' ? saved.meta.title.trim() : '',
@@ -150,46 +177,49 @@ export function useEditorDraft(
     };
   };
   const [state, setState] = useState(makeState);
-  // Never render a previous account/record's state while waiting for an effect.
-  const current = state.identity === identity ? state : makeState();
-  const valuesSignature = JSON.stringify(current.values);
-  const dirty = valuesSignature !== current.baseline;
-  // A recovered draft differs from the server but loses nothing on leave until it is edited here.
-  const touched = valuesSignature !== current.opened;
-  const stale = current.key !== key;
-  const values = scope.canEditBody
-    ? current.values
-    : { ...current.values, body: server.body };
+  const [seenKey, setSeenKey] = useState(remountKey);
+  if (seenKey !== remountKey) {
+    setSeenKey(remountKey);
+    setState(makeState());
+  } else if (state.editableBody !== scope.canEditBody) {
+    if (!scope.canEditBody) {
+      const scrubbed = { ...state.values, body: server.body };
+      setState({
+        ...state,
+        editableBody: false,
+        applied: signature,
+        baseline: signature,
+        opened: signature,
+        values: scrubbed,
+        history: [scrubbed],
+        cursor: 0,
+      });
+    } else {
+      setState(makeState());
+    }
+  } else if (
+    (state.applied !== signature || state.key !== key) &&
+    JSON.stringify(state.values) === state.baseline
+  ) {
+    setState(makeState());
+  }
   useEffect(() => {
-    setState((old) => {
-      if (old.identity !== identity) return makeState();
-      if (old.editableBody && !scope.canEditBody) {
-        removeDraft(old.key);
-        const value = { meta: old.values.meta, body: server.body };
-        return {
-          ...makeState(),
-          key: old.key,
-          opened: JSON.stringify(value),
-          values: value,
-          history: [value],
-        };
-      }
-      if (old.baseline === signature && old.key === key) return old;
-      if (JSON.stringify(old.values) !== old.baseline) {
-        // Keep the edits, but a value the route pins (a new quest's series) still wins.
-        const value = withPinned(old.values, pinned);
-        if (value === old.values) return old;
-        const history = [...old.history.slice(0, old.cursor + 1), value].slice(-100);
-        return { ...old, values: value, history, cursor: history.length - 1 };
-      }
-      return makeState();
-    });
-  }, [identity, key, signature, pinnedSignature, scope.canEditBody]);
+    if (!scope.canEditBody) removeDraft(state.key);
+  }, [scope.canEditBody, state.key]);
+  const values = withPinned(
+    scope.canEditBody ? state.values : { ...state.values, body: server.body },
+    pinned,
+  );
+  const valuesSignature = JSON.stringify(values);
+  const dirty = valuesSignature !== state.baseline;
+  // A recovered draft differs from the server but loses nothing on leave until it is edited here.
+  const touched = valuesSignature !== state.opened;
+  const stale = state.key !== key;
   const change = useCallback(
     (update: (old: Snapshot) => Snapshot) => {
       setState((old) => {
         const base = old.identity === identity ? old : makeState();
-        const value = update(base.values);
+        const value = update(withPinned(base.values, pinned));
         const history = [...base.history.slice(0, base.cursor + 1), value].slice(-100);
         const next = {
           ...base,
@@ -201,7 +231,7 @@ export function useEditorDraft(
         return next;
       });
     },
-    [identity, key, signature, scope.canEditBody],
+    [identity, key, signature, scope.canEditBody, pinnedSignature],
   );
   const setMeta: React.Dispatch<React.SetStateAction<EditorMeta>> = useCallback(
     (action) => {
@@ -228,16 +258,16 @@ export function useEditorDraft(
     });
   };
   const clearDraft = useCallback(() => {
-    removeDraft(current.key);
+    removeDraft(state.key);
     setState((old) => ({
       ...old,
       baseline: JSON.stringify(old.values),
       opened: JSON.stringify(old.values),
       restoredAt: null,
     }));
-  }, [current.key]);
+  }, [state.key]);
   const resetDraft = () => {
-    removeDraft(current.key);
+    removeDraft(state.key);
     setState({
       ...makeState(),
       opened: signature,
@@ -257,12 +287,12 @@ export function useEditorDraft(
     isTouched: dirty && touched,
     stale,
     /** When the draft this form opened with was saved on this device; null when it opened fresh. */
-    restoredAt: current.restoredAt,
+    restoredAt: state.restoredAt,
     /** Title of the recovered draft; empty when it has none. */
-    restoredTitle: current.restoredTitle,
+    restoredTitle: state.restoredTitle,
     /** The link's pinned values overrode the recovered draft's (e.g. its series). */
-    restoredPinned: current.restoredPinned,
-    saveDraft: () => persist(current.key, values),
+    restoredPinned: state.restoredPinned,
+    saveDraft: () => persist(state.key, values),
     recoverableDrafts,
     recoverDraft: (savedKey: string) => {
       const saved = recoverableDrafts.find((draft) => draft.key === savedKey);
@@ -280,7 +310,7 @@ export function useEditorDraft(
     resetDraft,
     undo: () => travel(-1),
     redo: () => travel(1),
-    canUndo: current.cursor > 0,
-    canRedo: current.cursor < current.history.length - 1,
+    canUndo: state.cursor > 0,
+    canRedo: state.cursor < state.history.length - 1,
   };
 }

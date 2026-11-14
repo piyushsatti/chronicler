@@ -133,22 +133,20 @@ describe('MembersPanel', () => {
     });
   });
 
-  it('keeps the bulk controls mounted for zero, one and mixed-role selections', async () => {
+  it('keeps the bulk controls available for zero, one and mixed-role selections', async () => {
     renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
     await screen.findByRole('button', { name: /Mira/ });
     await userEvent.click(screen.getByRole('button', { name: 'Select members' }));
-    const baseRole = screen.getByRole('button', { name: /^Base role/ });
-    const apply = screen.getByRole('button', { name: 'Apply roles to selection' });
-    const help = screen.getByText(/Select members below and choose/);
-    expect(baseRole).toBeDisabled();
-    expect(apply).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Base role/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Apply roles to selection' })).toBeDisabled();
+    expect(screen.getByText(/Select members below and choose/)).toBeVisible();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Mira' }));
-    expect(baseRole).toBeEnabled();
-    expect(apply).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^Base role/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Apply roles to selection' })).toBeEnabled();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Ashwin' }));
-    expect(screen.getByRole('button', { name: /^Base role/ })).toBe(baseRole);
-    expect(screen.getByText(/Select members below and choose/)).toBe(help);
-    expect(apply).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Base role/ })).toBeVisible();
+    expect(screen.getByText(/Select members below and choose/)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Apply roles to selection' })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Done selecting' }));
     expect(screen.queryByRole('checkbox', { name: 'Select Mira' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Select members' }));

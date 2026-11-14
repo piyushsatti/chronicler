@@ -1,9 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AdminReadFailure } from './AdminReadFailure.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import type { useDiscordSettingsPanel } from '../hooks/useDiscordSettingsPanel.js';
+import {
+  useDiscordSettingsForm,
+  type useDiscordSettingsPanel,
+} from '../hooks/useDiscordSettingsPanel.js';
+import type { DiscordSettingsView } from '../adapters/adminAdapter.js';
 import styles from './DiscordSettingsPanel.module.css';
 
 /** Admin settings for quest announcements in Discord. The bot token and server id are deploy secrets. */
@@ -12,8 +16,35 @@ export function DiscordSettingsPanel({
 }: {
   view: ReturnType<typeof useDiscordSettingsPanel>;
 }): React.JSX.Element {
+  const { settingsQ } = view;
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  if (settingsQ.isError) {
+    return <AdminReadFailure error={settingsQ.error} retry={settingsQ.retry} />;
+  }
+  if (settingsQ.isLoading || !settingsQ.data) {
+    return <StatePanel status="loading" />;
+  }
+
+  return (
+    <DiscordSettingsForm
+      initial={settingsQ.data}
+      saveMessage={saveMessage}
+      setSaveMessage={setSaveMessage}
+    />
+  );
+}
+
+function DiscordSettingsForm({
+  initial,
+  saveMessage,
+  setSaveMessage,
+}: {
+  initial: DiscordSettingsView;
+  saveMessage: string | null;
+  setSaveMessage: (message: string | null) => void;
+}): React.JSX.Element {
   const {
-    settingsQ,
     announceChannelId,
     setAnnounceChannelId,
     roleId,
@@ -24,21 +55,13 @@ export function DiscordSettingsPanel({
     removeVoiceChannel,
     errors,
     summaryFocus,
-    saveMessage,
     submit,
     save,
-  } = view;
+  } = useDiscordSettingsForm(initial, setSaveMessage);
   const summaryRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (summaryFocus > 0) summaryRef.current?.focus();
   }, [summaryFocus]);
-
-  if (settingsQ.isError) {
-    return <AdminReadFailure error={settingsQ.error} retry={settingsQ.retry} />;
-  }
-  if (settingsQ.isLoading) {
-    return <StatePanel status="loading" />;
-  }
 
   return (
     <Card data-el="admin.discordSettingsPanel" className={`stack ${styles.panel}`} data-gap="5">
