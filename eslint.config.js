@@ -62,7 +62,12 @@ export default tseslint.config(
               message: 'msw belongs in mocks entry points and *.mocks.ts only',
             },
             {
-              group: ['**/tests/**', '**/tests/fixtures/**', '*tests/fixtures*', '*tests/*'],
+              group: [
+                '**/tests/**',
+                '**/tests/fixtures/**',
+                '*tests/fixtures*',
+                '*tests/*',
+              ],
               message: 'test fixtures belong in mocks entry points and *.mocks.ts only',
             },
           ],
@@ -90,7 +95,12 @@ export default tseslint.config(
               message: 'msw belongs in mocks entry points and *.mocks.ts only',
             },
             {
-              group: ['**/tests/**', '**/tests/fixtures/**', '*tests/fixtures*', '*tests/*'],
+              group: [
+                '**/tests/**',
+                '**/tests/fixtures/**',
+                '*tests/fixtures*',
+                '*tests/*',
+              ],
               message: 'test fixtures belong in mocks entry points and *.mocks.ts only',
             },
           ],
@@ -119,7 +129,12 @@ export default tseslint.config(
               message: 'msw belongs in mocks entry points and *.mocks.ts only',
             },
             {
-              group: ['**/tests/**', '**/tests/fixtures/**', '*tests/fixtures*', '*tests/*'],
+              group: [
+                '**/tests/**',
+                '**/tests/fixtures/**',
+                '*tests/fixtures*',
+                '*tests/*',
+              ],
               message: 'test fixtures belong in mocks entry points and *.mocks.ts only',
             },
           ],
