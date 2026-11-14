@@ -388,14 +388,20 @@ func (s ProductCommands) PublishDocument(ctx context.Context, actor auth.Authori
 	return runDocumentWrite(ctx, s, actor, "Mutation.publishDocument", "publishDocument", spec, meta, spec.Id,
 		func(ctx context.Context, repo DocumentWriteRepository) (*DocumentView, error) {
 			state, err := repo.LockPublishDocument(ctx, spec)
-			if err != nil || !state.Exists || state.Before == nil {
+			if err != nil {
+				return nil, err
+			}
+			if !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
 			return state.Before, nil
 		},
 		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DocumentView, error) {
 			repo := repos.Document
-			state, _ := repo.LockPublishDocument(ctx, spec)
+			state, err := repo.LockPublishDocument(ctx, spec)
+			if err != nil {
+				return DocumentView{}, err
+			}
 			revisionID := s.IDs()
 			view, err := repo.StorePublishDocument(ctx, PublishDocumentWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state, RevisionID: &revisionID,
@@ -418,14 +424,20 @@ func (s ProductCommands) UnpublishDocument(ctx context.Context, actor auth.Autho
 	return runDocumentWrite(ctx, s, actor, "Mutation.unpublishDocument", "unpublishDocument", spec, meta, spec.Id,
 		func(ctx context.Context, repo DocumentWriteRepository) (*DocumentView, error) {
 			state, err := repo.LockUnpublishDocument(ctx, spec)
-			if err != nil || !state.Exists || state.Before == nil {
+			if err != nil {
+				return nil, err
+			}
+			if !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
 			return state.Before, nil
 		},
 		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DocumentView, error) {
 			repo := repos.Document
-			state, _ := repo.LockUnpublishDocument(ctx, spec)
+			state, err := repo.LockUnpublishDocument(ctx, spec)
+			if err != nil {
+				return DocumentView{}, err
+			}
 			return repo.StoreUnpublishDocument(ctx, UnpublishDocumentWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state,
 			})
@@ -443,7 +455,10 @@ func (s ProductCommands) EditPublishedDocument(ctx context.Context, actor auth.A
 	return runDocumentWrite(ctx, s, actor, "Mutation.editPublishedDocument", "editPublishedDocument", spec, meta, spec.Id,
 		func(ctx context.Context, repo DocumentWriteRepository) (*DocumentView, error) {
 			state, err := repo.LockEditPublishedDocument(ctx, spec)
-			if err != nil || !state.Exists || state.Before == nil {
+			if err != nil {
+				return nil, err
+			}
+			if !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
 			return state.Before, nil
@@ -491,14 +506,20 @@ func (s ProductCommands) SetDocumentVisibility(ctx context.Context, actor auth.A
 	return runDocumentWrite(ctx, s, actor, "Mutation.setDocumentVisibility", "setDocumentVisibility", spec, meta, spec.Id,
 		func(ctx context.Context, repo DocumentWriteRepository) (*DocumentView, error) {
 			state, err := repo.LockSetDocumentVisibility(ctx, spec)
-			if err != nil || !state.Exists || state.Before == nil {
+			if err != nil {
+				return nil, err
+			}
+			if !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
 			return state.Before, nil
 		},
 		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DocumentView, error) {
 			repo := repos.Document
-			state, _ := repo.LockSetDocumentVisibility(ctx, spec)
+			state, err := repo.LockSetDocumentVisibility(ctx, spec)
+			if err != nil {
+				return DocumentView{}, err
+			}
 			return repo.StoreSetDocumentVisibility(ctx, SetDocumentVisibilityWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state,
 			})
@@ -513,14 +534,20 @@ func (s ProductCommands) DeleteDocument(ctx context.Context, actor auth.Authorit
 	return runDocumentWrite(ctx, s, actor, "Mutation.deleteDocument", "deleteDocument", spec, meta, spec.Id,
 		func(ctx context.Context, repo DocumentWriteRepository) (*DocumentView, error) {
 			state, err := repo.LockDeleteDocument(ctx, spec)
-			if err != nil || !state.Exists || state.Before == nil {
+			if err != nil {
+				return nil, err
+			}
+			if !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
 			return state.Before, nil
 		},
 		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (product.CommandReceipt, error) {
 			repo := repos.Document
-			state, _ := repo.LockDeleteDocument(ctx, spec)
+			state, err := repo.LockDeleteDocument(ctx, spec)
+			if err != nil {
+				return product.CommandReceipt{}, err
+			}
 			return repo.StoreDeleteDocument(ctx, DeleteDocumentWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state,
 			})
@@ -535,14 +562,20 @@ func (s ProductCommands) RestoreDocument(ctx context.Context, actor auth.Authori
 	return runDocumentWrite(ctx, s, actor, "Mutation.restoreDocument", "restoreDocument", spec, meta, spec.Id,
 		func(ctx context.Context, repo DocumentWriteRepository) (*DocumentView, error) {
 			state, err := repo.LockRestoreDocument(ctx, spec)
-			if err != nil || !state.Exists || state.Before == nil {
+			if err != nil {
+				return nil, err
+			}
+			if !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
 			return state.Before, nil
 		},
 		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DocumentView, error) {
 			repo := repos.Document
-			state, _ := repo.LockRestoreDocument(ctx, spec)
+			state, err := repo.LockRestoreDocument(ctx, spec)
+			if err != nil {
+				return DocumentView{}, err
+			}
 			return repo.StoreRestoreDocument(ctx, RestoreDocumentWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state,
 			})

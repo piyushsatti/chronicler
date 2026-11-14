@@ -32,7 +32,7 @@ export function toAppError(err: unknown, context: string): AppError {
   }
 
   if (err instanceof TransportError) {
-    if (err.status === 401 || err.code === 'UNAUTHORIZED') {
+    if (err.status === 401 || err.code === 'UNAUTHORIZED' || err.code === 'UNAUTHENTICATED') {
       return {
         kind: 'unauthorized',
         userMessage: FIXED.unauthorized,

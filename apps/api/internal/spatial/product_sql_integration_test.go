@@ -368,13 +368,15 @@ VALUES ('spa03-actor','spa03-actor','SPA03 actor',ARRAY['admin'],'active') RETUR
 	if err := productQueryRow(t, pool, ctx, productSQL(t, "ReadProductGameDate", ":one"), pgx.StrictNamedArgs{"real_date": start.AddDate(0, 0, 1)}).Scan(&missingDay, new([]byte)); err != nil || missingDay.Valid {
 		t.Fatalf("missing game-date read day=%v err=%v", missingDay, err)
 	}
+	var realDateTotal int64
 	var repeatedDate time.Time
-	if err := productQueryRow(t, pool, ctx, productSQL(t, "ListProductRealDates", ":many"), pgx.StrictNamedArgs{"game_day": int32(5), "row_limit": int32(10), "row_offset": int32(0)}).Scan(&repeatedDate); err != nil || !repeatedDate.Equal(start.AddDate(0, 0, 2)) {
-		t.Fatalf("real dates for game day 5=%s err=%v", repeatedDate, err)
+	if err := productQueryRow(t, pool, ctx, productSQL(t, "ListProductRealDates", ":many"), pgx.StrictNamedArgs{"game_day": int32(5), "row_limit": int32(10), "row_offset": int32(0)}).Scan(&realDateTotal, &repeatedDate); err != nil || realDateTotal != 1 || !repeatedDate.Equal(start.AddDate(0, 0, 2)) {
+		t.Fatalf("real dates for game day 5 total=%d date=%s err=%v", realDateTotal, repeatedDate, err)
 	}
-	var realDateCount int32
-	if err := productQueryRow(t, pool, ctx, productSQL(t, "CountProductRealDates", ":one"), pgx.StrictNamedArgs{"game_day": int32(5)}).Scan(&realDateCount); err != nil || realDateCount != 1 {
-		t.Fatalf("real-date count for game day 5=%d err=%v", realDateCount, err)
+	var emptyRealDateTotal int64
+	var emptyRealDate sql.NullTime
+	if err := productQueryRow(t, pool, ctx, productSQL(t, "ListProductRealDates", ":many"), pgx.StrictNamedArgs{"game_day": int32(5), "row_limit": int32(10), "row_offset": int32(10)}).Scan(&emptyRealDateTotal, &emptyRealDate); err != nil || emptyRealDateTotal != 1 || emptyRealDate.Valid {
+		t.Fatalf("empty real-date page total=%d date=%v err=%v", emptyRealDateTotal, emptyRealDate, err)
 	}
 	calendarCells := productSQL(t, "ListProductCalendarCells", ":many")
 	cellRows, err := productQuery(t, pool, ctx, calendarCells, pgx.StrictNamedArgs{"real_from": start, "real_to": end})
@@ -459,19 +461,26 @@ VALUES ('spa03-actor','spa03-actor','SPA03 actor',ARRAY['admin'],'active') RETUR
 	if len(collisions) != 1 || collisions[0] != secondAnchorID {
 		t.Fatalf("anchor collision exclusions=%v, want only %s", collisions, secondAnchorID)
 	}
-	var anchorCount int32
-	if err := productQueryRow(t, pool, ctx, productSQL(t, "CountProductTimeAnchors", ":one")).Scan(&anchorCount); err != nil || anchorCount != 2 {
-		t.Fatalf("time-anchor count=%d err=%v", anchorCount, err)
-	}
 	anchorPages, err := productQuery(t, pool, ctx, productSQL(t, "ListProductTimeAnchors", ":many"), pgx.StrictNamedArgs{"row_limit": int32(1), "row_offset": int32(0)})
 	if err != nil {
 		t.Fatal(err)
 	}
+	var anchorTotal int64
 	var firstAnchorPageID uuid.UUID
-	if !anchorPages.Next() || anchorPages.Scan(&firstAnchorPageID, new(time.Time), new(int32), new(float64), new(*string)) != nil || firstAnchorPageID != minUUID(anchorID, secondAnchorID) {
-		t.Fatalf("first time-anchor page=%s, want public UUID ascending tie-break %s", firstAnchorPageID, minUUID(anchorID, secondAnchorID))
+	if !anchorPages.Next() || anchorPages.Scan(&anchorTotal, &firstAnchorPageID, new(time.Time), new(sql.NullInt32), new(sql.NullFloat64), new(*string)) != nil || anchorTotal != 2 || firstAnchorPageID != minUUID(anchorID, secondAnchorID) {
+		t.Fatalf("first time-anchor page total=%d id=%s, want total 2 and public UUID ascending tie-break %s", anchorTotal, firstAnchorPageID, minUUID(anchorID, secondAnchorID))
 	}
 	anchorPages.Close()
+	emptyAnchorPages, err := productQuery(t, pool, ctx, productSQL(t, "ListProductTimeAnchors", ":many"), pgx.StrictNamedArgs{"row_limit": int32(1), "row_offset": int32(10)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var emptyAnchorTotal int64
+	var emptyAnchorID uuid.NullUUID
+	if !emptyAnchorPages.Next() || emptyAnchorPages.Scan(&emptyAnchorTotal, &emptyAnchorID, new(sql.NullTime), new(sql.NullInt32), new(sql.NullFloat64), new(*string)) != nil || emptyAnchorTotal != 2 || emptyAnchorID.Valid {
+		t.Fatalf("empty time-anchor page total=%d id=%v, want total 2 and null page columns", emptyAnchorTotal, emptyAnchorID)
+	}
+	emptyAnchorPages.Close()
 	updateArgs := pgx.StrictNamedArgs{"anchor_id": anchorID, "real_utc": anchorAt.Add(time.Hour), "epoch_day": int32(102), "rate": float64(1.5), "note": "updated"}
 	var updatedID uuid.UUID
 	var updatedAt time.Time

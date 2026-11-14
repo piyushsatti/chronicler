@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 )
 
@@ -71,7 +72,7 @@ func (s *RequestState) CurrentAuthority(ctx context.Context) (auth.Authority, er
 func (s *RequestState) refreshAuthority(ctx context.Context, generation uint64, pending chan struct{}) {
 	authority, err := s.Resolver(ctx, s.Identity.MemberID)
 	if err == nil && authority.Claims().MemberID != s.Identity.MemberID {
-		err = errors.New("refreshed authority must match identity")
+		err = apierr.New(apierr.Forbidden, "refreshed authority must match identity")
 	}
 	s.mu.Lock()
 	if generation == s.generation {
@@ -135,7 +136,7 @@ func LiveAuthority(ctx context.Context) (auth.Authority, error) {
 		return a, nil
 	}
 	if auth.FromContext(ctx).Anonymous() {
-		return auth.Authority{}, errors.New("sign in required")
+		return auth.Authority{}, apierr.New(apierr.Unauthenticated, "sign in required")
 	}
-	return auth.Authority{}, errors.New("live authority unavailable")
+	return auth.Authority{}, apierr.New(apierr.Internal, "live authority unavailable")
 }
