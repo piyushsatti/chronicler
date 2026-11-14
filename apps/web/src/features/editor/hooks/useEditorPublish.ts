@@ -505,16 +505,16 @@ export function useEditorPublish({
     if (
       !mutation.isSuccess ||
       !mutation.data ||
-      mutation.dataUpdatedAt === handledAt.current
+      mutation.submittedAt === handledAt.current
     )
       return;
-    handledAt.current = mutation.dataUpdatedAt;
+    handledAt.current = mutation.submittedAt;
     if (mutation.data.originScope === scopeKey && admit())
       onSuccess(mutation.data, mutation.variables !== false);
   }, [
     mutation.isSuccess,
     mutation.data,
-    mutation.dataUpdatedAt,
+    mutation.submittedAt,
     mutation.variables,
     scopeKey,
     admit,

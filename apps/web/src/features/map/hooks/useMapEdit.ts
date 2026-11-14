@@ -198,8 +198,8 @@ export function useMapEdit({
   });
   const handledAt = useRef(0);
   useEffect(() => {
-    if (!save.isSuccess || !save.data || save.dataUpdatedAt === handledAt.current) return;
-    handledAt.current = save.dataUpdatedAt;
+    if (!save.isSuccess || !save.data || save.submittedAt === handledAt.current) return;
+    handledAt.current = save.submittedAt;
     const result = save.data;
     let cancelled = false;
     void (async () => {
@@ -228,7 +228,7 @@ export function useMapEdit({
     return () => {
       cancelled = true;
     };
-  }, [save.isSuccess, save.data, save.dataUpdatedAt, token, isCurrentSession]);
+  }, [save.isSuccess, save.data, save.submittedAt, token, isCurrentSession]);
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || !isCurrent()) return;

@@ -871,7 +871,7 @@ describe('MapPage', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
       const invalidate = vi
         .spyOn(queryClient, 'invalidateQueries')
-        .mockImplementation(() => held.promise as Promise<unknown>);
+        .mockImplementation(() => held.promise);
       fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
       await waitFor(() => expect(invalidate).toHaveBeenCalled());
       expect(screen.getByLabelText('Current path')).toHaveTextContent(`/map/LFC?node=${node0}`);
