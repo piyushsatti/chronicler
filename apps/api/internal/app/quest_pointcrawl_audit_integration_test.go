@@ -185,10 +185,6 @@ func TestReceiptCompletionFailureRollsBackCreatedQuestBriefAndJob(t *testing.T) 
 	if err != nil || !actor.IsPlatformOwner() || actor.Claims().Has(auth.Admin) || actor.LiveDM() {
 		t.Fatalf("configured Player owner unavailable: %v", err)
 	}
-	policy, err := auth.NewPoolPolicy(f.db.Pool)
-	if err != nil {
-		t.Fatal(err)
-	}
 	meta := product.CommandMeta{IdempotencyKey: uuid.NewString()}
 	at := time.Date(2026, 10, 20, 15, 0, 0, 123000, time.UTC)
 	fail, observed := true, false
@@ -213,7 +209,11 @@ func TestReceiptCompletionFailureRollsBackCreatedQuestBriefAndJob(t *testing.T) 
 				observed = true
 			}}
 		}
-		return bindQuestCommandRepos(tx, policy, store.ResolveAuthority, notification.NewProducer())
+		repos, err := bindQuestCommandRepos(tx, ownerID, notification.NewProducer())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return repos
 	})
 	commands, err := quest.NewProductCommands(runner, func() time.Time { return at }, uuid.NewString)
 	if err != nil {
@@ -281,16 +281,13 @@ func TestReceiptCompletionFailureRollsBackRealDocumentNotice(t *testing.T) {
 	if _, err := f.db.Pool.Exec(ctx, `INSERT INTO documents(public_id,kind,slug,title,status,visibility,body,author_id,version) SELECT $1,'codex_entry','audit-receipt-rollback','Before','published','public','HIDDEN_BODY_SENTINEL',id,1 FROM members WHERE public_id=$2`, docID, f.other.Claims().MemberID); err != nil {
 		t.Fatal(err)
 	}
-	policy, err := auth.NewPoolPolicy(f.db.Pool)
-	if err != nil {
-		t.Fatal(err)
-	}
 	meta := product.CommandMeta{IdempotencyKey: uuid.NewString()}
 	at := time.Date(2026, 10, 20, 14, 0, 0, 123000, time.UTC)
 	title := "Tentative edit"
 	spec := document.EditPublishedDocumentSpec{Id: docID, Input: document.DocumentEditFields{ExpectedRevision: 1, Title: product.Optional[string]{Set: true, Value: &title}}}
 	fail := true
 	observed := false
+	ownerID := f.store.ConfiguredOwnerID()
 	runner := db.NewRunner(f.db.Pool, func(tx pgx.Tx) document.ProductCommandRepos {
 		if fail {
 			tx = &auditReceiptFailureTx{Tx: tx, onComplete: func(callCtx context.Context, args []any) {
@@ -312,7 +309,11 @@ func TestReceiptCompletionFailureRollsBackRealDocumentNotice(t *testing.T) {
 				observed = true
 			}}
 		}
-		return bindDocumentCommandRepos(tx, policy, f.store.ResolveAuthority, notification.NewProducer())
+		repos, err := bindDocumentCommandRepos(tx, ownerID, notification.NewProducer())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return repos
 	})
 	commands, err := document.NewProductCommands(runner, func() time.Time { return at }, uuid.NewString)
 	if err != nil {
