@@ -228,6 +228,7 @@ type QuestFiltersFields struct {
 	DisplayStatus *string
 	DmId          *string
 	Genre         *string
+	Ids           []string
 	Kind          *string
 	RegionId      *string
 	ScheduledFrom *time.Time
@@ -395,9 +396,10 @@ type DmSummariesSpec struct {
 }
 
 type MyQuestSignupsSpec struct {
-	Limit  int32
-	Offset int32
-	AsOf   time.Time
+	ScheduledFrom *time.Time
+	Limit         int32
+	Offset        int32
+	AsOf          time.Time
 }
 
 type OpenQuestSeatsSpec struct {

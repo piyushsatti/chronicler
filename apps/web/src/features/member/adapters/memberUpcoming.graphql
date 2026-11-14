@@ -1,5 +1,16 @@
-query MemberUpcoming($from: DateTime!, $limit: Int! = 100, $offset: Int! = 0) {
-  quests(filters: { scheduledFrom: $from }, limit: $limit, offset: $offset) {
+query MemberMyUpcomingSignups($from: DateTime, $limit: Int! = 100, $offset: Int! = 0) {
+  myQuestSignups(scheduledFrom: $from, limit: $limit, offset: $offset) {
+    total
+    items {
+      questId
+      status
+      characterName
+    }
+  }
+}
+
+query MemberUpcomingQuests($ids: [ID!], $limit: Int! = 100, $offset: Int! = 0) {
+  quests(filters: { ids: $ids }, limit: $limit, offset: $offset) {
     total
     items {
       id
@@ -8,11 +19,6 @@ query MemberUpcoming($from: DateTime!, $limit: Int! = 100, $offset: Int! = 0) {
       scheduledAt
       briefDocument {
         title
-      }
-      participants(limit: 100) {
-        memberId
-        characterName
-        status
       }
     }
   }

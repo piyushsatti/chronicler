@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import type { MemberHubQuery } from '../../../api/graphql.operations.gen.js';
+import type {
+  MemberHubQuery,
+  MemberMyUpcomingSignupsQuery,
+  MemberRosterQuery,
+  MemberUpcomingQuestsQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
-import type {
-  MemberRosterQuery,
-  MemberUpcomingQuery,
-} from '../../../api/graphql.operations.gen.js';
 import MEMBER_HUB_QUERY from './memberHub.graphql?raw';
 import MEMBER_ROSTER_QUERY from './memberRoster.graphql?raw';
 import MEMBER_UPCOMING_QUERY from './memberUpcoming.graphql?raw';
@@ -50,7 +51,6 @@ export type MemberHubView = {
 const INACTIVE_SIGNUP = new Set(['withdrawn', 'no_show']);
 const INACTIVE_QUEST = new Set(['cancelled', 'completed', 'played', 'closed']);
 const UPCOMING_PAGE_SIZE = 100;
-const MAX_UPCOMING_PAGES = 20;
 
 export async function loadMemberHub(memberId: string): Promise<MemberHubView> {
   try {
@@ -130,7 +130,18 @@ export async function loadMemberRoster(): Promise<RosterCharacter[]> {
   }
 }
 
-const upcomingWireSchema = z.object({
+const signupWireSchema = z.object({
+  total: z.number().int().nonnegative(),
+  items: z.array(
+    z.object({
+      questId: z.string(),
+      status: z.string(),
+      characterName: z.string(),
+    }),
+  ),
+});
+
+const questWireSchema = z.object({
   total: z.number().int().nonnegative(),
   items: z.array(
     z.object({
@@ -139,13 +150,6 @@ const upcomingWireSchema = z.object({
       status: z.string(),
       scheduledAt: z.string(),
       briefDocument: z.object({ title: z.string() }).nullable(),
-      participants: z.array(
-        z.object({
-          memberId: z.string(),
-          characterName: z.string(),
-          status: z.string(),
-        }),
-      ),
     }),
   ),
 });
@@ -159,41 +163,81 @@ export type UpcomingSignup = {
   characterName: string;
 };
 
+const [signupsDocument, questsDocument] = MEMBER_UPCOMING_QUERY.split(/\n(?=query )/).filter(
+  Boolean,
+);
+
 /** Quests from now on that this member holds an active seat in, soonest first. */
 export async function loadUpcomingSignups(
-  memberId: string,
+  _memberId: string,
   from: string,
 ): Promise<UpcomingSignup[]> {
   try {
-    const out: UpcomingSignup[] = [];
-    let fetched = 0;
-    // Page through every future quest: a member's seat may sit beyond the first page.
-    for (let page = 0; page < MAX_UPCOMING_PAGES; page += 1) {
-      const data = await graphqlRequest<MemberUpcomingQuery>(MEMBER_UPCOMING_QUERY, {
+    const seats: Array<{ questId: string; status: string; characterName: string }> = [];
+    let signupOffset = 0;
+    let signupTotal = Infinity;
+    while (signupOffset < signupTotal) {
+      const data = await graphqlRequest<MemberMyUpcomingSignupsQuery>(signupsDocument, {
         from,
         limit: UPCOMING_PAGE_SIZE,
-        offset: fetched,
+        offset: signupOffset,
       });
-      const parsed = upcomingWireSchema.safeParse(data.quests);
+      const parsed = signupWireSchema.safeParse(data.myQuestSignups);
       if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'me:upcoming');
-      for (const quest of parsed.data.items) {
-        // Cancelling a quest keeps its participants, so the quest status decides.
-        if (INACTIVE_QUEST.has(quest.status)) continue;
-        const seat = quest.participants.find(
-          (p) => p.memberId === memberId && !INACTIVE_SIGNUP.has(p.status),
-        );
-        if (!seat) continue;
-        out.push({
-          questId: quest.id,
-          shortCode: quest.shortCode,
-          title: quest.briefDocument?.title ?? quest.shortCode,
-          scheduledAt: quest.scheduledAt,
-          status: seat.status,
-          characterName: seat.characterName,
-        });
+      signupTotal = parsed.data.total;
+      for (const seat of parsed.data.items) {
+        if (!INACTIVE_SIGNUP.has(seat.status)) seats.push(seat);
       }
-      fetched += parsed.data.items.length;
-      if (parsed.data.items.length === 0 || fetched >= parsed.data.total) break;
+      signupOffset += parsed.data.items.length;
+      if (parsed.data.items.length === 0) break;
+    }
+
+    if (seats.length === 0) return [];
+
+    const byQuest = new Map(seats.map((seat) => [seat.questId, seat]));
+    const ids = [...byQuest.keys()];
+    const quests = new Map<
+      string,
+      { shortCode: string; scheduledAt: string; title: string }
+    >();
+    for (let i = 0; i < ids.length; i += UPCOMING_PAGE_SIZE) {
+      const chunk = ids.slice(i, i + UPCOMING_PAGE_SIZE);
+      let questOffset = 0;
+      let questTotal = Infinity;
+      while (questOffset < questTotal) {
+        const data = await graphqlRequest<MemberUpcomingQuestsQuery>(questsDocument, {
+          ids: chunk,
+          limit: UPCOMING_PAGE_SIZE,
+          offset: questOffset,
+        });
+        const parsed = questWireSchema.safeParse(data.quests);
+        if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'me:upcoming');
+        questTotal = parsed.data.total;
+        for (const quest of parsed.data.items) {
+          if (INACTIVE_QUEST.has(quest.status)) continue;
+          quests.set(quest.id, {
+            shortCode: quest.shortCode,
+            scheduledAt: quest.scheduledAt,
+            title: quest.briefDocument?.title ?? quest.shortCode,
+          });
+        }
+        questOffset += parsed.data.items.length;
+        if (parsed.data.items.length === 0) break;
+      }
+    }
+
+    const out: UpcomingSignup[] = [];
+    for (const [questId, seat] of byQuest) {
+      const quest = quests.get(questId);
+      if (!quest) continue;
+      out.push({
+        questId,
+        shortCode: quest.shortCode,
+        title: quest.title,
+        scheduledAt: quest.scheduledAt,
+        status: seat.status,
+        characterName: seat.characterName,
+      });
     }
     return out.sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
   } catch (err) {
