@@ -30,15 +30,18 @@ afterEach(() => {
 
 describe('postHeartbeat', () => {
   it('POSTs JSON to /v1/ingest/heartbeat with X-Ingest-Secret', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
-    vi.stubGlobal('fetch', fetchMock);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
 
-    await postHeartbeat(config, {
-      gateway_ready: true,
-      shard_state: { '0': 'ready' },
-      host: 'test-host',
-      build_sha: 'test-build',
-    });
+    await postHeartbeat(
+      config,
+      {
+        gateway_ready: true,
+        shard_state: { '0': 'ready' },
+        host: 'test-host',
+        build_sha: 'test-build',
+      },
+      { fetch: fetchMock as unknown as typeof fetch },
+    );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
