@@ -171,7 +171,7 @@ heartbeat_alerts AS (
         '/admin/data-health'::text AS remediation_href,
         latest.received_at AS first_seen_at,
         latest.received_at AS last_seen_at
-    FROM (SELECT max(received_at) AS received_at FROM bot_heartbeats) latest
+    FROM (SELECT max(received_at) AS received_at FROM bot_heartbeats WHERE payload->>'gateway_ready' = 'true') latest
     WHERE latest.received_at IS NULL
        OR latest.received_at < clock_timestamp() - interval '3 minutes'
 ),
@@ -200,7 +200,7 @@ WITH job_alerts AS (
 ),
 heartbeat_alerts AS (
     SELECT 1
-    FROM (SELECT max(received_at) AS received_at FROM bot_heartbeats) latest
+    FROM (SELECT max(received_at) AS received_at FROM bot_heartbeats WHERE payload->>'gateway_ready' = 'true') latest
     WHERE latest.received_at IS NULL
        OR latest.received_at < clock_timestamp() - interval '3 minutes'
 )

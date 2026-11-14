@@ -2953,3 +2953,53 @@ func (q *Queries) ProductQuestUpdateParticipant(ctx context.Context, arg Product
 	)
 	return i, err
 }
+
+const productQuestUpdateParticipantsByPublicID = `-- name: ProductQuestUpdateParticipantsByPublicID :many
+UPDATE quest_participants qp
+SET status = statuses.status, manual = true, updated_at = $1::timestamptz
+FROM unnest($3::uuid[]) WITH ORDINALITY AS input(character_id, ordinality)
+JOIN unnest($4::text[]) WITH ORDINALITY AS statuses(status, ordinality)
+  ON statuses.ordinality = input.ordinality
+JOIN characters c ON c.public_id = input.character_id AND c.deleted_at IS NULL
+JOIN members owner ON owner.id = c.owner_id
+WHERE qp.quest_id = $2::bigint AND qp.character_id = c.id
+RETURNING c.public_id AS character_id, owner.public_id AS owner_id, qp.status
+`
+
+type ProductQuestUpdateParticipantsByPublicIDParams struct {
+	At           pgtype.Timestamptz `json:"at"`
+	QuestID      int64              `json:"quest_id"`
+	CharacterIds []pgtype.UUID      `json:"character_ids"`
+	Statuses     []string           `json:"statuses"`
+}
+
+type ProductQuestUpdateParticipantsByPublicIDRow struct {
+	CharacterID pgtype.UUID `json:"character_id"`
+	OwnerID     pgtype.UUID `json:"owner_id"`
+	Status      string      `json:"status"`
+}
+
+func (q *Queries) ProductQuestUpdateParticipantsByPublicID(ctx context.Context, arg ProductQuestUpdateParticipantsByPublicIDParams) ([]ProductQuestUpdateParticipantsByPublicIDRow, error) {
+	rows, err := q.db.Query(ctx, productQuestUpdateParticipantsByPublicID,
+		arg.At,
+		arg.QuestID,
+		arg.CharacterIds,
+		arg.Statuses,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductQuestUpdateParticipantsByPublicIDRow{}
+	for rows.Next() {
+		var i ProductQuestUpdateParticipantsByPublicIDRow
+		if err := rows.Scan(&i.CharacterID, &i.OwnerID, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

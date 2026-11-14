@@ -156,7 +156,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/design-gates/**/*.{mjs,js}'],
+    files: ['scripts/**/*.{mjs,js}'],
     languageOptions: {
       globals: {
         console: 'readonly',
@@ -183,12 +183,33 @@ export default tseslint.config(
           message: 'Read process.env only in apps/discord/src/index.ts via loadConfig',
         },
       ],
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'fetch',
+          message: 'Call fetch only in apps/discord/src/api/http.ts via createHttp',
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value="X-Ingest-Secret"]',
+          message: 'Set X-Ingest-Secret only in apps/discord/src/api/http.ts',
+        },
+      ],
     },
   },
   {
     files: ['apps/discord/src/index.ts'],
     rules: {
       'no-restricted-properties': 'off',
+    },
+  },
+  {
+    files: ['apps/discord/src/api/http.ts'],
+    rules: {
+      'no-restricted-globals': 'off',
+      'no-restricted-syntax': 'off',
     },
   },
 );

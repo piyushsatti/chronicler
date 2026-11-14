@@ -6,7 +6,7 @@
 
 ## Verdict
 
-`mountShardHealth` posts shard state to `POST /v1/ingest/heartbeat` every 60 seconds. A failed POST is logged and does not stop the process. Heartbeat is on unless `BOT_HEARTBEAT_ENABLED=false`. The same timer also touches `/tmp/chronicler-bot-alive` so Compose can treat the bot as healthy. No product GraphQL, announce, or agent path.
+`mountShardHealth` posts shard state to `POST /v1/ingest/heartbeat` every 60 seconds. A failed POST is logged and does not stop the process. Heartbeat is on unless `BOT_HEARTBEAT_ENABLED=false`. The same timer also touches `/tmp/chronicler-bot-alive` so Compose can treat the bot as healthy. The admin "Bot heartbeat is stale" alert fires when no heartbeat with `gateway_ready: true` has arrived in the last 3 minutes (silent bot or never Gateway-ready), not merely when the newest row is old. No product GraphQL, announce, or agent path.
 
 ## How it works
 
@@ -16,6 +16,6 @@
 
 On mount and every timer tick (even with the ingest heartbeat off), the bot writes `/tmp/chronicler-bot-alive`. Production Compose runs `bun apps/discord/dist/healthcheck.js`, which exits 0 when that file is younger than 150 seconds. That is event-loop liveness, not a Discord call.
 
-`GUILD_ID` and `INGEST_SECRET` are required while heartbeat is on. Host and build come from `BOT_HOST` and `BOT_BUILD_ID` (falling through `CHRONICLER_BUILD_SHA`, `BUILD_SHA`, `BUILD_VERSION`, then `unknown`).
+`GUILD_ID` and `INGEST_SECRET` are required while heartbeat is on. Host comes from `BOT_HOST`. Build id (`build_sha`) comes from the image via `BOT_BUILD_ID` (baked at build time; defaults to `unknown`).
 
 Tests: `tests/unit/health.test.ts`, `tests/unit/health.heartbeat.test.ts`, `tests/unit/healthcheck.test.ts`, `tests/unit/compose.test.ts`.

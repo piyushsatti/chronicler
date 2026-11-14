@@ -437,6 +437,17 @@ UPDATE quest_participants SET status = @status::text, manual = @manual::boolean,
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
 
+-- name: ProductQuestUpdateParticipantsByPublicID :many
+UPDATE quest_participants qp
+SET status = statuses.status, manual = true, updated_at = @at::timestamptz
+FROM unnest(@character_ids::uuid[]) WITH ORDINALITY AS input(character_id, ordinality)
+JOIN unnest(@statuses::text[]) WITH ORDINALITY AS statuses(status, ordinality)
+  ON statuses.ordinality = input.ordinality
+JOIN characters c ON c.public_id = input.character_id AND c.deleted_at IS NULL
+JOIN members owner ON owner.id = c.owner_id
+WHERE qp.quest_id = @quest_id::bigint AND qp.character_id = c.id
+RETURNING c.public_id AS character_id, owner.public_id AS owner_id, qp.status;
+
 -- name: ProductQuestRejoinParticipant :one
 -- Rejoining is always an ordinary signup, never a DM pick: clear any dm_picked left over
 -- from a prior DM selection of this same character, or it would wrongly stay bump-immune.

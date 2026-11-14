@@ -4,6 +4,7 @@ import { queryKeys } from '../../../src/api/queryKeys.js';
 import listGood from '../../fixtures/wire/quest/list-good.json';
 import { describe, expect, it } from 'vitest';
 import {
+  mapToBoardCardProps,
   parseQuestBoard,
   parseQuestList,
   loadQuestList,
@@ -59,6 +60,14 @@ describe('parseQuestBoard', () => {
                 memberAvatarUrl: null,
                 status: 'waitlisted',
               },
+              {
+                memberId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+                characterId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+                characterName: 'Ghost',
+                memberHandle: 'ghost',
+                memberAvatarUrl: null,
+                status: 'no_show',
+              },
             ],
           },
         ],
@@ -72,7 +81,10 @@ describe('parseQuestBoard', () => {
       regionName: 'The Marches',
       waitlistCount: 1,
     });
-    expect(result.data[0]?.participants).toHaveLength(2);
+    expect(result.data[0]?.participants).toHaveLength(3);
+    expect(mapToBoardCardProps(result.data[0]!).party).toEqual([
+      { characterName: 'Rook', characterId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', avatarUrl: null },
+    ]);
   });
 
   it('preserves all six recruiting identities, order, and distinct display labels', () => {

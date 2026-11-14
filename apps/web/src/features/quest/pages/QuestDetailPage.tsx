@@ -30,7 +30,12 @@ import {
   pluralize,
   statusLabel,
 } from '../../../utils/format.js';
-import { questKindLabel, signupTypeLabel } from '../../../utils/questVocabulary.js';
+import {
+  hasActiveSignup,
+  isSeatedOnDetailPage,
+  questKindLabel,
+  signupTypeLabel,
+} from '../../../utils/questVocabulary.js';
 
 const DECLARATION: PageDeclaration = {
   page: 'quest-detail',
@@ -120,10 +125,7 @@ export function QuestDetailPage(): React.JSX.Element {
   const playerLabel = (index: number) => peopleLabels[index + (hasDm ? 1 : 0)];
   const seated = quest.participants
     .map((participant, index) => ({ participant, label: playerLabel(index) }))
-    .filter(
-      ({ participant }) =>
-        participant.status !== 'waitlisted' && participant.status !== 'withdrawn',
-    );
+    .filter(({ participant }) => isSeatedOnDetailPage(participant.status));
   const waiting = quest.participants
     .map((participant, index) => ({ participant, label: playerLabel(index) }))
     .filter(({ participant }) => participant.status === 'waitlisted');
@@ -134,8 +136,7 @@ export function QuestDetailPage(): React.JSX.Element {
     detail.isAuthenticated && detail.memberId === null && !detail.charactersError;
   const dmHoldsSeat = quest.participants.some(
     (participant) =>
-      participant.memberId === quest.dmId &&
-      (participant.status === 'signed_up' || participant.status === 'waitlisted'),
+      participant.memberId === quest.dmId && hasActiveSignup(participant.status),
   );
   const hideParticipation =
     memberPending || (detail.memberId === quest.dmId && !dmHoldsSeat);

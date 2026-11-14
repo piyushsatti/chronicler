@@ -28,6 +28,10 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 		if expected, ok := errors.AsType[*apierr.Error](err); ok {
 			presented.Message = expected.Message
 			presented.Extensions = map[string]any{"code": string(expected.Code)}
+			// Recover already logged bare Internal; Wrap sites carry a cause to log.
+			if expected.Cause != nil {
+				slog.ErrorContext(ctx, "unexpected GraphQL error", "error", expected)
+			}
 		} else if presented.Err != nil {
 			// gqlgen wraps resolver errors in gqlerror.Error before presenting.
 			// Parser/validation errors have no wrapped cause and remain useful.
