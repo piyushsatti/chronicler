@@ -26,6 +26,10 @@ export const endpoints = {
 export const queryKeys = {
   me: ['me'] as const,
   myPrivateNotes: (memberId: string) => ['myPrivateNotes', memberId] as const,
+  currentAccess: (kind?: string, identity?: string | null) =>
+    kind === undefined
+      ? (['currentAccess'] as const)
+      : (['currentAccess', kind, identity ?? null] as const),
 };
 
 export const graphql: FeatureGraphql = {
@@ -44,7 +48,9 @@ export const graphql: FeatureGraphql = {
         },
       },
     }),
-  MemberUpcoming: () =>
+  MemberMyUpcomingSignups: () =>
+    HttpResponse.json({ data: { myQuestSignups: { total: 0, items: [] } } }),
+  MemberUpcomingQuests: () =>
     HttpResponse.json({ data: { quests: { total: 0, items: [] } } }),
   MemberRoster: () =>
     HttpResponse.json({ data: { myCharacters: { total: 0, items: [] } } }),

@@ -137,6 +137,7 @@ WITH filtered AS (
       AND (NOT @tag_filter_set::boolean OR q.tags && @tag_variants::text[])
       AND (NOT @genre_filter_set::boolean OR q.genres && @genre_variants::text[])
       AND (cardinality(@short_codes::text[]) = 0 OR q.short_code = ANY(@short_codes::text[]))
+      AND (cardinality(@ids::uuid[]) = 0 OR q.public_id = ANY(@ids::uuid[]))
       AND (@scheduled_from::timestamptz IS NULL OR q.scheduled_at >= @scheduled_from::timestamptz)
       AND (@scheduled_to::timestamptz IS NULL OR q.scheduled_at < @scheduled_to::timestamptz)
       AND (sqlc.narg(search)::text IS NULL OR q.short_code ILIKE '%' || replace(replace(replace(sqlc.narg(search)::text, E'\\', E'\\\\'), '%', E'\\%'), '_', E'\\_') || '%' ESCAPE E'\\')
@@ -275,6 +276,7 @@ WITH filtered AS (
     WHERE m.public_id = @member_id::uuid
       AND qp.status <> 'withdrawn'
       AND q.deleted_at IS NULL
+      AND (@scheduled_from::timestamptz IS NULL OR q.scheduled_at >= @scheduled_from::timestamptz)
 ), counted AS (
     SELECT count(*)::bigint AS total FROM filtered
 ), page AS (

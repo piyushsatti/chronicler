@@ -99,6 +99,7 @@ export function MapPage(): React.JSX.Element {
     clearSelection();
     if (id) viewport.current?.focusNode(id);
   };
+  // No deps: rebind Escape each render so closeDetails sees the latest selection.
   useEffect(() => {
     if (!selected || edit) return;
     const escape = (event: KeyboardEvent) => {

@@ -89,7 +89,7 @@ func (j *Job) Claim(now time.Time) (bool, error) {
 	} else if (j.State != Queued && j.State != RetryWait) || now.Before(j.NextRunAt) {
 		return false, nil
 	}
-	if j.Attempts >= MaxAttempts {
+	if j.Attempts >= j.MaxAttempts() {
 		j.terminate(Dead, "exhausted", "This request could not be completed. Please try again.")
 		return false, nil
 	}
@@ -285,7 +285,7 @@ func validateCompletionState(op string, state State) error {
 }
 
 func (j *Job) retry(now time.Time, after time.Duration, reason string) error {
-	if j.Attempts >= MaxAttempts {
+	if j.Attempts >= j.MaxAttempts() {
 		j.terminate(Dead, "exhausted", "This request could not be completed. Please try again.")
 		return nil
 	}
