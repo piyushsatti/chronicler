@@ -1027,6 +1027,7 @@ type QuestFiltersInput struct {
 	Tag           *string    `json:"tag,omitempty"`
 	Genre         *string    `json:"genre,omitempty"`
 	ShortCodes    []string   `json:"shortCodes,omitempty"`
+	Ids           []string   `json:"ids,omitempty"`
 	Search        *string    `json:"search,omitempty"`
 	DisplayStatus *string    `json:"displayStatus,omitempty"`
 	ScheduledFrom *time.Time `json:"scheduledFrom,omitempty"`

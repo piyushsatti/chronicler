@@ -79,6 +79,8 @@ type discordCall struct {
 	Body   map[string]any
 }
 
+const testBotUserID = "999999999999999999"
+
 // fakeDiscord records every call and answers like the REST API.
 type fakeDiscord struct {
 	mu    sync.Mutex
@@ -89,11 +91,16 @@ type fakeDiscord struct {
 	failHeader    http.Header
 	failBody      string
 	eventResponse string
-	client        *http.Client
+	events []map[string]any
+	// loseEventCreates drops that many create responses after recording the event.
+	loseEventCreates int
+	dropResponse     bool
+	client           *http.Client
 }
 
 func newFakeDiscord(t *testing.T) *fakeDiscord {
 	t.Helper()
+	delivery.ClearBotUserIDCache()
 	f := &fakeDiscord{}
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var raw []byte
@@ -133,6 +140,13 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 			return
 		}
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/users/@me":
+			_, _ = w.Write([]byte(`{"id":"` + testBotUserID + `"}`))
+		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/scheduled-events") && !strings.Contains(r.URL.Path, "/scheduled-events/"):
+			f.mu.Lock()
+			body, _ := json.Marshal(f.events)
+			f.mu.Unlock()
+			_, _ = w.Write(body)
 		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/scheduled-events/"):
 			body := f.eventResponse
 			if body == "" {
@@ -142,7 +156,23 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/threads"):
 			_, _ = w.Write([]byte(`{"id":"thread-1"}`))
 		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/scheduled-events"):
-			_, _ = w.Write([]byte(`{"id":"666666666666666666"}`))
+			id := "666666666666666666"
+			event := map[string]any{
+				"id": id, "creator_id": testBotUserID, "name": call.Body["name"],
+				"scheduled_start_time": call.Body["scheduled_start_time"], "status": float64(1),
+			}
+			f.mu.Lock()
+			if len(f.events) > 0 {
+				id = fmt.Sprintf("66666666666666666%d", len(f.events))
+				event["id"] = id
+			}
+			f.events = append(f.events, event)
+			if f.loseEventCreates > 0 {
+				f.loseEventCreates--
+				f.dropResponse = true
+			}
+			f.mu.Unlock()
+			_, _ = w.Write([]byte(`{"id":"` + id + `"}`))
 		case r.Method == http.MethodPost:
 			_, _ = w.Write([]byte(`{"id":"777777777777777777"}`))
 		default:
@@ -152,6 +182,13 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 	f.client = &http.Client{Transport: discordTransport(func(r *http.Request) (*http.Response, error) {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, r)
+		f.mu.Lock()
+		drop := f.dropResponse
+		f.dropResponse = false
+		f.mu.Unlock()
+		if drop {
+			return nil, context.DeadlineExceeded
+		}
 		return response.Result(), nil
 	})}
 	return f
@@ -216,6 +253,8 @@ func TestFirstPostMessageThreadEventThenEventLine(t *testing.T) {
 	want := []string{
 		"POST /channels/" + testChannel + "/messages",
 		"POST /channels/" + testChannel + "/messages/777777777777777777/threads",
+		"GET /users/@me",
+		"GET /guilds/" + testGuild + "/scheduled-events",
 		"POST /guilds/" + testGuild + "/scheduled-events",
 		"PATCH /channels/" + testChannel + "/messages/777777777777777777",
 	}
@@ -248,6 +287,50 @@ func TestFirstPostMessageThreadEventThenEventLine(t *testing.T) {
 func itoa(n int64) string {
 	b, _ := json.Marshal(n)
 	return string(b)
+}
+
+func TestMessageEditFailureStillCancelsEvent(t *testing.T) {
+	f := newFakeDiscord(t)
+	f.failStatus = http.StatusNotFound
+	f.fail = func(c discordCall) bool {
+		return c.Method == http.MethodPatch && strings.Contains(c.Path, "/messages/")
+	}
+	q := baseQuest(testVoice)
+	q.Status, q.MessageID, q.EventID, q.ThreadID, q.AppliedRevision = "cancelled", "gone-msg", "existing-event", "thread-9", 2
+	quests := &fakeQuests{quest: q}
+	applier := &fakeApplier{}
+	err := newSync(f, quests, fullSettings, applier).SyncQuest(context.Background(), testQuestID, 3)
+	if err == nil {
+		t.Fatal("missing announcement must fail the job")
+	}
+	if len(applier.revisions) != 0 {
+		t.Fatalf("must not apply revision on failure: %v", applier.revisions)
+	}
+	events := f.find(http.MethodPatch, "/scheduled-events/existing-event")
+	if len(events) != 1 || events[0].Body["status"] != float64(4) {
+		t.Fatalf("cancelled event update=%v want status 4", events)
+	}
+}
+
+func TestLostEventCreateResponseIsAdoptedOnRetry(t *testing.T) {
+	f := newFakeDiscord(t)
+	f.loseEventCreates = 1
+	quests := &fakeQuests{quest: baseQuest(testVoice)}
+	if err := newSync(f, quests, fullSettings, nil).SyncQuest(context.Background(), testQuestID, 1); err == nil {
+		t.Fatal("lost create response must fail so the job retries")
+	}
+	if quests.quest.EventID != "" || quests.events != 0 {
+		t.Fatalf("event must not be stored after a lost response: %+v", quests)
+	}
+	if err := newSync(f, quests, fullSettings, nil).SyncQuest(context.Background(), testQuestID, 1); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(f.find(http.MethodPost, "/scheduled-events")); n != 1 {
+		t.Fatalf("event creates=%d want 1 (retry adopts)", n)
+	}
+	if len(f.events) != 1 || quests.quest.EventID != "666666666666666666" || quests.events != 1 {
+		t.Fatalf("adopted event=%+v stored=%+v", f.events, quests)
+	}
 }
 
 func TestThreadIsNamedAfterQuestCode(t *testing.T) {
@@ -295,7 +378,9 @@ func TestNoThreadAfterFirstPostEvenWhenNoneWasRecorded(t *testing.T) {
 func TestRetryOfFirstPostStillOpensTheThreadOnce(t *testing.T) {
 	f := newFakeDiscord(t)
 	quests := &fakeQuests{quest: baseQuest(testVoice)}
-	f.fail = func(c discordCall) bool { return strings.HasSuffix(c.Path, "/scheduled-events") }
+	f.fail = func(c discordCall) bool {
+		return c.Method == http.MethodPost && strings.HasSuffix(c.Path, "/scheduled-events")
+	}
 	if err := newSync(f, quests, fullSettings, nil).SyncQuest(context.Background(), testQuestID, 1); err == nil {
 		t.Fatal("event failure must fail the job so it retries")
 	}

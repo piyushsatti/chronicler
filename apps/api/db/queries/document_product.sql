@@ -25,6 +25,29 @@ LEFT JOIN members publisher ON publisher.id=d.published_by
 LEFT JOIN members deleter ON deleter.id=d.deleted_by
 WHERE d.public_id=sqlc.arg(document_id)::uuid AND d.deleted_at IS NULL;
 
+-- name: GetProductDocumentsByIDs :many
+SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.category,
+       d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id AS author_internal_id,
+       author.public_id AS author_id, d.published_at, publisher.public_id AS published_by,
+       d.deleted_at, deleter.public_id AS deleted_by, d.created_at, d.updated_at, d.version,
+       COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
+                      WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids,
+       document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
+         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])) AS readable,
+       COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
+         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override,
+       COALESCE(ARRAY(SELECT member.public_id FROM lieutenant_assignments la JOIN members member ON member.id=la.member_id
+                      WHERE la.npc_document_id=d.id ORDER BY member.public_id), ARRAY[]::uuid[]) AS lieutenant_ids,
+       COALESCE(ARRAY(SELECT q.public_id FROM document_links l JOIN quests q ON q.id=l.quest_target_id
+                      WHERE l.source_id=d.id AND l.target_type='quest' ORDER BY q.public_id), ARRAY[]::uuid[]) AS linked_quest_ids
+FROM documents d
+LEFT JOIN members author ON author.id=d.author_id
+LEFT JOIN members publisher ON publisher.id=d.published_by
+LEFT JOIN members deleter ON deleter.id=d.deleted_by
+WHERE d.public_id = ANY(@document_ids::uuid[]) AND d.deleted_at IS NULL;
+
 -- name: GetProductDocumentRevisionParent :one
 SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.category,
        d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id AS author_internal_id,

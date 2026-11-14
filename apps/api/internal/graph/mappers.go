@@ -28,6 +28,7 @@ func toQuestFiltersFields(filters *QuestFiltersInput) *quest.QuestFiltersFields 
 		Tag:           filters.Tag,
 		Genre:         filters.Genre,
 		ShortCodes:    filters.ShortCodes,
+		Ids:           filters.Ids,
 		Search:        filters.Search,
 		DisplayStatus: filters.DisplayStatus,
 		ScheduledFrom: filters.ScheduledFrom,
