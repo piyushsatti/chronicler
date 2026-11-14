@@ -33,7 +33,9 @@ import { createHttp, type FetchFn } from './api/http.js';
 import { createIngest, type IngestPort } from './api/ingest.js';
 import type { BotConfig } from './config.js';
 import { BOT_ALIVE_PATH } from './healthcheck.js';
+import type { Stoppable } from './lifecycle.js';
 import { logger } from './log.js';
+import { realProcess } from './process.js';
 
 /** Injectable clock, so tests do not depend on wall time. */
 export type Clock = () => number;
@@ -50,9 +52,6 @@ export type HeartbeatPoster = (status?: HeartbeatStatus) => Promise<void>;
 
 export type ProcessExit = (code: number) => void;
 
-/** Stops the heartbeat interval started by {@link mountShardHealth}. */
-export type HeartbeatDisposer = () => void;
-
 export type GatewayEvent =
   | { type: 'ready'; first: boolean }
   | { type: 'resumed'; shardId: number }
@@ -63,7 +62,7 @@ export interface GatewayState {
   subscribe(fn: (e: GatewayEvent) => void): () => void;
 }
 
-export type MountedShardHealth = HeartbeatDisposer & GatewayState;
+export type MountedShardHealth = Stoppable & GatewayState;
 
 // Default 60s matches the retained ingest heartbeat watch cadence (OP-040).
 // The bot does not read API config; keep this literal aligned by hand.
@@ -151,7 +150,7 @@ export function mountShardHealth(
   const intervalMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
   const host = options.host ?? config.host ?? os.hostname();
   const buildSha = options.build ?? config.build;
-  const exit = options.exit ?? ((code: number) => process.exit(code));
+  const exit = options.exit ?? ((code: number) => realProcess.exit(code));
   const nonReadyExitMs = options.nonReadyExitMs ?? 5 * 60 * 1000;
   const exitOnTerminal = options.exitOnTerminal ?? false;
   let gatewayReady = false;
@@ -334,8 +333,11 @@ export function mountShardHealth(
     });
   }
 
-  const dispose: HeartbeatDisposer = () => {
-    if (timer !== undefined) clearInterval(timer);
+  return {
+    name: 'health',
+    async stop() {
+      if (timer !== undefined) clearInterval(timer);
+    },
+    subscribe,
   };
-  return Object.assign(dispose, { subscribe });
 }

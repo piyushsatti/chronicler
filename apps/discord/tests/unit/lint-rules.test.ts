@@ -28,6 +28,58 @@ describe('discord eslint process.env restriction', () => {
       ),
     ).toBe(false);
   });
+
+  it('reports process.on, process.once and process.exit outside process.ts and not inside it', async () => {
+    const eslint = new ESLint({ cwd: repoRoot });
+    const samples = [
+      'process.on("SIGTERM", () => undefined);\n',
+      'process.once("SIGINT", () => undefined);\n',
+      'process.exit(1);\n',
+    ];
+
+    for (const sample of samples) {
+      const [outside] = await eslint.lintText(sample, {
+        filePath: path.join(repoRoot, 'apps/discord/src/health.ts'),
+      });
+      expect(
+        outside?.messages.some(
+          (message) => message.ruleId === 'no-restricted-properties',
+        ),
+      ).toBe(true);
+
+      const [inside] = await eslint.lintText(sample, {
+        filePath: path.join(repoRoot, 'apps/discord/src/process.ts'),
+      });
+      expect(
+        inside?.messages.some(
+          (message) => message.ruleId === 'no-restricted-properties',
+        ),
+      ).toBe(false);
+
+      const [indexResult] = await eslint.lintText(sample, {
+        filePath: path.join(repoRoot, 'apps/discord/src/index.ts'),
+      });
+      expect(
+        indexResult?.messages.some(
+          (message) => message.ruleId === 'no-restricted-properties',
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('does not report process.exitCode', async () => {
+    const eslint = new ESLint({ cwd: repoRoot });
+    const sample = 'process.exitCode = 1;\n';
+
+    const [moduleResult] = await eslint.lintText(sample, {
+      filePath: path.join(repoRoot, 'apps/discord/src/health.ts'),
+    });
+    expect(
+      moduleResult?.messages.some(
+        (message) => message.ruleId === 'no-restricted-properties',
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('discord eslint fetch and secret restrictions', () => {

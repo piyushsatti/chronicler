@@ -138,8 +138,9 @@ function splitVoiceSegments(args: {
  * Tracks per-user voice-channel join times and turns VOICE_STATE_UPDATE
  * transitions into voice-minute SniffedEvents on channel leave/switch.
  *
- * Join times live in memory for this process. A restart forgets open
- * sessions. The API receives voice segment events when someone leaves.
+ * Join times live in memory for this process. Graceful stop flushes open
+ * sessions; a hard exit still forgets them. The API receives voice segment
+ * events when someone leaves or on flush.
  */
 export class VoiceSessionTracker {
   private readonly sessions = new Map<string, PersistedVoiceSession>();
@@ -242,6 +243,19 @@ export class VoiceSessionTracker {
       this.sessions.delete(userId);
     } else {
       this.sessions.set(userId, replacement);
+    }
+    return events;
+  }
+
+  /**
+   * Close every open join at `atMs` with normal (non-recovery) voice ids.
+   * Used on graceful shutdown so a racing leave dedupes at the API.
+   */
+  closeAll(atMs: number): SniffedEvent[] {
+    const events: SniffedEvent[] = [];
+    for (const session of [...this.sessions.values()]) {
+      events.push(...this.closePersistedSession(session, atMs, false));
+      this.sessions.delete(session.userId);
     }
     return events;
   }
