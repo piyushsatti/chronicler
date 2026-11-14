@@ -319,6 +319,32 @@ func assertOneGraphQLCode(t *testing.T, w *httptest.ResponseRecorder, code strin
 	}
 }
 
+func TestIntrospectionRespectsLimitsFlag(t *testing.T) {
+	query := `query I{__schema{queryType{name}}}`
+	for _, tc := range []struct {
+		name string
+		on   bool
+		want string
+	}{
+		{"off rejects", false, `"errors"`},
+		{"on serves", true, `"queryType"`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := NewHandler(&graph.Resolver{}, Limits{Introspection: tc.on}, nil)
+			request := httptest.NewRequest(http.MethodPost, "/v1/graphql", bytes.NewBufferString(`{"query":`+mustJSON(query)+`,"operationName":"I"}`))
+			request.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, request)
+			if w.Code != http.StatusOK || !bytes.Contains(w.Body.Bytes(), []byte(tc.want)) {
+				t.Fatalf("status=%d body=%s", w.Code, w.Body)
+			}
+			if !tc.on && bytes.Contains(w.Body.Bytes(), []byte(`"queryType"`)) {
+				t.Fatalf("introspection served when disabled: %s", w.Body)
+			}
+		})
+	}
+}
+
 func TestLiveAuthorityInterceptorFailures(t *testing.T) {
 	var logs bytes.Buffer
 	previous := slog.Default()
@@ -330,10 +356,10 @@ func TestLiveAuthorityInterceptorFailures(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
-		name  string
+		name    string
 		resolve auth.AuthorityResolver
-		code  string
-		log   string
+		code    string
+		log     string
 	}{
 		{"anonymous authority", func(context.Context, string) (auth.Authority, error) { return auth.Authority{}, nil }, "FORBIDDEN", ""},
 		{"mismatched member", func(context.Context, string) (auth.Authority, error) { return other, nil }, "FORBIDDEN", ""},

@@ -35,6 +35,7 @@ type HTTPDeps struct {
 	Agent         *agent.Service
 	SpatialTime   spatial.TimeMap
 	SpatialRead   spatial.ReadAPI
+	Introspection bool
 }
 
 // Mount registers the HTTP surface used by cmd/api (health, auth, GraphQL, /v1).
@@ -42,7 +43,9 @@ func Mount(mux httpserver.Router, d HTTPDeps) {
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
-	mux.Handle("POST /v1/graphql", graphql.NewHandler(d.Resolver, graphql.DefaultLimits(), d.Authority))
+	limits := graphql.DefaultLimits()
+	limits.Introspection = d.Introspection
+	mux.Handle("POST /v1/graphql", graphql.NewHandler(d.Resolver, limits, d.Authority))
 
 	if d.Login != nil {
 		d.Login.Routes(mux)
@@ -118,10 +121,11 @@ func MountFromAPI(mux httpserver.Router, runtime API, cfg config.Config) {
 			JWTSecret:     cfg.JWTSecret,
 			AllowDevLogin: cfg.Env != config.EnvProduction,
 		}, memberStore),
-		Ingest:      ingest.New(cfg.IngestSecret, runtime.Ingest),
-		Agent:       runtime.Agent,
-		SpatialTime: timeMap,
-		SpatialRead: spatialRead,
+		Ingest:        ingest.New(cfg.IngestSecret, runtime.Ingest),
+		Agent:         runtime.Agent,
+		SpatialTime:   timeMap,
+		SpatialRead:   spatialRead,
+		Introspection: cfg.Env != config.EnvProduction,
 	})
 }
 
