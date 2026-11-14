@@ -1,5 +1,5 @@
 {
-  "_comment": "Allowlists for apps/web design gates. Lengths may only shrink (ratchet). Soft-skipped gates (gallery/motion/effects/cosmetic/orphan) re-arm when their trees land. pageLayout (L5): justified exceptions, each with a reason. pageLayoutPendingMigration: current violations that round-3 page migration removes (entries match on file+rule+value; seenAtLine is informational). queryKeyOrigin: inline queryKey sites pending factory migration (match on file+rule+value; seenAtLine informational). hooksBoundary: shared-folder imports into features/* pending relocation (match on file:line).",
+  "_comment": "Allowlists for apps/web design gates. Lengths may only shrink (ratchet). Soft-skipped gates (gallery/motion/effects/cosmetic/orphan) re-arm when their trees land. pageLayout (L5): justified exceptions, each with a reason. pageLayoutPendingMigration: current violations that round-3 page migration removes (entries match on file+rule+value; seenAtLine is informational). queryKeyOrigin: inline queryKey sites pending factory migration (match on file+rule+value; seenAtLine informational). hooksBoundary: shared-folder imports into features/* pending relocation (match on file:line). idempotencyKeyOrigin: crypto.randomUUID sites outside useFencedMutation pending fence migration.",
   "tokens": [],
   "boundary": [],
   "hooksBoundary": [
@@ -197,6 +197,116 @@
     }
   ],
   "pageLayoutPendingMigration": [],
+  "idempotencyKeyOrigin": [
+    {
+      "file": "src/features/admin/adapters/adminForms.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 51
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterActivity.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 86
+    },
+    {
+      "file": "src/features/character/hooks/useCharacterCreation.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 75
+    },
+    {
+      "file": "src/features/character/hooks/useOwnerActions.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 152
+    },
+    {
+      "file": "src/features/editor/hooks/useEditorPublish.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 121
+    },
+    {
+      "file": "src/features/editor/hooks/useEditorWorkspace.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 307
+    },
+    {
+      "file": "src/features/home/hooks/useHomePresentation.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 70
+    },
+    {
+      "file": "src/features/map/hooks/useMapEdit.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 92
+    },
+    {
+      "file": "src/features/map/hooks/useMapEdit.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 122
+    },
+    {
+      "file": "src/features/map/hooks/useMapNodeDetails.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 110
+    },
+    {
+      "file": "src/features/map/hooks/useNodeState.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 63
+    },
+    {
+      "file": "src/features/member/hooks/usePrivateNotes.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 101
+    },
+    {
+      "file": "src/features/notifications/hooks/useLoginNotifications.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 117
+    },
+    {
+      "file": "src/features/notifications/hooks/useMarkNotificationsRead.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 140
+    },
+    {
+      "file": "src/hooks/usePersonalizePage.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 25
+    },
+    {
+      "file": "src/features/profile/hooks/useProfileActions.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 90
+    },
+    {
+      "file": "src/hooks/useSeriesPage.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 177
+    },
+    {
+      "file": "src/store/toastsSlice.ts",
+      "rule": "idempotency-key-origin",
+      "value": "crypto.randomUUID",
+      "seenAtLine": 52
+    }
+  ],
   "queryKeyOrigin": [
     {
       "file": "src/features/admin/hooks/useAdminOperations.ts",

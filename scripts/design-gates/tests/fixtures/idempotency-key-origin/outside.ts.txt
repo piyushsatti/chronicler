@@ -1,0 +1,4 @@
+export function useItems() {
+  const key = crypto.randomUUID();
+  return key;
+}

@@ -37,76 +37,108 @@ const quest = z.object({ id: z.string().uuid(), status: z.string() });
 
 export async function executeQuestCommand(
   command: QuestCommand,
-  idempotencyKey: string,
+  cmd: { token: string; idempotencyKey: string; signal?: AbortSignal },
 ): Promise<string> {
-  const meta = { idempotencyKey };
+  const meta = { idempotencyKey: cmd.idempotencyKey };
+  const init = {
+    headers: { Authorization: `Bearer ${cmd.token}` },
+    signal: cmd.signal,
+  };
   const questId = command.questId;
   try {
     switch (command.kind) {
       case 'signup': {
-        const data = await graphqlRequest<SignupForQuestMutation>(SIGNUP, {
-          questId,
-          characterId: command.characterId,
-          meta,
-        });
+        const data = await graphqlRequest<SignupForQuestMutation>(
+          SIGNUP,
+          {
+            questId,
+            characterId: command.characterId,
+            meta,
+          },
+          init,
+        );
         const result = participant.parse(data.signupForQuest);
         return result.status === 'waitlisted'
           ? 'You joined the waitlist.'
           : 'Your character is signed up.';
       }
       case 'withdraw': {
-        const data = await graphqlRequest<WithdrawFromQuestMutation>(WITHDRAW, {
-          questId,
-          characterId: command.characterId,
-          meta,
-        });
+        const data = await graphqlRequest<WithdrawFromQuestMutation>(
+          WITHDRAW,
+          {
+            questId,
+            characterId: command.characterId,
+            meta,
+          },
+          init,
+        );
         participant.parse(data.withdrawFromQuest);
         return 'Your character has withdrawn.';
       }
       case 'rosterAdd': {
-        const data = await graphqlRequest<QuestAddParticipantMutation>(ADD, {
-          questId,
-          characterId: command.characterId,
-          meta,
-        });
+        const data = await graphqlRequest<QuestAddParticipantMutation>(
+          ADD,
+          {
+            questId,
+            characterId: command.characterId,
+            meta,
+          },
+          init,
+        );
         participant.parse(data.addQuestParticipant);
         return 'Character added to the roster.';
       }
       case 'rosterRemove': {
-        const data = await graphqlRequest<QuestRemoveParticipantMutation>(REMOVE, {
-          questId,
-          characterId: command.characterId,
-          meta,
-        });
+        const data = await graphqlRequest<QuestRemoveParticipantMutation>(
+          REMOVE,
+          {
+            questId,
+            characterId: command.characterId,
+            meta,
+          },
+          init,
+        );
         participant.parse(data.removeQuestParticipant);
         return 'Character removed from the roster.';
       }
       case 'transition': {
-        const data = await graphqlRequest<TransitionQuestStatusMutation>(TRANSITION, {
-          id: questId,
-          to: command.to,
-          meta,
-        });
+        const data = await graphqlRequest<TransitionQuestStatusMutation>(
+          TRANSITION,
+          {
+            id: questId,
+            to: command.to,
+            meta,
+          },
+          init,
+        );
         quest.parse(data.transitionQuestStatus);
         return command.to === 'played'
           ? 'Session marked played. Record attendance and rewards to close it.'
           : 'Quest cancelled.';
       }
       case 'select': {
-        const data = await graphqlRequest<QuestSelectParticipantsMutation>(SELECT, {
-          questId,
-          characterIds: command.characterIds,
-          fillByLastGamePlayed: command.fillByLastGamePlayed,
-          meta,
-        });
+        const data = await graphqlRequest<QuestSelectParticipantsMutation>(
+          SELECT,
+          {
+            questId,
+            characterIds: command.characterIds,
+            fillByLastGamePlayed: command.fillByLastGamePlayed,
+            meta,
+          },
+          init,
+        );
         z.array(participant).parse(data.selectQuestParticipants);
         return 'Selected characters have a seat.';
       }
       case 'publishPlayerList': {
-        const data = await graphqlRequest<PublishQuestPlayerListMutation>(PUBLISH, {
-          questId,
-          meta,
-        });
+        const data = await graphqlRequest<PublishQuestPlayerListMutation>(
+          PUBLISH,
+          {
+            questId,
+            meta,
+          },
+          init,
+        );
         const receipt = z
           .object({ jobId: z.string().uuid(), deliveryStatus: z.string() })
           .parse(data.publishQuestPlayerList);
@@ -115,20 +147,28 @@ export async function executeQuestCommand(
           : 'Player list queued in the quest thread.';
       }
       case 'attest': {
-        const data = await graphqlRequest<QuestAttestParticipationMutation>(ATTEST, {
-          questId,
-          entries: command.entries,
-          meta,
-        });
+        const data = await graphqlRequest<QuestAttestParticipationMutation>(
+          ATTEST,
+          {
+            questId,
+            entries: command.entries,
+            meta,
+          },
+          init,
+        );
         z.array(participant).parse(data.attestQuestParticipation);
         return 'Attendance saved.';
       }
       case 'close': {
-        const data = await graphqlRequest<CloseQuestMutation>(CLOSE, {
-          id: questId,
-          input: { attendance: command.attendance, rewards: command.rewards },
-          meta,
-        });
+        const data = await graphqlRequest<CloseQuestMutation>(
+          CLOSE,
+          {
+            id: questId,
+            input: { attendance: command.attendance, rewards: command.rewards },
+            meta,
+          },
+          init,
+        );
         quest.parse(data.closeQuest);
         return 'Quest closed. The recorded PCXP awards are final.';
       }

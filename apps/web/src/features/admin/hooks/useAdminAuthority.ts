@@ -1,11 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { canAccessVerify, hasRole, isAdmin, isDm } from '../../../auth/roles.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { TransportError, type AppError } from '../../../errors/types.js';
 import { useMe } from '../../../hooks/useMe.js';
-import { useAuth } from '../../../auth/AuthContext.js';
+import { useFencedMutation } from '../../../hooks/useFencedMutation.js';
 import { useCurrentAccess } from '../../../auth/useCurrentAccess.js';
 import type { AdminCommand, AdminReadRequest } from '../adapters/adminRequest.js';
 
@@ -97,126 +97,66 @@ export function useAdminAuthority(required: WorkspaceAuthority = 'admin') {
             )
           : null;
 
-  const auth = useAuth();
   const identity = me.isSuccess
     ? JSON.stringify([me.data.id, [...me.data.roles].sort()])
     : null;
-  const owner = useMemo(
-    () => ({
-      id: crypto.randomUUID(),
-      token: auth.token,
-      identity,
-      active: false,
-      busy: false,
-      keys: new Map<string, string>(),
-    }),
-    [auth.token, identity],
-  );
-  const current = useRef(owner);
-  useEffect(() => {
-    current.current = owner;
-    owner.active = true;
-    return () => {
-      owner.active = false;
-    };
-  }, [owner]);
 
-  function assertCurrent(): void {
-    const account = queryClient.getQueryState<NonNullable<typeof me.data>>(
-      queryKeys.me,
-    );
-    if (
-      !auth.sessionReady ||
-      !auth.isCurrentSession(owner.token) ||
-      !owner.identity ||
-      account?.status !== 'success' ||
-      !account.data
-    ) {
-      throw toAppError({ failure: 'Unauthorized' }, 'workspace:session');
-    }
-    if (
-      !owner.active ||
-      current.current !== owner ||
-      JSON.stringify([account.data.id, [...account.data.roles].sort()]) !==
-        owner.identity
-    ) {
-      throw toAppError(
-        new TransportError('FORBIDDEN', { status: 403 }),
-        'workspace:authority',
+  const fence = useFencedMutation({
+    context: 'workspace:session',
+    assert: () => {
+      const account = queryClient.getQueryState<NonNullable<typeof me.data>>(
+        queryKeys.me,
       );
-    }
-    if (
-      required === 'verifier'
-        ? !permits(account.data.roles, required) || !proof.isCurrentProof()
-        : required === 'dm'
-          ? !permits(account.data.roles, required) && !adminAccess.isCurrentProof()
-          : !proof.isCurrentProof()
-    ) {
-      throw toAppError(
-        new TransportError('FORBIDDEN', { status: 403 }),
-        'workspace:mutation',
-      );
-    }
-  }
-
-  function request(signal?: AbortSignal): AdminCommand {
-    assertCurrent();
-    if (!owner.token)
-      throw toAppError({ failure: 'Unauthorized' }, 'workspace:session');
-    return {
-      token: owner.token,
-      signal,
-      assertCurrent,
-      keyFor: (payload) => {
-        assertCurrent();
-        const existing = owner.keys.get(payload);
-        if (existing) return existing;
-        const key = crypto.randomUUID();
-        owner.keys.set(payload, key);
-        return key;
-      },
-    };
-  }
+      if (!account?.data) {
+        throw toAppError({ failure: 'Unauthorized' }, 'workspace:session');
+      }
+      if (
+        required === 'verifier'
+          ? !permits(account.data.roles, required) || !proof.isCurrentProof()
+          : required === 'dm'
+            ? !permits(account.data.roles, required) && !adminAccess.isCurrentProof()
+            : !proof.isCurrentProof()
+      ) {
+        throw toAppError(
+          new TransportError('FORBIDDEN', { status: 403 }),
+          'workspace:mutation',
+        );
+      }
+    },
+    run: async () => {
+      throw toAppError(new TransportError('CONFLICT'), 'workspace:busy');
+    },
+  });
 
   function guardMutation<TArgs extends unknown[], TResult>(
     action: (command: AdminCommand, ...args: TArgs) => TResult | Promise<TResult>,
   ): (...args: TArgs) => Promise<TResult> {
-    return (...args) => {
-      const captured = request();
-      const payloads = new Set<string>();
-      const command = {
-        ...captured,
-        keyFor: (payload: string) => {
-          payloads.add(payload);
-          return captured.keyFor(payload);
-        },
-      };
-      if (owner.busy)
-        throw toAppError(new TransportError('CONFLICT'), 'workspace:busy');
-      owner.busy = true;
-      return Promise.resolve()
-        .then(() => {
-          command.assertCurrent();
-          return action(command, ...args);
-        })
-        .then((result) => {
-          command.assertCurrent();
-          for (const payload of payloads) owner.keys.delete(payload);
-          return result;
-        })
-        .finally(() => {
-          owner.busy = false;
-        });
-    };
+    return (...args) =>
+      fence.runExclusive(async (cmd) => {
+        const command: AdminCommand = {
+          token: cmd.token,
+          signal: cmd.signal,
+          assertCurrent: fence.assertCurrent,
+          keyFor: cmd.keyFor,
+        };
+        return action(command, ...args);
+      });
   }
 
   async function read<TResult>(
     action: (request: AdminReadRequest) => Promise<TResult>,
     signal?: AbortSignal,
   ): Promise<TResult> {
-    const captured = request(signal);
-    const result = await action(captured);
-    captured.assertCurrent();
+    fence.assertCurrent();
+    if (!fence.token)
+      throw toAppError({ failure: 'Unauthorized' }, 'workspace:session');
+    const request: AdminReadRequest = {
+      token: fence.token,
+      signal,
+      assertCurrent: fence.assertCurrent,
+    };
+    const result = await action(request);
+    fence.assertCurrent();
     return result;
   }
 
@@ -234,7 +174,7 @@ export function useAdminAuthority(required: WorkspaceAuthority = 'admin') {
     canReview: reviewAccess.allowed,
     isCurrent: () => {
       try {
-        assertCurrent();
+        fence.assertCurrent();
         return true;
       } catch {
         return false;
@@ -244,7 +184,7 @@ export function useAdminAuthority(required: WorkspaceAuthority = 'admin') {
     read,
     actorId: me.isSuccess ? me.data.id : null,
     cacheKey: identity,
-    commandKey: owner.id,
+    commandKey: fence.sessionKey,
     reload: () => {
       void me.refetch();
       if (required !== 'dm') proof.reload();

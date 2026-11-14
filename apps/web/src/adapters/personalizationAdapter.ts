@@ -21,8 +21,8 @@ import {
 import MY_PERSONALIZATION_QUERY from './myPersonalization.graphql?raw';
 import UPDATE_MY_SETTINGS_MUTATION from './updateMySettings.graphql?raw';
 
-function commandMeta(): { idempotencyKey: string } {
-  return { idempotencyKey: crypto.randomUUID() };
+function commandMeta(idempotencyKey: string): { idempotencyKey: string } {
+  return { idempotencyKey };
 }
 
 const settingsSchema = z.object({
@@ -224,12 +224,13 @@ export async function loadPersonalization(): Promise<PersonalizationView> {
 /** field-routing: updateMySettings → Mutation.updateMySettings */
 export async function updateMySettings(
   patch: SettingsPatch,
+  idempotencyKey: string,
 ): Promise<PersonalizationView> {
   try {
     const input = toWirePatch(patch);
     const data = await graphqlRequest<UpdateMySettingsMutation>(
       UPDATE_MY_SETTINGS_MUTATION,
-      { input, meta: commandMeta() },
+      { input, meta: commandMeta(idempotencyKey) },
     );
     const parsed = parsePersonalization({ settings: data.updateMySettings });
     if (!parsed.ok) {

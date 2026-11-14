@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { act, renderHook, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { graphql, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
@@ -198,6 +199,7 @@ describe('Chronicle current account and audience scope', () => {
 
   it('removes an already cached private timeline before a same-token role refetch and never repaints it', async () => {
     localStorage.setItem(TOKEN_KEY, token('same-account'));
+    const user = userEvent.setup();
     const gate = deferred();
     let changed = false;
     let currentRequests = 0;
@@ -218,6 +220,7 @@ describe('Chronicle current account and audience scope', () => {
     );
     const rendered = renderWithProviders(<ChroniclesListPage />);
     try {
+      await user.click(await screen.findByRole('button', { name: 'DM summaries' }));
       await screen.findByText('Private DM summary 1');
       changed = true;
       await act(async () => {
@@ -233,6 +236,7 @@ describe('Chronicle current account and audience scope', () => {
       await act(async () => {
         gate.release();
       });
+      await user.click(screen.getByRole('button', { name: 'Player summaries' }));
       await screen.findByText('Current readable summary 1');
       expect(screen.queryByText('Private DM summary 1')).not.toBeInTheDocument();
       expect(
