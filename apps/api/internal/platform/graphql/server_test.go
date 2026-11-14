@@ -100,7 +100,7 @@ func (documentErrorAudience) HasArchon(context.Context, string, string) (bool, e
 	return false, nil
 }
 
-func testDocumentQueries(t *testing.T, repo documentErrorRepo) *document.ProductQueries {
+func testDocumentQueries(t *testing.T, repo document.DocumentReadRepository) *document.ProductQueries {
 	t.Helper()
 	policy, err := auth.NewPolicy(auth.PolicyProviders{
 		Assignments:          documentErrorAudience{},
@@ -125,6 +125,113 @@ func testDocumentQueries(t *testing.T, repo documentErrorRepo) *document.Product
 		t.Fatal(err)
 	}
 	return queries
+}
+
+type panickingDocumentRepo struct{ documentErrorRepo }
+
+func (panickingDocumentRepo) ReadDocumentById(context.Context, auth.Authority, document.DocumentByIdSpec) (*document.DocumentView, error) {
+	panic("resolver boom")
+}
+
+func TestGraphQLRecoverFuncReturnsInternalWithStackLog(t *testing.T) {
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	handler := NewHandler(&graph.Resolver{Services: graph.Services{DocumentQueries: testDocumentQueries(t, panickingDocumentRepo{})}}, Limits{}, func(context.Context, string) (auth.Authority, error) {
+		return auth.Authority{}, nil
+	})
+	request := httptest.NewRequest(http.MethodPost, "/v1/graphql", bytes.NewBufferString(`{"query":"{documentById(id:\"11111111-1111-4111-8111-111111111111\"){id}}"}`))
+	request.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, request)
+	var result struct {
+		Errors []struct {
+			Extensions struct {
+				Code string `json:"code"`
+			} `json:"extensions"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != 200 {
+		t.Fatalf("status=%d body=%s err=%v", w.Code, w.Body, err)
+	}
+	if len(result.Errors) != 1 || result.Errors[0].Extensions.Code != "INTERNAL" {
+		t.Fatalf("response=%s", w.Body)
+	}
+	if !bytes.Contains(logs.Bytes(), []byte(`"stack"`)) || !bytes.Contains(logs.Bytes(), []byte("goroutine")) {
+		t.Fatalf("missing stack log: %s", logs.String())
+	}
+}
+
+func TestGraphQLRequestStateFailureAnswersErrorsNotProblemJSON(t *testing.T) {
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	authority := func(context.Context, string) (auth.Authority, error) {
+		t.Fatal("authority resolver should not run")
+		return auth.Authority{}, nil
+	}
+	handler := NewHandler(&graph.Resolver{}, Limits{}, authority)
+	request := httptest.NewRequest(http.MethodPost, "/v1/graphql", bytes.NewBufferString(`{"query":"{_contractLayoutStub}"}`))
+	request.Header.Set("Content-Type", "application/json")
+	request = request.WithContext(auth.WithClaims(request.Context(), auth.Claims{MemberID: "ada"}))
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, request)
+	if w.Header().Get("Content-Type") == "application/problem+json" {
+		t.Fatalf("problem+json: %s", w.Body)
+	}
+	var result struct {
+		Errors []struct {
+			Extensions struct {
+				Code string `json:"code"`
+			} `json:"extensions"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != 200 || len(result.Errors) != 1 {
+		t.Fatalf("status=%d body=%s err=%v", w.Code, w.Body, err)
+	}
+	if result.Errors[0].Extensions.Code != "INTERNAL" {
+		t.Fatalf("code=%q body=%s", result.Errors[0].Extensions.Code, w.Body)
+	}
+	if !bytes.Contains(logs.Bytes(), []byte("graphql request state")) {
+		t.Fatalf("missing cause log: %s", logs.String())
+	}
+}
+
+func TestSignedInDepthLimitCallsAuthorityResolverZeroTimes(t *testing.T) {
+	calls := 0
+	live, err := auth.NewAuthority("ada", []auth.Role{auth.Player}, "active", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(&graph.Resolver{}, DefaultLimits(), func(context.Context, string) (auth.Authority, error) {
+		calls++
+		return live, nil
+	})
+	selection := "id"
+	for range 40 {
+		selection = "quests(limit:1){arc{" + selection + "}}"
+	}
+	query := `{questArc(id:"11111111-1111-4111-8111-111111111111"){` + selection + `}}`
+	request := httptest.NewRequest(http.MethodPost, "/v1/graphql", bytes.NewBufferString(`{"query":`+mustJSON(query)+`}`))
+	request.Header.Set("Content-Type", "application/json")
+	request = request.WithContext(auth.WithAuthority(auth.WithClaims(request.Context(), auth.Claims{MemberID: "ada"}), live))
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, request)
+	if w.Code != http.StatusOK || !bytes.Contains(w.Body.Bytes(), []byte(`"code":"DEPTH_LIMIT_EXCEEDED"`)) || calls != 0 {
+		t.Fatalf("status=%d calls=%d body=%s", w.Code, calls, w.Body)
+	}
+}
+
+func mustJSON(s string) string {
+	b, err := json.Marshal(s)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
 }
 
 func TestDocumentGraphQLErrorPresenter(t *testing.T) {
