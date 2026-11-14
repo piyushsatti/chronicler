@@ -1,5 +1,21 @@
 import js from '@eslint/js';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
+
+function asWarn(rules) {
+  return Object.fromEntries(
+    Object.entries(rules).map(([name, conf]) => {
+      if (conf === 'off' || conf === 0) return [name, conf];
+      if (Array.isArray(conf)) {
+        const [sev, ...rest] = conf;
+        if (sev === 'off' || sev === 0) return [name, conf];
+        return [name, ['warn', ...rest]];
+      }
+      return [name, 'warn'];
+    }),
+  );
+}
 
 export default tseslint.config(
   {
@@ -60,6 +76,19 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    plugins: {
+      'react-hooks': reactHooks,
+      'jsx-a11y': jsxA11y,
+    },
+    languageOptions: jsxA11y.flatConfigs.recommended.languageOptions,
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      ...asWarn(jsxA11y.flatConfigs.recommended.rules),
     },
   },
   {
