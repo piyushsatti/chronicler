@@ -42,13 +42,14 @@ func (p *PostgresRevisionApplier) ApplyDiscordRevision(ctx context.Context, ques
 	})
 }
 
-func (p *PostgresRevisionApplier) SetDiscordMessageID(ctx context.Context, questID string, messageID string) error {
+func (p *PostgresRevisionApplier) SetDiscordMessageID(ctx context.Context, questID string, messageID, channelID string) error {
 	uid, err := parseQuestPublicID(questID)
 	if err != nil {
 		return err
 	}
 	return p.q.SetQuestDiscordMessageID(ctx, dbgen.SetQuestDiscordMessageIDParams{
 		DiscordMessageID: pgtype.Text{String: messageID, Valid: messageID != ""},
+		DiscordChannelID: pgtype.Text{String: channelID, Valid: channelID != ""},
 		PublicID:         uid,
 	})
 }
@@ -112,6 +113,7 @@ func (p *PostgresRevisionApplier) LoadAnnounceQuest(ctx context.Context, questID
 		DurationHours:   row.DurationHours,
 		AppliedRevision: int(row.DiscordAppliedRevision),
 		MessageID:       text(row.DiscordMessageID),
+		ChannelID:       text(row.DiscordChannelID),
 		EventID:         text(row.DiscordEventID),
 		ThreadID:        text(row.DiscordThreadID),
 		VoiceChannelID:  text(row.DiscordVoiceChannelID),

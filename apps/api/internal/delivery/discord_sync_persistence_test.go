@@ -40,9 +40,9 @@ func (q persistenceQuests) check(ctx context.Context) {
 	}
 }
 
-func (q persistenceQuests) SetDiscordMessageID(ctx context.Context, questID, id string) error {
+func (q persistenceQuests) SetDiscordMessageID(ctx context.Context, questID, id, channelID string) error {
 	q.check(ctx)
-	return q.fakeQuests.SetDiscordMessageID(ctx, questID, id)
+	return q.fakeQuests.SetDiscordMessageID(ctx, questID, id, channelID)
 }
 
 func (q persistenceQuests) SetDiscordEvent(ctx context.Context, questID, id, url string) error {
