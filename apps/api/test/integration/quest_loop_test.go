@@ -242,7 +242,7 @@ func insertOpenQuest(t *testing.T, pool *db.Pool) (string, string) {
 		FROM members m, documents d
 		WHERE m.public_id = $3 AND d.public_id = $4
 		ON CONFLICT (public_id) DO UPDATE SET status = 'open', scheduled_at = now() - interval '1 day',
-			discord_desired_revision = 0, discord_applied_revision = 0, discord_message_id = NULL,
+			discord_desired_revision = 0, discord_applied_revision = 0, discord_message_id = NULL, discord_channel_id = NULL,
 			filled_count = 0, slots_max = 5
 		RETURNING public_id::text`,
 		publicID, short, seedDM, seedDoc,

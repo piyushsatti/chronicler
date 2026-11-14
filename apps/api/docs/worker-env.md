@@ -12,7 +12,7 @@ The worker loop (`apps/api/internal/workerrun`) consumes Postgres-backed jobs wh
 
 Without token + channel **and** without dry-run, sync returns an error; the job retries then dead-letters. Applied revision does **not** advance.
 
-Idempotency: the first successful POST stores `quests.discord_message_id`; later deliveries `PATCH` that message instead of posting again.
+Idempotency: the first successful POST stores `quests.discord_message_id` and `quests.discord_channel_id`; later deliveries `PATCH` that message instead of posting again.
 
 ### Coalesce while running
 

@@ -4054,26 +4054,6 @@
             "key": "verifier"
           }
         ],
-        "publishedDocumentsByCategory": [
-          {
-            "count": 1,
-            "key": "Lore"
-          }
-        ],
-        "publishedDocumentsByKind": [
-          {
-            "count": 1,
-            "key": "codex_entry"
-          },
-          {
-            "count": 1,
-            "key": "quest_brief"
-          },
-          {
-            "count": 1,
-            "key": "summary"
-          }
-        ],
         "totalDms": 1,
         "totalMaps": 2,
         "totalMembers": 8,
@@ -4089,8 +4069,6 @@
         "SDL-SiteStatsV2Type-activeCharacters",
         "SDL-SiteStatsV2Type-activity",
         "SDL-SiteStatsV2Type-membersByRole",
-        "SDL-SiteStatsV2Type-publishedDocumentsByCategory",
-        "SDL-SiteStatsV2Type-publishedDocumentsByKind",
         "SDL-SiteStatsV2Type-totalDms",
         "SDL-SiteStatsV2Type-totalMaps",
         "SDL-SiteStatsV2Type-totalMembers",
@@ -4104,7 +4082,7 @@
       "kind": "positive",
       "operation": "siteStats",
       "owner": "S03",
-      "query": "query Output76 { siteStats { totalMembers membersByRole { key count } activeCharacters publishedDocumentsByKind { key count } publishedDocumentsByCategory { key count } totalMaps totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } }",
+      "query": "query Output76 { siteStats { totalMembers membersByRole { key count } activeCharacters totalMaps totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } }",
       "result_path": "siteStats",
       "root": "siteStats",
       "scalar_scenario_refs": [],
@@ -4148,26 +4126,6 @@
             {
               "count": 1,
               "key": "verifier"
-            }
-          ],
-          "publishedDocumentsByCategory": [
-            {
-              "count": 1,
-              "key": "Lore"
-            }
-          ],
-          "publishedDocumentsByKind": [
-            {
-              "count": 1,
-              "key": "codex_entry"
-            },
-            {
-              "count": 1,
-              "key": "quest_brief"
-            },
-            {
-              "count": 1,
-              "key": "summary"
             }
           ],
           "totalDms": 1,
@@ -4216,8 +4174,6 @@
         "SDL-SiteStatsV2Type-activeCharacters",
         "SDL-SiteStatsV2Type-activity",
         "SDL-SiteStatsV2Type-membersByRole",
-        "SDL-SiteStatsV2Type-publishedDocumentsByCategory",
-        "SDL-SiteStatsV2Type-publishedDocumentsByKind",
         "SDL-SiteStatsV2Type-totalDms",
         "SDL-SiteStatsV2Type-totalMaps",
         "SDL-SiteStatsV2Type-totalMembers",
@@ -4231,7 +4187,7 @@
       "kind": "positive",
       "operation": "home",
       "owner": "S03",
-      "query": "query Output77 { home { recentByCategory { category documents { id title } } communityStats { totalMembers membersByRole { key count } activeCharacters publishedDocumentsByKind { key count } publishedDocumentsByCategory { key count } totalMaps totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } } }",
+      "query": "query Output77 { home { recentByCategory { category documents { id title } } communityStats { totalMembers membersByRole { key count } activeCharacters totalMaps totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } } }",
       "result_path": "home",
       "root": "home",
       "scalar_scenario_refs": [],
@@ -4784,7 +4740,7 @@
             "eventLink": null,
             "failureStreak": 2,
             "id": "10000000-0000-4000-8000-000000000110",
-            "maxAttempts": 8,
+            "maxAttempts": 20,
             "messageId": null,
             "nextAttemptAt": "2026-10-15T00:00:00Z",
             "questId": "10000000-0000-4000-8000-000000000050",
@@ -5422,7 +5378,7 @@
       "id": "QUERY-OUTPUT-SITE-STATS-INTERNAL-6",
       "inject": "Site aggregate SQL query failure",
       "owner": "S03",
-      "query": "query Output76 { siteStats { totalMembers membersByRole { key count } activeCharacters publishedDocumentsByKind { key count } publishedDocumentsByCategory { key count } totalMaps totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } }",
+      "query": "query Output76 { siteStats { totalMembers membersByRole { key count } activeCharacters totalMaps totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } }",
       "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
       "variables": {}
     },
@@ -6378,14 +6334,6 @@
     ],
     "SDL-SiteStatsV2Type-activity": ["QUERY-OUTPUT-SITE-STATS", "QUERY-OUTPUT-HOME"],
     "SDL-SiteStatsV2Type-membersByRole": [
-      "QUERY-OUTPUT-SITE-STATS",
-      "QUERY-OUTPUT-HOME"
-    ],
-    "SDL-SiteStatsV2Type-publishedDocumentsByCategory": [
-      "QUERY-OUTPUT-SITE-STATS",
-      "QUERY-OUTPUT-HOME"
-    ],
-    "SDL-SiteStatsV2Type-publishedDocumentsByKind": [
       "QUERY-OUTPUT-SITE-STATS",
       "QUERY-OUTPUT-HOME"
     ],

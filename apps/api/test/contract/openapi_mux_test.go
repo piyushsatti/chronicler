@@ -148,7 +148,7 @@ func mountMuxOperations(t *testing.T) []string {
 			JWTSecret:    "test-secret",
 		}, login.StaticMemberStore{}),
 		Ingest:      ingest.New("test-ingest", &ingest.MemoryStore{}),
-		Agent:       agent.New("test-ingest", nil, false),
+		Agent:       agent.New("test-ingest", "test-worker", nil, false),
 		SpatialTime: spatial.EmptyTimeMap{},
 	})
 	out := append([]string(nil), mux.Patterns...)
