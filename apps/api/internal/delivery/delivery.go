@@ -129,6 +129,9 @@ func (h *Handler) processPlayerList(ctx context.Context, job jobs.Job) (bool, er
 		if errors.Is(err, ErrDiscordForbidden) {
 			return true, h.store.FailWithCode(ctx, job.Receipt(), jobs.RepairRequired, err.Error(), SafeCodeDiscordPermission)
 		}
+		if errors.Is(err, ErrPlayerListNoThread) {
+			return true, h.store.FailWithCode(ctx, job.Receipt(), jobs.Dead, err.Error(), SafeCodeDiscordThreadMissing)
+		}
 		if errors.Is(err, ErrPlayerListTooLong) || errors.Is(err, ErrBadPayload) {
 			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, err.Error())
 		}
