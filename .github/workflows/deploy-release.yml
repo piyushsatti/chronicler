@@ -25,7 +25,7 @@ name: deploy-release
 # Required in the GitHub environment named by `environment`:
 #   Secrets, both environments: JWT_SECRET, INGEST_SECRET, DISCORD_CLIENT_ID,
 #            DISCORD_CLIENT_SECRET, DISCORD_BOT_TOKEN (API worker REST),
-#            BOT_DISCORD_TOKEN (gateway bot), BOT_CLIENT_ID, GUILD_ID,
+#            BOT_DISCORD_TOKEN (gateway bot), GUILD_ID,
 #            DISCORD_ANNOUNCE_CHANNEL_ID (secret or variable),
 #            VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
 #   local_database: POSTGRES_PASSWORD (URL-safe); optional variables
@@ -179,7 +179,6 @@ jobs:
           PLATFORM_OWNER_DISCORD_ID: ${{ secrets.PLATFORM_OWNER_DISCORD_ID }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           BOT_DISCORD_TOKEN: ${{ secrets.BOT_DISCORD_TOKEN }}
-          BOT_CLIENT_ID: ${{ secrets.BOT_CLIENT_ID }}
           GUILD_ID: ${{ secrets.GUILD_ID }}
           DISCORD_ANNOUNCE_CHANNEL_ID: ${{ secrets.DISCORD_ANNOUNCE_CHANNEL_ID || vars.DISCORD_ANNOUNCE_CHANNEL_ID }}
         run: |
@@ -215,7 +214,7 @@ jobs:
           fi
           names+=(JWT_SECRET INGEST_SECRET \
             DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET DISCORD_BOT_TOKEN \
-            BOT_DISCORD_TOKEN BOT_CLIENT_ID GUILD_ID DISCORD_ANNOUNCE_CHANNEL_ID \
+            BOT_DISCORD_TOKEN GUILD_ID DISCORD_ANNOUNCE_CHANNEL_ID \
             CORS_ORIGINS DISCORD_REDIRECT_URI API_PORT)
           services+=(chronicler-api chronicler-discord-bot)
           if [[ "$TUNNEL" == true ]]; then

@@ -16,6 +16,6 @@
 
 On mount and every timer tick (even with the ingest heartbeat off), the bot writes `/tmp/chronicler-bot-alive`. Production Compose runs `bun apps/discord/dist/healthcheck.js`, which exits 0 when that file is younger than 150 seconds. That is event-loop liveness, not a Discord call.
 
-`GUILD_ID` and `INGEST_SECRET` are required while heartbeat is on. Host and build come from `BOT_HOST` and `BOT_BUILD_ID` (falling through `CHRONICLER_BUILD_SHA`, `BUILD_SHA`, `BUILD_VERSION`, then `unknown`).
+`GUILD_ID` and `INGEST_SECRET` are required while heartbeat is on. Host and build come from `BOT_HOST` and `BOT_BUILD_ID` (build defaults to `unknown`).
 
 Tests: `tests/unit/health.test.ts`, `tests/unit/health.heartbeat.test.ts`, `tests/unit/healthcheck.test.ts`, `tests/unit/compose.test.ts`.

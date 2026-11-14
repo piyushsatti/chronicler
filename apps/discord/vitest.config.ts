@@ -16,8 +16,7 @@ export default defineConfig({
   test: {
     include: [path.resolve(appRoot, 'tests/**/*.test.ts')],
     env: {
-      DISCORD_TOKEN: 'test-token',
-      BOT_CLIENT_ID: 'test-client-id',
+      BOT_DISCORD_TOKEN: 'test-token',
       GUILD_ID: 'test-guild-id',
       INGEST_SECRET: 'test-ingest-secret',
     },

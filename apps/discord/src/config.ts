@@ -5,11 +5,9 @@
 
 export type BotConfig = {
   token: string;
-  clientId: string;
   guildId: string;
   apiUrl: string;
   ingestSecret: string;
-  devGuildId: string | undefined;
   snifferEnabled: boolean;
   heartbeatEnabled: boolean;
   host: string | undefined;
@@ -30,16 +28,6 @@ function requireEnv(
   const value = env[name];
   if (value === undefined || value === '') {
     throw new Error(`Required environment variable ${name} is not set`);
-  }
-  return value;
-}
-
-function requireBotToken(env: Readonly<Record<string, string | undefined>>): string {
-  const value = env['BOT_DISCORD_TOKEN'] || env['DISCORD_TOKEN'];
-  if (value === undefined || value === '') {
-    throw new Error(
-      'Required environment variable BOT_DISCORD_TOKEN (or DISCORD_TOKEN) is not set',
-    );
   }
   return value;
 }
@@ -131,6 +119,32 @@ export function validateApiUrl(
   return parsed.origin;
 }
 
+function validateAgentPublicOrigin(rawValue: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawValue);
+  } catch {
+    throw new Error(
+      'Environment variable AGENT_PUBLIC_ORIGIN must be an absolute HTTPS origin',
+    );
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error('Environment variable AGENT_PUBLIC_ORIGIN must use HTTPS');
+  }
+  if (
+    parsed.username ||
+    parsed.password ||
+    parsed.search ||
+    parsed.hash ||
+    (parsed.pathname !== '/' && parsed.pathname !== '')
+  ) {
+    throw new Error(
+      'Environment variable AGENT_PUBLIC_ORIGIN must be an origin only',
+    );
+  }
+  return parsed.origin;
+}
+
 export function loadConfig(
   env: Readonly<Record<string, string | undefined>>,
 ): BotConfig {
@@ -172,30 +186,24 @@ export function loadConfig(
   }
 
   return {
-    token: requireBotToken(env),
-    clientId: requireEnv(env, 'BOT_CLIENT_ID'),
+    token: requireEnv(env, 'BOT_DISCORD_TOKEN'),
     guildId,
-    apiUrl: validateApiUrl(env['API_URL'] || 'http://api:8000', {
+    apiUrl: validateApiUrl(requireEnv(env, 'API_URL'), {
       allowedOrigin: env['BOT_API_ALLOWED_ORIGIN'] || undefined,
       allowInsecure: (env['BOT_ALLOW_INSECURE_API_URL'] ?? '').toLowerCase() === 'true',
     }),
     ingestSecret,
-    devGuildId: env['DEV_GUILD_ID'] || undefined,
     snifferEnabled,
     heartbeatEnabled,
     host: env['BOT_HOST'] || undefined,
-    build:
-      env['BOT_BUILD_ID'] ||
-      env['CHRONICLER_BUILD_SHA'] ||
-      env['BUILD_SHA'] ||
-      env['BUILD_VERSION'] ||
-      'unknown',
+    build: env['BOT_BUILD_ID'] || 'unknown',
     agentEnabled,
     agentAllowedGuildIds,
     agentAllowedChannelIds,
     agentAllowedDmUserIds,
-    agentPublicOrigin:
-      env['AGENT_PUBLIC_ORIGIN'] || 'https://chronicler.smokebombstudios.com',
+    agentPublicOrigin: agentEnabled
+      ? validateAgentPublicOrigin(requireEnv(env, 'AGENT_PUBLIC_ORIGIN'))
+      : '',
     agentMaxConcurrent: positiveInteger(env, 'AGENT_MAX_CONCURRENT', 2),
     agentQueueCapacity: positiveInteger(env, 'AGENT_QUEUE_CAPACITY', 25),
   };
