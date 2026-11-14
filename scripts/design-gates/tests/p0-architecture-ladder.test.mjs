@@ -47,6 +47,11 @@ const negativeCases = [
     ['no-react-in-adapter', 'no-dom-in-adapter'],
   ],
   ['effect-hook.ts.txt', 'src/features/items/hooks/useItems.ts', ['no-effect-fetch']],
+  [
+    'effect-invalidate-queries.ts.txt',
+    'src/features/items/hooks/useItems.ts',
+    ['no-effect-fetch'],
+  ],
 ];
 for (const [name, path, expected] of negativeCases) {
   test(`reject ${name} at ${path}`, () => {
@@ -61,6 +66,10 @@ const positiveCases = [
   ['valid-composition-hook.ts.txt', 'src/features/items/hooks/useItemsPage.ts'],
   ['valid-dom-hook.ts.txt', 'src/components/hooks/useFocus.ts'],
   ['valid-adapter.ts.txt', 'src/features/items/adapters/itemsAdapter.ts'],
+  [
+    'mutation-invalidate-queries.ts.txt',
+    'src/features/items/hooks/useSaveItem.ts',
+  ],
 ];
 for (const [name, path] of positiveCases) {
   test(`accept ${name}`, () => assert.deepEqual(scanSource(fixture(name), path), []));
