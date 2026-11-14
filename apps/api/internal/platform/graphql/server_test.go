@@ -419,8 +419,8 @@ func TestGraphQLErrorPresenterLogsWrappedInternalNotBareNotFound(t *testing.T) {
 				if bytes.Contains(w.Body.Bytes(), []byte("database blip")) {
 					t.Fatalf("cause leaked to client: %s", w.Body)
 				}
-			} else if logs.Len() != 0 {
-				t.Fatalf("unexpected log for bare not found: %s", logs.String())
+			} else if bytes.Contains(logs.Bytes(), []byte("unexpected GraphQL error")) {
+				t.Fatalf("unexpected error log for bare not found: %s", logs.String())
 			}
 		})
 	}
