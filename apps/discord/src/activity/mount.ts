@@ -3,28 +3,32 @@
  *
  * No command registry, interaction router, GraphQL client, or announce path.
  * Listeners cover messageCreate, voiceStateUpdate, and raw MESSAGE_REACTION_ADD;
- * each accepted payload becomes a SniffedEvent (normalize.ts) and is POSTed via
- * deliverActivity (forward.ts) to Go `/v1/ingest/discord-event`.
+ * each accepted payload becomes a SniffedEvent (normalize.ts) and is enqueued on
+ * ActivityForwarder (forward.ts) for `/v1/ingest/discord-event`.
  *
  * Gated by SNIFFER_ENABLED (default false).
  */
 
 import { Events } from 'discord.js';
 import type { Client, Guild, Message, VoiceState } from 'discord.js';
+import { createHttp } from '../api/http.js';
+import { createIngest } from '../api/ingest.js';
 import type { BotConfig } from '../config.js';
 import type { GatewayState } from '../health.js';
 import { logger } from '../log.js';
+import { ActivityForwarder } from './forward.js';
 import {
   isPublicActivityChannel,
   normalizeMessageCreate,
   normalizeReactionDispatch,
   VoiceSessionTracker,
 } from './normalize.js';
-import { deliverActivity } from './forward.js';
+import type { SniffedEvent } from './types.js';
 
 export interface MountActivityOptions {
   voiceTracker?: VoiceSessionTracker;
   gateway?: GatewayState;
+  forwarder?: { enqueue(e: SniffedEvent): void };
 }
 
 /**
@@ -44,6 +48,18 @@ export function mountActivity(
     return;
   }
 
+  const forwarder =
+    options.forwarder ??
+    new ActivityForwarder({
+      ingest: createIngest(
+        createHttp({
+          apiUrl: config.apiUrl,
+          secret: config.ingestSecret,
+        }),
+      ),
+      now: Date.now,
+    });
+
   const tracker =
     options.voiceTracker ??
     new VoiceSessionTracker({
@@ -53,7 +69,7 @@ export function mountActivity(
   const reconcileVoiceSessions = (guild: Guild) => {
     const events = tracker.reconcile(guild.voiceStates.cache.values());
     for (const event of events) {
-      deliverActivity(config, event);
+      forwarder.enqueue(event);
     }
     return events;
   };
@@ -116,7 +132,7 @@ export function mountActivity(
     }
     const event = normalizeMessageCreate(message);
     if (event !== null) {
-      deliverActivity(config, event);
+      forwarder.enqueue(event);
     }
   });
 
@@ -126,7 +142,7 @@ export function mountActivity(
       return;
     }
     for (const event of tracker.handleVoiceStateUpdate(oldState, newState)) {
-      deliverActivity(config, event);
+      forwarder.enqueue(event);
     }
   });
 
@@ -175,7 +191,7 @@ export function mountActivity(
       rawClient.user?.id,
     );
     if (event !== null) {
-      deliverActivity(config, event);
+      forwarder.enqueue(event);
     }
   });
 

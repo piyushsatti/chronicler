@@ -49,6 +49,11 @@ function isTokenExpired(token: string): boolean {
   return expiry === null || Date.now() >= expiry;
 }
 
+function memberIdOf(token: string | null): string | null {
+  const memberId = token ? decodeJwtPayload(token)?.['member_id'] : null;
+  return typeof memberId === 'string' && memberId ? memberId : null;
+}
+
 /** Adapters retain the typed transport cause when building an AppError. */
 function isSessionRejection(error: unknown): boolean {
   if (error instanceof TransportError) {
@@ -114,6 +119,8 @@ export type AuthState = {
   sessionReady: boolean;
   /** Checks retained callbacks against the current session, including expiry. */
   isCurrentSession: (candidate: string | null) => boolean;
+  /** D52: a token refresh for the same member keeps in-flight work current. */
+  isCurrentMember: (candidate: string | null) => boolean;
   /** Identity hint only — never use for roles. */
   memberId: string | null;
   login: () => void;
@@ -223,6 +230,16 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     );
   }, []);
 
+  const isCurrentMember = useCallback((candidate: string | null): boolean => {
+    const current = tokenRef.current;
+    return (
+      candidate !== null &&
+      current !== null &&
+      memberIdOf(current) === candidate &&
+      !isTokenExpired(current)
+    );
+  }, []);
+
   useEffect(() => {
     // One cache observer owns session rejection and validated-account changes.
     // Initialization also removes caches from an earlier provider/session.
@@ -322,25 +339,28 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
 
   const value = useMemo((): AuthState => {
     const isAuthenticated = token !== null && !isTokenExpired(token);
-    let memberId: string | null = null;
-    if (token) {
-      const payload = decodeJwtPayload(token);
-      if (payload && typeof payload['member_id'] === 'string' && payload['member_id']) {
-        memberId = payload['member_id'];
-      }
-    }
     return {
       token,
       isAuthenticated,
       sessionReady,
       isCurrentSession,
-      memberId,
+      isCurrentMember,
+      memberId: memberIdOf(token),
       login,
       loginError,
       logout,
       storeToken,
     };
-  }, [isCurrentSession, login, loginError, logout, sessionReady, storeToken, token]);
+  }, [
+    isCurrentMember,
+    isCurrentSession,
+    login,
+    loginError,
+    logout,
+    sessionReady,
+    storeToken,
+    token,
+  ]);
 
   const audience = useMemo(
     (): ViewerAudienceValue => ({

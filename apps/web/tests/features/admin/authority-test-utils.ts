@@ -152,13 +152,14 @@ export function trackPrivilegedRequests() {
         const clone = request.clone();
         const body = (await clone.json()) as { query?: string };
         if (
-          // Authority reads, not privileged data: the member, the server proofs,
-          // and the DM-profile read behind LiveDM create gates.
+          // Authority / account reads, not privileged admin data: the member,
+          // server proofs, DM-profile gates, and signed-in settings (dates).
           [
             'MemberMe',
             'CurrentAdminAccess',
             'CurrentReviewAccess',
             'QuestAuthoringAuthority',
+            'MyPersonalization',
           ].includes(graphqlOperationName(body.query) ?? '')
         )
           return;
