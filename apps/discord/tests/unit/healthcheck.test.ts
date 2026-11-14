@@ -4,6 +4,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { testConfig } from '../support/config.js';
 
 vi.mock('@discord/log.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -49,7 +50,7 @@ describe('alive file from timer', () => {
 
   it('writes the alive file on the timer with heartbeat off', async () => {
     const { mountShardHealth } = await import('@discord/health.js');
-    const dispose = mountShardHealth(fakeClient(), {
+    const dispose = mountShardHealth(fakeClient(), testConfig(), {
       heartbeatEnabled: false,
       heartbeatPoster: vi.fn(),
       heartbeatIntervalMs: 1_000,

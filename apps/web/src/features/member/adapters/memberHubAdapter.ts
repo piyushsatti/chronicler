@@ -10,6 +10,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import MEMBER_HUB_QUERY from './memberHub.graphql?raw';
 import MEMBER_ROSTER_QUERY from './memberRoster.graphql?raw';
 import MEMBER_UPCOMING_QUERY from './memberUpcoming.graphql?raw';
+import { isUpcomingSignup } from '../../../utils/questVocabulary.js';
 
 const hubWireSchema = z.object({
   member: z.object({
@@ -48,7 +49,6 @@ export type MemberHubView = {
   recentSessions: Array<{ kind: string; occurredAt: string; amount: number }>;
 };
 
-const INACTIVE_SIGNUP = new Set(['withdrawn', 'no_show']);
 const INACTIVE_QUEST = new Set(['cancelled', 'completed', 'played', 'closed']);
 const UPCOMING_PAGE_SIZE = 100;
 
@@ -186,7 +186,7 @@ export async function loadUpcomingSignups(
       if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'me:upcoming');
       signupTotal = parsed.data.total;
       for (const seat of parsed.data.items) {
-        if (!INACTIVE_SIGNUP.has(seat.status)) seats.push(seat);
+        if (isUpcomingSignup(seat.status)) seats.push(seat);
       }
       signupOffset += parsed.data.items.length;
       if (parsed.data.items.length === 0) break;

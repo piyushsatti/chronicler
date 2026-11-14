@@ -1,7 +1,129 @@
 {
-  "_comment": "Allowlists for apps/web design gates. Lengths may only shrink (ratchet). Soft-skipped gates (gallery/motion/effects/cosmetic/orphan) re-arm when their trees land. pageLayout (L5): justified exceptions, each with a reason. pageLayoutPendingMigration: current violations that round-3 page migration removes (entries match on file+rule+value; seenAtLine is informational). queryKeyOrigin: inline queryKey sites pending factory migration (match on file+rule+value; seenAtLine informational).",
+  "_comment": "Allowlists for apps/web design gates. Lengths may only shrink (ratchet). Soft-skipped gates (gallery/motion/effects/cosmetic/orphan) re-arm when their trees land. pageLayout (L5): justified exceptions, each with a reason. pageLayoutPendingMigration: current violations that round-3 page migration removes (entries match on file+rule+value; seenAtLine is informational). queryKeyOrigin: inline queryKey sites pending factory migration (match on file+rule+value; seenAtLine informational). hooksBoundary: shared-folder imports into features/* pending relocation (match on file:line).",
   "tokens": [],
   "boundary": [],
+  "hooksBoundary": [
+    {
+      "file": "src/hooks/useDmDashboard.ts",
+      "line": 6,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/hooks/useDmDashboard.ts",
+      "line": 11,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/hooks/useDmDashboard.ts",
+      "line": 12,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/hooks/useLiveDm.ts",
+      "line": 9,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/hooks/useMarkerMemberSearch.ts",
+      "line": 2,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/hooks/useMe.ts",
+      "line": 6,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/hooks/useMemberProfile.ts",
+      "line": 2,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/hooks/useProfileActivity.ts",
+      "line": 4,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/hooks/useProfileActivity.ts",
+      "line": 5,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/hooks/useProfileActivity.ts",
+      "line": 6,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/hooks/useSeriesPage.ts",
+      "line": 18,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/hooks/useSeriesPage.ts",
+      "line": 19,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/chrome/LoginRoute.tsx",
+      "line": 1,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/chrome/MeAvailabilityEditor.tsx",
+      "line": 7,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/chrome/MeShell.tsx",
+      "line": 16,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/chrome/NotificationBell.tsx",
+      "line": 3,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/chrome/NotificationBell.tsx",
+      "line": 4,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/chrome/NotificationBell.tsx",
+      "line": 5,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/chrome/SettingsForm.tsx",
+      "line": 20,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/chrome/SettingsForm.tsx",
+      "line": 21,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/chrome/SiteChrome.tsx",
+      "line": 8,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/chrome/SiteChrome.tsx",
+      "line": 9,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 6,
+      "rule": "shared-feature-import"
+    },
+    {
+      "file": "src/App.tsx",
+      "line": 7,
+      "rule": "shared-feature-import"
+    }
+  ],
   "responsive": [],
   "layout": [],
   "duplication": [],

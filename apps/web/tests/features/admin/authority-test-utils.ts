@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
-import { featureGraphql } from '../../../src/chrome/featureRegistry.js';
+import { featureGraphql } from '../../../src/mocks/featureMocks.js';
 import type { GraphqlRequestBody } from '../../../src/chrome/featureModule.js';
 import { server } from '../../../src/mocks/server.js';
 import goodMe from '../../fixtures/wire/me/good.json';

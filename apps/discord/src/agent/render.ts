@@ -12,8 +12,11 @@ function escapeDiscordLinkTitle(value: string): string {
     .replace(/[\r\n]+/g, ' ');
 }
 
+const MAX_FAILURE_CHARS = 300;
+
 export function renderQuestionResult(result: QuestionResult): string {
-  if (result.type === 'question.failed') return result.message.trim();
+  if (result.type === 'question.failed')
+    return result.message.trim().slice(0, MAX_FAILURE_CHARS);
   const body = result.answer.trim();
   const sourceLines = result.sources
     .slice(0, 3)

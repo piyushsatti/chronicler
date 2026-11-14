@@ -17,6 +17,7 @@ import {
   communityDirectoryWireSchema,
   participantWireSchema,
   questListWireSchema,
+  recentlyClosedTotalWireSchema,
   regionCatalogWireSchema,
   upcomingPageWireSchema,
   upcomingQuestWireSchema,
@@ -26,6 +27,7 @@ import { toCardStatus } from '../../../view-models/questCard.js';
 import { formatScheduled, formatScheduledShort } from '../../../utils/format.js';
 import { isDiscordDeliveryTerminal } from '../../../utils/discordDelivery.js';
 import type { QuestCardProps } from '../../../components/domain/QuestCard.js';
+import { hasSeat } from '../../../utils/questVocabulary.js';
 
 export type DmAcceptingView = {
   memberId: string;
@@ -74,7 +76,6 @@ export type HomeQuestView = {
 export type HomeLanesViewModel = {
   recruiting: HomeQuestView[];
   upcoming: HomeQuestView[];
-  recentlyClosed: HomeQuestView[];
   dmsAccepting: DmAcceptingView[];
   upcomingSchedule: z.infer<typeof upcomingQuestWireSchema>[];
   totals: {
@@ -84,8 +85,6 @@ export type HomeLanesViewModel = {
     dmsAccepting: number;
   };
 };
-
-const SEATED = new Set(['signed_up', 'played', 'selected']);
 
 type WireQuestItem = (typeof questListWireSchema)['_output']['items'][number];
 
@@ -219,8 +218,10 @@ export function parseHomeLanesWire(wire: {
   if (!recruiting.ok) return recruiting;
   const upcoming = parseQuestList(wire.quests, catalog.data);
   if (!upcoming.ok) return upcoming;
-  const recentlyClosed = parseQuestList(wire.recentlyClosedQuests, catalog.data);
-  if (!recentlyClosed.ok) return recentlyClosed;
+  const recentlyClosed = recentlyClosedTotalWireSchema.safeParse(wire.recentlyClosedQuests);
+  if (!recentlyClosed.success) {
+    return { ok: false, failure: 'InvalidWire', detail: recentlyClosed.error.message };
+  }
   const dmsAccepting = parseCommunity(wire.communityDirectory);
   if (!dmsAccepting.ok) return dmsAccepting;
   const schedule = upcomingPageWireSchema.safeParse(wire.quests);
@@ -232,7 +233,6 @@ export function parseHomeLanesWire(wire: {
     data: {
       recruiting: recruiting.data.items.filter((q) => q.machineStatus === 'open'),
       upcoming: upcoming.data.items,
-      recentlyClosed: recentlyClosed.data.items,
       dmsAccepting: dmsAccepting.data.items,
       upcomingSchedule: schedule.data.items,
       totals: {
@@ -256,7 +256,7 @@ export function mapToQuestCardProps(
     timeZone?: string | null;
   } = {},
 ): QuestCardProps {
-  const seated = quest.participants.filter((p) => SEATED.has(p.status));
+  const seated = quest.participants.filter((p) => hasSeat(p.status));
   const own =
     quest.participants.find(
       (p) => p.memberId === opts.memberId && p.status === 'signed_up',
@@ -440,11 +440,7 @@ export async function loadHomeLanes(signal?: AbortSignal): Promise<HomeLanesView
     result.data.dmsAccepting = dms.items;
     result.data.totals.dmsAccepting = dms.total;
     const rosters = new Map<string, HomeQuestParticipantView[]>();
-    for (const lane of [
-      result.data.recruiting,
-      result.data.upcoming,
-      result.data.recentlyClosed,
-    ]) {
+    for (const lane of [result.data.recruiting, result.data.upcoming]) {
       for (const quest of lane) {
         const roster =
           rosters.get(quest.id) ?? (await completeParticipantPages(quest, request));

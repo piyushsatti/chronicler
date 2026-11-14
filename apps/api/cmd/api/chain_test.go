@@ -31,6 +31,27 @@ func chainTestConfigAndToken(t *testing.T) (config.Config, string) {
 	return cfg, token
 }
 
+func TestProductionChainGraphQLUsesIdentityMiddleware(t *testing.T) {
+	cfg, token := chainTestConfigAndToken(t)
+	called := false
+	h := apiHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusNoContent)
+	}), cfg, func(context.Context, string) (auth.Authority, error) {
+		return auth.NewAuthority("member", nil, "inactive", "")
+	})
+	r := httptest.NewRequest(http.MethodPost, "/v1/graphql", nil)
+	r.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if !called || w.Code != http.StatusNoContent {
+		t.Fatalf("called=%v status=%d body=%s", called, w.Code, w.Body)
+	}
+	if got := w.Header().Get("Content-Type"); got == "application/problem+json" {
+		t.Fatalf("content type=%q", got)
+	}
+}
+
 func TestProductionChainAuthorityFailuresKeepCORS(t *testing.T) {
 	for _, tt := range []struct {
 		name    string

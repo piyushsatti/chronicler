@@ -14,7 +14,7 @@ import { AUTH_DISCORD_PATH } from '../api/endpoints.js';
 import { safeAppError, toAppError } from '../errors/toAppError.js';
 import type { AppError } from '../errors/types.js';
 import { TransportError } from '../errors/types.js';
-import type { MemberViewModel } from '../features/member/adapters/memberAdapter.js';
+import type { MemberViewModel } from '../view-models/member.js';
 import { EXPIRES_KEY, TOKEN_KEY } from './storage.js';
 import { beginOAuthState, discardOAuthState } from './oauthState.js';
 import { storeIntendedPath } from './intendedPath.js';

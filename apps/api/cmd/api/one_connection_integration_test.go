@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/piyushsatti/chronicler/apps/api/internal/app"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/config"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
@@ -34,7 +33,7 @@ func TestProductCommandsCompleteOnOnePoolConnection(t *testing.T) {
 	query := parsed.Query()
 	query.Set("pool_max_conns", "1")
 	parsed.RawQuery = query.Encode()
-	runtime := app.Wire(ctx, config.Config{DatabaseURL: parsed.String(), RequireDatabase: true, JWTSecret: "one-connection-integration-key"})
+	runtime := wireForTest(ctx, config.Config{DatabaseURL: parsed.String(), RequireDatabase: true, JWTSecret: "one-connection-integration-key"})
 	t.Cleanup(runtime.Pool.Close)
 	if runtime.Pool == nil || runtime.Resolver == nil {
 		t.Fatal("Wire did not bind Postgres product commands")

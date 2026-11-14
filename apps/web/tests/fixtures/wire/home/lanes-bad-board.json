@@ -18,6 +18,6 @@
     "total": 1
   },
   "quests": { "items": [], "total": 0 },
-  "recentlyClosedQuests": { "items": [], "total": 0 },
+  "recentlyClosedQuests": { "total": 0 },
   "communityDirectory": { "entries": [], "total": 0 }
 }

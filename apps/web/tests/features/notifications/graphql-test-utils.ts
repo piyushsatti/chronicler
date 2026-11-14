@@ -1,6 +1,6 @@
 import { HttpResponse } from 'msw';
 import type { GraphqlRequestBody } from '../../../src/chrome/featureModule.js';
-import { featureGraphql } from '../../../src/chrome/featureRegistry.js';
+import { featureGraphql } from '../../../src/mocks/featureMocks.js';
 
 export function graphqlOperationName(query: string | undefined): string | null {
   const m = (query ?? '').match(/\b(query|mutation)\s+(\w+)/);
