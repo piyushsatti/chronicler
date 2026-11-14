@@ -1,10 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { GRAPHQL_PATH } from '../api/endpoints.js';
-import {
-  featureGraphql,
-  featureHandlers,
-} from '../chrome/featureRegistry.js';
 import type { GraphqlRequestBody } from '../chrome/featureModule.js';
+import { featureGraphql, featureHandlers } from './featureMocks.js';
 
 function graphqlOperationName(body: GraphqlRequestBody): string | null {
   const q = body.query ?? '';
