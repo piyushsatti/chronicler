@@ -18,11 +18,6 @@ ORDER BY name;
 SELECT definition FROM game_calendar WHERE id = 1;
 -- name: GetGameDayForRealDate :one
 SELECT game_day FROM game_time_map WHERE real_date = $1;
--- name: CountOpenQuestsInRegion :one
-SELECT count(*)::int FROM quests q
-JOIN quest_regions qr ON qr.quest_id = q.id
-JOIN regions r ON r.id = qr.region_id
-WHERE r.public_id = $1 AND q.status = 'open';
 -- name: UpsertGameTimeMapDay :exec
 INSERT INTO game_time_map (real_date, game_day)
 VALUES ($1, $2)

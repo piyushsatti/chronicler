@@ -60,7 +60,7 @@ func (s ProductQueries) audienceRead(ctx context.Context, actor auth.Authority, 
 }
 
 func (s ProductQueries) documentPage(limit, offset int32) error {
-	if limit <= 0 || offset < 0 {
+	if !product.ValidPage(limit, offset) {
 		return apierr.New(apierr.Invalid, "invalid document page")
 	}
 	return nil

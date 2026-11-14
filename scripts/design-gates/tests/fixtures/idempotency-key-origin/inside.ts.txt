@@ -1,0 +1,4 @@
+export function useFencedMutation() {
+  const key = crypto.randomUUID();
+  return key;
+}

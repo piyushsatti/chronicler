@@ -42,16 +42,17 @@ type QuestionCompletion struct {
 	LeaseToken string `json:"lease_token"`
 }
 type Service struct {
-	secret         string
+	botSecret      string
+	workerSecret   string
 	store          Store
 	inlineComplete bool
 }
 
-func New(secret string, store Store, inlineComplete bool) *Service {
+func New(botSecret, workerSecret string, store Store, inlineComplete bool) *Service {
 	if store == nil {
 		store = newMemoryStore(time.Now)
 	}
-	return &Service{secret, store, inlineComplete}
+	return &Service{botSecret, workerSecret, store, inlineComplete}
 }
 func (s *Service) Routes(mux httpserver.Router) {
 	mux.HandleFunc("POST /v1/agent/questions", s.submit)
@@ -61,8 +62,8 @@ func (s *Service) Routes(mux httpserver.Router) {
 	mux.HandleFunc("POST /v1/agent/questions/{id}/renew", s.renew)
 	mux.HandleFunc("POST /v1/agent/questions/{id}/retry", s.retry)
 }
-func (s *Service) authorize(r *http.Request) error {
-	return httpserver.AuthorizeIngestSecret(r, s.secret)
+func (s *Service) authorize(r *http.Request, secret string) error {
+	return httpserver.AuthorizeIngestSecret(r, secret)
 }
 func invalid(message string) error { return apierr.New(apierr.Invalid, message) }
 func decode(r *http.Request, v any, limit int64) error {
@@ -274,7 +275,7 @@ func validateCompletionDiagnostics(raw json.RawMessage) error {
 	return nil
 }
 func (s *Service) submit(w http.ResponseWriter, r *http.Request) {
-	if e := s.authorize(r); e != nil {
+	if e := s.authorize(r, s.botSecret); e != nil {
 		apierr.Write(w, r, e)
 		return
 	}
@@ -304,7 +305,7 @@ func (s *Service) submit(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 func (s *Service) claim(w http.ResponseWriter, r *http.Request) {
-	if e := s.authorize(r); e != nil {
+	if e := s.authorize(r, s.workerSecret); e != nil {
 		apierr.Write(w, r, e)
 		return
 	}
@@ -332,7 +333,7 @@ func (s *Service) claim(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(q)
 }
 func (s *Service) completeHTTP(w http.ResponseWriter, r *http.Request) {
-	if e := s.authorize(r); e != nil {
+	if e := s.authorize(r, s.workerSecret); e != nil {
 		apierr.Write(w, r, e)
 		return
 	}
@@ -352,7 +353,7 @@ func (s *Service) completeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(204)
 }
 func (s *Service) get(w http.ResponseWriter, r *http.Request) {
-	if e := s.authorize(r); e != nil {
+	if e := s.authorize(r, s.botSecret); e != nil {
 		apierr.Write(w, r, e)
 		return
 	}
@@ -373,7 +374,7 @@ func (s *Service) get(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(result)
 }
 func (s *Service) renew(w http.ResponseWriter, r *http.Request) {
-	if e := s.authorize(r); e != nil {
+	if e := s.authorize(r, s.workerSecret); e != nil {
 		apierr.Write(w, r, e)
 		return
 	}
@@ -397,7 +398,7 @@ func (s *Service) renew(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(lease)
 }
 func (s *Service) retry(w http.ResponseWriter, r *http.Request) {
-	if e := s.authorize(r); e != nil {
+	if e := s.authorize(r, s.workerSecret); e != nil {
 		apierr.Write(w, r, e)
 		return
 	}

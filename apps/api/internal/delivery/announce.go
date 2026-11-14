@@ -30,6 +30,7 @@ type AnnounceQuest struct {
 	AvgPartyLevel   *int
 	AppliedRevision int
 	MessageID       string
+	ChannelID       string
 	EventID         string
 	ThreadID        string
 	VoiceChannelID  string

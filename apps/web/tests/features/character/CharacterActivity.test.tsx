@@ -6,6 +6,7 @@ import { CharacterActivityPanel } from '../../../src/features/character/componen
 import { loadCharacterActivity } from '../../../src/features/character/adapters/characterActivityAdapter.js';
 import {
   loadCharacterDirectory,
+  loadCharacterRegionNames,
   loadCreationOptions,
 } from '../../../src/features/character/adapters/characterDirectoryAdapter.js';
 import { server } from '../../../src/mocks/server.js';
@@ -164,5 +165,55 @@ describe('Character activity', () => {
     const options = await loadCreationOptions('');
     expect(options.backstories).toHaveLength(101);
     expect(offsets).toEqual([0, 100]);
+  });
+
+  it('pages character region names by 100 until a short page', async () => {
+    const regions = Array.from({ length: 101 }, (_, index) => ({
+      id: `11111111-1111-4111-8111-${String(index).padStart(12, '0')}`,
+      name: `Region ${index}`,
+    }));
+    const requested: unknown[] = [];
+    server.use(
+      graphql.query('CharacterRegions', ({ variables }) => {
+        requested.push(variables);
+        const offset = Number(variables.offset ?? 0);
+        const limit = Number(variables.limit ?? 100);
+        return HttpResponse.json({
+          data: { regions: regions.slice(offset, offset + limit) },
+        });
+      }),
+    );
+    await expect(loadCharacterRegionNames()).resolves.toMatchObject({
+      [regions[100]!.id]: 'Region 100',
+    });
+    expect(requested).toEqual([
+      { limit: 100, offset: 0 },
+      { limit: 100, offset: 100 },
+    ]);
+  });
+
+  it('pages creation-option regions by 100 until a short page', async () => {
+    const regions = Array.from({ length: 101 }, (_, index) => ({
+      id: `11111111-1111-4111-8111-${String(index).padStart(12, '0')}`,
+      name: `Region ${index}`,
+    }));
+    const requested: unknown[] = [];
+    server.use(
+      graphql.query('CharacterRegions', ({ variables }) => {
+        requested.push(variables);
+        const offset = Number(variables.offset ?? 0);
+        const limit = Number(variables.limit ?? 100);
+        return HttpResponse.json({
+          data: { regions: regions.slice(offset, offset + limit) },
+        });
+      }),
+    );
+    const options = await loadCreationOptions('');
+    expect(options.regions).toHaveLength(101);
+    expect(options.regions[100]).toEqual(regions[100]);
+    expect(requested).toEqual([
+      { limit: 100, offset: 0 },
+      { limit: 100, offset: 100 },
+    ]);
   });
 });

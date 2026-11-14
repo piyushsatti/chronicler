@@ -112,20 +112,24 @@ export const graphql: FeatureGraphql = {
     HttpResponse.json({ data: { documentById: editorDocumentWire } }),
   EditorDocumentBySlug: () =>
     HttpResponse.json({ data: { document: editorDocumentWire } }),
-  EntityLinkQuestBoard: () =>
-    HttpResponse.json({
+  EntityLinkQuestBoard: ({ variables }) => {
+    const offset = Number(variables?.offset ?? 0);
+    const limit = Number(variables?.limit ?? 100);
+    const items = [
+      {
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        shortCode: 'qa-the-salt-stair',
+        briefDocument: { title: 'The Salt Stair' },
+      },
+    ];
+    return HttpResponse.json({
       data: {
         questBoard: {
-          items: [
-            {
-              id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-              shortCode: 'qa-the-salt-stair',
-              briefDocument: { title: 'The Salt Stair' },
-            },
-          ],
+          items: items.slice(offset, offset + limit),
         },
       },
-    }),
+    });
+  },
   EntityLinkCodexDirectory: () =>
     HttpResponse.json({
       data: {

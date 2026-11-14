@@ -95,7 +95,7 @@ query HomeWarRoom(
     }
     total
   }
-  regions(limit: 200) {
+  regions(limit: 100) {
     id
     name
   }

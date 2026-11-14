@@ -12,7 +12,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
@@ -1209,12 +1208,6 @@ func pageBounds(length int, offset, limit int32) (int, int) {
 		end = length
 	}
 	return start, end
-}
-
-func (p *ProductPostgres) RequestParties(ctx context.Context, id string) (notification.RequestParties, error) {
-	_ = ctx
-	_ = id
-	return notification.RequestParties{}, nil
 }
 
 func mapProductMember(id pgtype.UUID, discord string, handle, name string, avatar pgtype.Text, roles []string, status string, joined pgtype.Timestamptz) MemberView {

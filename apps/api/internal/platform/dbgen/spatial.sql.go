@@ -11,20 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countOpenQuestsInRegion = `-- name: CountOpenQuestsInRegion :one
-SELECT count(*)::int FROM quests q
-JOIN quest_regions qr ON qr.quest_id = q.id
-JOIN regions r ON r.id = qr.region_id
-WHERE r.public_id = $1 AND q.status = 'open'
-`
-
-func (q *Queries) CountOpenQuestsInRegion(ctx context.Context, publicID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, countOpenQuestsInRegion, publicID)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
 const getGameCalendar = `-- name: GetGameCalendar :one
 SELECT definition FROM game_calendar WHERE id = 1
 `

@@ -2,9 +2,12 @@ import { ChannelType, type Client, type Message } from 'discord.js';
 import type { BotConfig } from '../config.js';
 import type { GatewayState } from '../health.js';
 import { logger } from '../log.js';
-import { submitQuestion } from './broker.js';
+import { createAgentApi } from './api.js';
+import { createHttp } from '../api/http.js';
+import { OUTCOME_TEXT, runQuestion, sleep } from './broker.js';
 import { normalizeMention } from './normalize.js';
 import { collectReplyHistory, fetchDirectReplyToBot } from './reply-context.js';
+import { replyTo } from './reply.js';
 import {
   DuplicateRequestError,
   AgentQueue,
@@ -12,10 +15,8 @@ import {
   RateLimitedError,
 } from './queue.js';
 import { renderQuestionResult } from './render.js';
-import type { QuestionResult } from './types.js';
 
 const TYPING_REFRESH_MS = 8_000;
-const FAILURE_TEXT = "I couldn't finish this request. Please try again.";
 const COMPLETED_JOB_LIMIT = 1_000;
 
 interface PendingQuestion {
@@ -44,13 +45,6 @@ function locallyAllowed(config: BotConfig, message: Message): boolean {
   );
 }
 
-function reply(message: Message, content: string): Promise<unknown> {
-  return message.reply({
-    content,
-    allowedMentions: { parse: [], repliedUser: false },
-  });
-}
-
 export async function mountAgent(
   client: Client,
   config: BotConfig,
@@ -61,6 +55,12 @@ export async function mountAgent(
     return { close: async () => undefined };
   }
 
+  const api = createAgentApi(
+    createHttp({
+      apiUrl: config.apiUrl,
+      secret: config.ingestSecret,
+    }),
+  );
   const publisherQueue = new AgentQueue(
     config.agentMaxConcurrent,
     config.agentQueueCapacity,
@@ -87,28 +87,11 @@ export async function mountAgent(
   const failPending = (): void => {
     for (const [jobId, item] of pending) {
       stopTyping(jobId);
-      if (!stopping) void reply(item.message, FAILURE_TEXT).catch(() => undefined);
+      if (!stopping) {
+        void replyTo(item.message, OUTCOME_TEXT.rejected, 'shutdown');
+      }
     }
     pending.clear();
-  };
-  const handleResult = async (result: QuestionResult): Promise<void> => {
-    if (stopping) return;
-    const item = pending.get(result.job_id);
-    if (!item || completed.has(result.job_id)) {
-      logger.warn('Ignoring Agent result without a live Discord destination', {
-        jobId: result.job_id,
-        state: completed.has(result.job_id) ? 'completed' : 'unknown',
-      });
-      return;
-    }
-    await reply(item.message, renderQuestionResult(result));
-    rememberCompleted(result.job_id);
-    forget(result.job_id);
-    logger.info('Agent result delivered', {
-      jobId: result.job_id,
-      sourceMessageId: item.sourceMessageId,
-      resultType: result.type,
-    });
   };
 
   const handleMessage = async (message: Message): Promise<void> => {
@@ -125,15 +108,32 @@ export async function mountAgent(
     );
     if (outcome.kind === 'ignore') return;
     if (outcome.kind === 'usage' || outcome.kind === 'reject') {
-      void reply(message, outcome.text).catch(() => undefined);
+      await replyTo(message, outcome.text, outcome.kind);
       return;
     }
-    if (pending.has(outcome.job.job_id)) {
-      void reply(message, 'That question is already being handled.').catch(
-        () => undefined,
-      );
-      return;
+
+    try {
+      publisherQueue.reserve(outcome.authorId, outcome.guildId);
+    } catch (error: unknown) {
+      if (error instanceof RateLimitedError) {
+        if (publisherQueue.takeRateLimitNotice(outcome.authorId)) {
+          const delivered = await replyTo(
+            message,
+            OUTCOME_TEXT.rate_limited,
+            'rate_limited',
+          );
+          if (!delivered) publisherQueue.releaseRateLimitNotice(outcome.authorId);
+        } else {
+          logger.info('Agent rate-limit notice suppressed', {
+            authorId: outcome.authorId,
+            sourceMessageId: outcome.sourceMessageId,
+          });
+        }
+        return;
+      }
+      throw error;
     }
+
     const sendTyping = (): void => {
       if (message.channel.type !== ChannelType.GroupDM)
         void message.channel.sendTyping().catch(() => undefined);
@@ -148,36 +148,62 @@ export async function mountAgent(
     };
     pending.set(outcome.job.job_id, item);
     try {
-      const published = publisherQueue.enqueue(
-        outcome.sourceMessageId,
-        outcome.authorId,
-        outcome.guildId,
-        async () => {
-          const result = await submitQuestion(config, job, abortController.signal);
-          await handleResult(result);
-        },
-      );
+      const published = publisherQueue.enqueue(outcome.sourceMessageId, async () => {
+        const questionOutcome = await runQuestion(job, api, {
+          signal: abortController.signal,
+          now: Date.now,
+          sleep,
+          publicOrigin: config.agentPublicOrigin,
+        });
+        if (stopping) return;
+        const live = pending.get(job.job_id);
+        if (!live || completed.has(job.job_id)) {
+          logger.warn('Ignoring Agent result without a live Discord destination', {
+            jobId: job.job_id,
+            state: completed.has(job.job_id) ? 'completed' : 'unknown',
+          });
+          return;
+        }
+        if (questionOutcome.kind === 'aborted') {
+          forget(job.job_id);
+          return;
+        }
+        const content =
+          questionOutcome.kind === 'answered' || questionOutcome.kind === 'agent_failed'
+            ? renderQuestionResult(questionOutcome.result)
+            : OUTCOME_TEXT[questionOutcome.kind];
+        const delivered = await replyTo(live.message, content, questionOutcome.kind);
+        if (delivered) {
+          rememberCompleted(job.job_id);
+          logger.info('Agent result delivered', {
+            jobId: job.job_id,
+            sourceMessageId: live.sourceMessageId,
+            outcome: questionOutcome.kind,
+          });
+        }
+        forget(job.job_id);
+      });
       void published.catch((error: unknown) => {
         forget(outcome.job.job_id);
         if (stopping) return;
-        logger.warn('Agent request publish failed', {
+        logger.warn('Agent request failed', {
           jobId: outcome.job.job_id,
           sourceMessageId: outcome.sourceMessageId,
           error: error instanceof Error ? error.message : String(error),
         });
-        void reply(message, FAILURE_TEXT).catch(() => undefined);
+        void replyTo(message, OUTCOME_TEXT.rejected, 'handler_error');
       });
     } catch (error: unknown) {
       forget(outcome.job.job_id);
-      const content =
-        error instanceof RateLimitedError
-          ? 'Please wait before asking another question.'
-          : error instanceof DuplicateRequestError
-            ? 'That question is already being handled.'
-            : error instanceof QueueFullError
-              ? 'I am at capacity right now. Please try again shortly.'
-              : FAILURE_TEXT;
-      void reply(message, content).catch(() => undefined);
+      if (error instanceof DuplicateRequestError) {
+        await replyTo(message, OUTCOME_TEXT.duplicate, 'duplicate');
+        return;
+      }
+      if (error instanceof QueueFullError) {
+        await replyTo(message, OUTCOME_TEXT.queue_full, 'queue_full');
+        return;
+      }
+      await replyTo(message, OUTCOME_TEXT.rejected, 'handler_error');
     }
   };
   client.on('messageCreate', (message: Message) => {
@@ -186,7 +212,7 @@ export async function mountAgent(
         sourceMessageId: message.id,
         error: error instanceof Error ? error.message : String(error),
       });
-      void reply(message, FAILURE_TEXT).catch(() => undefined);
+      void replyTo(message, OUTCOME_TEXT.rejected, 'handler_error');
     });
   });
   gateway?.subscribe((event) => {

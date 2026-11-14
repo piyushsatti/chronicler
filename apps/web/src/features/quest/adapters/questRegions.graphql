@@ -1,5 +1,5 @@
-query QuestRegions($limit: Int!) {
-  regions(limit: $limit) {
+query QuestRegions($limit: Int!, $offset: Int!) {
+  regions(limit: $limit, offset: $offset) {
     id
     name
   }

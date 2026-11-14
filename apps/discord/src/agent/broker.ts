@@ -82,26 +82,48 @@ export function parseQuestionResult(
 export const WAIT_MS = 120_000;
 const POLL_MS = 1_000;
 
+export type Clock = () => number;
+export type SleepFn = (ms: number, signal: AbortSignal) => Promise<void>;
+
+export type QuestionOutcome =
+  | { kind: 'answered' | 'agent_failed'; result: QuestionResult }
+  | { kind: 'rejected'; status?: number }
+  | { kind: 'timed_out' }
+  | { kind: 'aborted' }
+  | { kind: 'invalid_result'; reason: string };
+
+const FAILURE_TEXT = "I couldn't finish this request. Please try again.";
+
+export const OUTCOME_TEXT = {
+  rejected: FAILURE_TEXT,
+  timed_out: FAILURE_TEXT,
+  aborted: FAILURE_TEXT,
+  invalid_result: FAILURE_TEXT,
+  rate_limited: 'Please wait before asking another question.',
+  queue_full: 'I am at capacity right now. Please try again shortly.',
+  duplicate: 'That question is already being handled.',
+} as const;
+
 export type AgentApiDeps = {
   agent?: AgentPort;
   fetch?: FetchFn;
 };
 
-function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
+export function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
+    if (signal.aborted) {
       reject(signal.reason instanceof Error ? signal.reason : new Error('Aborted'));
       return;
     }
     const timer = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort);
+      signal.removeEventListener('abort', onAbort);
       resolve();
     }, ms);
     const onAbort = (): void => {
       clearTimeout(timer);
-      reject(signal?.reason instanceof Error ? signal.reason : new Error('Aborted'));
+      reject(signal.reason instanceof Error ? signal.reason : new Error('Aborted'));
     };
-    signal?.addEventListener('abort', onAbort, { once: true });
+    signal.addEventListener('abort', onAbort, { once: true });
   });
 }
 
@@ -116,45 +138,140 @@ function agentFor(config: BotConfig, deps?: AgentApiDeps): AgentPort {
   );
 }
 
-/** POST a question, then poll until the API returns a completed or failed result. */
+function isFailFast(status: number | undefined): boolean {
+  return status === 401 || status === 403 || status === 404;
+}
+
+function abortedOutcome(): QuestionOutcome {
+  return { kind: 'aborted' };
+}
+
+/** POST a question, then poll until completed, failed, or a terminal outcome. */
+export async function runQuestion(
+  job: QuestionRequest,
+  api: AgentPort,
+  o: {
+    signal: AbortSignal;
+    now: Clock;
+    sleep: SleepFn;
+    publicOrigin: string;
+  },
+): Promise<QuestionOutcome> {
+  const deadline = o.now() + WAIT_MS;
+
+  for (;;) {
+    if (o.signal.aborted) return abortedOutcome();
+    if (o.now() > deadline) return { kind: 'timed_out' };
+
+    let created;
+    try {
+      created = await api.submit(job, o.signal);
+    } catch (error: unknown) {
+      if (o.signal.aborted) return abortedOutcome();
+      throw error;
+    }
+    if (created.ok) break;
+    if (o.signal.aborted) return abortedOutcome();
+    if (isFailFast(created.status) || created.kind === 'permanent') {
+      return { kind: 'rejected', status: created.status };
+    }
+    if (o.now() > deadline) return { kind: 'timed_out' };
+    try {
+      await o.sleep(created.retryAfterMs ?? POLL_MS, o.signal);
+    } catch {
+      return abortedOutcome();
+    }
+  }
+
+  for (;;) {
+    if (o.signal.aborted) return abortedOutcome();
+    if (o.now() > deadline) return { kind: 'timed_out' };
+
+    let response;
+    try {
+      response = await api.poll(job.job_id, o.signal);
+    } catch (error: unknown) {
+      if (o.signal.aborted) return abortedOutcome();
+      throw error;
+    }
+    if (!response.ok) {
+      if (o.signal.aborted) return abortedOutcome();
+      if (
+        response.status !== undefined &&
+        response.status >= 200 &&
+        response.status < 300
+      ) {
+        return { kind: 'invalid_result', reason: response.detail };
+      }
+      if (isFailFast(response.status) || response.kind === 'permanent') {
+        return { kind: 'rejected', status: response.status };
+      }
+      if (o.now() > deadline) return { kind: 'timed_out' };
+      try {
+        await o.sleep(response.retryAfterMs ?? POLL_MS, o.signal);
+      } catch {
+        return abortedOutcome();
+      }
+      continue;
+    }
+    if (response.status === 202 || response.status === 204) {
+      try {
+        await o.sleep(POLL_MS, o.signal);
+      } catch {
+        return abortedOutcome();
+      }
+      continue;
+    }
+    try {
+      const result = parseQuestionResult(
+        Buffer.from(response.text),
+        job.job_id,
+        o.publicOrigin,
+      );
+      return {
+        kind: result.type === 'question.completed' ? 'answered' : 'agent_failed',
+        result,
+      };
+    } catch (error: unknown) {
+      return {
+        kind: 'invalid_result',
+        reason: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+}
+
+/** Compatibility wrapper: throws on non-result outcomes for older callers. */
 export async function submitQuestion(
   config: BotConfig,
   job: QuestionRequest,
   signal?: AbortSignal,
   deps?: AgentApiDeps,
 ): Promise<QuestionResult> {
-  const api = agentFor(config, deps);
-  const created = await api.submit(job, signal);
-  if (!created.ok) {
-    throw new Error(
-      created.status === undefined
-        ? created.detail
-        : `agent question rejected: ${created.status}`,
-    );
-  }
-
-  const deadline = Date.now() + WAIT_MS;
-  for (;;) {
-    if (signal?.aborted) {
-      throw signal.reason instanceof Error ? signal.reason : new Error('Aborted');
-    }
-    if (Date.now() > deadline) throw new Error('agent question timed out');
-    const response = await api.poll(job.job_id, signal);
-    if (!response.ok) {
-      if (response.status === undefined) throw new Error(response.detail);
-      if (response.status >= 200 && response.status < 300) {
-        throw new Error(response.detail);
-      }
-      throw new Error(`agent question status ${response.status}`);
-    }
-    if (response.status === 202 || response.status === 204) {
-      await sleep(POLL_MS, signal);
-      continue;
-    }
-    return parseQuestionResult(
-      Buffer.from(response.text),
-      job.job_id,
-      config.agentPublicOrigin,
-    );
+  const controller = signal ?? new AbortController().signal;
+  const outcome = await runQuestion(job, agentFor(config, deps), {
+    signal: controller,
+    now: Date.now,
+    sleep,
+    publicOrigin: config.agentPublicOrigin,
+  });
+  switch (outcome.kind) {
+    case 'answered':
+    case 'agent_failed':
+      return outcome.result;
+    case 'aborted':
+      throw controller.reason instanceof Error
+        ? controller.reason
+        : new Error('Aborted');
+    case 'timed_out':
+      throw new Error('agent question timed out');
+    case 'invalid_result':
+      throw new Error(outcome.reason);
+    case 'rejected':
+      throw new Error(
+        outcome.status === undefined
+          ? 'agent question rejected'
+          : `agent question status ${outcome.status}`,
+      );
   }
 }
