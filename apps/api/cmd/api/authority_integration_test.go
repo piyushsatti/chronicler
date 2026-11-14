@@ -63,7 +63,7 @@ func newAuthorityDBFixture(t *testing.T) *authorityDBFixture {
 		},
 		mux: http.NewServeMux(),
 	}
-	f.runtime = app.Wire(context.Background(), f.cfg)
+	f.runtime = wireForTest(context.Background(), f.cfg)
 	if f.runtime.Pool == nil || f.runtime.Authority == nil || f.runtime.Members == nil {
 		t.Fatal("Wire did not select Postgres member authority")
 	}
@@ -357,7 +357,20 @@ func TestProductionChainPostgresDraftOwnershipAndActiveStatus(t *testing.T) {
 				t.Fatal(err)
 			}
 			w = authorityDBRequest(f.handler, http.MethodPost, "/v1/graphql", token, body)
-			assertAuthorityDBProblem(t, w, http.StatusForbidden, "FORBIDDEN")
+			assertAuthorityDBCORS(t, w)
+			if w.Code != http.StatusOK {
+				t.Fatalf("GraphQL status=%d body=%s", w.Code, w.Body)
+			}
+			var result struct {
+				Errors []struct {
+					Extensions struct {
+						Code string `json:"code"`
+					} `json:"extensions"`
+				} `json:"errors"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || len(result.Errors) != 1 || result.Errors[0].Extensions.Code != "FORBIDDEN" {
+				t.Fatalf("GraphQL failure=%s err=%v", w.Body, err)
+			}
 			if bytes.Contains(w.Body.Bytes(), []byte(owned.body)) {
 				t.Fatal("inactive author response contains draft body")
 			}

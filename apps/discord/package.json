@@ -17,7 +17,6 @@
     "test:watch": "vitest --config vitest.config.ts tests/unit tests/integration tests/e2e"
   },
   "dependencies": {
-    "@pi/contracts": "workspace:*",
     "discord.js": "^14.16.0",
     "dotenv": "^16.4.0"
   },

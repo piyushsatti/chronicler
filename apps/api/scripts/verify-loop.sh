@@ -21,6 +21,3 @@ go test ./...
 # -tags=integration: Postgres via testcontainers (needs Docker daemon).
 # cmd/api is the mounted production-chain lane; keep it here so a new migration cannot rot outside CI.
 go test -tags=integration ./test/integration/... ./internal/quest/... ./internal/document/... ./cmd/api/
-
-# package script runs vitest. `bun test` is Bun's runner and skips vitest aliases.
-( cd "$repo/apps/discord" && bun run test )

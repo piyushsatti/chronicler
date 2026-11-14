@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbtest"
 )
 
@@ -143,46 +144,26 @@ func TestCharacterProductNamedSQLReadsAndPCXPEffect(t *testing.T) {
 		"row_limit":        int32(10),
 		"row_offset":       int32(0),
 	})
+	var listedTotal int64
 	var listedCharacterID, listedCharacterName string
-	if err := fixture.Pool.QueryRow(ctx, "SELECT id, name FROM ("+query+") AS list_projection", args...).Scan(&listedCharacterID, &listedCharacterName); err != nil {
+	if err := fixture.Pool.QueryRow(ctx, "SELECT total, id, name FROM ("+query+") AS list_projection WHERE id IS NOT NULL", args...).Scan(&listedTotal, &listedCharacterID, &listedCharacterName); err != nil {
 		t.Fatal(err)
 	}
-	if listedCharacterID != characterID || listedCharacterName != "Test Character" {
-		t.Fatalf("filtered list returned id=%s name=%s", listedCharacterID, listedCharacterName)
-	}
-	query, args = characterProductQuery(t, "CharacterProductCount", map[string]any{
-		"owner_id":         ownerID,
-		"character_status": "active",
-		"name_prefix":      "Test",
-		"region_id":        nil,
-		"guild_id":         nil,
-	})
-	var characterTotal int32
-	if err := fixture.Pool.QueryRow(ctx, query, args...).Scan(&characterTotal); err != nil {
-		t.Fatal(err)
-	}
-	if characterTotal != 1 {
-		t.Fatalf("filtered character count = %d, want 1", characterTotal)
+	if listedTotal != 1 || listedCharacterID != characterID || listedCharacterName != "Test Character" {
+		t.Fatalf("filtered list returned total=%d id=%s name=%s", listedTotal, listedCharacterID, listedCharacterName)
 	}
 	query, args = characterProductQuery(t, "CharacterProductMyCharacters", map[string]any{
 		"owner_id":   ownerID,
 		"row_limit":  int32(10),
 		"row_offset": int32(0),
 	})
+	var myTotal int64
 	var myCharacterID, myCharacterName, myVerificationStatus string
-	if err := fixture.Pool.QueryRow(ctx, "SELECT id, name, verification_status FROM ("+query+") AS my_character_projection", args...).Scan(&myCharacterID, &myCharacterName, &myVerificationStatus); err != nil {
+	if err := fixture.Pool.QueryRow(ctx, "SELECT total, id, name, verification_status FROM ("+query+") AS my_character_projection WHERE id IS NOT NULL", args...).Scan(&myTotal, &myCharacterID, &myCharacterName, &myVerificationStatus); err != nil {
 		t.Fatal(err)
 	}
-	if myCharacterID != characterID || myCharacterName != "Test Character" || myVerificationStatus != "UNKNOWN" {
-		t.Fatalf("my-character read returned id=%s name=%s verification=%s", myCharacterID, myCharacterName, myVerificationStatus)
-	}
-	query, args = characterProductQuery(t, "CharacterProductCountMyCharacters", map[string]any{"owner_id": ownerID})
-	var myCharacterTotal int32
-	if err := fixture.Pool.QueryRow(ctx, query, args...).Scan(&myCharacterTotal); err != nil {
-		t.Fatal(err)
-	}
-	if myCharacterTotal != 1 {
-		t.Fatalf("my-character count = %d, want 1", myCharacterTotal)
+	if myTotal != 1 || myCharacterID != characterID || myCharacterName != "Test Character" || myVerificationStatus != "UNKNOWN" {
+		t.Fatalf("my-character read returned total=%d id=%s name=%s verification=%s", myTotal, myCharacterID, myCharacterName, myVerificationStatus)
 	}
 	query, args = characterProductQuery(t, "CharacterProductAdminDirectory", map[string]any{
 		"name_prefix":      "Test",
@@ -191,31 +172,20 @@ func TestCharacterProductNamedSQLReadsAndPCXPEffect(t *testing.T) {
 		"row_limit":        int32(10),
 		"row_offset":       int32(0),
 	})
+	var adminTotal int64
 	var adminCharacterID, adminName, adminOwnerID, adminOwnerHandle, adminOwnerDisplayName, adminShortCode, adminStatus, adminVerificationStatus string
 	var adminOwnerAvatar, adminRegionID, adminRegionName, adminGuildID, adminDdbURL sql.NullString
 	var adminSubmittedAt sql.NullTime
 	var adminUpdatedAt time.Time
 	if err := fixture.Pool.QueryRow(ctx, query, args...).Scan(
-		&adminCharacterID, &adminName, &adminOwnerID, &adminOwnerHandle, &adminOwnerDisplayName,
+		&adminTotal, &adminCharacterID, &adminName, &adminOwnerID, &adminOwnerHandle, &adminOwnerDisplayName,
 		&adminOwnerAvatar, &adminShortCode, &adminStatus, &adminRegionID, &adminRegionName,
 		&adminGuildID, &adminVerificationStatus, &adminSubmittedAt, &adminDdbURL, &adminUpdatedAt,
 	); err != nil {
 		t.Fatal(err)
 	}
-	if adminCharacterID != characterID || adminOwnerID != ownerID || adminVerificationStatus != "UNKNOWN" || adminRegionName.Valid {
-		t.Fatalf("admin directory returned id=%s owner=%s verification=%s region=%v", adminCharacterID, adminOwnerID, adminVerificationStatus, adminRegionName)
-	}
-	query, args = characterProductQuery(t, "CharacterProductCountAdminDirectory", map[string]any{
-		"name_prefix":      "Test",
-		"region_id":        nil,
-		"character_status": nil,
-	})
-	var adminTotal int32
-	if err := fixture.Pool.QueryRow(ctx, query, args...).Scan(&adminTotal); err != nil {
-		t.Fatal(err)
-	}
-	if adminTotal != 1 {
-		t.Fatalf("admin directory count = %d, want 1", adminTotal)
+	if adminTotal != 1 || adminCharacterID != characterID || adminOwnerID != ownerID || adminVerificationStatus != "UNKNOWN" || adminRegionName.Valid {
+		t.Fatalf("admin directory returned total=%d id=%s owner=%s verification=%s region=%v", adminTotal, adminCharacterID, adminOwnerID, adminVerificationStatus, adminRegionName)
 	}
 	var verificationID string
 	if err := fixture.Pool.QueryRow(ctx, `
@@ -232,18 +202,19 @@ func TestCharacterProductNamedSQLReadsAndPCXPEffect(t *testing.T) {
 		"row_limit":    int32(10),
 		"row_offset":   int32(0),
 	})
+	var historyTotal int64
 	var historyID, historySubjectType, historySubjectID, historyDecision, historyDecider string
 	var historyNote sql.NullString
 	var historyCreatedAt time.Time
 	var historyEvidenceID sql.NullString
 	if err := fixture.Pool.QueryRow(ctx, query, args...).Scan(
-		&historyID, &historySubjectType, &historySubjectID, &historyDecision, &historyDecider,
+		&historyTotal, &historyID, &historySubjectType, &historySubjectID, &historyDecision, &historyDecider,
 		&historyNote, &historyCreatedAt, &historyEvidenceID,
 	); err != nil {
 		t.Fatal(err)
 	}
-	if historyID != verificationID || historySubjectType != "character" || historySubjectID != characterID || historyDecision != "rejected" || historyDecider != ownerID {
-		t.Fatalf("verification history returned id=%s subject=%s/%s decision=%s decider=%s", historyID, historySubjectType, historySubjectID, historyDecision, historyDecider)
+	if historyTotal != 1 || historyID != verificationID || historySubjectType != "character" || historySubjectID != characterID || historyDecision != "rejected" || historyDecider != ownerID {
+		t.Fatalf("verification history returned total=%d id=%s subject=%s/%s decision=%s decider=%s", historyTotal, historyID, historySubjectType, historySubjectID, historyDecision, historyDecider)
 	}
 	query, args = characterProductQuery(t, "CharacterProductByID", map[string]any{"character_id": characterID})
 	var rejectedStatus string
@@ -340,6 +311,7 @@ func TestCharacterProductNamedSQLReadsAndPCXPEffect(t *testing.T) {
 		rows.Close()
 		t.Fatal("actual CharacterProductListProgression source omitted the inserted ledger entry")
 	}
+	var progressionTotal int64
 	var listedID, listedCharacter string
 	var listedAmount int32
 	var listedKind string
@@ -347,12 +319,12 @@ func TestCharacterProductNamedSQLReadsAndPCXPEffect(t *testing.T) {
 	var listedQuest *string
 	var listedAt time.Time
 	var listedBy *string
-	if err := rows.Scan(&listedID, &listedCharacter, &listedAmount, &listedKind, &listedNote, &listedQuest, &listedAt, &listedBy); err != nil {
+	if err := rows.Scan(&progressionTotal, &listedID, &listedCharacter, &listedAmount, &listedKind, &listedNote, &listedQuest, &listedAt, &listedBy); err != nil {
 		rows.Close()
 		t.Fatal(err)
 	}
 	rows.Close()
-	if listedID != entryID || listedCharacter != characterID || listedAmount != 4 || listedNote == nil || *listedNote != "earned" || listedBy == nil || *listedBy != ownerID {
+	if progressionTotal != 1 || listedID != entryID || listedCharacter != characterID || listedAmount != 4 || listedNote == nil || *listedNote != "earned" || listedBy == nil || *listedBy != ownerID {
 		t.Fatalf("progression history does not preserve the inserted ledger values")
 	}
 
@@ -585,7 +557,7 @@ func TestCharacterProductRetireDropsOpenVerification(t *testing.T) {
 	queued := func() map[string]struct{} {
 		t.Helper()
 		query, args := characterProductQuery(t, "CharacterProductPendingVerificationDirectory", map[string]any{"row_limit": int32(20), "row_offset": int32(0)})
-		rows, err := fixture.Pool.Query(ctx, "SELECT id FROM ("+query+") AS pending_rows", args...)
+		rows, err := fixture.Pool.Query(ctx, "SELECT id FROM ("+query+") AS pending_rows WHERE id IS NOT NULL", args...)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -678,38 +650,38 @@ func TestCharacterProductPendingVerificationUsesCurrentSubmission(t *testing.T) 
 	readQueue := func(want int32) {
 		t.Helper()
 		query, args := characterProductQuery(t, "CharacterProductPendingVerificationDirectory", map[string]any{"row_limit": int32(10), "row_offset": int32(0)})
-		rows, err := fixture.Pool.Query(ctx, "SELECT id, verification_status FROM ("+query+") AS pending_rows", args...)
+		rows, err := fixture.Pool.Query(ctx, query, args...)
 		if err != nil {
 			t.Fatal(err)
 		}
+		var total int64
 		var ids []string
 		for rows.Next() {
-			var id, status string
-			if err := rows.Scan(&id, &status); err != nil {
+			var id, status sql.NullString
+			var discarded any
+			if err := rows.Scan(
+				&total, &id, &discarded, &discarded, &discarded, &discarded, &discarded, &discarded, &discarded,
+				&discarded, &discarded, &discarded, &status, &discarded, &discarded, &discarded, &discarded,
+			); err != nil {
 				rows.Close()
 				t.Fatal(err)
 			}
-			if status != "PENDING" {
-				rows.Close()
-				t.Fatalf("queue status = %s, want PENDING", status)
+			if !id.Valid {
+				continue
 			}
-			ids = append(ids, id)
+			if status.String != "PENDING" {
+				rows.Close()
+				t.Fatalf("queue status = %s, want PENDING", status.String)
+			}
+			ids = append(ids, id.String)
 		}
 		if err := rows.Err(); err != nil {
 			rows.Close()
 			t.Fatal(err)
 		}
 		rows.Close()
-		if int32(len(ids)) != want {
-			t.Fatalf("queue page contains %d rows, want %d (ids=%v)", len(ids), want, ids)
-		}
-		countQuery, countArgs := characterProductQuery(t, "CharacterProductCountPendingVerifications", map[string]any{})
-		var count int32
-		if err := fixture.Pool.QueryRow(ctx, countQuery, countArgs...).Scan(&count); err != nil {
-			t.Fatal(err)
-		}
-		if count != want {
-			t.Fatalf("queue count = %d, want %d", count, want)
+		if int32(len(ids)) != want || int32(total) != want {
+			t.Fatalf("queue page contains %d rows total=%d, want %d (ids=%v)", len(ids), total, want, ids)
 		}
 	}
 	firstSubmission := base.Add(time.Second)
@@ -743,6 +715,168 @@ func TestCharacterProductPendingVerificationUsesCurrentSubmission(t *testing.T) 
 		t.Fatal(err)
 	}
 	readQueue(0)
+}
+
+func characterProductPageTotal(t *testing.T, ctx context.Context, fixture *dbtest.ProductFixture, name string, args map[string]any, idColumn string) (total int64, items int) {
+	t.Helper()
+	query, ordered := characterProductQuery(t, name, args)
+	rows, err := fixture.Pool.Query(ctx, query, ordered...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	cols := rows.FieldDescriptions()
+	idIndex := -1
+	for i, col := range cols {
+		if string(col.Name) == idColumn {
+			idIndex = i
+			break
+		}
+	}
+	if idIndex < 0 {
+		t.Fatalf("%s missing identity column %q", name, idColumn)
+	}
+	for rows.Next() {
+		values := make([]any, len(cols))
+		dest := make([]any, len(cols))
+		for i := range values {
+			dest[i] = &values[i]
+		}
+		if err := rows.Scan(dest...); err != nil {
+			t.Fatal(err)
+		}
+		if total == 0 {
+			switch v := values[0].(type) {
+			case int64:
+				total = v
+			case int32:
+				total = int64(v)
+			default:
+				t.Fatalf("%s total type %T", name, values[0])
+			}
+		}
+		if values[idIndex] != nil {
+			items++
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return total, items
+}
+
+func TestCharacterProductPagedListsKeepTotalOnEmptyPage(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	defer cancel()
+	fixture := dbtest.NewProductFixture(t)
+	var ownerID, peerID, dmID string
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO members (discord_id, handle, display_name) VALUES ('cha-page-owner', 'cha_page_owner', 'Page Owner') RETURNING public_id::text`).Scan(&ownerID); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO members (discord_id, handle, display_name) VALUES ('cha-page-peer', 'cha_page_peer', 'Page Peer') RETURNING public_id::text`).Scan(&peerID); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO members (discord_id, handle, display_name, roles) VALUES ('cha-page-dm', 'cha_page_dm', 'Page DM', ARRAY['dm']) RETURNING public_id::text`).Scan(&dmID); err != nil {
+		t.Fatal(err)
+	}
+	var backstoryID string
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO backstories (name, lore, cohort) VALUES ('Page Backstory', 'Lore', 'core') RETURNING public_id::text`).Scan(&backstoryID); err != nil {
+		t.Fatal(err)
+	}
+	var characterID, peerCharacterID string
+	submittedAt := time.Now().UTC().Truncate(time.Microsecond).Add(-time.Minute)
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO characters (short_code, name, owner_id, status, backstory_id, verification_submitted_at) SELECT 'C-PAGE-1', 'Page Alpha', id, 'pending_approval', (SELECT id FROM backstories WHERE public_id = $2::uuid), $3 FROM members WHERE public_id = $1::uuid RETURNING public_id::text`, ownerID, backstoryID, submittedAt).Scan(&characterID); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO characters (short_code, name, owner_id, status) SELECT 'C-PAGE-2', 'Page Beta', id, 'active' FROM members WHERE public_id = $1::uuid RETURNING public_id::text`, peerID).Scan(&peerCharacterID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO character_progression_ledger (character_id, delta, reason, note, recorded_by) SELECT character.id, 2, 'pcxp', 'page', owner.id FROM characters character, members owner WHERE character.public_id = $1::uuid AND owner.public_id = $2::uuid`, characterID, ownerID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO verifications (subject_type, subject_id, verdict, decided_by, note, created_at) SELECT 'character', id, 'rejected', (SELECT id FROM members WHERE public_id = $2::uuid), 'page', $3 FROM characters WHERE public_id = $1::uuid`, characterID, ownerID, submittedAt.Add(-time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO creation_catalog (kind, code, name, available, retired) VALUES ('species', 'page_species', 'Page Species', true, false)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO downtime_projects (character_id, name, progress, status, updated_at) SELECT id, 'Page Project', 1, 'active', now() FROM characters WHERE public_id = $1::uuid`, characterID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO character_logs (character_id, body, created_at, created_by) SELECT character.id, 'page log', now(), owner.id FROM characters character, members owner WHERE character.public_id = $1::uuid AND owner.public_id = $2::uuid`, characterID, ownerID); err != nil {
+		t.Fatal(err)
+	}
+	var questID string
+	if err := fixture.Pool.QueryRow(ctx, `
+		WITH doc AS (
+			INSERT INTO documents (kind, slug, title, status, visibility, body, author_id)
+			SELECT 'quest_brief', 'page-quest', 'Page Quest', 'published', 'public', 'body', id FROM members WHERE public_id = $1::uuid
+			RETURNING id
+		)
+		INSERT INTO quests (short_code, kinds, status, dm_id, document_id, scheduled_at, duration_hours, slots_max, filled_count, created_by)
+		SELECT 'Q-PAGE-1', ARRAY['one_shot'], 'closed', owner.id, doc.id, now(), 4, 4, 2, owner.id
+		FROM members owner, doc WHERE owner.public_id = $1::uuid
+		RETURNING public_id::text
+	`, dmID).Scan(&questID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.Pool.Exec(ctx, `
+		INSERT INTO quest_participants (quest_id, member_id, character_id, status, manual)
+		SELECT q.id, m.id, c.id, 'played', false
+		FROM quests q, members m, characters c
+		WHERE q.public_id = $1::uuid AND ((m.public_id = $2::uuid AND c.public_id = $3::uuid) OR (m.public_id = $4::uuid AND c.public_id = $5::uuid))
+	`, questID, ownerID, characterID, peerID, peerCharacterID); err != nil {
+		t.Fatal(err)
+	}
+	var summaryID string
+	if err := fixture.Pool.QueryRow(ctx, `
+		INSERT INTO documents (kind, slug, title, status, visibility, body, author_id)
+		SELECT 'summary', 'page-summary', 'Page Summary', 'published', 'public', 'meta', id FROM members WHERE public_id = $1::uuid
+		RETURNING public_id::text
+	`, ownerID).Scan(&summaryID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO document_links (source_id, character_target_id, relation) SELECT d.id, c.id, 'summarizes' FROM documents d, characters c WHERE d.public_id = $1::uuid AND c.public_id = $2::uuid`, summaryID, characterID); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name     string
+		idColumn string
+		args     map[string]any
+		want     int64
+	}{
+		{"CharacterProductList", "id", map[string]any{"owner_id": ownerID, "character_status": nil, "name_prefix": "Page", "region_id": nil, "guild_id": nil, "row_limit": int32(10), "row_offset": int32(0)}, 1},
+		{"CharacterProductMyCharacters", "id", map[string]any{"owner_id": ownerID, "row_limit": int32(10), "row_offset": int32(0)}, 1},
+		{"CharacterProductAdminDirectory", "id", map[string]any{"name_prefix": "Page", "region_id": nil, "character_status": nil, "row_limit": int32(10), "row_offset": int32(0)}, 2},
+		{"CharacterProductPendingVerificationDirectory", "id", map[string]any{"row_limit": int32(10), "row_offset": int32(0)}, 1},
+		{"CharacterProductListProgression", "id", map[string]any{"character_id": characterID, "row_limit": int32(10), "row_offset": int32(0)}, 1},
+		{"CharacterProductListVerificationHistory", "id", map[string]any{"character_id": characterID, "row_limit": int32(10), "row_offset": int32(0)}, 1},
+		{"CharacterProductCreationCatalog", "id", map[string]any{"include_all": false, "kind": "species", "region_id": nil, "row_limit": int32(10), "row_offset": int32(0)}, 1},
+		{"CharacterProductListParticipations", "quest_id", map[string]any{"public_id": characterID, "row_limit": int32(10), "row_offset": int32(0)}, 1},
+		{"CharacterProductListCoPlayers", "character_id", map[string]any{"public_id": characterID, "row_limit": int32(10), "row_offset": int32(0)}, 1},
+		{"CharacterProductListDowntimeProjects", "id", map[string]any{"public_id": characterID, "row_limit": int32(10), "row_offset": int32(0)}, 1},
+		{"CharacterProductListLogs", "id", map[string]any{"character_id": characterID, "row_limit": int32(10), "row_offset": int32(0)}, 1},
+		{"CharacterProductListBackstories", "id", map[string]any{"include_retired": false, "region_id": nil, "cohort": "core", "row_limit": int32(10), "row_offset": int32(0)}, 1},
+		{"CharacterProductListSummaries", "id", map[string]any{"character_id": characterID, "viewer_id": nil, "viewer_roles": []string{}, "viewer_handle": "", "viewer_admin": false, "viewer_live_dm": false, "reader_ids": []pgtype.UUID{}, "row_limit": int32(10), "row_offset": int32(0)}, 1},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			total, items := characterProductPageTotal(t, ctx, fixture, tc.name, tc.args, tc.idColumn)
+			if total != tc.want || items != int(tc.want) {
+				t.Fatalf("page total=%d items=%d, want %d", total, items, tc.want)
+			}
+			emptyArgs := map[string]any{}
+			for k, v := range tc.args {
+				emptyArgs[k] = v
+			}
+			emptyArgs["row_offset"] = int32(50)
+			emptyTotal, emptyItems := characterProductPageTotal(t, ctx, fixture, tc.name, emptyArgs, tc.idColumn)
+			if emptyTotal != tc.want || emptyItems != 0 {
+				t.Fatalf("empty page total=%d items=%d, want total %d items 0", emptyTotal, emptyItems, tc.want)
+			}
+		})
+	}
 }
 
 // CHA03 owns this file and the exact edit limits in its implementation handoff.

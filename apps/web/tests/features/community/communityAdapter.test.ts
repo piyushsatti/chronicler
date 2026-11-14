@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { loadCommunityHub } from '../../../src/features/community/adapters/communityAdapter.js';
+import {
+  loadCommunityHub,
+  loadCommunityRegionNames,
+} from '../../../src/features/community/adapters/communityAdapter.js';
 import { graphqlRequest } from '../../../src/api/graphql.js';
 import { TransportError } from '../../../src/errors/types.js';
 import good from '../../fixtures/wire/community/directory-good.json';
@@ -153,4 +156,27 @@ describe('loadCommunityHub complete roster', () => {
       expect(graphqlRequest).toHaveBeenCalledTimes(page + 1);
     },
   );
+});
+
+describe('loadCommunityRegionNames', () => {
+  beforeEach(() => vi.mocked(graphqlRequest).mockReset());
+
+  it('pages by 100 until a short page', async () => {
+    const full = Array.from({ length: 100 }, (_, index) => ({
+      id: `aaaaaaaa-aaaa-4aaa-8aaa-${String(index).padStart(12, '0')}`,
+      name: `Region ${index}`,
+    }));
+    const tail = [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Tail' }];
+    vi.mocked(graphqlRequest)
+      .mockResolvedValueOnce({ regions: full })
+      .mockResolvedValueOnce({ regions: tail });
+    await expect(loadCommunityRegionNames()).resolves.toEqual({
+      ...Object.fromEntries(full.map(({ id, name }) => [id, name])),
+      [tail[0]!.id]: tail[0]!.name,
+    });
+    expect(vi.mocked(graphqlRequest).mock.calls.map((call) => call[1])).toEqual([
+      { limit: 100, offset: 0 },
+      { limit: 100, offset: 100 },
+    ]);
+  });
 });

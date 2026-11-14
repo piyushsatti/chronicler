@@ -129,6 +129,54 @@ func TestCancellationAndCompletionOrder(t *testing.T) {
 		t.Fatal(j, e)
 	}
 }
+func TestBackoffSchedule(t *testing.T) {
+	want := []time.Duration{
+		time.Second, 2 * time.Second, 4 * time.Second, 8 * time.Second,
+		16 * time.Second, 32 * time.Second, 64 * time.Second,
+	}
+	for i, d := range want {
+		if got := Backoff(i + 1); got != d {
+			t.Fatalf("Backoff(%d)=%v want %v", i+1, got, d)
+		}
+	}
+	var sum time.Duration
+	for attempt := 1; attempt <= 19; attempt++ {
+		sum += Backoff(attempt)
+	}
+	if sum < 50*time.Minute || sum > 70*time.Minute {
+		t.Fatalf("sum Backoff(1..19)=%v want 50-70m", sum)
+	}
+	if got := Backoff(100); got != 5*time.Minute {
+		t.Fatalf("Backoff(100)=%v want 5m", got)
+	}
+}
+
+func TestDiscordLaneAttemptBudget(t *testing.T) {
+	now := time.Now()
+	discord := Job{ID: "1", Lane: LaneDiscord, State: Queued, NextRunAt: now, Attempts: MaxAttempts}
+	if ok, err := discord.Claim(now); !ok || err != nil || discord.State != Running {
+		t.Fatalf("discord at 8 attempts: ok=%v err=%v state=%s", ok, err, discord.State)
+	}
+	mid := Job{ID: "4", Lane: LaneDiscord, State: Queued, NextRunAt: now, Attempts: MaxAttempts - 1}
+	if ok, err := mid.Claim(now); !ok || err != nil {
+		t.Fatalf("discord claim before attempt 8: ok=%v err=%v", ok, err)
+	}
+	if err := mid.Finish(mid.Token, now, "retry", RetryWait, nil, time.Second, "transient"); err != nil {
+		t.Fatal(err)
+	}
+	if mid.State != RetryWait || mid.Attempts != MaxAttempts {
+		t.Fatalf("discord retry at attempt 8: state=%s attempts=%d want retry_wait/%d", mid.State, mid.Attempts, MaxAttempts)
+	}
+	exhausted := Job{ID: "2", Lane: LaneDiscord, State: Queued, NextRunAt: now, Attempts: DiscordMaxAttempts}
+	if ok, err := exhausted.Claim(now); ok || err != nil || exhausted.State != Dead {
+		t.Fatalf("discord at 20 attempts: ok=%v err=%v state=%s", ok, err, exhausted.State)
+	}
+	maintenance := Job{ID: "3", Lane: "maintenance", State: Queued, NextRunAt: now, Attempts: MaxAttempts}
+	if ok, err := maintenance.Claim(now); ok || err != nil || maintenance.State != Dead {
+		t.Fatalf("maintenance at 8 attempts: ok=%v err=%v state=%s", ok, err, maintenance.State)
+	}
+}
+
 func TestExhaustionAndTokenOverflow(t *testing.T) {
 	now := time.Now()
 	j := questionFixture(now)

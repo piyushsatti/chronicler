@@ -20,7 +20,7 @@ Variables for the HTTP-first Q&A path. Values are never committed. Archive requi
 | `AGENT_PUBLIC_ORIGIN`           | Discord               | yes            | yes       | HTTPS origin for source URL checks                                                                       |
 | `API_URL` / Discord `apiUrl`    | Discord               | yes            | yes       | Base URL for agent REST                                                                                  |
 | `INGEST_SECRET`                 | Discord + API + Agent | yes            | yes       | Shared ingest header value                                                                               |
-| `AGENT_INLINE_COMPLETE`         | API                   | optional       | **unset** | `1` = stub complete; not for production                                                                  |
+| `AGENT_INLINE_COMPLETE`         | API                   | optional       | **unset** | `1` = stub complete; local/dev only — production refuses to start if set                                 |
 | `DATABASE_URL`                  | API                   | yes            | yes       | Owns `agent_questions` / jobs                                                                            |
 | `API_URL`                       | Agent worker          | yes            | yes       | Base URL for claim/complete (Phase C)                                                                    |
 | `INGEST_SECRET`                 | Agent worker          | yes            | yes       | Same secret as Discord                                                                                   |

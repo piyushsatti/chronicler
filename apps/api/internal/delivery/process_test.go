@@ -168,9 +168,21 @@ func TestProcessOneSyncFailureRetriesThenDies(t *testing.T) {
 		t.Fatalf("state=%s want retry_wait", store.Jobs[0].State)
 	}
 
-	// Claim increments attempts; MaxAttempts-1 before claim yields MaxAttempts after.
+	// Shared MaxAttempts (8) is not the discord budget; failure at 8 stays retry_wait.
 	store.Jobs[0].State = jobs.Queued
 	store.Jobs[0].Attempts = jobs.MaxAttempts - 1
+	store.Jobs[0].NextRunAt = time.Now()
+	ok, err = delivery.NewHandler(store, sync).ProcessOne(context.Background())
+	if err != nil || !ok {
+		t.Fatalf("ok=%v err=%v", ok, err)
+	}
+	if store.Jobs[0].State != jobs.RetryWait || store.Jobs[0].Attempts != jobs.MaxAttempts {
+		t.Fatalf("state=%s attempts=%d want retry_wait/%d", store.Jobs[0].State, store.Jobs[0].Attempts, jobs.MaxAttempts)
+	}
+
+	// Claim increments attempts; DiscordMaxAttempts-1 before claim yields DiscordMaxAttempts after.
+	store.Jobs[0].State = jobs.Queued
+	store.Jobs[0].Attempts = jobs.DiscordMaxAttempts - 1
 	store.Jobs[0].NextRunAt = time.Now()
 	ok, err = delivery.NewHandler(store, sync).ProcessOne(context.Background())
 	if err != nil || !ok {
@@ -223,6 +235,40 @@ func TestProcessOneDiscordServerErrorStillRetries(t *testing.T) {
 	store := restDiscordJob(t, f)
 	if store.Jobs[0].State != jobs.RetryWait || store.Jobs[0].SafeErrorCode != "" {
 		t.Fatalf("state=%s code=%q want retry_wait without a safe code", store.Jobs[0].State, store.Jobs[0].SafeErrorCode)
+	}
+}
+
+func TestProcessOneDiscordRateLimitHonoursRetryAfter(t *testing.T) {
+	cases := []struct {
+		name   string
+		header http.Header
+		body   string
+		delay  time.Duration
+	}{
+		{"header", http.Header{"Retry-After": {"7"}}, `{"message":"rate limited"}`, 7 * time.Second},
+		{"body only", nil, `{"message":"rate limited","retry_after":2.5}`, 2500 * time.Millisecond},
+		{"header capped", http.Header{"Retry-After": {"9999"}}, `{"retry_after":1}`, 300 * time.Second},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			before := time.Now()
+			f := newFakeDiscord(t)
+			f.failStatus = http.StatusTooManyRequests
+			f.failHeader = tc.header
+			f.failBody = tc.body
+			f.fail = func(c discordCall) bool {
+				return c.Method == http.MethodPost && strings.HasSuffix(c.Path, "/messages")
+			}
+			store := restDiscordJob(t, f)
+			job := store.Jobs[0]
+			if job.State != jobs.RetryWait {
+				t.Fatalf("state=%s want retry_wait", job.State)
+			}
+			got := job.NextRunAt.Sub(before)
+			if got < tc.delay-time.Second || got > tc.delay+2*time.Second {
+				t.Fatalf("NextRunAt delay=%v want about %v", got, tc.delay)
+			}
+		})
 	}
 }
 

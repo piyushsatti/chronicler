@@ -2,6 +2,7 @@ package notification
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
@@ -71,7 +72,7 @@ func notificationDocumentIDs(candidates []NotificationCandidate, results []produ
 			return nil, err
 		}
 		if projection.Malformed {
-			return nil, opaqueNotificationProofError()
+			return nil, opaqueNotificationProofError(errors.New("malformed notification subject projection"))
 		}
 		if candidate.Subject.SubjectType != subjectTypeDocument {
 			continue
@@ -102,7 +103,7 @@ func suppressedNotificationIDs(candidates []NotificationCandidate, results []pro
 				selected = append(selected, candidate.NotificationID)
 			}
 		} else if !projection.Visible {
-			return nil, opaqueNotificationProofError()
+			return nil, opaqueNotificationProofError(errors.New("non-document subject missing from proof"))
 		}
 	}
 	return selected, nil
@@ -113,11 +114,11 @@ func subjectProjectionOrFail(result product.BatchResult[SubjectProjection]) (Sub
 		return SubjectProjection{}, result.Err
 	}
 	if result.Value == nil {
-		return SubjectProjection{}, opaqueNotificationProofError()
+		return SubjectProjection{}, opaqueNotificationProofError(errors.New("missing notification subject projection"))
 	}
 	return *result.Value, nil
 }
 
-func opaqueNotificationProofError() error {
-	return apierr.New(apierr.Internal, "Internal error")
+func opaqueNotificationProofError(cause error) error {
+	return apierr.Wrap(apierr.Internal, "Internal error", cause)
 }

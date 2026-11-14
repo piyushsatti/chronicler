@@ -14,6 +14,15 @@ export const QUEST_SIGNUP_TYPES: [string, string][] = [
   ['dm_pick', 'DM pick'],
 ];
 
+/** Participant statuses allowed by `quest_participants_status_check`. */
+export const QUEST_PARTICIPANT_STATUSES = [
+  'signed_up',
+  'waitlisted',
+  'withdrawn',
+  'played',
+  'no_show',
+] as const;
+
 function labelFrom(vocabulary: [string, string][], value: string): string {
   return vocabulary.find(([key]) => key === value)?.[1] ?? value;
 }
@@ -26,4 +35,24 @@ export function questKindLabel(kind: string): string {
 /** Display label for a signup type; unknown types show as sent. */
 export function signupTypeLabel(signupType: string): string {
   return labelFrom(QUEST_SIGNUP_TYPES, signupType);
+}
+
+/** Occupies a seat on quest cards: signed up now, or played after the game. */
+export function hasSeat(status: string): boolean {
+  return status === 'signed_up' || status === 'played';
+}
+
+/** Holds an active signup the member can withdraw: seated or waitlisted. */
+export function hasActiveSignup(status: string): boolean {
+  return status === 'signed_up' || status === 'waitlisted';
+}
+
+/** Shown among seated players on the quest detail page (includes no_show). */
+export function isSeatedOnDetailPage(status: string): boolean {
+  return status !== 'waitlisted' && status !== 'withdrawn';
+}
+
+/** Listed as an upcoming signup on the Me hub (includes waitlisted). */
+export function isUpcomingSignup(status: string): boolean {
+  return status !== 'withdrawn' && status !== 'no_show';
 }

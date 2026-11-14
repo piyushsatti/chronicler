@@ -2028,6 +2028,7 @@ export type QueryMyNotificationsArgs = {
 export type QueryMyQuestSignupsArgs = {
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
+  scheduledFrom?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
 
@@ -2235,6 +2236,7 @@ export type QuestFiltersInput = {
   displayStatus?: InputMaybe<Scalars['String']['input']>;
   dmId?: InputMaybe<Scalars['ID']['input']>;
   genre?: InputMaybe<Scalars['String']['input']>;
+  ids?: InputMaybe<Array<Scalars['ID']['input']>>;
   kind?: InputMaybe<Scalars['String']['input']>;
   regionId?: InputMaybe<Scalars['ID']['input']>;
   scheduledFrom?: InputMaybe<Scalars['DateTime']['input']>;

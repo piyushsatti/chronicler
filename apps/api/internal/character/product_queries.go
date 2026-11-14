@@ -30,7 +30,7 @@ func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock produc
 }
 
 func characterQueryPage(limit, offset int32) error {
-	if limit <= 0 || offset < 0 {
+	if !product.ValidPage(limit, offset) {
 		return apierr.New(apierr.Invalid, "invalid character page")
 	}
 	return nil
@@ -82,10 +82,17 @@ func (s ProductQueries) parentRead(ctx context.Context, actor auth.Authority, id
 }
 func (s ProductQueries) projectCharacters(ctx context.Context, actor auth.Authority, items []CharacterView) ([]CharacterView, error) {
 	ids := make([]string, 0, len(items))
+	seen := make(map[string]struct{}, len(items))
 	for _, item := range items {
-		if item.GuildId != nil {
-			ids = append(ids, *item.GuildId)
+		if item.GuildId == nil {
+			continue
 		}
+		id := *item.GuildId
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
 	}
 	var visible map[string]bool
 	if len(ids) > 0 {

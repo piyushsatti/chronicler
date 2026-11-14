@@ -29,8 +29,7 @@ import {
   discordFailureReason,
   isDiscordDeliveryTerminal,
 } from '../../../utils/discordDelivery.js';
-
-const SEATED = new Set(['signed_up', 'played', 'selected']);
+import { hasSeat } from '../../../utils/questVocabulary.js';
 
 export type DiscordDeliveryView = {
   desiredRevision: number;
@@ -220,7 +219,7 @@ export function mapToBoardCardProps(
   quest: QuestBoardItemView,
   timeZone: string | null = null,
 ): QuestBoardCardPropsView {
-  const seated = quest.participants.filter((p) => SEATED.has(p.status));
+  const seated = quest.participants.filter((p) => hasSeat(p.status));
   return {
     code: quest.shortCode,
     title: quest.title,
@@ -327,8 +326,17 @@ export function parseQuestRegions(wire: unknown): AdapterResult<Map<string, stri
 
 async function loadQuestRegions(): Promise<Map<string, string>> {
   try {
-    const data = await graphqlRequest<QuestRegionsQuery>(REGIONS_QUERY, { limit: 200 });
-    const result = parseQuestRegions(data.regions);
+    const regions: Array<{ id: string; name: string }> = [];
+    for (;;) {
+      const data = await graphqlRequest<QuestRegionsQuery>(REGIONS_QUERY, {
+        limit: 100,
+        offset: regions.length,
+      });
+      const page = data.regions ?? [];
+      regions.push(...page);
+      if (page.length < 100) break;
+    }
+    const result = parseQuestRegions(regions);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'quest:regions');
     return result.data;
   } catch (err) {

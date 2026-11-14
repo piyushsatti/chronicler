@@ -34,13 +34,30 @@ var statusByCode = map[Code]int{
 type Error struct {
 	Code    Code
 	Message string
+	Cause   error
 }
 
 func New(code Code, message string) *Error {
 	return &Error{Code: code, Message: message}
 }
 
-func (e *Error) Error() string { return string(e.Code) + ": " + e.Message }
+func Wrap(code Code, message string, cause error) *Error {
+	return &Error{Code: code, Message: message, Cause: cause}
+}
+
+func (e *Error) Error() string {
+	if e.Cause == nil {
+		return string(e.Code) + ": " + e.Message
+	}
+	return string(e.Code) + ": " + e.Message + ": " + e.Cause.Error()
+}
+
+func (e *Error) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Cause
+}
 
 type problem struct {
 	Title  string `json:"title"`
@@ -53,6 +70,9 @@ func Write(w http.ResponseWriter, r *http.Request, err error) {
 	body := problem{Title: "Internal error", Status: http.StatusInternalServerError, Code: "INTERNAL"}
 	if expected, ok := errors.AsType[*Error](err); ok {
 		body = problem{Title: expected.Message, Status: statusByCode[expected.Code], Code: expected.Code}
+		if expected.Cause != nil || expected.Code == Internal {
+			slog.ErrorContext(r.Context(), "unexpected error", "path", r.URL.Path, "error", err)
+		}
 	} else {
 		slog.ErrorContext(r.Context(), "unexpected error", "path", r.URL.Path, "error", err)
 	}

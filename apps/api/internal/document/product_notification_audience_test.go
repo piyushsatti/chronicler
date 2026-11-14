@@ -15,6 +15,10 @@ type notificationAudienceDB struct {
 	err error
 }
 
+func (f notificationAudienceDB) Query(context.Context, string, ...any) (pgx.Rows, error) {
+	return nil, f.err
+}
+
 func (f notificationAudienceDB) QueryRow(context.Context, string, ...any) pgx.Row {
 	return notificationAudienceRow{err: f.err}
 }

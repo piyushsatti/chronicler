@@ -69,7 +69,7 @@ func TestChronicleBrowserCompleteCollection(t *testing.T) {
 	}
 	origin := fmt.Sprintf("http://127.0.0.1:%d", port)
 	cfg := config.Config{DatabaseURL: fixture.databaseURL, RequireDatabase: true, JWTSecret: "synthetic-chronicle-fixture-key", CORSOrigins: []string{origin}}
-	runtime := app.Wire(ctx, cfg)
+	runtime := wireForTest(ctx, cfg)
 	if runtime.Pool != nil {
 		t.Cleanup(runtime.Pool.Close)
 	}

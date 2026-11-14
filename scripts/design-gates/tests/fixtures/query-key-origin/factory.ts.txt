@@ -1,0 +1,5 @@
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../api/queryKeys.js';
+export function useItems() {
+  return useQuery({ queryKey: queryKeys.items, queryFn: async () => [] });
+}

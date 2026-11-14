@@ -71,7 +71,7 @@ func (h *MaintenanceHandler) ProcessOne(ctx context.Context) (bool, error) {
 			return true, h.store.FailWithCode(ctx, job.Receipt(), jobs.RepairRequired, TimeAnchorUncoveredCode, TimeAnchorUncoveredCode)
 		}
 		code := maintenanceFailureCode(errRun)
-		if job.Attempts >= jobs.MaxAttempts {
+		if job.Attempts >= job.MaxAttempts() {
 			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, code)
 		}
 		return true, h.store.Retry(ctx, job.Receipt(), jobs.Backoff(job.Attempts), code)

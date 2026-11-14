@@ -1236,7 +1236,11 @@ extend type Query {
   questArcs(limit: Int! = 50, offset: Int! = 0): QuestArcListResult!
   questArc(id: ID!): QuestArcType
   questGenreOptions: [String!]!
-  myQuestSignups(limit: Int! = 50, offset: Int! = 0): ParticipationPage!
+  myQuestSignups(
+    scheduledFrom: DateTime = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): ParticipationPage!
   questSummaries(
     questId: ID!
     limit: Int! = 50
@@ -1456,6 +1460,7 @@ input QuestFiltersInput {
   tag: String = null
   genre: String = null
   shortCodes: [String!] = null
+  ids: [ID!] = null
   search: String = null
   displayStatus: String = null
   scheduledFrom: DateTime = null

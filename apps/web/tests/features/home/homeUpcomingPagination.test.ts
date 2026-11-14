@@ -23,6 +23,35 @@ function firstPage(items = quests(51)) {
   };
 }
 
+describe('Home region catalog pagination', () => {
+  it('pages regions by 100 until a short page', async () => {
+    const regions = Array.from({ length: 101 }, (_, index) => ({
+      id: `aaaaaaaa-aaaa-4aaa-8aaa-${String(index).padStart(12, '0')}`,
+      name: `Region ${index}`,
+    }));
+    const requested: unknown[] = [];
+    server.use(
+      graphql.query('HomeWarRoom', () =>
+        HttpResponse.json({
+          data: {
+            ...good,
+            regions: regions.slice(0, 100),
+          },
+        }),
+      ),
+      graphql.query('HomeRegions', ({ variables }) => {
+        requested.push(variables);
+        const offset = Number(variables.offset ?? 0);
+        return HttpResponse.json({
+          data: { regions: regions.slice(offset, offset + 100) },
+        });
+      }),
+    );
+    await loadHomeLanes();
+    expect(requested).toEqual([{ offset: 100 }]);
+  });
+});
+
 describe('Home upcoming window pagination', () => {
   it('retains12 previews and authoritative totals while completing all51 schedule entries', async () => {
     const items = quests(51);

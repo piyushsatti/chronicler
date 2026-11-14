@@ -76,3 +76,28 @@ func (q *Queries) InsertQuestionJob(ctx context.Context, arg InsertQuestionJobPa
 	}
 	return result.RowsAffected(), nil
 }
+
+const pruneFinishedAgentQuestions = `-- name: PruneFinishedAgentQuestions :exec
+WITH doomed AS (
+  SELECT background_jobs.id FROM background_jobs
+  WHERE background_jobs.kind='agent_question'
+    AND background_jobs.state IN ('succeeded','dead','repair_required','cancelled')
+    AND background_jobs.updated_at < $1
+  ORDER BY background_jobs.updated_at,background_jobs.id
+  FOR UPDATE OF background_jobs SKIP LOCKED
+  LIMIT $2::int
+), deleted_questions AS (
+  DELETE FROM agent_questions WHERE job_id IN (SELECT id FROM doomed)
+)
+DELETE FROM background_jobs WHERE id IN (SELECT id FROM doomed)
+`
+
+type PruneFinishedAgentQuestionsParams struct {
+	Cutoff     pgtype.Timestamptz `json:"cutoff"`
+	BatchLimit int32              `json:"batch_limit"`
+}
+
+func (q *Queries) PruneFinishedAgentQuestions(ctx context.Context, arg PruneFinishedAgentQuestionsParams) error {
+	_, err := q.db.Exec(ctx, pruneFinishedAgentQuestions, arg.Cutoff, arg.BatchLimit)
+	return err
+}

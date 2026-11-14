@@ -19,6 +19,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 )
@@ -166,20 +167,9 @@ func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, actor auth.Au
 	if err != nil {
 		return AdminOperationsView{}, err
 	}
-	publicOrigin := ""
-	if originRow, err := p.readSetting(ctx, settingPublicOrigin); err == nil {
-		publicOrigin = parsePublicOrigin(originRow.Payload)
-	}
-	announcementRole, _ := p.ReadQuestAnnouncementRoleSetting(ctx, auth.Authority{}, QuestAnnouncementRoleSettingSpec{})
-	deliveryMode, _ := p.ReadDiscordDeliveryMode(ctx, auth.Authority{}, DiscordDeliveryModeSpec{})
-	config := AdminDeliveryConfigView{
-		DeliveryMode:           deliveryMode,
-		PublicOrigin:           publicOrigin,
-		AnnouncementRoleId:     announcementRole.RoleId,
-		AnnouncementRoleSource: "site_settings",
-	}
-	if announcementRole.RoleId != nil {
-		config.AnnouncementRoleSource = "site_settings"
+	config, err := p.readAdminDeliveryConfig(ctx)
+	if err != nil {
+		return AdminOperationsView{}, err
 	}
 	deliveries := make([]AdminDeliveryJobView, 0)
 	overridden := false
@@ -207,6 +197,29 @@ func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, actor auth.Au
 		PendingDeliveryCount:  counts.PendingCount,
 		TerminalDeliveryCount: counts.TerminalCount,
 		ScheduledWork:         scheduled,
+	}, nil
+}
+
+func (p *ProductPostgres) readAdminDeliveryConfig(ctx context.Context) (AdminDeliveryConfigView, error) {
+	publicOrigin := ""
+	if originRow, err := p.readSetting(ctx, settingPublicOrigin); err == nil {
+		publicOrigin = parsePublicOrigin(originRow.Payload)
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return AdminDeliveryConfigView{}, err
+	}
+	announcementRole, err := p.ReadQuestAnnouncementRoleSetting(ctx, auth.Authority{}, QuestAnnouncementRoleSettingSpec{})
+	if err != nil {
+		return AdminDeliveryConfigView{}, err
+	}
+	deliveryMode, err := p.ReadDiscordDeliveryMode(ctx, auth.Authority{}, DiscordDeliveryModeSpec{})
+	if err != nil {
+		return AdminDeliveryConfigView{}, err
+	}
+	return AdminDeliveryConfigView{
+		DeliveryMode:           deliveryMode,
+		PublicOrigin:           publicOrigin,
+		AnnouncementRoleId:     announcementRole.RoleId,
+		AnnouncementRoleSource: "site_settings",
 	}, nil
 }
 
@@ -406,7 +419,7 @@ func mapAdminDeliveryJob(row dbgen.SiteAdminDeliveryJobsRow) AdminDeliveryJobVie
 	}
 	job := AdminDeliveryJobView{
 		Id: db.UUIDString(row.PublicID), State: state, FailureStreak: row.Attempts.Int32,
-		MaxAttempts: deliveryJobMaxAttempts, RedriveCount: row.RedriveCount.Int32,
+		MaxAttempts: jobs.DiscordMaxAttempts, RedriveCount: row.RedriveCount.Int32,
 	}
 	if row.CreatedAt.Valid {
 		job.CreatedAt = row.CreatedAt.Time
@@ -452,7 +465,7 @@ func mapAdminDeliveryJob(row dbgen.SiteAdminDeliveryJobsRow) AdminDeliveryJobVie
 func mapLockedDeliveryJob(row dbgen.SiteLockDiscordDeliveryJobRow) AdminDeliveryJobView {
 	job := AdminDeliveryJobView{
 		Id: db.UUIDString(row.PublicID), State: row.State, FailureStreak: row.Attempts,
-		MaxAttempts: deliveryJobMaxAttempts, RedriveCount: row.RedriveCount,
+		MaxAttempts: jobs.DiscordMaxAttempts, RedriveCount: row.RedriveCount,
 		CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time, NextAttemptAt: row.NextRunAt.Time,
 	}
 	if row.SafeErrorCode.Valid {

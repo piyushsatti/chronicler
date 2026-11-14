@@ -83,28 +83,6 @@ func (q *Queries) CountProductArchonAssignments(ctx context.Context, arg CountPr
 	return column_1, err
 }
 
-const countProductRealDates = `-- name: CountProductRealDates :one
-SELECT count(*)::int FROM game_time_map WHERE game_day=$1
-`
-
-func (q *Queries) CountProductRealDates(ctx context.Context, gameDay int32) (int32, error) {
-	row := q.db.QueryRow(ctx, countProductRealDates, gameDay)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const countProductTimeAnchors = `-- name: CountProductTimeAnchors :one
-SELECT count(*)::int FROM time_anchors
-`
-
-func (q *Queries) CountProductTimeAnchors(ctx context.Context) (int32, error) {
-	row := q.db.QueryRow(ctx, countProductTimeAnchors)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
 const createProductMap = `-- name: CreateProductMap :one
 WITH inserted AS (
   INSERT INTO maps(name,atlas_code,map_kind,family,grid,region_id,asset_path,created_by)
@@ -981,8 +959,18 @@ func (q *Queries) ListProductPointcrawlNodesForMaps(ctx context.Context, arg Lis
 }
 
 const listProductRealDates = `-- name: ListProductRealDates :many
-SELECT real_date FROM game_time_map WHERE game_day=$1
-ORDER BY real_date LIMIT $3 OFFSET $2
+WITH filtered AS (
+    SELECT real_date FROM game_time_map WHERE game_day=$1
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT real_date FROM filtered
+    ORDER BY real_date
+    LIMIT $3 OFFSET $2
+)
+SELECT counted.total, page.real_date
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.real_date ASC NULLS LAST
 `
 
 type ListProductRealDatesParams struct {
@@ -991,19 +979,24 @@ type ListProductRealDatesParams struct {
 	RowLimit  int32 `json:"row_limit"`
 }
 
-func (q *Queries) ListProductRealDates(ctx context.Context, arg ListProductRealDatesParams) ([]pgtype.Date, error) {
+type ListProductRealDatesRow struct {
+	Total    int64       `json:"total"`
+	RealDate pgtype.Date `json:"real_date"`
+}
+
+func (q *Queries) ListProductRealDates(ctx context.Context, arg ListProductRealDatesParams) ([]ListProductRealDatesRow, error) {
 	rows, err := q.db.Query(ctx, listProductRealDates, arg.GameDay, arg.RowOffset, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []pgtype.Date{}
+	items := []ListProductRealDatesRow{}
 	for rows.Next() {
-		var real_date pgtype.Date
-		if err := rows.Scan(&real_date); err != nil {
+		var i ListProductRealDatesRow
+		if err := rows.Scan(&i.Total, &i.RealDate); err != nil {
 			return nil, err
 		}
-		items = append(items, real_date)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1119,9 +1112,19 @@ func (q *Queries) ListProductTimeAnchorCollisions(ctx context.Context, arg ListP
 }
 
 const listProductTimeAnchors = `-- name: ListProductTimeAnchors :many
-SELECT public_id AS id, real_utc, epoch_day, rate, note
-FROM time_anchors ORDER BY real_utc, public_id
-LIMIT $2 OFFSET $1
+WITH filtered AS (
+    SELECT public_id AS id, real_utc, epoch_day, rate, note
+    FROM time_anchors
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT id, real_utc, epoch_day, rate, note FROM filtered
+    ORDER BY real_utc, id
+    LIMIT $2 OFFSET $1
+)
+SELECT counted.total, page.id, page.real_utc, page.epoch_day, page.rate, page.note
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.real_utc ASC NULLS LAST, page.id ASC NULLS LAST
 `
 
 type ListProductTimeAnchorsParams struct {
@@ -1130,10 +1133,11 @@ type ListProductTimeAnchorsParams struct {
 }
 
 type ListProductTimeAnchorsRow struct {
+	Total    int64              `json:"total"`
 	ID       pgtype.UUID        `json:"id"`
 	RealUtc  pgtype.Timestamptz `json:"real_utc"`
-	EpochDay int32              `json:"epoch_day"`
-	Rate     float64            `json:"rate"`
+	EpochDay pgtype.Int4        `json:"epoch_day"`
+	Rate     pgtype.Float8      `json:"rate"`
 	Note     pgtype.Text        `json:"note"`
 }
 
@@ -1147,6 +1151,7 @@ func (q *Queries) ListProductTimeAnchors(ctx context.Context, arg ListProductTim
 	for rows.Next() {
 		var i ListProductTimeAnchorsRow
 		if err := rows.Scan(
+			&i.Total,
 			&i.ID,
 			&i.RealUtc,
 			&i.EpochDay,

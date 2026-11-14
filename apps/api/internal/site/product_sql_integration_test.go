@@ -351,7 +351,7 @@ func TestSiteActiveAlertsUseRetainedDiagnosticsDestination(t *testing.T) {
 		RETURNING public_id::text`).Scan(&jobID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO bot_heartbeats(received_at) VALUES(clock_timestamp()-interval '10 minutes')`); err != nil {
+	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO bot_heartbeats(payload,received_at) VALUES('{"gateway_ready":true}',clock_timestamp()-interval '10 minutes')`); err != nil {
 		t.Fatal(err)
 	}
 	query := siteProductSQL(t, "SiteActiveAlerts", ":many")
@@ -409,6 +409,44 @@ func TestSiteActiveAlertsUseRetainedDiagnosticsDestination(t *testing.T) {
 		t.Fatalf("fresh heartbeat page=%+v, want only the job alert", fresh)
 	}
 	assertCount(1)
+}
+
+func TestSiteActiveAlertsRequireGatewayReadyHeartbeat(t *testing.T) {
+	fixture := dbtest.NewProductFixture(t)
+	ctx := context.Background()
+	queries := dbgen.New(fixture.Pool)
+	heartbeatAlert := func() (found bool, count int32) {
+		t.Helper()
+		count, err := queries.SiteActiveAlertCount(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows, err := queries.SiteActiveAlerts(ctx, dbgen.SiteActiveAlertsParams{PageLimit: 20})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, row := range rows {
+			if row.Key.Valid && row.Key.String == "bot:heartbeat:stale" {
+				found = true
+			}
+		}
+		if found != (count == 1) {
+			t.Fatalf("count=%d rows=%+v, want heartbeat alert present iff count is 1", count, rows)
+		}
+		return found, count
+	}
+	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO bot_heartbeats(payload,received_at) VALUES('{"gateway_ready":false}',clock_timestamp())`); err != nil {
+		t.Fatal(err)
+	}
+	if found, count := heartbeatAlert(); !found || count != 1 {
+		t.Fatalf("want stale alert in both queries when newest heartbeat is not gateway-ready; found=%v count=%d", found, count)
+	}
+	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO bot_heartbeats(payload,received_at) VALUES('{"gateway_ready":true}',clock_timestamp()-interval '1 minute')`); err != nil {
+		t.Fatal(err)
+	}
+	if found, count := heartbeatAlert(); found || count != 0 {
+		t.Fatalf("want no stale alert when a ready heartbeat arrived within 3 minutes; found=%v count=%d", found, count)
+	}
 }
 
 func equalJSON(left, right []byte) bool {

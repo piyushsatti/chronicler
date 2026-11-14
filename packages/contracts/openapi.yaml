@@ -88,6 +88,8 @@ paths:
           description: Accepted
         '401':
           $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
   /v1/agent/questions:
     post:
       operationId: submitQuestion
@@ -349,10 +351,31 @@ components:
           type: string
           format: date-time
         amount:
-          type: number
+          type: integer
+          minimum: 1
+          maximum: 1440
+          description: >
+            message and reaction amounts are exactly 1; voice amounts are whole
+            minutes from 1 to 1440 (long sessions are split into segments).
     Heartbeat:
       type: object
-      additionalProperties: true
+      additionalProperties: false
+      required:
+        - gateway_ready
+        - shard_state
+        - host
+        - build_sha
+      properties:
+        gateway_ready:
+          type: boolean
+        shard_state:
+          type: object
+          additionalProperties:
+            type: string
+        host:
+          type: string
+        build_sha:
+          type: string
     QuestionClaimRequest:
       description: Request at most 16384 bytes.
       type: object

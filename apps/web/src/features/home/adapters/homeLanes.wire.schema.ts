@@ -51,6 +51,10 @@ export const questListWireSchema = z.object({
   total: z.number().int().nonnegative(),
 });
 
+export const recentlyClosedTotalWireSchema = z.object({
+  total: z.number().int().nonnegative(),
+});
+
 export const upcomingQuestWireSchema = z.object({
   id: z.string().uuid(),
   scheduledAt: z.string().datetime({ offset: true }),

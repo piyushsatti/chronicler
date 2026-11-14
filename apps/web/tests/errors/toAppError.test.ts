@@ -9,6 +9,12 @@ describe('toAppError', () => {
     expect(err.userMessage).toMatch(/You don’t have access to this/);
   });
 
+  it('maps UNAUTHENTICATED to unauthorized copy', () => {
+    const err = toAppError(new TransportError('UNAUTHENTICATED', { status: 200 }), 'auth');
+    expect(err.kind).toBe('unauthorized');
+    expect(err.userMessage).toMatch(/Your session ended/);
+  });
+
   it('never surfaces raw transport message', () => {
     const err = toAppError(new TransportError('GRAPHQL', { status: 200 }), 'home:load');
     expect(err.userMessage).not.toContain('GRAPHQL');

@@ -1,11 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
+import { queryKeys } from '../../../src/api/queryKeys.js';
 import { AuthProvider } from '../../../src/auth/AuthContext.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import type { GraphqlRequestBody } from '../../../src/chrome/featureModule.js';
@@ -107,5 +111,49 @@ describe('useNotificationsPage', () => {
     expect(readRequests[0]).toEqual({
       ids: ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
     });
+  });
+
+  it('refreshes the unread count once when the list refetches', async () => {
+    let queryClient!: QueryClient;
+    function localWrapper({ children }: { children: ReactNode }) {
+      const store = createAppStore();
+      queryClient = createTestQueryClient();
+      return (
+        <ReduxProvider store={store}>
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter>
+              <AuthProvider>{children}</AuthProvider>
+            </MemoryRouter>
+          </QueryClientProvider>
+        </ReduxProvider>
+      );
+    }
+    const { result } = renderHook(
+      () => useNotificationsPage({ markOnView: false }),
+      { wrapper: localWrapper },
+    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    try {
+      await act(async () => {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.notifications,
+        });
+      });
+      await waitFor(() => {
+        expect(
+          invalidate.mock.calls.filter(
+            ([options]) =>
+              options &&
+              typeof options === 'object' &&
+              'queryKey' in options &&
+              Array.isArray(options.queryKey) &&
+              options.queryKey[0] === 'notificationsUnread',
+          ),
+        ).toHaveLength(1);
+      });
+    } finally {
+      invalidate.mockRestore();
+    }
   });
 });

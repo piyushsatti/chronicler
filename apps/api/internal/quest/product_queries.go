@@ -69,7 +69,7 @@ func (s ProductQueries) BatchRewardEntitlements(ctx context.Context, actor auth.
 }
 
 func questQueryPage(limit, offset int32) error {
-	if limit <= 0 || offset < 0 {
+	if !product.ValidPage(limit, offset) {
 		return apierr.New(apierr.Invalid, "invalid quest page")
 	}
 	return nil

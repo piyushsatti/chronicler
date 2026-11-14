@@ -81,10 +81,8 @@ describe('Quest command replay guard', () => {
     const keys = [
       queryKeys.quest('Q-1'),
       queryKeys.questSummary('Q-1'),
-      queryKeys.questBoard,
       queryKeys.questList({}, 50, 0),
       ['quests', 'pages', {}],
-      queryKeys.home,
       queryKeys.homeLanes,
       queryKeys.notifications,
       queryKeys.notificationsUnread,

@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/piyushsatti/chronicler/apps/api/internal/character"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbtest"
@@ -356,5 +357,102 @@ func TestFrontendQuestCloseRejectsRosterAddedDuringCharacterLocks(t *testing.T) 
 	assertQuestCloseCode(t, <-result, apierr.Conflict)
 	if f.snapshot(t) != before {
 		t.Fatal("changed roster committed partial closure")
+	}
+}
+
+func seedCloseRoster(t *testing.T, f questCloseFixture, total int) []string {
+	t.Helper()
+	ctx := context.Background()
+	ids := []string{f.characterID}
+	for len(ids) < total {
+		owner, characterID := uuid.NewString(), uuid.NewString()
+		if _, err := f.fixture.Pool.Exec(ctx, `INSERT INTO members(public_id,discord_id,handle,display_name,roles,status)
+			VALUES($1::uuid,$1::text,$1::text,'Close Extra',ARRAY['player'],'active')`, owner); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.fixture.Pool.Exec(ctx, `INSERT INTO characters(public_id,short_code,name,owner_id,status,player_xp)
+			SELECT $1::uuid,$1::text,'Extra',id,'active',0 FROM members WHERE public_id=$2::uuid`, characterID, owner); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.fixture.Pool.Exec(ctx, `INSERT INTO quest_participants(quest_id,character_id,member_id,status)
+			SELECT q.id,c.id,c.owner_id,'signed_up' FROM quests q,characters c WHERE q.public_id=$1 AND c.public_id=$2`, f.questID, characterID); err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, characterID)
+	}
+	if _, err := f.fixture.Pool.Exec(ctx, `UPDATE quests SET slots_max=$2,filled_count=$2 WHERE public_id=$1`, f.questID, total); err != nil {
+		t.Fatal(err)
+	}
+	return ids
+}
+
+func TestFrontendQuestCloseBatchAttendanceAndRewards(t *testing.T) {
+	for _, n := range []int{1, 5} {
+		t.Run(fmt.Sprintf("%d", n), func(t *testing.T) {
+			f := newQuestCloseFixture(t)
+			ctx := context.Background()
+			ids := seedCloseRoster(t, f, n)
+			attendance := make([]ParticipationAttestationFields, 0, n)
+			rewards := make([]QuestPcxpAwardFields, 0, n)
+			for i, id := range ids {
+				attendance = append(attendance, ParticipationAttestationFields{CharacterId: id, Status: "played"})
+				rewards = append(rewards, QuestPcxpAwardFields{CharacterId: id, Pcxp: int32(i + 1)})
+			}
+			view, err := f.commands.CloseQuest(ctx, f.actor, CloseQuestSpec{Id: f.questID, Input: CloseQuestFields{Attendance: attendance, Rewards: rewards}}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+			if err != nil || view.Status != "closed" || view.FilledCount != 0 {
+				t.Fatalf("close=%+v err=%v", view, err)
+			}
+			var played, ledger, total int
+			if err := f.fixture.Pool.QueryRow(ctx, `SELECT
+				(SELECT count(*) FROM quest_participants p JOIN quests q ON q.id=p.quest_id WHERE q.public_id=$1 AND p.status='played'),
+				(SELECT count(*) FROM character_progression_ledger l JOIN quests q ON q.id=l.quest_id WHERE q.public_id=$1 AND l.reason='quest_reward'),
+				(SELECT coalesce(sum(l.delta),0) FROM character_progression_ledger l JOIN quests q ON q.id=l.quest_id WHERE q.public_id=$1 AND l.reason='quest_reward')
+			`, f.questID).Scan(&played, &ledger, &total); err != nil {
+				t.Fatal(err)
+			}
+			wantTotal := n * (n + 1) / 2
+			if played != n || ledger != n || total != wantTotal {
+				t.Fatalf("played=%d ledger=%d total=%d want n=%d sum=%d", played, ledger, total, n, wantTotal)
+			}
+		})
+	}
+}
+
+func TestFrontendQuestCloseSoftDeletedAttendanceNotFound(t *testing.T) {
+	f := newQuestCloseFixture(t)
+	ctx := context.Background()
+	if _, err := f.fixture.Pool.Exec(ctx, `UPDATE characters SET deleted_at=now() WHERE public_id=$1`, f.characterID); err != nil {
+		t.Fatal(err)
+	}
+	before := f.snapshot(t)
+	_, err := f.commands.CloseQuest(ctx, f.actor, f.input(), product.CommandMeta{IdempotencyKey: uuid.NewString()})
+	assertQuestCloseCode(t, err, apierr.NotFound)
+	if f.snapshot(t) != before {
+		t.Fatal("soft-deleted attendance changed state")
+	}
+}
+
+func TestFrontendQuestCloseUnplayedRewardGuardConflict(t *testing.T) {
+	f := newQuestCloseFixture(t)
+	ctx := context.Background()
+	input := f.input()
+	input.Input.Attendance[0].Status = "no_show"
+	input.Input.Rewards = nil
+	if _, err := f.commands.CloseQuest(ctx, f.actor, input, product.CommandMeta{IdempotencyKey: uuid.NewString()}); err != nil {
+		t.Fatal(err)
+	}
+	charPG, err := character.NewProductPostgres(f.fixture.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := f.snapshot(t)
+	err = charPG.AwardQuestPCXP(ctx, f.questID, f.actor.Claims().MemberID, []character.QuestPCXPAward{{CharacterID: f.characterID, Amount: 3}}, time.Now().UTC())
+	assertQuestCloseCode(t, err, apierr.Conflict)
+	var ledger int
+	if err := f.fixture.Pool.QueryRow(ctx, `SELECT count(*) FROM character_progression_ledger l JOIN quests q ON q.id=l.quest_id WHERE q.public_id=$1 AND l.reason='quest_reward'`, f.questID).Scan(&ledger); err != nil {
+		t.Fatal(err)
+	}
+	if ledger != 0 || f.snapshot(t) != before {
+		t.Fatalf("unplayed award wrote ledger=%d or changed state", ledger)
 	}
 }

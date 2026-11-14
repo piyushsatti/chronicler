@@ -246,7 +246,7 @@ func TestAdminBrowserRetainedJourneys(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		state, attempts := "dead", jobs.MaxAttempts
+		state, attempts := "dead", jobs.DiscordMaxAttempts
 		if index == 25 {
 			state, attempts = "succeeded", 1
 		}
@@ -267,7 +267,7 @@ func TestAdminBrowserRetainedJourneys(t *testing.T) {
 	}
 	cfg := config.Config{DatabaseURL: fixture.databaseURL, RequireDatabase: true, JWTSecret: "synthetic-admin-browser-fixture-key", PlatformOwnerMemberID: owner.publicID, CORSOrigins: []string{fmt.Sprintf("http://127.0.0.1:%d", port)}}
 	rows.cfg = cfg
-	runtime := app.Wire(ctx, cfg)
+	runtime := wireForTest(ctx, cfg)
 	if runtime.Pool != nil {
 		closeRuntime = runtime.Pool.Close
 	}
@@ -394,7 +394,7 @@ func TestAdminBrowserRetainedJourneys(t *testing.T) {
 		t.Fatal("configured owner fact clock must be UTC")
 	}
 	assertCount(`SELECT count(*) FROM idempotency_keys WHERE actor_id=$1 AND endpoint='graphql:updateHomeBanner' AND completed_at IS NOT NULL AND NOT(receipt ? '_authorizationOverrides')`, 1, admin.rowID)
-	assertCount(`SELECT count(*) FROM background_jobs WHERE kind='quest_discord_delivery' AND redrive_count=0 AND ((state='dead' AND attempts=$1) OR (state='succeeded' AND attempts=1))`, 26, jobs.MaxAttempts)
+	assertCount(`SELECT count(*) FROM background_jobs WHERE kind='quest_discord_delivery' AND redrive_count=0 AND ((state='dead' AND attempts=$1) OR (state='succeeded' AND attempts=1))`, 26, jobs.DiscordMaxAttempts)
 	var auditMissing bool
 	if err := fixture.pool.QueryRow(ctx, `SELECT to_regclass('auth_override_audit') IS NULL`).Scan(&auditMissing); err != nil || !auditMissing {
 		t.Fatalf("unexpected separate audit table: missing=%v err=%v", auditMissing, err)

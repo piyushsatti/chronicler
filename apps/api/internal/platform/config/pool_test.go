@@ -9,7 +9,11 @@ import (
 
 func TestDefaultDatabasePoolBoundPreservesExplicitDSN(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
-	defaultDSN := FromEnv().DatabaseURL
+	loaded, err := FromEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defaultDSN := loaded.DatabaseURL
 	parsed, err := url.Parse(defaultDSN)
 	if err != nil {
 		t.Fatal(err)
@@ -26,7 +30,11 @@ func TestDefaultDatabasePoolBoundPreservesExplicitDSN(t *testing.T) {
 	}
 	const explicit = "postgres://test:test@localhost/test?sslmode=disable&pool_max_conns=3"
 	t.Setenv("DATABASE_URL", explicit)
-	if got := FromEnv().DatabaseURL; got != explicit {
+	loaded, err = FromEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := loaded.DatabaseURL; got != explicit {
 		t.Fatalf("explicit DATABASE_URL was changed")
 	}
 }

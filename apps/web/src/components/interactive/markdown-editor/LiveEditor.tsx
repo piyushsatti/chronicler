@@ -413,6 +413,7 @@ function BlocksLiveEditor({
     }
   }, [active]);
 
+  // No deps: apply ref-staged caret/selection after the input mounts or updates.
   useEffect(() => {
     if (pendingCaret.current != null && inputRef.current) {
       const p = pendingCaret.current;
@@ -640,6 +641,7 @@ function BlocksLiveEditor({
       inputRef.current.setSelectionRange(0, 0);
     } else setActive(idx);
     // Only a new request moves the caret; later edits keep it where the author put it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only focusRequest should re-run
   }, [focusRequest]);
 
   // Audit spans are the server's (D46). They are shown only while the body still

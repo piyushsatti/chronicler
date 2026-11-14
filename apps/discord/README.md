@@ -2,6 +2,8 @@
 
 discord.js bot for Chronicler. It records guild activity and answers a mention through the agent.
 
+Run one bot process per bot token: a second copy double-counts reactions and voice minutes.
+
 ## Layout
 
 | Path                                    | Purpose                                               |
@@ -9,7 +11,7 @@ discord.js bot for Chronicler. It records guild activity and answers a mention t
 | `src/session.ts`                        | Log in, mount activity and agent, shut down           |
 | `src/activity/`                         | Guild events posted to the API                        |
 | `src/agent/`                            | Mentions posted to the API, replies posted in Discord |
-| `src/health.ts`                         | Shard resume and re-identify logs                     |
+| `src/health.ts`                         | Shard state logs, heartbeat and the not-ready exit watchdog |
 | `tests/unit/`                           | One module at a time, dependencies mocked             |
 | `tests/integration/`                    | Real client code against a local HTTP fixture         |
 | `tests/integration/live-ingest.test.ts` | Opt-in POSTs to a running Go `/v1/ingest/*`           |
@@ -28,6 +30,8 @@ bun run --filter @pi/discord lint
 bun run --filter @pi/discord build
 bun run --filter @pi/discord dev
 ```
+
+Unit tests (`tests/unit/`) run only under Node: their `vi.mock` module mocks do not apply under the Bun runtime (`bun --bun vitest`). Integration and e2e suites run under both.
 
 ### Live ingest (opt-in)
 

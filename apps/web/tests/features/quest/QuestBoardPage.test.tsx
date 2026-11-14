@@ -6,7 +6,6 @@ import { Route, Routes } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { QuestBoardPage } from '../../../src/features/quest/pages/QuestBoardPage.js';
 import { server } from '../../../src/mocks/server.js';
-import { queryKeys } from '../../../src/api/queryKeys.js';
 import { DEFAULT_PREFERENCES, savePrefs } from '../../../src/context/theme.utils.js';
 import listGood from '../../fixtures/wire/quest/list-good.json';
 import recruitment from '../../fixtures/wire/quest/board-recruitment.json';
@@ -255,7 +254,7 @@ describe('QuestBoardPage', () => {
       }),
     );
     const { queryClient } = renderWithProviders(<QuestBoardPage />);
-    queryClient.setQueryData(queryKeys.questBoard, [
+    queryClient.setQueryData(['unrelated'], [
       { title: 'Unrelated board cache' },
     ]);
     expect(await screen.findByText('No open quests right now.')).toBeInTheDocument();
@@ -279,7 +278,7 @@ describe('QuestBoardPage', () => {
         { items: expect.any(Array), total: 51 },
       ],
     });
-    expect(queryClient.getQueryData(queryKeys.questBoard)).toEqual([
+    expect(queryClient.getQueryData(['unrelated'])).toEqual([
       { title: 'Unrelated board cache' },
     ]);
   });

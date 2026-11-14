@@ -31,6 +31,7 @@ export function usePageAuthorityFailures(...errors: unknown[]) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.me });
     }
   };
+  // No deps: re-scan the latest errors every render; invalidate me at most once.
   useEffect(() => {
     for (const error of errors) report(error);
   });
@@ -41,6 +42,7 @@ export function useAuthorityFailures(...errors: unknown[]): void {
   const reportPageError = useContext(AuthorityFailureContext);
   const reportLocalError = usePageAuthorityFailures();
   const report = reportPageError ?? reportLocalError.report;
+  // No deps: re-scan the latest errors every render via the active reporter.
   useEffect(() => {
     for (const error of errors) report(error);
   });

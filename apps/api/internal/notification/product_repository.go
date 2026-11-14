@@ -52,9 +52,6 @@ type DocumentRecipientReader interface {
 type QuestRecipientReader interface {
 	QuestRecipientIDs(context.Context, string, string) ([]string, error)
 }
-type SocialRecipientReader interface {
-	RequestParties(context.Context, string) (RequestParties, error)
-}
 type PreferenceReader interface {
 	ReadPreferences(context.Context, []string) ([]Preferences, error)
 }
@@ -68,7 +65,6 @@ type RecipientComposition struct {
 	Character CharacterRecipientReader
 	Document  DocumentRecipientReader
 	Quest     QuestRecipientReader
-	Social    SocialRecipientReader
 }
 type ProducerRepos struct {
 	Writer      EventWriter

@@ -27,7 +27,7 @@ Local stack: [deploy/compose.yaml](/deploy/compose.yaml).
 | Service   | Token               | Role                                                                                                                            |
 | --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `worker`  | `DISCORD_BOT_TOKEN` | Discord REST announce (or dry-run)                                                                                              |
-| `discord` | `BOT_DISCORD_TOKEN` | Gateway sensor only; posts to `/v1/ingest/*`. Does not announce quests ([D1](/docs/decisions/D1-Discord-Announce-Ownership.md)) |
+| `discord` | `BOT_DISCORD_TOKEN` | Gateway sensor; opt-in agent replies; posts to `/v1/ingest/*`. Does not announce quests ([D1](/docs/decisions/D1-Discord-Announce-Ownership.md)) |
 
 Staging E2E against a live channel needs a real worker token + channel id and `DISCORD_DELIVERY_DRY_RUN` unset/false. No live Discord test runs in CI (httptest mocks).
 
@@ -41,7 +41,7 @@ Optional: set `DATABASE_URL` to reuse an existing Postgres (migrate+seed still a
 
 | Variable           | Purpose                                                                    |
 | ------------------ | -------------------------------------------------------------------------- |
-| `CHRONICLER_ENV`   | `development` (default) or `production`. Production requires Postgres      |
+| `CHRONICLER_ENV`   | `development` (default), `test`, `staging`, or `production`. Anything else refuses to start. Production requires Postgres, bot token, guild, and non-loopback CORS/redirect; dry-run and inline-complete are refused |
 | `REQUIRE_DATABASE` | When truthy, fail startup if Postgres is unavailable (even in development) |
 
 ## Maintenance lane

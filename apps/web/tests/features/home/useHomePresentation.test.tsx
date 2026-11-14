@@ -128,7 +128,6 @@ describe('Home participation', () => {
       expect(state.result.current.view.cards[0]?.isMutating).toBe(false),
     );
     const keys = [
-      ['home'],
       ['homeLanes'],
       ['quest', 'Q1'],
       ['questSummary', 'Q1'],

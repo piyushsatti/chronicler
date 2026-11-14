@@ -23,7 +23,7 @@ import {
   mergeQueryKeySlices,
 } from './featureModule.js';
 
-const SLICES: readonly FeatureSlice[] = [
+const SLICES = [
   home,
   editor,
   quest,
@@ -42,7 +42,7 @@ const SLICES: readonly FeatureSlice[] = [
   admin,
   gallery,
   document,
-];
+] as const satisfies readonly FeatureSlice[];
 
 function orderRoutesByManifest(routes: readonly FeatureRoute[]): FeatureRoute[] {
   const byPath = new Map<string, FeatureRoute>();
@@ -70,21 +70,6 @@ const flatRoutes = SLICES.flatMap((slice) => slice.routes).filter((route) =>
 );
 
 export const routes = orderRoutesByManifest(flatRoutes);
-
-export const featureHandlers = SLICES.flatMap((slice) => slice.handlers);
-
-export const featureGraphql = SLICES.reduce<Record<string, FeatureSlice['graphql'][string]>>(
-  (acc, slice) => {
-    for (const [name, handler] of Object.entries(slice.graphql)) {
-      if (name in acc) {
-        throw new Error(`Duplicate GraphQL operation handler: ${name}`);
-      }
-      acc[name] = handler;
-    }
-    return acc;
-  },
-  {},
-);
 
 export const featureQueryKeys = mergeQueryKeySlices(SLICES);
 

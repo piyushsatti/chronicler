@@ -82,13 +82,24 @@ func QuestPlayerListKey(publicID, fingerprint string) string {
 	return "quest-player-list:" + publicID + ":" + fingerprint
 }
 
-const MaxAttempts = 8
+const (
+	MaxAttempts        = 8
+	DiscordMaxAttempts = 20
+	LaneDiscord        = "discord"
+)
+
+func (j Job) MaxAttempts() int {
+	if j.Lane == LaneDiscord {
+		return DiscordMaxAttempts
+	}
+	return MaxAttempts
+}
 
 func Backoff(attempt int) time.Duration {
 	if attempt < 1 {
 		attempt = 1
 	}
-	d := time.Duration(1<<uint(min(attempt-1, 6))) * time.Second
+	d := time.Duration(1<<uint(min(attempt-1, 9))) * time.Second
 	if d > 5*time.Minute {
 		return 5 * time.Minute
 	}

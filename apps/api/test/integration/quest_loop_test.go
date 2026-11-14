@@ -129,6 +129,10 @@ func TestQuestCommandJobAndMockDiscord(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/users/@me":
+			_, _ = w.Write([]byte(`{"id":"bot-loop-1"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/guilds/"+guild+"/scheduled-events":
+			_, _ = w.Write([]byte(`[]`))
 		case r.Method == http.MethodPost && r.URL.Path == "/guilds/"+guild+"/scheduled-events":
 			_, _ = w.Write([]byte(`{"id":"555555555555555555"}`))
 		case r.Method == http.MethodPost && r.URL.Path == "/channels/"+channel+"/messages":
@@ -193,6 +197,7 @@ func TestQuestCommandJobAndMockDiscord(t *testing.T) {
 		t.Fatalf("stored message=%q thread=%q event=%q url=%q", messageID, threadID, discordEventID, eventURL)
 	}
 	wantCalls := "POST /channels/" + channel + "/messages|POST /channels/" + channel + "/messages/msg-loop-1/threads|" +
+		"GET /users/@me|GET /guilds/" + guild + "/scheduled-events|" +
 		"POST /guilds/" + guild + "/scheduled-events|PATCH /channels/" + channel + "/messages/msg-loop-1"
 	if got := strings.Join(calls, "|"); got != wantCalls {
 		t.Fatalf("calls=%s\nwant=%s", got, wantCalls)

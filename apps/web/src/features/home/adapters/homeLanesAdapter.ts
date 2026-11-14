@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type {
   HomeQuestParticipantsQuery,
   HomeAcceptingDmsQuery,
+  HomeRegionsQuery,
   HomeUpcomingQuery,
   HomeWarRoomQuery,
 } from '../../../api/graphql.operations.gen.js';
@@ -9,6 +10,7 @@ import { graphqlRequest } from '../../../api/graphql.js';
 import { bearerHeaders } from '../../../api/authHeader.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import LANES_QUERY from './homeWarRoom.graphql?raw';
+import REGIONS_QUERY from './homeRegions.graphql?raw';
 import PARTICIPANTS_QUERY from './homeQuestParticipants.graphql?raw';
 import UPCOMING_QUERY from './homeUpcoming.graphql?raw';
 import ACCEPTING_DMS_QUERY from './homeAcceptingDms.graphql?raw';
@@ -17,6 +19,7 @@ import {
   communityDirectoryWireSchema,
   participantWireSchema,
   questListWireSchema,
+  recentlyClosedTotalWireSchema,
   regionCatalogWireSchema,
   upcomingPageWireSchema,
   upcomingQuestWireSchema,
@@ -26,6 +29,7 @@ import { toCardStatus } from '../../../view-models/questCard.js';
 import { formatScheduled, formatScheduledShort } from '../../../utils/format.js';
 import { isDiscordDeliveryTerminal } from '../../../utils/discordDelivery.js';
 import type { QuestCardProps } from '../../../components/domain/QuestCard.js';
+import { hasSeat } from '../../../utils/questVocabulary.js';
 
 export type DmAcceptingView = {
   memberId: string;
@@ -74,7 +78,6 @@ export type HomeQuestView = {
 export type HomeLanesViewModel = {
   recruiting: HomeQuestView[];
   upcoming: HomeQuestView[];
-  recentlyClosed: HomeQuestView[];
   dmsAccepting: DmAcceptingView[];
   upcomingSchedule: z.infer<typeof upcomingQuestWireSchema>[];
   totals: {
@@ -84,8 +87,6 @@ export type HomeLanesViewModel = {
     dmsAccepting: number;
   };
 };
-
-const SEATED = new Set(['signed_up', 'played', 'selected']);
 
 type WireQuestItem = (typeof questListWireSchema)['_output']['items'][number];
 
@@ -219,8 +220,10 @@ export function parseHomeLanesWire(wire: {
   if (!recruiting.ok) return recruiting;
   const upcoming = parseQuestList(wire.quests, catalog.data);
   if (!upcoming.ok) return upcoming;
-  const recentlyClosed = parseQuestList(wire.recentlyClosedQuests, catalog.data);
-  if (!recentlyClosed.ok) return recentlyClosed;
+  const recentlyClosed = recentlyClosedTotalWireSchema.safeParse(wire.recentlyClosedQuests);
+  if (!recentlyClosed.success) {
+    return { ok: false, failure: 'InvalidWire', detail: recentlyClosed.error.message };
+  }
   const dmsAccepting = parseCommunity(wire.communityDirectory);
   if (!dmsAccepting.ok) return dmsAccepting;
   const schedule = upcomingPageWireSchema.safeParse(wire.quests);
@@ -232,7 +235,6 @@ export function parseHomeLanesWire(wire: {
     data: {
       recruiting: recruiting.data.items.filter((q) => q.machineStatus === 'open'),
       upcoming: upcoming.data.items,
-      recentlyClosed: recentlyClosed.data.items,
       dmsAccepting: dmsAccepting.data.items,
       upcomingSchedule: schedule.data.items,
       totals: {
@@ -256,7 +258,7 @@ export function mapToQuestCardProps(
     timeZone?: string | null;
   } = {},
 ): QuestCardProps {
-  const seated = quest.participants.filter((p) => SEATED.has(p.status));
+  const seated = quest.participants.filter((p) => hasSeat(p.status));
   const own =
     quest.participants.find(
       (p) => p.memberId === opts.memberId && p.status === 'signed_up',
@@ -418,6 +420,25 @@ async function completeAcceptingDms(
   }
 }
 
+async function completeRegionCatalog(
+  initial: HomeWarRoomQuery['regions'],
+  request: RequestInit,
+): Promise<HomeWarRoomQuery['regions']> {
+  const regions = [...(initial ?? [])];
+  let pageLength = regions.length;
+  while (pageLength >= 100) {
+    const data = await readHome<HomeRegionsQuery>(
+      REGIONS_QUERY,
+      { offset: regions.length },
+      request,
+    );
+    const page = data.regions ?? [];
+    regions.push(...page);
+    pageLength = page.length;
+  }
+  return regions;
+}
+
 export async function loadHomeLanes(signal?: AbortSignal): Promise<HomeLanesViewModel> {
   const window = defaultWindow();
   const request: RequestInit = {
@@ -426,8 +447,9 @@ export async function loadHomeLanes(signal?: AbortSignal): Promise<HomeLanesView
   };
   try {
     const data = await readHome<HomeWarRoomQuery>(LANES_QUERY, window, request);
+    const regions = await completeRegionCatalog(data.regions, request);
 
-    const result = parseHomeLanesWire(data);
+    const result = parseHomeLanesWire({ ...data, regions });
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'home:lanes');
     }
@@ -440,11 +462,7 @@ export async function loadHomeLanes(signal?: AbortSignal): Promise<HomeLanesView
     result.data.dmsAccepting = dms.items;
     result.data.totals.dmsAccepting = dms.total;
     const rosters = new Map<string, HomeQuestParticipantView[]>();
-    for (const lane of [
-      result.data.recruiting,
-      result.data.upcoming,
-      result.data.recentlyClosed,
-    ]) {
+    for (const lane of [result.data.recruiting, result.data.upcoming]) {
       for (const quest of lane) {
         const roster =
           rosters.get(quest.id) ?? (await completeParticipantPages(quest, request));

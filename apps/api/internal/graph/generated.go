@@ -887,7 +887,7 @@ type ComplexityRoot struct {
 		MyNotifications               func(childComplexity int, limit int, unreadOnly bool, before *string) int
 		MyPersonalization             func(childComplexity int) int
 		MyPrivateNotes                func(childComplexity int) int
-		MyQuestSignups                func(childComplexity int, limit int, offset int) int
+		MyQuestSignups                func(childComplexity int, scheduledFrom *time.Time, limit int, offset int) int
 		MyUnlocks                     func(childComplexity int, limit int, offset int) int
 		MyUnreadNotificationCount     func(childComplexity int) int
 		OpenQuestSeats                func(childComplexity int, regionID *string, dmID *string, limit int, offset int) int
@@ -1398,7 +1398,7 @@ type QueryResolver interface {
 	QuestArcs(ctx context.Context, limit int, offset int) (*QuestArcListResult, error)
 	QuestArc(ctx context.Context, id string) (*QuestArcType, error)
 	QuestGenreOptions(ctx context.Context) ([]string, error)
-	MyQuestSignups(ctx context.Context, limit int, offset int) (*ParticipationPage, error)
+	MyQuestSignups(ctx context.Context, scheduledFrom *time.Time, limit int, offset int) (*ParticipationPage, error)
 	QuestSummaries(ctx context.Context, questID string, limit int, offset int) (*QuestSummariesResult, error)
 	QuestStateCounts(ctx context.Context, filters *QuestStateCountsFiltersInput) ([]*QuestStateCountType, error)
 	DmStats(ctx context.Context, memberID string) (*DmStatsType, error)
@@ -6092,7 +6092,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.MyQuestSignups(childComplexity, args["limit"].(int), args["offset"].(int)), true
+		return e.complexity.Query.MyQuestSignups(childComplexity, args["scheduledFrom"].(*time.Time), args["limit"].(int), args["offset"].(int)), true
 
 	case "Query.myUnlocks":
 		if e.complexity.Query.MyUnlocks == nil {
@@ -9145,7 +9145,11 @@ type ParticipationPage {
   questArcs(limit: Int! = 50, offset: Int! = 0): QuestArcListResult!
   questArc(id: ID!): QuestArcType
   questGenreOptions: [String!]!
-  myQuestSignups(limit: Int! = 50, offset: Int! = 0): ParticipationPage!
+  myQuestSignups(
+    scheduledFrom: DateTime = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): ParticipationPage!
   questSummaries(
     questId: ID!
     limit: Int! = 50
@@ -9364,6 +9368,7 @@ input QuestFiltersInput {
   tag: String = null
   genre: String = null
   shortCodes: [String!] = null
+  ids: [ID!] = null
   search: String = null
   displayStatus: String = null
   scheduledFrom: DateTime = null
@@ -12305,16 +12310,21 @@ func (ec *executionContext) field_Query_myNotifications_args(ctx context.Context
 func (ec *executionContext) field_Query_myQuestSignups_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalNInt2int)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "scheduledFrom", ec.unmarshalODateTime2ᚖtimeᚐTime)
 	if err != nil {
 		return nil, err
 	}
-	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "offset", ec.unmarshalNInt2int)
+	args["scheduledFrom"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalNInt2int)
 	if err != nil {
 		return nil, err
 	}
-	args["offset"] = arg1
+	args["limit"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "offset", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["offset"] = arg2
 	return args, nil
 }
 
@@ -42475,7 +42485,7 @@ func (ec *executionContext) _Query_myQuestSignups(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().MyQuestSignups(rctx, fc.Args["limit"].(int), fc.Args["offset"].(int))
+		return ec.resolvers.Query().MyQuestSignups(rctx, fc.Args["scheduledFrom"].(*time.Time), fc.Args["limit"].(int), fc.Args["offset"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -57036,7 +57046,7 @@ func (ec *executionContext) unmarshalInputQuestFiltersInput(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"status", "kind", "dmId", "regionId", "arcId", "tag", "genre", "shortCodes", "search", "displayStatus", "scheduledFrom", "scheduledTo"}
+	fieldsInOrder := [...]string{"status", "kind", "dmId", "regionId", "arcId", "tag", "genre", "shortCodes", "ids", "search", "displayStatus", "scheduledFrom", "scheduledTo"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -57099,6 +57109,13 @@ func (ec *executionContext) unmarshalInputQuestFiltersInput(ctx context.Context,
 				return it, err
 			}
 			it.ShortCodes = data
+		case "ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
+			data, err := ec.unmarshalOID2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ids = data
 		case "search":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)

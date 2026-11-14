@@ -10,7 +10,6 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -48,11 +47,11 @@ type Service struct {
 	inlineComplete bool
 }
 
-func New(secret string, store Store) *Service {
+func New(secret string, store Store, inlineComplete bool) *Service {
 	if store == nil {
 		store = newMemoryStore(time.Now)
 	}
-	return &Service{secret, store, os.Getenv("AGENT_INLINE_COMPLETE") == "1"}
+	return &Service{secret, store, inlineComplete}
 }
 func (s *Service) Routes(mux httpserver.Router) {
 	mux.HandleFunc("POST /v1/agent/questions", s.submit)

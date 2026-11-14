@@ -15,7 +15,7 @@ export function useCurrentAccess(kind: CurrentAccessKind) {
   const client = useQueryClient();
   const identity = me.isSuccess ? currentAccessIdentity(me.data) : null;
   const token = auth.token;
-  const key = ['currentAccess', kind, identity];
+  const key = queryKeys.currentAccess(kind, identity);
   const current = (): boolean => {
     const actor = client.getQueryState<NonNullable<typeof me.data>>(queryKeys.me);
     return (

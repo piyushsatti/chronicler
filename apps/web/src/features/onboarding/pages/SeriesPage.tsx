@@ -16,9 +16,8 @@ import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { seriesNameError, useSeriesPage } from '../../../hooks/useSeriesPage.js';
 import { isSentinelDate, personLabels, pluralize } from '../../../utils/format.js';
 import { toCardStatus } from '../../../view-models/questCard.js';
+import { hasSeat } from '../../../utils/questVocabulary.js';
 import styles from './seriesPage.module.css';
-
-const SEATED = new Set(['signed_up', 'selected', 'played']);
 
 /** The quest create form with this series pre-selected. */
 function newQuestHref(arcId: string): string {
@@ -146,7 +145,7 @@ export function SeriesPage(): React.JSX.Element {
                       }
                       totalSlots={quest.slotsMax}
                       party={quest.participants
-                        .filter((member) => SEATED.has(member.status))
+                        .filter((member) => hasSeat(member.status))
                         .map((member) => ({
                           characterId: member.characterId,
                           characterName: member.characterName,

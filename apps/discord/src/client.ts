@@ -3,32 +3,43 @@
  */
 
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
-import { config } from './config.js';
+import type { BotConfig } from './config.js';
 
 /**
- * Create a discord.js Client with the intents required by activity and the
- * agent. The agent requests MessageContent so unmentioned guild replies have
- * readable text. Enable that permission in the Developer Portal before
- * deployment. Activity still never reads content.
+ * Derive Gateway intents and partials from feature flags.
+ * Guilds always; messages when activity or agent; reactions and voice with
+ * activity; DMs, MessageContent, and Channel partial with the agent.
+ * Enable MessageContent in the Developer Portal before agent deployment.
+ * Activity still never reads content.
  * Intentionally excludes:
  *  - GuildScheduledEvents: zero consumers (the old events/ dispatcher this
  *    fed was vestigial and has been deleted).
  *  - GuildModeration: zero consumers (fed the deleted audit-log handler).
  */
-export function createClient(): Client {
-  const intents = [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMessageReactions,
-    // Required for voiceStateUpdate, which activity needs for
-    // voice-minute tracking. Not privileged.
-    GatewayIntentBits.GuildVoiceStates,
-  ];
-  if (config.agentEnabled) {
-    intents.push(GatewayIntentBits.DirectMessages, GatewayIntentBits.MessageContent);
+export function intentsFor(c: BotConfig): {
+  intents: GatewayIntentBits[];
+  partials: Partials[];
+} {
+  const intents: GatewayIntentBits[] = [GatewayIntentBits.Guilds];
+  if (c.snifferEnabled || c.agentEnabled) {
+    intents.push(GatewayIntentBits.GuildMessages);
   }
-  return new Client({
-    intents,
-    partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User],
-  });
+  if (c.snifferEnabled) {
+    intents.push(
+      GatewayIntentBits.GuildMessageReactions,
+      GatewayIntentBits.GuildVoiceStates,
+    );
+  }
+  const partials: Partials[] = [];
+  if (c.agentEnabled) {
+    intents.push(GatewayIntentBits.DirectMessages, GatewayIntentBits.MessageContent);
+    partials.push(Partials.Channel);
+  }
+  return { intents, partials };
+}
+
+/** Create a discord.js Client with intents derived from the injected config. */
+export function createClient(config: BotConfig): Client {
+  const { intents, partials } = intentsFor(config);
+  return new Client({ intents, partials });
 }

@@ -89,7 +89,7 @@ func (r RESTSync) PublishPlayerList(ctx context.Context, jobKey string, body job
 		return "", nil
 	}
 	if target.ThreadID == "" {
-		return "", fmt.Errorf("discord quest thread missing")
+		return "", ErrPlayerListNoThread
 	}
 	nonce := playerListNonce(jobKey)
 	found, err := r.playerListMessage(ctx, target.ThreadID, content)

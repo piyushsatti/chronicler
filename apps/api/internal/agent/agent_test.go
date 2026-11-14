@@ -11,8 +11,7 @@ import (
 )
 
 func TestSubmitClaimCompleteGet(t *testing.T) {
-	t.Setenv("AGENT_INLINE_COMPLETE", "0")
-	svc := agent.New("secret", nil)
+	svc := agent.New("secret", nil, false)
 	mux := http.NewServeMux()
 	svc.Routes(mux)
 
@@ -78,7 +77,7 @@ func TestRoutesRejectMissingOrWrongSecret(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			mux := http.NewServeMux()
-			agent.New(tc.configured, nil).Routes(mux)
+			agent.New(tc.configured, nil, false).Routes(mux)
 			claim := httptest.NewRequest(http.MethodPost, "/v1/agent/questions/claim", strings.NewReader(`{"lease_protocol":1}`))
 			if tc.header != "" {
 				claim.Header.Set("X-Ingest-Secret", tc.header)
@@ -96,7 +95,7 @@ func TestRoutesRejectMissingOrWrongSecret(t *testing.T) {
 }
 
 func TestClaimEmptyReturns204(t *testing.T) {
-	svc := agent.New("secret", nil)
+	svc := agent.New("secret", nil, false)
 	mux := http.NewServeMux()
 	svc.Routes(mux)
 	claim := httptest.NewRequest(http.MethodPost, "/v1/agent/questions/claim", strings.NewReader(`{"lease_protocol":1}`))
@@ -109,7 +108,7 @@ func TestClaimEmptyReturns204(t *testing.T) {
 }
 
 func TestFailedCompleteReturnsOnGet(t *testing.T) {
-	svc := agent.New("secret", nil)
+	svc := agent.New("secret", nil, false)
 	mux := http.NewServeMux()
 	svc.Routes(mux)
 	jobID := "22222222-2222-4222-8222-222222222222"

@@ -105,29 +105,14 @@ func (p *ProductPostgres) ReadDocuments(ctx context.Context, actor auth.Authorit
 	if err != nil {
 		return DocumentListResult{}, err
 	}
-	countRow, err := p.queries().CountProductDocuments(ctx, dbgen.CountProductDocumentsParams{
-		ViewerAdmin: admin, ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerLiveDm: liveDM,
-		Kind: params.Kind, Category: params.Category, Status: params.Status, Visibility: params.Visibility,
-		AuthorID: params.AuthorID, Search: params.Search, RegionID: params.RegionID,
-	})
+	result, err := documentListFromPageRows(ctx, scope, rows)
 	if err != nil {
 		return DocumentListResult{}, err
 	}
-	if override, _ := countRow.AdminOverride.(bool); override {
-		AuditSQLOverride(ctx, scope, true, "documents", "count")
-	}
-	items := make([]DocumentView, 0, len(rows))
-	for _, row := range rows {
-		view, err := mapListProductDocumentRow(row, scope, ctx)
-		if err != nil {
-			return DocumentListResult{}, err
-		}
-		items = append(items, view)
-	}
-	if err := p.setDocumentCapabilities(ctx, actor, documentViewPointers(items)); err != nil {
+	if err := p.setDocumentCapabilities(ctx, actor, documentViewPointers(result.Items)); err != nil {
 		return DocumentListResult{}, err
 	}
-	return DocumentListResult{Items: items, Total: int32(countRow.Total)}, nil
+	return result, nil
 }
 
 func (p *ProductPostgres) ReadDocumentsTrash(ctx context.Context, _ auth.Authority, spec DocumentsTrashSpec) (DocumentListResult, error) {
@@ -137,19 +122,22 @@ func (p *ProductPostgres) ReadDocumentsTrash(ctx context.Context, _ auth.Authori
 	if err != nil {
 		return DocumentListResult{}, err
 	}
-	total, err := p.queries().CountProductDocumentsTrash(ctx)
-	if err != nil {
-		return DocumentListResult{}, err
-	}
+	var total int32
 	items := make([]DocumentView, 0, len(rows))
-	for _, row := range rows {
-		view, err := documentFromParts(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, pgtype.Timestamptz{}, row.DeletedAt, row.DeletedBy, row.UpdatedAt, row.Version)
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
+		view, err := documentFromParts(row.ID, row.Kind.String, row.Slug.String, row.Title.String, row.Status.String, row.Visibility.String, row.Body.String, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, pgtype.Timestamptz{}, row.DeletedAt, row.DeletedBy, row.UpdatedAt, row.Version.Int32)
 		if err != nil {
 			return DocumentListResult{}, err
 		}
 		items = append(items, view)
 	}
-	return DocumentListResult{Items: items, Total: int32(total)}, nil
+	return DocumentListResult{Items: items, Total: total}, nil
 }
 
 func (p *ProductPostgres) ReadDocumentRevisionParent(ctx context.Context, actor auth.Authority, documentID string) (*DocumentView, error) {
@@ -197,24 +185,27 @@ func (p *ProductPostgres) ReadDocumentRevisions(ctx context.Context, actor auth.
 	if err != nil {
 		return DocumentRevisionPage{}, err
 	}
-	total, err := p.queries().CountProductDocumentRevisions(ctx, docID)
-	if err != nil {
-		return DocumentRevisionPage{}, err
-	}
+	var total int32
 	items := make([]DocumentRevisionView, 0, len(rows))
-	for _, row := range rows {
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
 		item, err := mapRevision(row)
 		if err != nil {
 			return DocumentRevisionPage{}, err
 		}
-		projected, err := ProjectDocumentView(ctx, scope, *parent, row.Body)
+		projected, err := ProjectDocumentView(ctx, scope, *parent, row.Body.String)
 		if err != nil {
 			return DocumentRevisionPage{}, err
 		}
 		item.Body = *projected.EffectiveBody
 		items = append(items, item)
 	}
-	return DocumentRevisionPage{Items: items, Total: int32(total)}, nil
+	return DocumentRevisionPage{Items: items, Total: total}, nil
 }
 
 func (p *ProductPostgres) ReadDocumentBacklinks(ctx context.Context, actor auth.Authority, spec DocumentBacklinksSpec) ([]DocumentLinkView, error) {
@@ -283,20 +274,20 @@ func (p *ProductPostgres) ReadCodexDirectory(ctx context.Context, actor auth.Aut
 	if err != nil {
 		return CodexDirectoryResult{}, err
 	}
-	total, err := p.queries().CountProductCodexDirectory(ctx, dbgen.CountProductCodexDirectoryParams{
-		CategoryPrefix: params.CategoryPrefix, Search: params.Search,
-		ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
-	})
-	if err != nil {
-		return CodexDirectoryResult{}, err
-	}
+	var total int32
 	items := make([]DocumentView, 0, len(rows))
-	for _, row := range rows {
-		view, err := documentFromParts(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, pgtype.Timestamptz{}, pgtype.Timestamptz{}, pgtype.UUID{}, row.UpdatedAt, row.Version)
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
+		view, err := documentFromParts(row.ID, row.Kind.String, row.Slug.String, row.Title.String, row.Status.String, row.Visibility.String, row.Body.String, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, pgtype.Timestamptz{}, pgtype.Timestamptz{}, pgtype.UUID{}, row.UpdatedAt, row.Version.Int32)
 		if err != nil {
 			return CodexDirectoryResult{}, err
 		}
-		projected, err := ProjectDocumentView(ctx, scope, view, row.Body)
+		projected, err := ProjectDocumentView(ctx, scope, view, row.Body.String)
 		if err != nil {
 			return CodexDirectoryResult{}, err
 		}
@@ -305,7 +296,7 @@ func (p *ProductPostgres) ReadCodexDirectory(ctx context.Context, actor auth.Aut
 	if err := p.setDocumentCapabilities(ctx, actor, documentViewPointers(items)); err != nil {
 		return CodexDirectoryResult{}, err
 	}
-	return CodexDirectoryResult{Items: items, Total: int32(total)}, nil
+	return CodexDirectoryResult{Items: items, Total: total}, nil
 }
 
 func (p *ProductPostgres) ReadCodexEntry(ctx context.Context, actor auth.Authority, spec CodexEntrySpec) (*CodexEntryCardView, error) {
@@ -456,58 +447,139 @@ func (p *ProductPostgres) previewMemberScope(ctx context.Context, handle string)
 	return scope, nil
 }
 
+type docRow = dbgen.GetProductDocumentsByIDsRow
+
+func mapGetProductDocumentsByIDsRow(row docRow, scope ViewerScope, ctx context.Context) (DocumentView, error) {
+	return mapReadableDocumentRow(row.Readable, row.AdminOverride, row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, row.PublishedAt, row.DeletedAt, row.DeletedBy, row.UpdatedAt, row.Version, scope, ctx, "document")
+}
+
+func (p *ProductPostgres) readDocumentsByIDs(ctx context.Context, scope ViewerScope, ids []string) (map[string]docRow, error) {
+	out := make(map[string]docRow, len(ids))
+	uuids := make([]pgtype.UUID, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		docID, err := productDocumentID(id)
+		if err != nil {
+			continue
+		}
+		uuids = append(uuids, docID)
+	}
+	if len(uuids) == 0 {
+		return out, nil
+	}
+	viewerID, roles, handle, admin, liveDM := viewerParams(scope)
+	rows, err := p.queries().GetProductDocumentsByIDs(ctx, dbgen.GetProductDocumentsByIDsParams{
+		ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
+		DocumentIds: uuids,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		out[db.UUIDString(row.ID)] = row
+	}
+	return out, nil
+}
+
 func (p *ProductPostgres) ReadableDocumentIDs(ctx context.Context, actor auth.Authority, ids []string) (map[string]bool, error) {
 	out := make(map[string]bool, len(ids))
 	scope, err := p.viewerScope(ctx, actor)
 	if err != nil {
 		return nil, err
 	}
-	viewerID, roles, handle, admin, liveDM := viewerParams(scope)
+	rows, err := p.readDocumentsByIDs(ctx, scope, ids)
+	if err != nil {
+		return nil, err
+	}
 	for _, id := range ids {
-		docID, err := productDocumentID(id)
-		if err != nil {
+		if _, err := productDocumentID(id); err != nil {
 			out[id] = false
 			continue
 		}
-		row, err := p.queries().GetProductDocumentByID(ctx, dbgen.GetProductDocumentByIDParams{
-			ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
-			DocumentID: docID,
-		})
-		if errors.Is(err, pgx.ErrNoRows) {
+		row, ok := rows[id]
+		if !ok {
 			out[id] = false
 			continue
-		}
-		if err != nil {
-			return nil, err
 		}
 		out[id] = row.Readable || scope.Privileged()
 	}
 	return out, nil
 }
 
+func documentBatchResult(view *DocumentView, err error) product.BatchResult[DocumentView] {
+	if err != nil {
+		if expected, ok := errors.AsType[*apierr.Error](err); ok && expected.Code == apierr.Forbidden {
+			return product.BatchResult[DocumentView]{}
+		}
+		return product.BatchResult[DocumentView]{Err: err}
+	}
+	return product.BatchResult[DocumentView]{Value: view}
+}
+
+func (p *ProductPostgres) fillBatchDocumentsByIDs(ctx context.Context, actor auth.Authority, out []product.BatchResult[DocumentView], indexes []int, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	scope, err := p.viewerScope(ctx, actor)
+	if err != nil {
+		for _, idx := range indexes {
+			out[idx] = product.BatchResult[DocumentView]{Err: err}
+		}
+		return nil
+	}
+	rows, err := p.readDocumentsByIDs(ctx, scope, ids)
+	if err != nil {
+		for _, idx := range indexes {
+			out[idx] = product.BatchResult[DocumentView]{Err: err}
+		}
+		return nil
+	}
+	for j, idx := range indexes {
+		row, ok := rows[ids[j]]
+		if !ok {
+			continue
+		}
+		view, err := mapGetProductDocumentsByIDsRow(row, scope, ctx)
+		if err != nil {
+			out[idx] = documentBatchResult(nil, err)
+			continue
+		}
+		out[idx] = documentBatchResult(&view, nil)
+	}
+	return nil
+}
+
 func (p *ProductPostgres) ReadBatchDocuments(ctx context.Context, actor auth.Authority, keys []DocumentKey) ([]product.BatchResult[DocumentView], error) {
 	out := make([]product.BatchResult[DocumentView], len(keys))
 	readCtx := context.WithValue(ctx, deferDocumentCapabilities{}, true)
+	idIndexes := make([]int, 0, len(keys))
+	ids := make([]string, 0, len(keys))
 	for i, key := range keys {
-		var view *DocumentView
-		var err error
 		if key.BySlug {
-			view, err = p.ReadDocument(readCtx, actor, DocumentSpec{Slug: key.Slug})
-		} else {
-			id := key.ID
-			if id == "" {
-				id = key.Slug
-			}
-			view, err = p.ReadDocumentById(readCtx, actor, DocumentByIdSpec{Id: id})
+			view, err := p.ReadDocument(readCtx, actor, DocumentSpec{Slug: key.Slug})
+			out[i] = documentBatchResult(view, err)
+			continue
 		}
-		if err != nil {
-			if expected, ok := errors.AsType[*apierr.Error](err); ok && expected.Code == apierr.Forbidden {
-				continue
-			}
+		id := key.ID
+		if id == "" {
+			id = key.Slug
+		}
+		if _, err := productDocumentID(id); err != nil {
 			out[i] = product.BatchResult[DocumentView]{Err: err}
 			continue
 		}
-		out[i] = product.BatchResult[DocumentView]{Value: view}
+		idIndexes = append(idIndexes, i)
+		ids = append(ids, id)
+	}
+	if err := p.fillBatchDocumentsByIDs(readCtx, actor, out, idIndexes, ids); err != nil {
+		return nil, err
 	}
 	views := make([]*DocumentView, len(out))
 	for i := range out {

@@ -86,8 +86,16 @@ func characterTimePointer(value pgtype.Timestamptz) *time.Time {
 }
 
 func characterVerificationStatus(value any) (CharacterReviewStatus, error) {
-	status, ok := value.(string)
-	if !ok {
+	var status string
+	switch v := value.(type) {
+	case string:
+		status = v
+	case pgtype.Text:
+		if !v.Valid {
+			return "", fmt.Errorf("missing character verification status")
+		}
+		status = v.String
+	default:
 		return "", fmt.Errorf("unexpected character verification status type %T", value)
 	}
 	switch status {
@@ -291,15 +299,15 @@ func mapAdminCharacterDirectory(row dbgen.CharacterProductAdminDirectoryRow) (Ad
 		DdbUrl:                  characterTextPointer(row.DdbUrl),
 		GuildId:                 characterUUIDPointer(row.GuildID),
 		Id:                      db.UUIDString(row.ID),
-		Name:                    row.Name,
+		Name:                    row.Name.String,
 		OwnerAvatarUrl:          characterTextPointer(row.OwnerAvatarUrl),
-		OwnerDisplayName:        row.OwnerDisplayName,
-		OwnerHandle:             row.OwnerHandle,
+		OwnerDisplayName:        row.OwnerDisplayName.String,
+		OwnerHandle:             row.OwnerHandle.String,
 		OwnerId:                 db.UUIDString(row.OwnerID),
 		RegionId:                characterUUIDPointer(row.RegionID),
 		RegionName:              characterTextPointer(row.RegionName),
-		ShortCode:               row.ShortCode,
-		Status:                  row.Status,
+		ShortCode:               row.ShortCode.String,
+		Status:                  row.Status.String,
 		UpdatedAt:               row.UpdatedAt.Time,
 		VerificationStatus:      string(verification),
 		VerificationSubmittedAt: characterTimePointer(row.VerificationSubmittedAt),
@@ -316,15 +324,15 @@ func mapPendingCharacterDirectory(row dbgen.CharacterProductPendingVerificationD
 		DdbUrl:                  characterTextPointer(row.DdbUrl),
 		GuildId:                 characterUUIDPointer(row.GuildID),
 		Id:                      db.UUIDString(row.ID),
-		Name:                    row.Name,
+		Name:                    row.Name.String,
 		OwnerAvatarUrl:          characterTextPointer(row.OwnerAvatarUrl),
-		OwnerDisplayName:        row.OwnerDisplayName,
-		OwnerHandle:             row.OwnerHandle,
+		OwnerDisplayName:        row.OwnerDisplayName.String,
+		OwnerHandle:             row.OwnerHandle.String,
 		OwnerId:                 db.UUIDString(row.OwnerID),
 		RegionId:                characterUUIDPointer(row.RegionID),
 		RegionName:              characterTextPointer(row.RegionName),
-		ShortCode:               row.ShortCode,
-		Status:                  row.Status,
+		ShortCode:               row.ShortCode.String,
+		Status:                  row.Status.String,
 		UpdatedAt:               row.UpdatedAt.Time,
 		VerificationStatus:      string(verification),
 		VerificationSubmittedAt: characterTimePointer(row.VerificationSubmittedAt),
@@ -386,19 +394,22 @@ func (p *ProductPostgres) ReadCharacters(ctx context.Context, _ auth.Authority, 
 	if err != nil {
 		return CharacterListResult{}, err
 	}
-	totalArg := dbgen.CharacterProductCountParams{OwnerID: arg.OwnerID, RegionID: arg.RegionID, GuildID: arg.GuildID, CharacterStatus: arg.CharacterStatus, NamePrefix: arg.NamePrefix}
-	total, err := p.queries().CharacterProductCount(ctx, totalArg)
-	if err != nil {
-		return CharacterListResult{}, err
-	}
-	out := CharacterListResult{Items: make([]CharacterView, 0, len(rows)), Total: total}
-	for _, row := range rows {
-		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.BackgroundText, row.DdbUrl, row.ImageUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
+	var total int32
+	out := CharacterListResult{Items: make([]CharacterView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
+		view, mapErr := mapProductCharacter(row.ID, row.ShortCode.String, row.Name.String, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status.String, row.Description, row.BackgroundText, row.DdbUrl, row.ImageUrl, row.Pcxp.Int32, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
 		if mapErr != nil {
 			return CharacterListResult{}, mapErr
 		}
 		out.Items = append(out.Items, view)
 	}
+	out.Total = total
 	return out, nil
 }
 
@@ -411,18 +422,22 @@ func (p *ProductPostgres) ReadMyCharacters(ctx context.Context, actor auth.Autho
 	if err != nil {
 		return CharacterListResult{}, err
 	}
-	total, err := p.queries().CharacterProductCountMyCharacters(ctx, ownerID)
-	if err != nil {
-		return CharacterListResult{}, err
-	}
-	out := CharacterListResult{Items: make([]CharacterView, 0, len(rows)), Total: total}
-	for _, row := range rows {
-		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.BackgroundText, row.DdbUrl, row.ImageUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
+	var total int32
+	out := CharacterListResult{Items: make([]CharacterView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
+		view, mapErr := mapProductCharacter(row.ID, row.ShortCode.String, row.Name.String, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status.String, row.Description, row.BackgroundText, row.DdbUrl, row.ImageUrl, row.Pcxp.Int32, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
 		if mapErr != nil {
 			return CharacterListResult{}, mapErr
 		}
 		out.Items = append(out.Items, view)
 	}
+	out.Total = total
 	return out, nil
 }
 
@@ -441,18 +456,22 @@ func (p *ProductPostgres) ReadAdminCharacterDirectory(ctx context.Context, _ aut
 	if err != nil {
 		return AdminCharacterDirectoryView{}, err
 	}
-	total, err := p.queries().CharacterProductCountAdminDirectory(ctx, dbgen.CharacterProductCountAdminDirectoryParams{NamePrefix: arg.NamePrefix, RegionID: arg.RegionID, CharacterStatus: arg.CharacterStatus})
-	if err != nil {
-		return AdminCharacterDirectoryView{}, err
-	}
-	out := AdminCharacterDirectoryView{Items: make([]AdminCharacterDirectoryEntryView, 0, len(rows)), Total: total}
-	for _, row := range rows {
+	var total int32
+	out := AdminCharacterDirectoryView{Items: make([]AdminCharacterDirectoryEntryView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
 		entry, mapErr := mapAdminCharacterDirectory(row)
 		if mapErr != nil {
 			return AdminCharacterDirectoryView{}, mapErr
 		}
 		out.Items = append(out.Items, entry)
 	}
+	out.Total = total
 	return out, nil
 }
 
@@ -461,18 +480,22 @@ func (p *ProductPostgres) ReadPendingCharacterVerifications(ctx context.Context,
 	if err != nil {
 		return AdminCharacterDirectoryView{}, err
 	}
-	total, err := p.queries().CharacterProductCountPendingVerifications(ctx)
-	if err != nil {
-		return AdminCharacterDirectoryView{}, err
-	}
-	out := AdminCharacterDirectoryView{Items: make([]AdminCharacterDirectoryEntryView, 0, len(rows)), Total: total}
-	for _, row := range rows {
+	var total int32
+	out := AdminCharacterDirectoryView{Items: make([]AdminCharacterDirectoryEntryView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
 		entry, mapErr := mapPendingCharacterDirectory(row)
 		if mapErr != nil {
 			return AdminCharacterDirectoryView{}, mapErr
 		}
 		out.Items = append(out.Items, entry)
 	}
+	out.Total = total
 	return out, nil
 }
 
@@ -485,14 +508,18 @@ func (p *ProductPostgres) ReadCharacterProgression(ctx context.Context, _ auth.A
 	if err != nil {
 		return ProgressionListResult{}, err
 	}
-	total, err := p.queries().CharacterProductCountProgression(ctx, characterID)
-	if err != nil {
-		return ProgressionListResult{}, err
+	var total int32
+	out := ProgressionListResult{Items: make([]ProgressionEntryView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
+		out.Items = append(out.Items, ProgressionEntryView{Amount: int32Pointer(row.Amount.Int32), CharacterId: db.UUIDString(row.CharacterID), Id: db.UUIDString(row.ID), Kind: row.Kind.String, Note: characterTextPointer(row.Note), QuestId: characterUUIDPointer(row.QuestID), RecordedAt: row.RecordedAt.Time, RecordedBy: characterUUIDPointer(row.RecordedBy)})
 	}
-	out := ProgressionListResult{Items: make([]ProgressionEntryView, 0, len(rows)), Total: total}
-	for _, row := range rows {
-		out.Items = append(out.Items, ProgressionEntryView{Amount: int32Pointer(row.Amount), CharacterId: db.UUIDString(row.CharacterID), Id: db.UUIDString(row.ID), Kind: row.Kind, Note: characterTextPointer(row.Note), QuestId: characterUUIDPointer(row.QuestID), RecordedAt: row.RecordedAt.Time, RecordedBy: characterUUIDPointer(row.RecordedBy)})
-	}
+	out.Total = total
 	return out, nil
 }
 
@@ -505,14 +532,18 @@ func (p *ProductPostgres) ReadCharacterVerificationHistory(ctx context.Context, 
 	if err != nil {
 		return member.VerificationPage{}, err
 	}
-	total, err := p.queries().CharacterProductCountVerificationHistory(ctx, characterID)
-	if err != nil {
-		return member.VerificationPage{}, err
+	var total int32
+	out := member.VerificationPage{Items: make([]member.VerificationView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
+		out.Items = append(out.Items, member.VerificationView{Id: db.UUIDString(row.ID), Note: characterTextPointer(row.Note), RecordedAt: row.CreatedAt.Time, TargetId: db.UUIDString(row.SubjectID), TargetType: row.SubjectType.String, Verdict: row.Decision.String, VerifiedBy: db.UUIDString(row.DecidedBy)})
 	}
-	out := member.VerificationPage{Items: make([]member.VerificationView, 0, len(rows)), Total: total}
-	for _, row := range rows {
-		out.Items = append(out.Items, member.VerificationView{Id: db.UUIDString(row.ID), Note: characterTextPointer(row.Note), RecordedAt: row.CreatedAt.Time, TargetId: db.UUIDString(row.SubjectID), TargetType: row.SubjectType, Verdict: row.Decision, VerifiedBy: db.UUIDString(row.DecidedBy)})
-	}
+	out.Total = total
 	return out, nil
 }
 

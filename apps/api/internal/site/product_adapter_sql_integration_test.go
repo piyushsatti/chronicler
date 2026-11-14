@@ -176,7 +176,7 @@ func TestSiteDeliveryReadsUseTypedPayloadCurrentAudienceAndCausalAudit(t *testin
 	insertJob := func(index int, payload []byte) string {
 		t.Helper()
 		var id string
-		if err := fixture.Pool.QueryRow(ctx, `INSERT INTO background_jobs(job_key,kind,lane,state,attempts,payload,updated_at) VALUES($1,'quest_discord_delivery','discord','dead',$2,$3,$4) RETURNING public_id::text`, fmt.Sprintf("delivery-read-%d", index), jobs.MaxAttempts, payload, base.Add(-time.Duration(index)*time.Minute)).Scan(&id); err != nil {
+		if err := fixture.Pool.QueryRow(ctx, `INSERT INTO background_jobs(job_key,kind,lane,state,attempts,payload,updated_at) VALUES($1,'quest_discord_delivery','discord','dead',$2,$3,$4) RETURNING public_id::text`, fmt.Sprintf("delivery-read-%d", index), jobs.DiscordMaxAttempts, payload, base.Add(-time.Duration(index)*time.Minute)).Scan(&id); err != nil {
 			t.Fatal(err)
 		}
 		return id
@@ -272,7 +272,7 @@ func TestSiteDeliveryReadsUseTypedPayloadCurrentAudienceAndCausalAudit(t *testin
 			t.Fatalf("offset=%d deliveries=%+v", offset, view.Deliveries)
 		}
 		got := view.Deliveries[0]
-		if got.Id != expected.jobID || got.State != "dead" || got.FailureStreak != jobs.MaxAttempts || got.QuestId == nil || *got.QuestId != expected.questID || got.QuestShortCode == nil || *got.QuestShortCode != expected.code || got.QuestLink == nil || *got.QuestLink != "/quests/"+expected.code {
+		if got.Id != expected.jobID || got.State != "dead" || got.FailureStreak != jobs.DiscordMaxAttempts || got.MaxAttempts != jobs.DiscordMaxAttempts || got.QuestId == nil || *got.QuestId != expected.questID || got.QuestShortCode == nil || *got.QuestShortCode != expected.code || got.QuestLink == nil || *got.QuestLink != "/quests/"+expected.code {
 			t.Fatalf("typed payload or internal destination failed: %+v", got)
 		}
 		if visible && (got.QuestTitle == nil || *got.QuestTitle != expected.title) || !visible && got.QuestTitle != nil {
@@ -413,6 +413,28 @@ func TestRedriveDiscordDeliveryReportsQuestRevisionsAndClearsSafeCode(t *testing
 	alias, _ := redrive(aliasID)
 	if alias.Before == nil || alias.Before.QuestId != nil || alias.Before.DesiredRevision != nil {
 		t.Fatalf("retired questId alias matched a quest: %+v", alias.Before)
+	}
+}
+
+func TestReadAdminOperationsDefaultsWhenSettingsAbsent(t *testing.T) {
+	fixture := dbtest.NewProductFixture(t)
+	ctx := context.Background()
+	adapter, err := NewProductPostgres(fixture.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, err := adapter.ReadAdminOperations(ctx, auth.Authority{}, AdminOperationsSpec{Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if view.Config.DeliveryMode != defaultDiscordDeliveryMode {
+		t.Fatalf("deliveryMode=%q, want %q", view.Config.DeliveryMode, defaultDiscordDeliveryMode)
+	}
+	if view.Config.PublicOrigin != "" {
+		t.Fatalf("publicOrigin=%q, want empty", view.Config.PublicOrigin)
+	}
+	if view.Config.AnnouncementRoleId != nil {
+		t.Fatalf("announcementRoleId=%v, want nil", view.Config.AnnouncementRoleId)
 	}
 }
 

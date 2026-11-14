@@ -22,12 +22,6 @@ type memberMeResponse struct {
 }
 
 func Routes(mux httpserver.Router, me MeQuery) {
-	mux.Handle("POST /v1/me/personalization/reconcile", auth.Require(auth.Authenticated, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	})))
-	mux.Handle("POST /v1/me/notifications/acknowledge-suppressed", auth.Require(auth.Authenticated, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	})))
 	mux.Handle("GET /v1/members/me", auth.Require(auth.Authenticated, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		a, ok := auth.AuthorityFromContext(r.Context())
 		if !ok {
