@@ -160,7 +160,8 @@ WHERE public_id = sqlc.arg(public_id);
 
 -- name: SetQuestDiscordMessageID :exec
 UPDATE quests
-SET discord_message_id = sqlc.arg(discord_message_id)
+SET discord_message_id = sqlc.arg(discord_message_id),
+    discord_channel_id = sqlc.arg(discord_channel_id)
 WHERE public_id = sqlc.arg(public_id);
 
 -- name: MemberInternalID :one
@@ -184,7 +185,7 @@ SELECT id FROM documents WHERE public_id = sqlc.arg(public_id);
 -- projects it for an ordinary member before use.
 SELECT q.id, q.public_id, q.short_code, q.status, q.deleted_at, q.scheduled_at, q.duration_hours, q.avg_party_level,
        q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.discord_thread_id,
+       q.discord_message_id, q.discord_channel_id, q.discord_event_id, q.discord_thread_id,
        q.discord_voice_channel_id,
        dm.discord_id AS dm_discord_id,
        d.public_id AS document_public_id, d.kind AS document_kind, d.slug AS document_slug,
