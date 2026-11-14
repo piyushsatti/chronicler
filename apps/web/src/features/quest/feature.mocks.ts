@@ -30,12 +30,15 @@ export const graphql: FeatureGraphql = {
       },
     });
   },
-  QuestRegions: () =>
-    HttpResponse.json({
+  QuestRegions: ({ variables }) => {
+    const offset = Number(variables?.offset ?? 0);
+    const regions = [{ id: '11111111-1111-4111-8111-111111111111', name: 'The Marches' }];
+    return HttpResponse.json({
       data: {
-        regions: [{ id: '11111111-1111-4111-8111-111111111111', name: 'The Marches' }],
+        regions: regions.slice(offset, offset + Number(variables?.limit ?? 100)),
       },
-    }),
+    });
+  },
   QuestBoardChrome: () =>
     HttpResponse.json({
       data: {

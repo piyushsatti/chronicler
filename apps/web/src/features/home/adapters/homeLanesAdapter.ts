@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type {
   HomeQuestParticipantsQuery,
   HomeAcceptingDmsQuery,
+  HomeRegionsQuery,
   HomeUpcomingQuery,
   HomeWarRoomQuery,
 } from '../../../api/graphql.operations.gen.js';
@@ -9,6 +10,7 @@ import { graphqlRequest } from '../../../api/graphql.js';
 import { bearerHeaders } from '../../../api/authHeader.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import LANES_QUERY from './homeWarRoom.graphql?raw';
+import REGIONS_QUERY from './homeRegions.graphql?raw';
 import PARTICIPANTS_QUERY from './homeQuestParticipants.graphql?raw';
 import UPCOMING_QUERY from './homeUpcoming.graphql?raw';
 import ACCEPTING_DMS_QUERY from './homeAcceptingDms.graphql?raw';
@@ -418,6 +420,25 @@ async function completeAcceptingDms(
   }
 }
 
+async function completeRegionCatalog(
+  initial: HomeWarRoomQuery['regions'],
+  request: RequestInit,
+): Promise<HomeWarRoomQuery['regions']> {
+  const regions = [...(initial ?? [])];
+  let pageLength = regions.length;
+  while (pageLength >= 100) {
+    const data = await readHome<HomeRegionsQuery>(
+      REGIONS_QUERY,
+      { offset: regions.length },
+      request,
+    );
+    const page = data.regions ?? [];
+    regions.push(...page);
+    pageLength = page.length;
+  }
+  return regions;
+}
+
 export async function loadHomeLanes(signal?: AbortSignal): Promise<HomeLanesViewModel> {
   const window = defaultWindow();
   const request: RequestInit = {
@@ -426,8 +447,9 @@ export async function loadHomeLanes(signal?: AbortSignal): Promise<HomeLanesView
   };
   try {
     const data = await readHome<HomeWarRoomQuery>(LANES_QUERY, window, request);
+    const regions = await completeRegionCatalog(data.regions, request);
 
-    const result = parseHomeLanesWire(data);
+    const result = parseHomeLanesWire({ ...data, regions });
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'home:lanes');
     }
