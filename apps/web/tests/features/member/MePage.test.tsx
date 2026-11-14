@@ -743,11 +743,27 @@ describe('MePage', () => {
   it('lists upcoming sign-ups that link to the quest', async () => {
     signIn(['player']);
     server.use(
-      graphql.query('MemberUpcoming', () =>
+      graphql.query('MemberMyUpcomingSignups', () =>
+        HttpResponse.json({
+          data: {
+            myQuestSignups: {
+              total: 1,
+              items: [
+                {
+                  questId: 'q1',
+                  characterName: 'Wren',
+                  status: 'signed_up',
+                },
+              ],
+            },
+          },
+        }),
+      ),
+      graphql.query('MemberUpcomingQuests', () =>
         HttpResponse.json({
           data: {
             quests: {
-              total: 2,
+              total: 1,
               items: [
                 {
                   id: 'q1',
@@ -755,23 +771,6 @@ describe('MePage', () => {
                   status: 'open',
                   scheduledAt: '2099-06-20T20:00:00Z',
                   briefDocument: { title: 'The Hound of Culann' },
-                  participants: [
-                    {
-                      memberId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-                      characterName: 'Wren',
-                      status: 'signed_up',
-                    },
-                  ],
-                },
-                {
-                  id: 'q2',
-                  shortCode: 'Q-418',
-                  status: 'open',
-                  scheduledAt: '2099-06-21T20:00:00Z',
-                  briefDocument: { title: 'Someone else' },
-                  participants: [
-                    { memberId: 'other', characterName: 'X', status: 'signed_up' },
-                  ],
                 },
               ],
             },
@@ -782,37 +781,36 @@ describe('MePage', () => {
     renderWithProviders(<MePage />, { route: '/me' });
     const link = await screen.findByRole('link', { name: /The Hound of Culann/ });
     expect(link).toHaveAttribute('href', '/quests/Q-417');
-    expect(screen.queryByText('Someone else')).toBeNull();
   });
 
-  it('pages past the first 100 quests and skips cancelled ones', async () => {
+  it('skips cancelled quests from the viewer signups', async () => {
     signIn(['player']);
-    const me = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-    const seat = { memberId: me, characterName: 'Wren', status: 'signed_up' };
-    const filler = Array.from({ length: 100 }, (_, i) => ({
-      id: `f${i}`,
-      shortCode: `F-${i}`,
-      status: 'open',
-      scheduledAt: '2099-06-01T20:00:00Z',
-      briefDocument: { title: `Filler ${i}` },
-      participants: [],
-    }));
-    const offsets: number[] = [];
     server.use(
-      graphql.query('MemberUpcoming', ({ variables }) => {
-        const offset = Number(variables.offset ?? 0);
-        offsets.push(offset);
-        const items =
-          offset === 0
-            ? filler
-            : [
+      graphql.query('MemberMyUpcomingSignups', () =>
+        HttpResponse.json({
+          data: {
+            myQuestSignups: {
+              total: 2,
+              items: [
+                { questId: 'late', characterName: 'Wren', status: 'signed_up' },
+                { questId: 'gone', characterName: 'Wren', status: 'signed_up' },
+              ],
+            },
+          },
+        }),
+      ),
+      graphql.query('MemberUpcomingQuests', () =>
+        HttpResponse.json({
+          data: {
+            quests: {
+              total: 2,
+              items: [
                 {
                   id: 'late',
                   shortCode: 'Q-900',
                   status: 'open',
                   scheduledAt: '2099-07-01T20:00:00Z',
                   briefDocument: { title: 'Late table' },
-                  participants: [seat],
                 },
                 {
                   id: 'gone',
@@ -820,16 +818,16 @@ describe('MePage', () => {
                   status: 'cancelled',
                   scheduledAt: '2099-07-02T20:00:00Z',
                   briefDocument: { title: 'Cancelled table' },
-                  participants: [seat],
                 },
-              ];
-        return HttpResponse.json({ data: { quests: { total: 102, items } } });
-      }),
+              ],
+            },
+          },
+        }),
+      ),
     );
     renderWithProviders(<MePage />, { route: '/me' });
     expect(await screen.findByRole('link', { name: /Late table/ })).toBeVisible();
     expect(screen.queryByText('Cancelled table')).toBeNull();
-    expect(offsets).toEqual([0, 100]);
   });
 });
 

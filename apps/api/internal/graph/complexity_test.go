@@ -50,7 +50,7 @@ func TestSupportedWebOperationsFitDefaultComplexityBudget(t *testing.T) {
 							vars[variable.Variable] = 50
 						case "AdminOperations": // useAdminOperations.ts
 							vars[variable.Variable] = 25
-						case "MemberUpcoming": // memberHubAdapter.ts UPCOMING_PAGE_SIZE
+						case "MemberMyUpcomingSignups", "MemberUpcomingQuests": // memberHubAdapter.ts UPCOMING_PAGE_SIZE
 							vars[variable.Variable] = 100
 						}
 					}

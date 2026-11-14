@@ -51,18 +51,7 @@ func queryListComplexity(c *ComplexityRoot) {
 	c.Query.CreationCatalog = func(child int, _ *CreationCatalogFiltersInput, limit, _ int) int { return listCost(child, limit) }
 	c.Query.DmSummaries = func(child int, _ *DmSummaryFiltersInput, limit, _ int) int { return listCost(child, limit) }
 	c.Query.Documents = func(child int, _ *DocumentFiltersInput, limit, _ int) int { return listCost(child, limit) }
-	for _, field := range []*func(int, int, int) int{
-		&c.Query.DocumentsTrash,
-		&c.Query.MyCharacters,
-		&c.Query.MyQuestSignups,
-		&c.Query.MyUnlocks,
-		&c.Query.PendingCharacterVerifications,
-		&c.Query.PendingDmProfileVerifications,
-		&c.Query.QuestArcs,
-		&c.Query.TimeAnchors,
-	} {
-		*field = page
-	}
+	assignPageListComplexity(c, page)
 	c.Query.LieutenantAssignments = func(child int, _, _ *string, limit, _ int) int { return listCost(child, limit) }
 	c.Query.Maps = func(child int, _, _ *string, limit, _ int) int { return listCost(child, limit) }
 	c.Query.Members = func(child int, _ *MemberFiltersInput, _ *MemberSortInput, limit, _ int) int {
@@ -75,6 +64,21 @@ func queryListComplexity(c *ComplexityRoot) {
 	c.Query.RecentlyClosedQuests = func(child int, _ *string, _ *time.Time, limit, _ int) int { return listCost(child, limit) }
 	c.Query.Search = func(child int, _ string, _ []string, limit, _ int) int { return listCost(child, limit) }
 	c.Query.UnlockablesCatalog = func(child int, _ bool, limit, _ int) int { return listCost(child, limit) }
+}
+
+func assignPageListComplexity(c *ComplexityRoot, page func(int, int, int) int) {
+	for _, field := range []*func(int, int, int) int{
+		&c.Query.DocumentsTrash,
+		&c.Query.MyCharacters,
+		&c.Query.MyUnlocks,
+		&c.Query.PendingCharacterVerifications,
+		&c.Query.PendingDmProfileVerifications,
+		&c.Query.QuestArcs,
+		&c.Query.TimeAnchors,
+	} {
+		*field = page
+	}
+	c.Query.MyQuestSignups = func(child int, _ *time.Time, limit, _ int) int { return listCost(child, limit) }
 }
 
 func nestedListComplexity(c *ComplexityRoot) {

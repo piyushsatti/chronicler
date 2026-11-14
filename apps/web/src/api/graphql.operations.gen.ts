@@ -266,6 +266,7 @@ export type QuestFiltersInput = {
   displayStatus?: string | null | undefined;
   dmId?: string | null | undefined;
   genre?: string | null | undefined;
+  ids?: Array<string> | null | undefined;
   kind?: string | null | undefined;
   regionId?: string | null | undefined;
   scheduledFrom?: string | null | undefined;
@@ -1467,14 +1468,23 @@ export type MemberSetMyPrivateNotesMutationVariables = Exact<{
 
 export type MemberSetMyPrivateNotesMutation = { setMyPrivateNotes: { body: string, updatedAt: string | null } };
 
-export type MemberUpcomingQueryVariables = Exact<{
-  from: string;
+export type MemberMyUpcomingSignupsQueryVariables = Exact<{
+  from?: string | null | undefined;
   limit?: number;
   offset?: number;
 }>;
 
 
-export type MemberUpcomingQuery = { quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, briefDocument: { title: string } | null, participants: Array<{ memberId: string, characterName: string, status: string }> }> } };
+export type MemberMyUpcomingSignupsQuery = { myQuestSignups: { total: number, items: Array<{ questId: string, status: string, characterName: string }> } };
+
+export type MemberUpcomingQuestsQueryVariables = Exact<{
+  ids?: Array<string> | string | null | undefined;
+  limit?: number;
+  offset?: number;
+}>;
+
+
+export type MemberUpcomingQuestsQuery = { quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, briefDocument: { title: string } | null }> } };
 
 export type AcknowledgeSuppressedNotificationsMutationVariables = Exact<{
   limit: number;
