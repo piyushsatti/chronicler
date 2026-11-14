@@ -80,7 +80,8 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status, q.dm_id,
        q.discord_desired_revision, q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.event_url,
        q.created_by, q.created_at, q.updated_at, q.closed_at, q.deleted_at,
-       q.deleted_by, q.discord_voice_channel_id, q.discord_thread_id
+       q.deleted_by, q.discord_voice_channel_id, q.discord_thread_id,
+       q.discord_channel_id
 FROM quests q
 WHERE q.public_id = @quest_id::uuid
 FOR UPDATE OF q;

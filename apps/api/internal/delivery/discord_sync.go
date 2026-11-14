@@ -33,7 +33,7 @@ type RevisionApplier interface {
 // off instead of posting twice.
 type QuestStore interface {
 	LoadAnnounceQuest(ctx context.Context, questID string) (AnnounceQuest, error)
-	SetDiscordMessageID(ctx context.Context, questID string, messageID string) error
+	SetDiscordMessageID(ctx context.Context, questID string, messageID, channelID string) error
 	SetDiscordEvent(ctx context.Context, questID, eventID, eventURL string) error
 	SetDiscordThread(ctx context.Context, questID, threadID string) error
 }
@@ -118,7 +118,7 @@ func (r RESTSync) SyncQuest(ctx context.Context, questID string, desiredRevision
 	if err != nil {
 		return fmt.Errorf("discord quest lookup: %w", err)
 	}
-	run := syncRun{RESTSync: r, questID: questID, channelID: channelID, origin: origin, roleID: settings.RoleID, quest: quest}
+	run := syncRun{RESTSync: r, questID: questID, channelID: announcementChannel(channelID, quest), origin: origin, roleID: settings.RoleID, quest: quest}
 	if err := run.execute(ctx, desiredRevision); err != nil {
 		return err
 	}
@@ -126,6 +126,13 @@ func (r RESTSync) SyncQuest(ctx context.Context, questID string, desiredRevision
 		return r.Apply.ApplyDiscordRevision(ctx, questID, desiredRevision)
 	}
 	return nil
+}
+
+func announcementChannel(setting string, quest AnnounceQuest) string {
+	if quest.MessageID != "" && quest.ChannelID != "" {
+		return quest.ChannelID
+	}
+	return setting
 }
 
 type syncRun struct {
@@ -244,7 +251,7 @@ func (s *syncRun) postMessage(ctx context.Context) (string, error) {
 	}
 	persist, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
-	if err := s.Quests.SetDiscordMessageID(persist, s.questID, id); err != nil {
+	if err := s.Quests.SetDiscordMessageID(persist, s.questID, id, s.channelID); err != nil {
 		return "", fmt.Errorf("discord message id persist: %w", err)
 	}
 	return id, ctx.Err()
