@@ -220,9 +220,9 @@ export function scanSource(
     node = unwrap(node);
     return Boolean(
       node &&
-        (ts.isArrayLiteralExpression(node) ||
-          ts.isStringLiteral(node) ||
-          ts.isNoSubstitutionTemplateLiteral(node)),
+      (ts.isArrayLiteralExpression(node) ||
+        ts.isStringLiteral(node) ||
+        ts.isNoSubstitutionTemplateLiteral(node)),
     );
   };
   const queryKeyFromObjectArg = (arg) => {
@@ -240,11 +240,7 @@ export function scanSource(
   };
   const flagInlineQueryKey = (keyNode) => {
     if (!isInlineQueryKey(keyNode)) return;
-    add(
-      keyNode,
-      'query-key-origin',
-      keyNode.getText(sf).replace(/\s+/g, ' ').trim(),
-    );
+    add(keyNode, 'query-key-origin', keyNode.getText(sf).replace(/\s+/g, ' ').trim());
   };
   const storedJson = (node, seen = new Set()) => {
     node = unwrap(node);
@@ -445,7 +441,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     for (const hit of [...ladderHits, ...unlistedOrigin])
       console.error(`  ${hit.file}:${hit.line} [${hit.rule}] ${hit.detail}`);
     for (const s of staleOrigin)
-      console.warn(`check:architecture-ladder stale queryKeyOrigin entry (remove it): ${s}`);
+      console.warn(
+        `check:architecture-ladder stale queryKeyOrigin entry (remove it): ${s}`,
+      );
     if (ladderHits.length)
       console.error(
         `check:architecture-ladder FAILED — ${ladderHits.length} violation(s); fix their owning layer.`,
@@ -454,11 +452,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       console.error(
         `check:architecture-ladder FAILED — ${unlistedOrigin.length} query-key-origin hit(s) not in queryKeyOrigin allowlist.`,
       );
-    if (
-      !ladderHits.length &&
-      !unlistedOrigin.length &&
-      !exceptions.length
-    )
+    if (!ladderHits.length && !unlistedOrigin.length && !exceptions.length)
       console.log(
         `check:architecture-ladder OK — ladder clean; ${(allowlist.queryKeyOrigin ?? []).length} query-key-origin pending migration.`,
       );

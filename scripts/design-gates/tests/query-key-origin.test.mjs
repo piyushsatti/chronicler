@@ -23,8 +23,5 @@ test('factory queryKey passes', () => {
     fixture('factory.ts.txt'),
     'src/features/items/hooks/useItems.ts',
   );
-  assert.equal(
-    hits.filter((hit) => hit.rule === 'query-key-origin').length,
-    0,
-  );
+  assert.equal(hits.filter((hit) => hit.rule === 'query-key-origin').length, 0);
 });
