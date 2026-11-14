@@ -20,17 +20,32 @@ export type FeatureGraphql = Readonly<Record<string, FeatureGraphqlHandler>>;
 
 export type FeatureHandlers = readonly HttpHandler[];
 
+export type QueryKeyFactory = {
+  readonly [key: string]:
+    | readonly unknown[]
+    | ((...args: never[]) => readonly unknown[]);
+};
+
 export type FeatureSlice = {
   readonly routes: readonly FeatureRoute[];
   readonly handlers: FeatureHandlers;
   readonly graphql: FeatureGraphql;
-  readonly queryKeys: Readonly<Record<string, unknown>>;
+  readonly queryKeys: QueryKeyFactory;
   readonly endpoints?: Readonly<Record<string, unknown>>;
 };
 
-export function mergeQueryKeySlices(
-  slices: readonly FeatureSlice[],
-): Record<string, unknown> {
+type SliceWithKeys = { readonly queryKeys: object };
+
+export type MergedQueryKeys<S extends readonly SliceWithKeys[]> = S extends readonly [
+  infer Head extends SliceWithKeys,
+  ...infer Tail extends readonly SliceWithKeys[],
+]
+  ? Head['queryKeys'] & MergedQueryKeys<Tail>
+  : unknown;
+
+export function mergeQueryKeySlices<S extends readonly SliceWithKeys[]>(
+  slices: S,
+): MergedQueryKeys<S> {
   const merged: Record<string, unknown> = {};
   for (const slice of slices) {
     for (const [key, value] of Object.entries(slice.queryKeys)) {
@@ -40,7 +55,7 @@ export function mergeQueryKeySlices(
       merged[key] = value;
     }
   }
-  return merged;
+  return merged as MergedQueryKeys<S>;
 }
 
 export function mergeEndpointSlices(

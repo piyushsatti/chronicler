@@ -25,9 +25,7 @@ export function useQuestMutations(shortCode: string, questId: string) {
         client.invalidateQueries({
           queryKey: shortCode ? queryKeys.questSummary(shortCode) : ['questSummary'],
         }),
-        client.invalidateQueries({ queryKey: queryKeys.questBoard }),
         client.invalidateQueries({ queryKey: queryKeys.questLists }),
-        client.invalidateQueries({ queryKey: queryKeys.home }),
         client.invalidateQueries({ queryKey: queryKeys.homeLanes }),
         client.invalidateQueries({ queryKey: queryKeys.notifications }),
         client.invalidateQueries({ queryKey: queryKeys.notificationsUnread }),
