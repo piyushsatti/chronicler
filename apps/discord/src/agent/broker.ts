@@ -1,5 +1,5 @@
 import type { BotConfig } from '../config.js';
-import type { QuestionRequest, QuestionResult } from './types.js';
+import type { QuestionRequest, QuestionResult, QuestionSource } from './types.js';
 
 const MAX_RESULT_BYTES = 64 * 1024;
 const UUID_RE =
@@ -32,48 +32,53 @@ export function parseQuestionResult(
       version: 1,
       type: 'question.failed',
       job_id: jobId,
-      message: boundedString(raw['message'], 300),
+      message: boundedString(raw['message'], 1_000),
     };
   }
   if (raw['type'] !== 'question.completed')
     throw new Error('Agent result type mismatch');
-  const rawSources = raw['sources'];
-  if (!Array.isArray(rawSources) || rawSources.length > 3)
+  const rawSources = raw['sources'] ?? [];
+  if (!Array.isArray(rawSources) || rawSources.length > 100)
     throw new Error('Agent result sources mismatch');
   const expectedOrigin = new URL(publicOrigin).origin;
-  const sources = rawSources.map((item) => {
-    if (typeof item !== 'object' || item === null || Array.isArray(item))
-      throw new Error('Agent result source mismatch');
-    const source = item as Record<string, unknown>;
-    const url = new URL(boundedString(source['url'], 1_000));
-    if (
-      url.protocol !== 'https:' ||
-      url.origin !== expectedOrigin ||
-      (!url.pathname.startsWith('/rules/') && !url.pathname.startsWith('/codex/')) ||
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash
-    ) {
-      throw new Error('Agent result contained an untrusted URL');
+  const sources: QuestionSource[] = [];
+  for (const item of rawSources) {
+    try {
+      if (typeof item !== 'object' || item === null || Array.isArray(item))
+        throw new Error('Agent result source mismatch');
+      const source = item as Record<string, unknown>;
+      const url = new URL(boundedString(source['url'], 1_000));
+      if (
+        url.protocol !== 'https:' ||
+        url.origin !== expectedOrigin ||
+        (!url.pathname.startsWith('/rules/') && !url.pathname.startsWith('/codex/')) ||
+        url.username ||
+        url.password ||
+        url.search ||
+        url.hash
+      ) {
+        throw new Error('Agent result contained an untrusted URL');
+      }
+      sources.push({
+        document_id: boundedString(source['document_id'], 64),
+        title: boundedString(source['title'], 300),
+        url: url.toString(),
+      });
+    } catch {
+      // Tolerant reader: drop bad sources rather than reject the answer.
     }
-    return {
-      document_id: boundedString(source['document_id'], 64),
-      title: boundedString(source['title'], 300),
-      url: url.toString(),
-    };
-  });
+  }
   return {
     version: 1,
     type: 'question.completed',
     job_id: jobId,
-    answer: boundedString(raw['answer'], 4_000),
+    answer: boundedString(raw['answer'], 16_000),
     sources,
   };
 }
 
 const QUESTIONS_PATH = '/v1/agent/questions';
-const WAIT_MS = 120_000;
+export const WAIT_MS = 120_000;
 const POLL_MS = 1_000;
 
 function callSignal(signal: AbortSignal | undefined): AbortSignal {

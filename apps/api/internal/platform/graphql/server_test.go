@@ -14,6 +14,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/httpserver"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 )
@@ -131,6 +132,67 @@ type panickingDocumentRepo struct{ documentErrorRepo }
 
 func (panickingDocumentRepo) ReadDocumentById(context.Context, auth.Authority, document.DocumentByIdSpec) (*document.DocumentView, error) {
 	panic("resolver boom")
+}
+
+func TestGraphQLOperationAndUnexpectedErrorShareRequestID(t *testing.T) {
+	const wantID = "gql-request-id-9"
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(httpserver.ContextHandler(slog.NewJSONHandler(&logs, nil))))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	handler := httpserver.RequestID(httpserver.RequestLog(NewHandler(
+		&graph.Resolver{Services: graph.Services{DocumentQueries: testDocumentQueries(t, documentErrorRepo{err: errors.New("database boom")})}},
+		Limits{},
+		func(context.Context, string) (auth.Authority, error) { return auth.Authority{}, nil },
+	)))
+	body := `{"query":"query NamedDoc { documentById(id:\"11111111-1111-4111-8111-111111111111\") { id } }","operationName":"NamedDoc"}`
+	request := httptest.NewRequest(http.MethodPost, "/v1/graphql", bytes.NewBufferString(body))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Request-Id", wantID)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, request)
+	if w.Header().Get("X-Request-Id") != wantID {
+		t.Fatalf("X-Request-Id=%q", w.Header().Get("X-Request-Id"))
+	}
+	opID, opName := graphqlLogFields(t, logs.Bytes(), "graphql operation")
+	if opID != wantID || opName != "NamedDoc" {
+		t.Fatalf("operation request_id=%q name=%q logs=%s", opID, opName, logs.String())
+	}
+	if got := graphqlLogRequestID(t, logs.Bytes(), "request"); got != wantID {
+		t.Fatalf("request request_id=%q logs=%s", got, logs.String())
+	}
+	if got := graphqlLogRequestID(t, logs.Bytes(), "unexpected GraphQL error"); got != wantID {
+		t.Fatalf("error request_id=%q logs=%s", got, logs.String())
+	}
+}
+
+func graphqlLogRequestID(t *testing.T, raw []byte, msg string) string {
+	t.Helper()
+	id, _ := graphqlLogFields(t, raw, msg)
+	return id
+}
+
+func graphqlLogFields(t *testing.T, raw []byte, msg string) (requestID, operation string) {
+	t.Helper()
+	for _, line := range bytes.Split(raw, []byte("\n")) {
+		if len(line) == 0 {
+			continue
+		}
+		var entry struct {
+			Msg       string `json:"msg"`
+			RequestID string `json:"request_id"`
+			Operation string `json:"operation"`
+		}
+		if err := json.Unmarshal(line, &entry); err != nil {
+			t.Fatalf("unmarshal %s: %v", line, err)
+		}
+		if entry.Msg == msg {
+			return entry.RequestID, entry.Operation
+		}
+	}
+	t.Fatalf("missing %q log in %s", msg, raw)
+	return "", ""
 }
 
 func TestGraphQLRecoverFuncReturnsInternalWithStackLog(t *testing.T) {
