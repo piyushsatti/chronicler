@@ -6,9 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
 )
+
+func discordRetryDelay(job jobs.Job, err error) time.Duration {
+	var apiErr *DiscordAPIError
+	if errors.As(err, &apiErr) && apiErr.RetryAfter > 0 {
+		return apiErr.RetryAfter
+	}
+	return jobs.Backoff(job.Attempts)
+}
 
 func parseQuestPayload(payload []byte) (string, int, error) {
 	if len(payload) == 0 {
@@ -27,7 +36,7 @@ func parseQuestPayload(payload []byte) (string, int, error) {
 	return body.PublicID, body.DesiredRevision, nil
 }
 
-const LaneDiscord = "discord"
+const LaneDiscord = jobs.LaneDiscord
 const KindQuestDiscord = "quest_discord_delivery"
 const KindQuestPlayerList = "quest_player_list"
 
@@ -81,10 +90,10 @@ func (h *Handler) ProcessOne(ctx context.Context) (bool, error) {
 		if errors.Is(err, ErrDiscordEventState) {
 			return true, h.store.Fail(ctx, job.Receipt(), jobs.RepairRequired, err.Error())
 		}
-		if job.Attempts >= jobs.MaxAttempts {
+		if job.Attempts >= job.MaxAttempts() {
 			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, err.Error())
 		}
-		return true, h.store.Retry(ctx, job.Receipt(), jobs.Backoff(job.Attempts), err.Error())
+		return true, h.store.Retry(ctx, job.Receipt(), discordRetryDelay(job, err), err.Error())
 	}
 	if err := h.store.Succeed(ctx, job.Receipt()); err != nil {
 		return true, err
@@ -123,10 +132,10 @@ func (h *Handler) processPlayerList(ctx context.Context, job jobs.Job) (bool, er
 		if errors.Is(err, ErrPlayerListTooLong) || errors.Is(err, ErrBadPayload) {
 			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, err.Error())
 		}
-		if job.Attempts >= jobs.MaxAttempts {
+		if job.Attempts >= job.MaxAttempts() {
 			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, err.Error())
 		}
-		return true, h.store.Retry(ctx, job.Receipt(), jobs.Backoff(job.Attempts), err.Error())
+		return true, h.store.Retry(ctx, job.Receipt(), discordRetryDelay(job, err), err.Error())
 	}
 	payload := []byte(`{}`)
 	if messageID != "" {

@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -424,7 +426,7 @@ func (s *syncRun) call(ctx context.Context, method, path string, payload any) ([
 	defer func() { _ = response.Body.Close() }()
 	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
 	if response.StatusCode >= 300 {
-		return nil, discordAPIStatusError(response.StatusCode, raw)
+		return nil, discordAPIStatusError(response.StatusCode, response.Header, raw)
 	}
 	return raw, nil
 }
@@ -440,12 +442,48 @@ func (r RESTSync) syncDryRun(ctx context.Context, questID string, revision int) 
 	return nil
 }
 
-func discordAPIStatusError(status int, raw []byte) error {
+func discordAPIStatusError(status int, header http.Header, raw []byte) error {
 	snippet := strings.TrimSpace(string(raw))
 	if len(snippet) > 200 {
 		snippet = snippet[:200]
 	}
-	return &DiscordAPIError{Status: status, Snippet: snippet}
+	err := &DiscordAPIError{Status: status, Snippet: snippet}
+	if status == http.StatusTooManyRequests {
+		err.RetryAfter = parseDiscordRetryAfter(header, raw)
+	}
+	return err
+}
+
+func parseDiscordRetryAfter(header http.Header, raw []byte) time.Duration {
+	if secs, ok := positiveRetrySeconds(strings.TrimSpace(header.Get("Retry-After"))); ok {
+		return retryAfterDuration(secs)
+	}
+	var body struct {
+		RetryAfter float64 `json:"retry_after"`
+	}
+	if json.Unmarshal(raw, &body) != nil || !finitePositive(body.RetryAfter) {
+		return 0
+	}
+	return retryAfterDuration(body.RetryAfter)
+}
+
+func positiveRetrySeconds(raw string) (float64, bool) {
+	secs, err := strconv.ParseFloat(raw, 64)
+	if err != nil || !finitePositive(secs) {
+		return 0, false
+	}
+	return secs, true
+}
+
+func finitePositive(secs float64) bool {
+	return secs > 0 && !math.IsInf(secs, 0) && !math.IsNaN(secs)
+}
+
+func retryAfterDuration(secs float64) time.Duration {
+	if secs > 300 {
+		secs = 300
+	}
+	return time.Duration(math.Ceil(secs * float64(time.Second)))
 }
 
 // RecordingSync is a test fake that records sync calls.

@@ -86,6 +86,8 @@ type fakeDiscord struct {
 	fail  func(discordCall) bool
 	// failStatus is the status a failed call answers with; zero means 400.
 	failStatus    int
+	failHeader    http.Header
+	failBody      string
 	eventResponse string
 	client        *http.Client
 }
@@ -102,7 +104,7 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 		_ = json.Unmarshal(raw, &call.Body)
 		f.mu.Lock()
 		f.calls = append(f.calls, call)
-		fail, status := f.fail, f.failStatus
+		fail, status, failHeader, failBody := f.fail, f.failStatus, f.failHeader, f.failBody
 		f.mu.Unlock()
 		if r.Header.Get("Authorization") != "Bot tok" {
 			t.Errorf("authorization=%q", r.Header.Get("Authorization"))
@@ -117,8 +119,17 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 			if status == 0 {
 				status = http.StatusBadRequest
 			}
+			for key, values := range failHeader {
+				for _, value := range values {
+					w.Header().Add(key, value)
+				}
+			}
 			w.WriteHeader(status)
-			_, _ = w.Write([]byte(`{"message":"boom"}`))
+			body := failBody
+			if body == "" {
+				body = `{"message":"boom"}`
+			}
+			_, _ = w.Write([]byte(body))
 			return
 		}
 		switch {
