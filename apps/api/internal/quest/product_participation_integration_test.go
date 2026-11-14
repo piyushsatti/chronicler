@@ -5,6 +5,8 @@ package quest
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -348,5 +350,109 @@ func TestFrontendQuestWithdrawalReplansBoundedRosterDrift(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestFrontendQuestAttestBatchAndErrors(t *testing.T) {
+	for _, n := range []int{1, 5} {
+		t.Run(fmt.Sprintf("%d", n), func(t *testing.T) {
+			f := newQuestCloseFixture(t)
+			ctx := context.Background()
+			ids := seedCloseRoster(t, f, n)
+			entries := make([]ParticipationAttestationFields, 0, n)
+			for i, id := range ids {
+				status := "played"
+				if i%2 == 1 {
+					status = "no_show"
+				}
+				entries = append(entries, ParticipationAttestationFields{CharacterId: id, Status: status})
+			}
+			views, err := f.commands.AttestQuestParticipation(ctx, f.actor, AttestQuestParticipationSpec{QuestId: f.questID, Entries: entries}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+			if err != nil || len(views) != n {
+				t.Fatalf("attest=%+v err=%v", views, err)
+			}
+			for i, view := range views {
+				if view.CharacterId != entries[i].CharacterId || view.Status != entries[i].Status || !view.Manual {
+					t.Fatalf("view[%d]=%+v want %+v", i, view, entries[i])
+				}
+			}
+			var played, noShow int
+			if err := f.fixture.Pool.QueryRow(ctx, `SELECT
+				(SELECT count(*) FROM quest_participants p JOIN quests q ON q.id=p.quest_id WHERE q.public_id=$1 AND p.status='played' AND p.manual),
+				(SELECT count(*) FROM quest_participants p JOIN quests q ON q.id=p.quest_id WHERE q.public_id=$1 AND p.status='no_show' AND p.manual)
+			`, f.questID).Scan(&played, &noShow); err != nil {
+				t.Fatal(err)
+			}
+			wantNoShow := n / 2
+			if played != n-wantNoShow || noShow != wantNoShow {
+				t.Fatalf("played=%d no_show=%d n=%d", played, noShow, n)
+			}
+		})
+	}
+}
+
+func TestFrontendQuestAttestMissingAndSoftDeletedNotFound(t *testing.T) {
+	f := newQuestCloseFixture(t)
+	ctx := context.Background()
+	before := f.snapshot(t)
+	_, err := f.commands.AttestQuestParticipation(ctx, f.actor, AttestQuestParticipationSpec{
+		QuestId: f.questID,
+		Entries: []ParticipationAttestationFields{{CharacterId: uuid.NewString(), Status: "played"}},
+	}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+	assertQuestCloseCode(t, err, apierr.NotFound)
+	if f.snapshot(t) != before {
+		t.Fatal("missing attest changed state")
+	}
+	if _, err := f.fixture.Pool.Exec(ctx, `UPDATE characters SET deleted_at=now() WHERE public_id=$1`, f.characterID); err != nil {
+		t.Fatal(err)
+	}
+	before = f.snapshot(t)
+	_, err = f.commands.AttestQuestParticipation(ctx, f.actor, AttestQuestParticipationSpec{
+		QuestId: f.questID,
+		Entries: []ParticipationAttestationFields{{CharacterId: f.characterID, Status: "played"}},
+	}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+	assertQuestCloseCode(t, err, apierr.NotFound)
+	if f.snapshot(t) != before {
+		t.Fatal("soft-deleted attest changed state")
+	}
+}
+
+func TestFrontendQuestAttestRejectsDuplicateCharacter(t *testing.T) {
+	f := newQuestCloseFixture(t)
+	before := f.snapshot(t)
+	_, err := f.commands.AttestQuestParticipation(context.Background(), f.actor, AttestQuestParticipationSpec{
+		QuestId: f.questID,
+		Entries: []ParticipationAttestationFields{
+			{CharacterId: f.characterID, Status: "played"},
+			{CharacterId: f.characterID, Status: "no_show"},
+		},
+	}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+	assertQuestCloseCode(t, err, apierr.Invalid)
+	if f.snapshot(t) != before {
+		t.Fatal("duplicate attest changed state")
+	}
+}
+
+func TestFrontendQuestAttestPropagatesUpdateError(t *testing.T) {
+	f := newQuestCloseFixture(t)
+	ctx := context.Background()
+	if _, err := f.fixture.Pool.Exec(ctx, `CREATE FUNCTION fail_attest_update() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN RAISE EXCEPTION 'injected attest failure';END$$;
+		CREATE TRIGGER fail_attest_update BEFORE UPDATE ON quest_participants FOR EACH ROW EXECUTE FUNCTION fail_attest_update()`); err != nil {
+		t.Fatal(err)
+	}
+	before := f.snapshot(t)
+	_, err := f.commands.AttestQuestParticipation(ctx, f.actor, AttestQuestParticipationSpec{
+		QuestId: f.questID,
+		Entries: []ParticipationAttestationFields{{CharacterId: f.characterID, Status: "played"}},
+	}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+	if err == nil {
+		t.Fatal("injected failure succeeded")
+	}
+	var expected *apierr.Error
+	if errors.As(err, &expected) && expected.Code == apierr.NotFound {
+		t.Fatalf("update error mapped to NotFound: %v", err)
+	}
+	if f.snapshot(t) != before {
+		t.Fatal("attest update failure changed state")
 	}
 }
