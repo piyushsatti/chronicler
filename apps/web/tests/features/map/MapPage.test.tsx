@@ -33,7 +33,9 @@ import member from '../../fixtures/wire/me/good.json';
 beforeEach(() => localStorage.setItem(MAP_ROUTES_STORAGE_KEY, 'true'));
 
 function token(actor = 'A') {
-  return `${btoa('{}')}.${btoa(JSON.stringify({ sub: actor, exp: 4102444800 }))}.test`;
+  const member_id =
+    actor === 'B' ? 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' : member.id;
+  return `${btoa('{}')}.${btoa(JSON.stringify({ sub: actor, member_id, exp: 4102444800 }))}.test`;
 }
 function session() {
   localStorage.setItem(TOKEN_KEY, token());

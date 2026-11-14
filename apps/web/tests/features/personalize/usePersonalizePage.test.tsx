@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
@@ -85,7 +85,10 @@ describe('usePersonalizePage', () => {
       }),
     );
     const { result } = renderHook(
-      () => ({ page: usePersonalizePage(), auth: useAuth() }),
+      () => {
+        const [local, setLocal] = useState('clean');
+        return { page: usePersonalizePage(), auth: useAuth(), local, setLocal };
+      },
       { wrapper },
     );
     await waitFor(() => expect(result.current.page.personalization.isSuccess).toBe(true));
@@ -95,9 +98,12 @@ describe('usePersonalizePage', () => {
     await waitFor(() =>
       expect(result.current.page.settingsMutation.isSuccess).toBe(true),
     );
+    act(() => result.current.setLocal('stale'));
+    expect(result.current.local).toBe('stale');
     act(() => {
       result.current.auth.storeToken(seedToken('other-member'));
     });
+    expect(result.current.local).toBe('clean');
     expect(result.current.page.settingsMutation.isSuccess).toBe(false);
     expect(result.current.page.settingsMutation.isError).toBe(false);
     expect(result.current.page.settingsMutation.data).toBeUndefined();

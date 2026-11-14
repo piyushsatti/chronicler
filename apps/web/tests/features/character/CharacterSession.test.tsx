@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { graphql, HttpResponse } from 'msw';
 import { AuthProvider, useAuth } from '../../../src/auth/AuthContext.js';
 import { createTestQueryClient } from '../../../src/providers.js';
@@ -32,6 +32,7 @@ function setup() {
   }
   const hook = renderHook(
     () => {
+      const [local, setLocal] = useState('clean');
       const auth = useAuth();
       const creation = useCharacterCreation();
       const activity = useCharacterActivity(character.id);
@@ -43,6 +44,8 @@ function setup() {
         activity,
         owner,
         location,
+        local,
+        setLocal,
         execute(kind: 'create' | 'activity' | 'owner') {
           if (kind === 'create') creation.create.mutate({ name: 'One owned PC' });
           else if (kind === 'activity')
@@ -258,7 +261,14 @@ describe('Character session remount', () => {
         HttpResponse.json({ data: { memberMe: other } }),
       ),
     );
-    act(() => result.current.auth.storeToken(characterToken('character-second')));
+    act(() => result.current.setLocal('stale'));
+    expect(result.current.local).toBe('stale');
+    act(() =>
+      result.current.auth.storeToken(
+        characterToken('character-second', Date.now() + 3600000, other.id),
+      ),
+    );
+    expect(result.current.local).toBe('clean');
     expect(result.current.feedback('create')).toEqual({ error: null, success: false });
     expect(result.current.feedback('owner')).toEqual({ error: null, success: false });
     await ready(client, other.id);

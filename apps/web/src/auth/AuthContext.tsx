@@ -352,11 +352,12 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
   );
 
   // No query observer mounts until the initial cache boundary has completed.
-  // Key by authenticated identity so signed-in hooks remount on login switch
-  // instead of resetting in an effect. Logout keeps the key so unrelated local
-  // state under the provider is not remounted.
-  const sessionKeyRef = useRef(token ?? 'guest');
-  if (token !== null) sessionKeyRef.current = token;
+  // Key by member id so signed-in hooks remount on account switch, while D52
+  // idempotency state survives a same-member token refresh. Logout keeps the
+  // key so unrelated local state under the provider is not remounted.
+  // login.Parse rejects empty member_id, so signed-in tokens always carry it.
+  const sessionKeyRef = useRef(value.memberId ?? 'guest');
+  if (value.memberId !== null) sessionKeyRef.current = value.memberId;
   return createElement(
     AuthContext.Provider,
     { value },

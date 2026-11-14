@@ -231,7 +231,11 @@ describe('Profile session admission', () => {
     server.use(
       graphql.query('MemberMe', () => HttpResponse.json({ data: { memberMe: other } })),
     );
-    act(() => result.current.auth.storeToken(profileToken('profile-second')));
+    act(() =>
+      result.current.auth.storeToken(
+        profileToken('profile-second', Date.now() + 3600000, other.id),
+      ),
+    );
     expect(result.current.local).toBe('clean');
     expect(result.current.actions.message).toBeNull();
     expect(result.current.actions.error).toBeNull();

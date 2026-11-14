@@ -258,8 +258,10 @@ describe('hex state', () => {
   });
 });
 
+const otherMemberId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 function nodeToken(sub: string) {
-  return `${btoa('{}')}.${btoa(JSON.stringify({ sub, exp: 4102444800 }))}.test`;
+  const member_id = sub === 'hex-b' ? otherMemberId : member.id;
+  return `${btoa('{}')}.${btoa(JSON.stringify({ sub, member_id, exp: 4102444800 }))}.test`;
 }
 
 describe('useNodeState session', () => {
@@ -288,7 +290,7 @@ describe('useNodeState session', () => {
             memberMe: {
               ...member,
               id: request.headers.get('authorization')?.includes(nodeToken('hex-b'))
-                ? 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+                ? otherMemberId
                 : member.id,
               roles: ['admin', 'player'],
             },

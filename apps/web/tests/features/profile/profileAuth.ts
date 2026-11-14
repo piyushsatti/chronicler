@@ -10,9 +10,14 @@ export const profileActor = {
 export function profileToken(
   subject = 'profile-first',
   expires = Date.now() + 3600000,
+  memberId = profileActor.id,
 ) {
   return `${btoa(JSON.stringify({ alg: 'none' }))}.${btoa(
-    JSON.stringify({ sub: subject, exp: Math.floor(expires / 1000) }),
+    JSON.stringify({
+      sub: subject,
+      member_id: memberId,
+      exp: Math.floor(expires / 1000),
+    }),
   )}.test`;
 }
 export function signInProfile() {

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRef } from 'react';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { useAuth } from '../../../context/AuthContext.js';
 import {
@@ -21,6 +22,7 @@ export function usePersonalizePage() {
   const queryClient = useQueryClient();
   const { token, memberId, isCurrentSession } = useAuth();
   const personalization = usePersonalization();
+  const attemptToken = useRef<string | null>(null);
 
   const settingsMutation = useMutation({
     mutationFn: async (patch: Parameters<typeof updateMySettings>[0]) => ({
@@ -28,6 +30,9 @@ export function usePersonalizePage() {
       sessionToken: token,
       account: memberId,
     }),
+    onMutate: () => {
+      attemptToken.current = token;
+    },
     onSuccess: (result) => {
       if (!isCurrentSession(result.sessionToken)) return;
       queryClient.setQueryData(
@@ -37,8 +42,25 @@ export function usePersonalizePage() {
     },
   });
 
+  const live = isCurrentSession(attemptToken.current);
+
   const retryLoading = (): void => {
     void personalization.refetch();
   };
-  return { personalization, settingsMutation, retryLoading };
+  return {
+    personalization,
+    settingsMutation: {
+      ...settingsMutation,
+      isPending: live && settingsMutation.isPending,
+      isSuccess: live && settingsMutation.isSuccess,
+      isError: live && settingsMutation.isError,
+      error: live ? settingsMutation.error : null,
+      data: live ? settingsMutation.data : undefined,
+      reset: () => {
+        attemptToken.current = null;
+        settingsMutation.reset();
+      },
+    },
+    retryLoading,
+  };
 }
