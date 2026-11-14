@@ -14,7 +14,7 @@ The bot calls the API over the internal network. In production, public traffic r
 
 | Mechanism                                                          | Location                                                                                                                     | Status                                         |
 | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Activity and heartbeat bodies match `DiscordEvent` and `Heartbeat` | [ingest.test.ts](/apps/discord/tests/unit/interface/ingest.test.ts) against [openapi.yaml](/packages/contracts/openapi.yaml) | **enforced**                                   |
+| Activity and heartbeat bodies match `DiscordEvent` and `Heartbeat` | [ingest.test.ts](/apps/discord/tests/unit/interface/ingest.test.ts) against [openapi.yaml](/packages/contracts/openapi.yaml); API rejects invalid bodies in [ingest.go](/apps/api/internal/ingest/ingest.go) | **enforced**                                   |
 | Public ingest rejection at the edge                                | Cloudflare WAF custom rule on the production API hostname, set up per the [runbook](/deploy/docs/deploy-runbook.md)          | **not enforced** by the repository; unverified |
 | Production machine-secret minimum                                  | `TestValidateProductionRequiresStrongMachineSecrets` in [config tests](/apps/api/internal/platform/config/validate_test.go)  | **enforced**                                   |
 
