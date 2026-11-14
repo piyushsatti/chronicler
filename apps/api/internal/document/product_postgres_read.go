@@ -485,6 +485,9 @@ func (p *ProductPostgres) readDocumentsByIDs(ctx context.Context, scope ViewerSc
 		ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
 		DocumentIds: uuids,
 	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, nil
+	}
 	if err != nil {
 		return nil, err
 	}
