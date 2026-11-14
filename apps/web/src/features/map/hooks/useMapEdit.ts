@@ -1,8 +1,8 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { TransportError } from '../../../errors/types.js';
 import { toAppError } from '../../../errors/toAppError.js';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type { MapAtlasView, MapNode, MapRegion } from '../adapters/mapAdapter.js';
 import {
   mapWriteError,
@@ -39,6 +39,10 @@ export function suggestMapAddress(name: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 64);
 }
+
+type SaveInput = { data: FormData; regionId?: string | null };
+type SaveResult = { atlasCode?: string; nodeId?: string; regionId?: string | null };
+
 export function useMapEdit({
   edit,
   onClose,
@@ -68,27 +72,31 @@ export function useMapEdit({
               : null,
         ],
   );
-  const current = useRef({ token, scopeKey, identity, admit });
-  current.current = { token, scopeKey, identity, admit };
-  const mounted = useRef(true);
+  const current = useRef({ token, scopeKey, identity, admit, open: true });
+  current.current = { token, scopeKey, identity, admit, open: current.current.open };
   useLayoutEffect(() => {
-    mounted.current = true;
+    current.current.open = true;
     return () => {
-      mounted.current = false;
+      current.current.open = false;
     };
   }, []);
+  const onSavedRef = useRef(onSaved);
+  const onCloseRef = useRef(onClose);
+  const onDeniedRef = useRef(onDenied);
+  onSavedRef.current = onSaved;
+  onCloseRef.current = onClose;
+  onDeniedRef.current = onDenied;
   const isCurrent = () =>
-    mounted.current &&
+    current.current.open &&
     token !== null &&
     isCurrentSession(token) &&
     current.current.token === token &&
     current.current.scopeKey === scopeKey &&
     current.current.identity === identity;
-  const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [offset, setOffset] = useState(0);
-  const busy = useRef(false);
+  const [busy, setBusy] = useState(false);
   const replay = useRef({ payload: '', key: crypto.randomUUID() });
   const locations = useQuery({
     queryKey: queryKeys.mapLocations(search, offset),
@@ -102,28 +110,14 @@ export function useMapEdit({
     },
     enabled: edit.kind === 'link' && isCurrent() && admit(),
   });
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy.current || !isCurrent()) return;
-    const data = new FormData(event.currentTarget);
-    const text = (name: string) => String(data.get(name) ?? '').trim();
-    if (
-      (edit.kind === 'create' && !edit.global && !text('regionId')) ||
-      (edit.kind === 'link' && !text('documentId'))
-    ) {
-      setError('Please select an item in the list.');
-      return;
-    }
-    const regionId = edit.kind === 'create' ? text('regionId') || null : undefined;
-    if (!current.current.admit(regionId)) return;
-    const active = () => isCurrent() && current.current.admit(regionId);
-    const payload = JSON.stringify([...data.entries()]);
-    if (replay.current.payload !== payload)
-      replay.current = { payload, key: crypto.randomUUID() };
-    busy.current = true;
-    setPending(true);
-    setError('');
-    try {
+  const save = useMutation({
+    mutationFn: async ({ data, regionId }: SaveInput): Promise<SaveResult> => {
+      if (!isCurrent() || !current.current.admit(regionId))
+        throw toAppError({ failure: 'Unauthorized' }, 'map:session');
+      const text = (name: string) => String(data.get(name) ?? '').trim();
+      const payload = JSON.stringify([...data.entries()]);
+      if (replay.current.payload !== payload)
+        replay.current = { payload, key: crypto.randomUUID() };
       const key = replay.current.key;
       if (edit.kind === 'create') {
         const created = await createMap(
@@ -138,9 +132,9 @@ export function useMapEdit({
           },
           key,
         );
-        if (!active()) return;
-        await onSaved(created.atlasCode);
-      } else if (edit.kind === 'map') {
+        return { atlasCode: created.atlasCode, regionId };
+      }
+      if (edit.kind === 'map') {
         await updateMap(
           edit.map.id,
           {
@@ -151,9 +145,9 @@ export function useMapEdit({
           },
           key,
         );
-        if (!active()) return;
-        await onSaved();
-      } else if (edit.kind === 'node') {
+        return { regionId };
+      }
+      if (edit.kind === 'node') {
         const node = await saveNode(
           edit.map.id,
           {
@@ -165,48 +159,104 @@ export function useMapEdit({
           },
           key,
         );
-        if (!active()) return;
-        await onSaved(undefined, node.id);
-      } else {
-        await changeEntry(
-          {
-            mapId: edit.map.id,
-            nodeId: edit.node.id,
-            documentId: text('documentId'),
-            relation: 'location',
-          },
-          false,
-          key,
-        );
-        if (!active()) return;
-        await onSaved();
+        return { nodeId: node.id, regionId };
       }
-      if (active()) onClose();
-    } catch (cause) {
-      if (!active()) return;
+      await changeEntry(
+        {
+          mapId: edit.map.id,
+          nodeId: edit.node.id,
+          documentId: text('documentId'),
+          relation: 'location',
+        },
+        false,
+        key,
+      );
+      return { regionId };
+    },
+    onError: (cause, input) => {
+      if (!isCurrent() || !current.current.admit(input.regionId)) return;
       if (
         cause instanceof TransportError &&
         (cause.code === 'FORBIDDEN' ||
           cause.code === 'UNAUTHENTICATED' ||
           cause.code === 'UNAUTHORIZED')
       ) {
-        await onDenied(mapWriteError(cause));
-        if (!active()) return;
+        void onDeniedRef.current(mapWriteError(cause)).then(() => {
+          if (!isCurrent() || !current.current.admit(input.regionId)) return;
+          setError(
+            `${mapWriteError(cause)} Your entries are retained. Retry or close and refresh the map.`,
+          );
+        });
+        return;
       }
       setError(
         edit.kind === 'link' && cause instanceof TransportError && cause.code === 'CONFLICT'
           ? 'That Location is already linked here. Pick a different one.'
           : `${mapWriteError(cause)} Your entries are retained. Retry or close and refresh the map.`,
       );
-    } finally {
-      if (isCurrent()) {
-        busy.current = false;
-        setPending(false);
+    },
+  });
+  const handledAt = useRef(0);
+  useEffect(() => {
+    if (!save.isSuccess || !save.data || save.submittedAt === handledAt.current) return;
+    handledAt.current = save.submittedAt;
+    const result = save.data;
+    let cancelled = false;
+    void (async () => {
+      try {
+        if (
+          cancelled ||
+          token === null ||
+          !isCurrentSession(token) ||
+          current.current.token !== token ||
+          !current.current.admit(result.regionId)
+        )
+          return;
+        await onSavedRef.current(result.atlasCode, result.nodeId);
+        if (
+          !cancelled &&
+          token !== null &&
+          isCurrentSession(token) &&
+          current.current.token === token &&
+          current.current.admit(result.regionId)
+        )
+          onCloseRef.current();
+      } finally {
+        if (!cancelled) setBusy(false);
       }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [save.isSuccess, save.data, save.submittedAt, token, isCurrentSession]);
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy || !isCurrent()) return;
+    const data = new FormData(event.currentTarget);
+    const text = (name: string) => String(data.get(name) ?? '').trim();
+    if (
+      (edit.kind === 'create' && !edit.global && !text('regionId')) ||
+      (edit.kind === 'link' && !text('documentId'))
+    ) {
+      setError('Please select an item in the list.');
+      return;
     }
+    const regionId = edit.kind === 'create' ? text('regionId') || null : undefined;
+    if (!current.current.admit(regionId)) return;
+    setError('');
+    setBusy(true);
+    save.mutate(
+      { data, regionId },
+      {
+        onSettled: (_data, error) => {
+          // Success keeps busy until onSaved/onClose finish in the effect above.
+          if (error != null && isCurrent()) setBusy(false);
+        },
+      },
+    );
   }
   return {
-    pending,
+    pending: busy || save.isPending,
     error,
     search,
     setSearch,
@@ -218,7 +268,7 @@ export function useMapEdit({
     },
     submit,
     close: () => {
-      if (isCurrent() && current.current.admit() && !busy.current) onClose();
+      if (isCurrent() && current.current.admit() && !busy) onClose();
     },
   };
 }

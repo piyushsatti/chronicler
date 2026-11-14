@@ -1,4 +1,4 @@
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { useMe } from '../../../hooks/useMe.js';
@@ -65,17 +65,34 @@ export function useMapPage(atlasCode: string) {
   const selectedMap = map.data ?? directoryMaps.find((item) => item.atlasCode === selectedAtlas);
   const region = directory.data?.regions.find((item) => item.id === selectedMap?.regionId);
   const regionDocumentId = region?.documentId ?? '';
-  const current = useRef({ token, actorScope, selectedAtlas, regionDocumentId, map, directory, me });
-  current.current = { token, actorScope, selectedAtlas, regionDocumentId, map, directory, me };
-  const mounted = useRef(true);
+  const current = useRef({
+    token,
+    actorScope,
+    selectedAtlas,
+    regionDocumentId,
+    map,
+    directory,
+    me,
+    open: true,
+  });
+  current.current = {
+    token,
+    actorScope,
+    selectedAtlas,
+    regionDocumentId,
+    map,
+    directory,
+    me,
+    open: current.current.open,
+  };
   useLayoutEffect(() => {
-    mounted.current = true;
+    current.current.open = true;
     return () => {
-      mounted.current = false;
+      current.current.open = false;
     };
   }, []);
   const isCurrentActor = () =>
-    mounted.current &&
+    current.current.open &&
     sessionReady &&
     current.current.token === token &&
     current.current.actorScope === actorScope &&
@@ -120,13 +137,8 @@ export function useMapPage(atlasCode: string) {
     enabled: Boolean(regionDocumentId) && sessionReady,
     retry: false,
   });
-  return {
-    actorScope,
-    authorityScope,
-    isCurrent,
-    admitEdit,
-    refresh: async () => {
-      if (!isCurrent()) return false;
+  const refreshMutation = useMutation({
+    mutationFn: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: ['me'] }),
         client.invalidateQueries({ queryKey: queryKeys.mapDirectory }),
@@ -135,6 +147,16 @@ export function useMapPage(atlasCode: string) {
         client.invalidateQueries({ queryKey: ['mapDocument'] }),
         client.invalidateQueries({ queryKey: queryKeys.map(selectedAtlas) }),
       ]);
+    },
+  });
+  return {
+    actorScope,
+    authorityScope,
+    isCurrent,
+    admitEdit,
+    refresh: async () => {
+      if (!isCurrent()) return false;
+      await refreshMutation.mutateAsync();
       return isCurrent();
     },
     retryDirectory: () => {

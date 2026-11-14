@@ -113,7 +113,7 @@ export function SettingsForm({
   preview?: React.ReactNode;
 }): React.JSX.Element {
   const personalize = section === 'personalize';
-  const { isAuthenticated, token, isCurrentSession } = useAuth();
+  const { isAuthenticated, memberId, isCurrentMember } = useAuth();
   const { prefs, setPreferences } = useTheme();
   const { personalization, settingsMutation, retryLoading } = usePersonalizePage();
   const device = useMemo(deviceTimeZone, []);
@@ -143,10 +143,10 @@ export function SettingsForm({
     if (!isAuthenticated || locked) return;
     const { modeExplicit: _modeExplicit, ...patch } = form;
     const bgEffect = form.bgEffect;
-    const sessionToken = token;
+    const account = memberId;
     settingsMutation.mutate(patch, {
       onSuccess: () => {
-        if (!isCurrentSession(sessionToken)) return;
+        if (!isCurrentMember(account)) return;
         setPreferences({ bgEffect });
       },
     });

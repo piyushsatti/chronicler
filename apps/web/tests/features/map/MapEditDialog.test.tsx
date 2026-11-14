@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { useState } from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { graphql, HttpResponse } from 'msw';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
+import { TransportError } from '../../../src/errors/types.js';
 import { MapEditDialog } from '../../../src/features/map/components/MapEditDialog.js';
 import type { MapEdit } from '../../../src/features/map/hooks/useMapEdit.js';
 import * as adapter from '../../../src/features/map/adapters/mapAdapter.js';
@@ -89,6 +91,97 @@ it('edits a map: shows its current values and saves name, type, group and image'
     { name: 'Renamed map', family: map.family, grid: 'hex', assetPath: null },
     expect.any(String),
   ));
+});
+
+it('closes after a successful save when onSaved re-renders with a new callback identity', async () => {
+  vi.spyOn(adapter, 'updateMap').mockResolvedValue({ id: map.id, atlasCode: map.atlasCode });
+  const onClose = vi.fn();
+  function WarmSave() {
+    const [, bump] = useState(0);
+    return (
+      <MapEditDialog
+        edit={{ kind: 'map', map }}
+        scopeKey="warm"
+        admit={() => true}
+        onClose={onClose}
+        onSaved={async () => {
+          bump((n) => n + 1);
+        }}
+        onDenied={async () => {}}
+      />
+    );
+  }
+  renderWithProviders(<WarmSave />);
+  expect(screen.getByRole('dialog', { name: 'Edit map' })).toBeVisible();
+  fireEvent.submit(form());
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+});
+
+it('keeps Save and Cancel blocked until onSaved finishes', async () => {
+  let finishSaved!: () => void;
+  const onSaved = vi.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        finishSaved = resolve;
+      }),
+  );
+  const onClose = vi.fn();
+  vi.spyOn(adapter, 'updateMap').mockResolvedValue({ id: map.id, atlasCode: map.atlasCode });
+  renderWithProviders(
+    <MapEditDialog
+      edit={{ kind: 'map', map }}
+      scopeKey="pending-reload"
+      admit={() => true}
+      onClose={onClose}
+      onSaved={onSaved}
+      onDenied={async () => {}}
+    />,
+  );
+  fireEvent.submit(form());
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  expect(onClose).not.toHaveBeenCalled();
+  finishSaved();
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());
+});
+
+it('does not call onDenied when a save fails after unmount', async () => {
+  let fail!: (cause: unknown) => void;
+  vi.spyOn(adapter, 'updateMap').mockImplementation(
+    () =>
+      new Promise((_, reject) => {
+        fail = reject;
+      }),
+  );
+  const onDenied = vi.fn(async () => {});
+  const view = renderWithProviders(
+    <MapEditDialog
+      edit={{ kind: 'map', map }}
+      scopeKey="fail-unmount"
+      admit={() => true}
+      onClose={vi.fn()}
+      onSaved={async () => {}}
+      onDenied={onDenied}
+    />,
+  );
+  fireEvent.submit(form());
+  await waitFor(() => expect(fail).toEqual(expect.any(Function)));
+  const errors: unknown[] = [];
+  const error = vi.spyOn(console, 'error').mockImplementation((...args) => {
+    errors.push(args);
+  });
+  view.unmount();
+  fail(new TransportError('FORBIDDEN', { status: 403 }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(onDenied).not.toHaveBeenCalled();
+  expect(
+    errors.filter((args) =>
+      String(args).includes("Can't perform a React state update on a component"),
+    ),
+  ).toEqual([]);
+  error.mockRestore();
 });
 
 it('prefills the position when a location is added from a right-click', () => {

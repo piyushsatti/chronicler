@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { graphql, HttpResponse } from 'msw';
 import { AuthProvider, useAuth } from '../../../src/auth/AuthContext.js';
 import { createTestQueryClient } from '../../../src/providers.js';
@@ -30,7 +30,15 @@ function setup() {
     );
   }
   const hook = renderHook(
-    () => ({ auth: useAuth(), actions: useProfileActions('mira') }),
+    () => {
+      const [local, setLocal] = useState('clean');
+      return {
+        auth: useAuth(),
+        actions: useProfileActions('mira'),
+        local,
+        setLocal,
+      };
+    },
     { wrapper: Wrapper },
   );
   return { ...hook, client };
@@ -199,5 +207,38 @@ describe('Profile session admission', () => {
     act(() => result.current.actions.execute(command));
     await waitFor(() => expect(attempts).toHaveLength(2));
     expect(attempts[0]?.meta).not.toEqual(attempts[1]?.meta);
+  });
+  it('shows no prior profile feedback on the first render after a login switch', async () => {
+    server.use(
+      graphql.mutation('ProfileUpdateMyProfile', () =>
+        HttpResponse.json({
+          data: {
+            updateMyProfile: {
+              id: profileActor.id,
+              displayName: 'Old form fields',
+              avatarUrl: null,
+            },
+          },
+        }),
+      ),
+    );
+    const { result, client } = setup();
+    await ready(client);
+    act(() => result.current.actions.execute(command));
+    await waitFor(() => expect(result.current.actions.message).toBe('Profile saved.'));
+    act(() => result.current.setLocal('stale'));
+    expect(result.current.local).toBe('stale');
+    server.use(
+      graphql.query('MemberMe', () => HttpResponse.json({ data: { memberMe: other } })),
+    );
+    act(() =>
+      result.current.auth.storeToken(
+        profileToken('profile-second', Date.now() + 3600000, other.id),
+      ),
+    );
+    expect(result.current.local).toBe('clean');
+    expect(result.current.actions.message).toBeNull();
+    expect(result.current.actions.error).toBeNull();
+    await ready(client, other.id);
   });
 });

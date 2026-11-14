@@ -106,13 +106,6 @@ export function useEditorPublish({
   const writing = useRef(false);
   const currentAdmission = useRef({ admit, scopeKey });
   currentAdmission.current = { admit, scopeKey };
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
   const replayKeys = useRef(new Map<string, string>());
   const replayKey = (operation: string, input: unknown) => {
     const fingerprint = JSON.stringify([operation, scopeKey, input]);
@@ -506,11 +499,27 @@ export function useEditorPublish({
         writing.current = false;
       }
     },
-    onSuccess: (result, publish) => {
-      if (mounted.current && result.originScope === scopeKey && admit())
-        onSuccess(result, publish !== false);
-    },
   });
+  const handledAt = useRef(0);
+  useEffect(() => {
+    if (
+      !mutation.isSuccess ||
+      !mutation.data ||
+      mutation.submittedAt === handledAt.current
+    )
+      return;
+    handledAt.current = mutation.submittedAt;
+    if (mutation.data.originScope === scopeKey && admit())
+      onSuccess(mutation.data, mutation.variables !== false);
+  }, [
+    mutation.isSuccess,
+    mutation.data,
+    mutation.submittedAt,
+    mutation.variables,
+    scopeKey,
+    admit,
+    onSuccess,
+  ]);
   return {
     ...mutation,
     /** A reset form starts a new quest, which must not reuse the one created before. */
