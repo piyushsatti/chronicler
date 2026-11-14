@@ -89,6 +89,8 @@ services:
     build:
       context: ..
       dockerfile: apps/discord/Dockerfile
+      args:
+        BOT_BUILD_ID: ${BOT_BUILD_ID:-unknown}
     environment:
       BOT_DISCORD_TOKEN: ${BOT_DISCORD_TOKEN:?set BOT_DISCORD_TOKEN}
       GUILD_ID: ${GUILD_ID:?set GUILD_ID}
