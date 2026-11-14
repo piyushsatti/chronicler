@@ -119,13 +119,13 @@ type DraftState = {
   restoredPinned: boolean;
 };
 
-/** Remount key for a draft host. Version is omitted so dirty edits can go stale instead of resetting. */
+/** Remount key for a draft host. Version and canEditBody are omitted so dirty/recovered edits stay stale-locked instead of resetting. */
 export function editorDraftKey(
   typeKey: EditorTypeKey,
   recordId: string,
-  scope: Pick<DraftScope, 'actorId' | 'canEditBody'>,
+  scope: Pick<DraftScope, 'actorId'>,
 ): string {
-  return JSON.stringify([scope.actorId, typeKey, recordId, scope.canEditBody]);
+  return JSON.stringify([scope.actorId, typeKey, recordId]);
 }
 
 export function useEditorDraft(
@@ -181,6 +181,22 @@ export function useEditorDraft(
   if (seenKey !== remountKey) {
     setSeenKey(remountKey);
     setState(makeState());
+  } else if (state.editableBody !== scope.canEditBody) {
+    if (!scope.canEditBody) {
+      const scrubbed = { ...state.values, body: server.body };
+      setState({
+        ...state,
+        editableBody: false,
+        applied: signature,
+        baseline: signature,
+        opened: signature,
+        values: scrubbed,
+        history: [scrubbed],
+        cursor: 0,
+      });
+    } else {
+      setState(makeState());
+    }
   } else if (
     (state.applied !== signature || state.key !== key) &&
     JSON.stringify(state.values) === state.baseline
@@ -188,8 +204,8 @@ export function useEditorDraft(
     setState(makeState());
   }
   useEffect(() => {
-    if (!scope.canEditBody) removeDraft(key);
-  }, [scope.canEditBody, key]);
+    if (!scope.canEditBody) removeDraft(state.key);
+  }, [scope.canEditBody, state.key]);
   const values = withPinned(
     scope.canEditBody ? state.values : { ...state.values, body: server.body },
     pinned,

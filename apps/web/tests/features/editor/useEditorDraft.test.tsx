@@ -205,6 +205,8 @@ it('drops cached body and undo history when body permission is revoked', () => {
   act(() => result.current.setBody('PRIVATE LOCAL CONTENT'));
   rerender({ canEditBody: false });
   expect(result.current.body).toBe('Safe projection');
+  expect(result.current.isDirty).toBe(false);
+  expect(result.current.isTouched).toBe(false);
   expect(localStorage.getItem(draftStorageKey('guide', 'doc', 'actor', 1))).toBeNull();
   act(() => result.current.undo());
   expect(result.current.body).toBe('Safe projection');

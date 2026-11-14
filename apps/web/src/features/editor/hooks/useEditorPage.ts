@@ -215,7 +215,6 @@ export function useEditorPageGate(
     workspace,
     draftKey: editorDraftKey(typeKey, initial.recordId, {
       actorId: auth.memberId,
-      canEditBody: Boolean(enabled && query.isSuccess && initial.canEditBody),
     }),
     denied: access.status === 'forbidden',
   };
