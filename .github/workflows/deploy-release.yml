@@ -35,6 +35,8 @@ name: deploy-release
 #   tunnel: CLOUDFLARE_TUNNEL_TOKEN
 #   Optional secret: PLATFORM_OWNER_DISCORD_ID (set only after the owner has
 #            signed in once; see deploy/docs/deploy-runbook.md)
+#   Optional variables (empty, true, or false; unset keeps today's defaults):
+#            SNIFFER_ENABLED (default off), BOT_HEARTBEAT_ENABLED (default on)
 # Missing required values fail the job before anything is deployed.
 
 on:
@@ -156,6 +158,8 @@ jobs:
       # Compose prefers the shell over the env file, so a DATABASE_URL in the
       # runner's environment would win. Pin it: empty selects the local-db URL.
       DATABASE_URL: ${{ !inputs.local_database && secrets.DATABASE_URL || '' }}
+      SNIFFER_ENABLED: ${{ vars.SNIFFER_ENABLED }}
+      BOT_HEARTBEAT_ENABLED: ${{ vars.BOT_HEARTBEAT_ENABLED }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -227,6 +231,17 @@ jobs:
           if [[ -n "${PLATFORM_OWNER_DISCORD_ID:-}" ]]; then
             write PLATFORM_OWNER_DISCORD_ID
           fi
+          for name in SNIFFER_ENABLED BOT_HEARTBEAT_ENABLED; do
+            value="${!name-}"
+            if [[ -z "$value" ]]; then
+              continue
+            fi
+            if [[ "$value" != true && "$value" != false ]]; then
+              echo "$name must be empty, true, or false" >&2
+              exit 1
+            fi
+            write "$name"
+          done
           if (( ${#missing[@]} )); then
             rm -f "$tmp"
             echo "Missing required $ENVIRONMENT values: ${missing[*]}" >&2
