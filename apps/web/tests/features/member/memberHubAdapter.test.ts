@@ -26,6 +26,18 @@ describe('loadUpcomingSignups', () => {
         },
       };
     });
+    const waitlisted = {
+      questId: '00000000-0000-4000-8000-000000000096',
+      status: 'waitlisted',
+      characterName: 'Queued',
+      quest: {
+        id: '00000000-0000-4000-8000-000000000096',
+        shortCode: 'Q-wait',
+        status: 'open',
+        scheduledAt: '2099-06-01T21:02:00Z',
+        briefDocument: { title: 'Waitlisted quest' },
+      },
+    };
     const omitted = [
       {
         questId: '00000000-0000-4000-8000-000000000099',
@@ -64,11 +76,12 @@ describe('loadUpcomingSignups', () => {
         },
       },
     ];
+    const seats = [...future, waitlisted, ...omitted];
     vi.mocked(graphqlRequest)
       .mockResolvedValueOnce({
         myQuestSignups: {
-          total: 63,
-          items: [...future, ...omitted].map(({ questId, status, characterName }) => ({
+          total: seats.length,
+          items: seats.map(({ questId, status, characterName }) => ({
             questId,
             status,
             characterName,
@@ -77,8 +90,8 @@ describe('loadUpcomingSignups', () => {
       })
       .mockResolvedValueOnce({
         quests: {
-          total: 63,
-          items: [...future.map((row) => row.quest), ...omitted.map((row) => row.quest)],
+          total: seats.length,
+          items: seats.map((row) => row.quest),
         },
       });
 
@@ -90,12 +103,20 @@ describe('loadUpcomingSignups', () => {
       offset: 0,
     });
     expect(vi.mocked(graphqlRequest).mock.calls[1]?.[1]).toEqual({
-      ids: [...future.map((row) => row.questId), omitted[2]!.questId],
+      ids: [
+        ...future.map((row) => row.questId),
+        waitlisted.questId,
+        omitted[2]!.questId,
+      ],
       limit: 100,
       offset: 0,
     });
-    expect(loaded).toHaveLength(60);
-    expect(loaded.map((row) => row.questId)).toEqual(future.map((row) => row.questId));
+    expect(loaded).toHaveLength(61);
+    expect(loaded.map((row) => row.questId)).toEqual([
+      ...future.map((row) => row.questId),
+      waitlisted.questId,
+    ]);
+    expect(loaded.some((row) => row.characterName === 'Queued')).toBe(true);
     expect(loaded.some((row) => row.characterName === 'Gone')).toBe(false);
     expect(loaded.some((row) => row.characterName === 'Missed')).toBe(false);
     expect(loaded.some((row) => row.characterName === 'Past')).toBe(false);
