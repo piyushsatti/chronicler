@@ -116,4 +116,38 @@ describe('discord eslint fetch and secret restrictions', () => {
       httpOn?.messages.some((message) => message.ruleId === 'no-restricted-syntax'),
     ).toBe(true);
   });
+
+  it('reports message.reply outside agent/reply.ts and not inside it', async () => {
+    const eslint = new ESLint({ cwd: repoRoot });
+    const sample = 'void message.reply({ content: "x" });\n';
+
+    const [outside] = await eslint.lintText(sample, {
+      filePath: path.join(repoRoot, 'apps/discord/src/agent/mount.ts'),
+    });
+    expect(
+      outside?.messages.some((message) => message.ruleId === 'no-restricted-syntax'),
+    ).toBe(true);
+
+    const [inside] = await eslint.lintText(sample, {
+      filePath: path.join(repoRoot, 'apps/discord/src/agent/reply.ts'),
+    });
+    expect(
+      inside?.messages.some((message) => message.ruleId === 'no-restricted-syntax'),
+    ).toBe(false);
+
+    const [httpReply] = await eslint.lintText(sample, {
+      filePath: path.join(repoRoot, 'apps/discord/src/api/http.ts'),
+    });
+    expect(
+      httpReply?.messages.some((message) => message.ruleId === 'no-restricted-syntax'),
+    ).toBe(true);
+
+    const [healthReply] = await eslint.lintText(sample, {
+      filePath: path.join(repoRoot, 'apps/discord/src/health.ts'),
+    });
+    expect(
+      healthReply?.messages.some((message) => message.ruleId === 'no-restricted-syntax'),
+    ).toBe(true);
+  });
 });
+

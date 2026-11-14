@@ -207,6 +207,16 @@ export default tseslint.config(
           message:
             'Listen to shard gateway events only in apps/discord/src/health.ts via GatewayState',
         },
+        {
+          selector: "CallExpression[callee.property.name='reply']",
+          message:
+            'Call message.reply only via replyTo in apps/discord/src/agent/reply.ts',
+        },
+        {
+          selector: "CallExpression[callee.property.name='send']",
+          message:
+            'Call channel.send only via replyTo in apps/discord/src/agent/reply.ts',
+        },
       ],
     },
   },
@@ -217,6 +227,29 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/discord/src/agent/reply.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value="X-Ingest-Secret"]',
+          message: 'Set X-Ingest-Secret only in apps/discord/src/api/http.ts',
+        },
+        {
+          selector:
+            'CallExpression[callee.property.name=/^(on|once)$/][arguments.0.value=/^shard/]',
+          message:
+            'Listen to shard gateway events only in apps/discord/src/health.ts via GatewayState',
+        },
+        {
+          selector: 'MemberExpression[object.name="Events"][property.name=/^Shard/]',
+          message:
+            'Listen to shard gateway events only in apps/discord/src/health.ts via GatewayState',
+        },
+      ],
+    },
+  },
+  {
     files: ['apps/discord/src/health.ts'],
     rules: {
       'no-restricted-syntax': [
@@ -224,6 +257,16 @@ export default tseslint.config(
         {
           selector: 'Literal[value="X-Ingest-Secret"]',
           message: 'Set X-Ingest-Secret only in apps/discord/src/api/http.ts',
+        },
+        {
+          selector: "CallExpression[callee.property.name='reply']",
+          message:
+            'Call message.reply only via replyTo in apps/discord/src/agent/reply.ts',
+        },
+        {
+          selector: "CallExpression[callee.property.name='send']",
+          message:
+            'Call channel.send only via replyTo in apps/discord/src/agent/reply.ts',
         },
       ],
     },
@@ -244,6 +287,16 @@ export default tseslint.config(
           selector: 'MemberExpression[object.name="Events"][property.name=/^Shard/]',
           message:
             'Listen to shard gateway events only in apps/discord/src/health.ts via GatewayState',
+        },
+        {
+          selector: "CallExpression[callee.property.name='reply']",
+          message:
+            'Call message.reply only via replyTo in apps/discord/src/agent/reply.ts',
+        },
+        {
+          selector: "CallExpression[callee.property.name='send']",
+          message:
+            'Call channel.send only via replyTo in apps/discord/src/agent/reply.ts',
         },
       ],
     },

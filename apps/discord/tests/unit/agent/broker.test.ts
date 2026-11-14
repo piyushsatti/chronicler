@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseQuestionResult, submitQuestion } from '@discord/agent/broker.js';
+import { parseQuestionResult, runQuestion } from '@discord/agent/broker.js';
 import type { AgentPort } from '@discord/agent/api.js';
 import { renderQuestionResult } from '@discord/agent/render.js';
 import { completedQuestion, jobId, publicOrigin, questionRequest } from '../../fixtures/api.js';
-import { testConfig } from '../../support/config.js';
 
 describe('parseQuestionResult', () => {
   it('accepts a correlated completion with canonical links', () => {
@@ -128,38 +127,63 @@ describe('parseQuestionResult', () => {
   });
 });
 
-describe('submitQuestion failure mapping', () => {
-  const config = testConfig({ agentPublicOrigin: publicOrigin });
+describe('runQuestion failure mapping', () => {
+  const opts = {
+    signal: new AbortController().signal,
+    now: () => 1_000,
+    sleep: async () => undefined,
+    publicOrigin,
+  };
 
-  it('rethrows submit network detail when status is undefined', async () => {
+  it('retries a submit network failure then continues', async () => {
+    let submits = 0;
     const agent: AgentPort = {
-      submit: async () => ({
-        ok: false,
-        kind: 'retryable',
-        detail: 'fetch failed',
+      submit: async () => {
+        submits += 1;
+        if (submits === 1) {
+          return { ok: false, kind: 'retryable', detail: 'fetch failed' };
+        }
+        return { ok: true, status: 202, text: '' };
+      },
+      poll: async () => ({
+        ok: true,
+        status: 200,
+        text: JSON.stringify(completedQuestion()),
       }),
-      poll: async () => ({ ok: true, status: 204, text: '' }),
     };
-    await expect(
-      submitQuestion(config, questionRequest, undefined, { agent }),
-    ).rejects.toThrow('fetch failed');
+    await expect(runQuestion(questionRequest, agent, opts)).resolves.toMatchObject({
+      kind: 'answered',
+    });
+    expect(submits).toBe(2);
   });
 
-  it('rethrows poll network detail when status is undefined', async () => {
+  it('retries a poll network failure then continues', async () => {
+    let polls = 0;
     const agent: AgentPort = {
       submit: async () => ({ ok: true, status: 202, text: '' }),
-      poll: async () => ({
-        ok: false,
-        kind: 'retryable',
-        detail: 'timeout: The operation was aborted due to timeout',
-      }),
+      poll: async () => {
+        polls += 1;
+        if (polls === 1) {
+          return {
+            ok: false,
+            kind: 'retryable',
+            detail: 'timeout: The operation was aborted due to timeout',
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          text: JSON.stringify(completedQuestion()),
+        };
+      },
     };
-    await expect(
-      submitQuestion(config, questionRequest, undefined, { agent }),
-    ).rejects.toThrow('timeout: The operation was aborted due to timeout');
+    await expect(runQuestion(questionRequest, agent, opts)).resolves.toMatchObject({
+      kind: 'answered',
+    });
+    expect(polls).toBe(2);
   });
 
-  it('rethrows poll byte-cap detail on a 200 failure', async () => {
+  it('maps a poll byte-cap failure to invalid_result', async () => {
     const agent: AgentPort = {
       submit: async () => ({ ok: true, status: 202, text: '' }),
       poll: async () => ({
@@ -169,8 +193,9 @@ describe('submitQuestion failure mapping', () => {
         detail: 'response exceeded 65536 bytes',
       }),
     };
-    await expect(
-      submitQuestion(config, questionRequest, undefined, { agent }),
-    ).rejects.toThrow('response exceeded 65536 bytes');
+    await expect(runQuestion(questionRequest, agent, opts)).resolves.toEqual({
+      kind: 'invalid_result',
+      reason: 'response exceeded 65536 bytes',
+    });
   });
 });
