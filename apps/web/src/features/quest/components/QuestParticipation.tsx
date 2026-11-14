@@ -9,6 +9,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import type { QuestDetailView, MyCharacterRef } from '../adapters/questAdapter.js';
 import type { QuestCommand } from '../adapters/questCommands.js';
 import type { AppError } from '../../../errors/types.js';
+import { hasActiveSignup } from '../../../utils/questVocabulary.js';
 import styles from '../pages/questDetail.module.css';
 
 export function QuestParticipation({
@@ -42,8 +43,7 @@ export function QuestParticipation({
   const preplay = quest.machineStatus === 'open' || quest.machineStatus === 'full';
   const own = quest.participants.filter(
     (participant) =>
-      participant.memberId === memberId &&
-      (participant.status === 'signed_up' || participant.status === 'waitlisted'),
+      participant.memberId === memberId && hasActiveSignup(participant.status),
   );
   const eligible = characters.filter(
     (character) =>

@@ -5,7 +5,7 @@ import { toAppError } from '../errors/toAppError.js';
 import { useMemberProfile } from '../hooks/useMemberProfile.js';
 import { useUrlParam } from '../hooks/useUrlParam.js';
 import { ProfileOwnerActions } from '../features/profile/components/ProfileOwnerActions.js';
-import type { MemberViewModel } from '../features/member/adapters/memberAdapter.js';
+import type { MemberViewModel } from '../view-models/member.js';
 
 /**
  * The profile editor (availability form focused) opened on /me by `?edit=availability`.
