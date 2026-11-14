@@ -1163,15 +1163,16 @@ WITH filtered AS (
       AND (NOT $8::boolean OR q.tags && $9::text[])
       AND (NOT $10::boolean OR q.genres && $11::text[])
       AND (cardinality($12::text[]) = 0 OR q.short_code = ANY($12::text[]))
-      AND ($13::timestamptz IS NULL OR q.scheduled_at >= $13::timestamptz)
-      AND ($14::timestamptz IS NULL OR q.scheduled_at < $14::timestamptz)
-      AND ($15::text IS NULL OR q.short_code ILIKE '%' || replace(replace(replace($15::text, E'\\', E'\\\\'), '%', E'\\%'), '_', E'\\_') || '%' ESCAPE E'\\')
+      AND (cardinality($13::uuid[]) = 0 OR q.public_id = ANY($13::uuid[]))
+      AND ($14::timestamptz IS NULL OR q.scheduled_at >= $14::timestamptz)
+      AND ($15::timestamptz IS NULL OR q.scheduled_at < $15::timestamptz)
+      AND ($16::text IS NULL OR q.short_code ILIKE '%' || replace(replace(replace($16::text, E'\\', E'\\\\'), '%', E'\\%'), '_', E'\\_') || '%' ESCAPE E'\\')
 ), counted AS (
     SELECT count(*)::bigint AS total FROM filtered
 ), page AS (
     SELECT id, public_id, short_code, kinds, status, display_status, dm_id, dm_public_id, arc_id, arc_public_id, scheduled_at, duration_hours, slots_max, filled_count, document_id, document_public_id, tags, genres, apl, signup_type, discord_desired_revision, discord_applied_revision, discord_message_id, discord_event_id, event_url, created_by, created_by_public_id, created_at, updated_at, closed_at, deleted_at, deleted_by_public_id FROM filtered
     ORDER BY scheduled_at ASC, public_id ASC
-    LIMIT $17::integer OFFSET $16::integer
+    LIMIT $18::integer OFFSET $17::integer
 )
 SELECT counted.total, page.id, page.public_id, page.short_code, page.kinds,
        page.status, page.display_status, page.dm_public_id, page.arc_public_id,
@@ -1198,6 +1199,7 @@ type ProductQuestListPageParams struct {
 	GenreFilterSet bool               `json:"genre_filter_set"`
 	GenreVariants  []string           `json:"genre_variants"`
 	ShortCodes     []string           `json:"short_codes"`
+	Ids            []pgtype.UUID      `json:"ids"`
 	ScheduledFrom  pgtype.Timestamptz `json:"scheduled_from"`
 	ScheduledTo    pgtype.Timestamptz `json:"scheduled_to"`
 	Search         pgtype.Text        `json:"search"`
@@ -1253,6 +1255,7 @@ func (q *Queries) ProductQuestListPage(ctx context.Context, arg ProductQuestList
 		arg.GenreFilterSet,
 		arg.GenreVariants,
 		arg.ShortCodes,
+		arg.Ids,
 		arg.ScheduledFrom,
 		arg.ScheduledTo,
 		arg.Search,
@@ -1439,12 +1442,13 @@ WITH filtered AS (
     WHERE m.public_id = $2::uuid
       AND qp.status <> 'withdrawn'
       AND q.deleted_at IS NULL
+      AND ($3::timestamptz IS NULL OR q.scheduled_at >= $3::timestamptz)
 ), counted AS (
     SELECT count(*)::bigint AS total FROM filtered
 ), page AS (
     SELECT quest_id, member_id, character_id, character_name, member_handle, member_display_name, member_avatar_url, status, manual, created_at, updated_at, scheduled_at, short_code, display_status FROM filtered
     ORDER BY scheduled_at ASC, quest_id ASC, character_id ASC
-    LIMIT $4::integer OFFSET $3::integer
+    LIMIT $5::integer OFFSET $4::integer
 )
 SELECT counted.total, page.quest_id, page.member_id, page.character_id,
        page.character_name, page.member_handle, page.member_display_name,
@@ -1456,10 +1460,11 @@ ORDER BY page.scheduled_at ASC NULLS LAST, page.quest_id ASC NULLS LAST,
 `
 
 type ProductQuestMySignupsPageParams struct {
-	AsOf      pgtype.Timestamptz `json:"as_of"`
-	MemberID  pgtype.UUID        `json:"member_id"`
-	RowOffset int32              `json:"row_offset"`
-	RowLimit  int32              `json:"row_limit"`
+	AsOf          pgtype.Timestamptz `json:"as_of"`
+	MemberID      pgtype.UUID        `json:"member_id"`
+	ScheduledFrom pgtype.Timestamptz `json:"scheduled_from"`
+	RowOffset     int32              `json:"row_offset"`
+	RowLimit      int32              `json:"row_limit"`
 }
 
 type ProductQuestMySignupsPageRow struct {
@@ -1484,6 +1489,7 @@ func (q *Queries) ProductQuestMySignupsPage(ctx context.Context, arg ProductQues
 	rows, err := q.db.Query(ctx, productQuestMySignupsPage,
 		arg.AsOf,
 		arg.MemberID,
+		arg.ScheduledFrom,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
