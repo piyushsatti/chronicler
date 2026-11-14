@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import { testConfig } from '../support/config.js';
 
 const close = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const disposeHealth = vi.hoisted(() => vi.fn());
@@ -11,13 +12,6 @@ const { client, mountShardHealth } = vi.hoisted(() => ({
   mountShardHealth: vi.fn(() => disposeHealth),
 }));
 
-vi.mock('@discord/config.js', () => ({
-  config: {
-    token: 'test-token',
-    heartbeatEnabled: true,
-    snifferEnabled: false,
-  },
-}));
 vi.mock('@discord/client.js', () => ({ createClient: () => client }));
 vi.mock('@discord/activity/mount.js', () => ({ mountActivity: vi.fn() }));
 vi.mock('@discord/agent/mount.js', () => ({
@@ -29,8 +23,9 @@ vi.mock('@discord/log.js', () => ({ logger: { info: vi.fn() } }));
 import { start } from '@discord/session.js';
 
 it('logs in with heartbeat enabled and returns stop', async () => {
-  const session = await start();
-  expect(mountShardHealth).toHaveBeenCalledWith(client, {
+  const config = testConfig({ token: 'test-token', heartbeatEnabled: true });
+  const session = await start({ config, installSignalHandlers: false });
+  expect(mountShardHealth).toHaveBeenCalledWith(client, config, {
     heartbeatEnabled: true,
     exitOnTerminal: true,
     exit: undefined,

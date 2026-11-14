@@ -5,18 +5,23 @@ import {
   type ServerResponse,
 } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it } from 'vitest';
+import { postDiscordEvent } from '@discord/activity/forward.js';
+import { submitQuestion } from '@discord/agent/broker.js';
+import { postHeartbeat } from '@discord/health.js';
 import {
   completedQuestion,
   jobId,
   messageEvent,
   questionRequest,
 } from '../fixtures/api.js';
+import { testConfig } from '../support/config.js';
 
 type Handler = (request: IncomingMessage, response: ServerResponse) => void;
 
 let server: Server;
 let baseUrl = '';
+let config = testConfig();
 let handler: Handler = (_request, response) => {
   response.writeHead(404);
   response.end();
@@ -24,7 +29,6 @@ let handler: Handler = (_request, response) => {
 let requestCount = 0;
 
 beforeEach(async () => {
-  vi.resetModules();
   requestCount = 0;
   server = createServer((request, response) => {
     requestCount += 1;
@@ -35,12 +39,13 @@ beforeEach(async () => {
   });
   const address = server.address() as AddressInfo;
   baseUrl = `http://127.0.0.1:${address.port}`;
-  vi.stubEnv('API_URL', baseUrl);
-  vi.stubEnv('AGENT_PUBLIC_ORIGIN', 'https://chronicler.example');
+  config = testConfig({
+    apiUrl: baseUrl,
+    agentPublicOrigin: 'https://chronicler.example',
+  });
 });
 
 afterEach(async () => {
-  vi.unstubAllEnvs();
   await new Promise<void>((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   });
@@ -53,8 +58,7 @@ it('posts an activity event to ingest once on 200', async () => {
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ status: 'applied' }));
   };
-  const { postDiscordEvent } = await import('@discord/activity/forward.js');
-  await expect(postDiscordEvent(messageEvent)).resolves.toBeUndefined();
+  await expect(postDiscordEvent(config, messageEvent)).resolves.toBeUndefined();
   expect(requestCount).toBe(1);
 });
 
@@ -63,8 +67,7 @@ it('rejects an activity 500 with one request', async () => {
     response.writeHead(500);
     response.end('boom');
   };
-  const { postDiscordEvent } = await import('@discord/activity/forward.js');
-  await expect(postDiscordEvent(messageEvent)).rejects.toThrow(/500/);
+  await expect(postDiscordEvent(config, messageEvent)).rejects.toThrow(/500/);
   expect(requestCount).toBe(1);
 });
 
@@ -72,8 +75,7 @@ it('rejects a closed activity connection with one request', async () => {
   handler = (request) => {
     request.socket.destroy();
   };
-  const { postDiscordEvent } = await import('@discord/activity/forward.js');
-  await expect(postDiscordEvent(messageEvent)).rejects.toThrow();
+  await expect(postDiscordEvent(config, messageEvent)).rejects.toThrow();
   expect(requestCount).toBe(1);
 });
 
@@ -99,8 +101,7 @@ it('polls a question through 202 then completed', async () => {
     response.writeHead(404);
     response.end();
   };
-  const { submitQuestion } = await import('@discord/agent/broker.js');
-  await expect(submitQuestion(questionRequest)).resolves.toMatchObject({
+  await expect(submitQuestion(config, questionRequest)).resolves.toMatchObject({
     type: 'question.completed',
     job_id: jobId,
     answer: 'A Shove can push a target.',
@@ -130,8 +131,7 @@ it('resolves a question.failed body as a finished result', async () => {
     response.writeHead(404);
     response.end();
   };
-  const { submitQuestion } = await import('@discord/agent/broker.js');
-  await expect(submitQuestion(questionRequest)).resolves.toMatchObject({
+  await expect(submitQuestion(config, questionRequest)).resolves.toMatchObject({
     type: 'question.failed',
     message: 'No evidence.',
   });
@@ -152,9 +152,8 @@ it('aborts a pending question poll before the deadline', async () => {
     response.writeHead(404);
     response.end();
   };
-  const { submitQuestion } = await import('@discord/agent/broker.js');
   const controller = new AbortController();
-  const pending = submitQuestion(questionRequest, controller.signal);
+  const pending = submitQuestion(config, questionRequest, controller.signal);
   await new Promise((resolve) => setTimeout(resolve, 50));
   controller.abort();
   await expect(pending).rejects.toThrow();
@@ -167,7 +166,6 @@ it('swallows a heartbeat 500 without throwing', async () => {
     response.writeHead(500);
     response.end('down');
   };
-  const { postHeartbeat } = await import('@discord/health.js');
-  await expect(postHeartbeat()).resolves.toBeUndefined();
+  await expect(postHeartbeat(config)).resolves.toBeUndefined();
   expect(requestCount).toBe(1);
 });
