@@ -27,4 +27,4 @@ Tests: `tests/unit/activity/mount.test.ts`, `normalize.test.ts`, `forward.test.t
 
 ## Configuration
 
-Required when the sniffer is on: `GUILD_ID`, `INGEST_SECRET`, `API_URL`, `BOT_API_ALLOWED_ORIGIN`, and `BOT_DISCORD_TOKEN` (or `DISCORD_TOKEN`). `SNIFFER_ENABLED` defaults off. `BOT_ALLOW_INSECURE_API_URL=true` permits an `http` origin outside tests.
+Required when the sniffer is on: `GUILD_ID`, `INGEST_SECRET`, `API_URL`, `BOT_API_ALLOWED_ORIGIN`, and `BOT_DISCORD_TOKEN`. `SNIFFER_ENABLED` defaults off. `BOT_ALLOW_INSECURE_API_URL=true` permits an `http` origin outside tests.
