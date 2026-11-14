@@ -63,7 +63,7 @@ func newAuthorityDBFixture(t *testing.T) *authorityDBFixture {
 		},
 		mux: http.NewServeMux(),
 	}
-	f.runtime = app.Wire(context.Background(), f.cfg)
+	f.runtime = wireForTest(context.Background(), f.cfg)
 	if f.runtime.Pool == nil || f.runtime.Authority == nil || f.runtime.Members == nil {
 		t.Fatal("Wire did not select Postgres member authority")
 	}
