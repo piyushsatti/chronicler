@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -17,8 +18,12 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/workerrun"
 )
 
+func newDefaultLogger(w io.Writer) *slog.Logger {
+	return slog.New(httpserver.ContextHandler(slog.NewJSONHandler(w, nil)))
+}
+
 func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	slog.SetDefault(newDefaultLogger(os.Stdout))
 	if len(os.Args) > 1 {
 		os.Exit(runSubcommand(os.Args[1:], os.Stdout, os.Stderr))
 	}
@@ -93,6 +98,7 @@ func newServer(cfg config.Config, h http.Handler) *http.Server {
 func apiHandler(mux http.Handler, cfg config.Config, authority auth.AuthorityResolver) http.Handler {
 	return httpserver.Chain(
 		mux,
+		httpserver.RequestID,
 		httpserver.Recover,
 		httpserver.RequestLog,
 		func(next http.Handler) http.Handler {
@@ -101,7 +107,16 @@ func apiHandler(mux http.Handler, cfg config.Config, authority auth.AuthorityRes
 		httpserver.MaxBody(1<<20, "/v1/"),
 		httpserver.Deadline(15*time.Second, "/v1/graphql"),
 		func(next http.Handler) http.Handler {
-			return auth.LiveMiddleware(login.Parser(cfg.JWTSecret), authority, next)
+			parse := login.Parser(cfg.JWTSecret)
+			live := auth.LiveMiddleware(parse, authority, next)
+			identity := auth.Middleware(parse, next)
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodPost && r.URL.Path == "/v1/graphql" {
+					identity.ServeHTTP(w, r)
+					return
+				}
+				live.ServeHTTP(w, r)
+			})
 		},
 	)
 }

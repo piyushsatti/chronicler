@@ -3,7 +3,7 @@
  */
 
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
-import { config } from './config.js';
+import type { BotConfig } from './config.js';
 
 /**
  * Create a discord.js Client with the intents required by activity and the
@@ -15,7 +15,7 @@ import { config } from './config.js';
  *    fed was vestigial and has been deleted).
  *  - GuildModeration: zero consumers (fed the deleted audit-log handler).
  */
-export function createClient(): Client {
+export function createClient(config: BotConfig): Client {
   const intents = [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,

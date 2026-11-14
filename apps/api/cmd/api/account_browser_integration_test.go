@@ -317,7 +317,7 @@ func TestAccountBrowserRetainedJourneys(t *testing.T) {
 	}
 	inventory := map[string]any{"database": fixture.databaseName, "actors": actorIDs, "characters": characters, "regionId": regionID, "backstoryId": backstoryID, "catalog": catalog, "table": map[string]string{"id": tableID, "slug": "account-fixture-table"}, "briefId": briefID, "quest": map[string]string{"id": questID, "shortCode": "ACCOUNTQUEST"}, "mirrorAt": mirrorAt, "initialRows": initial, "historicalSourceIds": historicalIDs, "historicalFixtureNotBrowserCommands": true}
 	write("native-inventory.json", inventory)
-	runtime := app.Wire(ctx, cfg)
+	runtime := wireForTest(ctx, cfg)
 	if runtime.Pool != nil {
 		closeRuntime = runtime.Pool.Close
 	}

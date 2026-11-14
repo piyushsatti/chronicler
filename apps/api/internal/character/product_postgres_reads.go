@@ -245,7 +245,9 @@ func (p *ProductPostgres) ReadCharacterSummaries(ctx context.Context, actor auth
 		}
 		var policyTokens []string
 		if len(row.Policy) > 0 {
-			_ = json.Unmarshal(row.Policy, &policyTokens)
+			if err := json.Unmarshal(row.Policy, &policyTokens); err != nil {
+				return document.DocumentListResult{}, err
+			}
 		}
 		var fm json.RawMessage
 		if row.FrontmatterYaml.Valid {

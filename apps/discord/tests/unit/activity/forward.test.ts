@@ -1,4 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  deliverActivity,
+  postDiscordEvent,
+  resetActivityInFlightForTests,
+} from '@discord/activity/forward.js';
+import { testConfig } from '../../support/config.js';
+
+const config = testConfig({
+  apiUrl: 'http://api:8000',
+  ingestSecret: 'test-ingest-secret',
+});
 
 function fakeEvent(overrides: Record<string, unknown> = {}) {
   return {
@@ -15,10 +26,6 @@ function fakeEvent(overrides: Record<string, unknown> = {}) {
 describe('postDiscordEvent', () => {
   const originalFetch = globalThis.fetch;
 
-  beforeEach(() => {
-    vi.resetModules();
-  });
-
   afterEach(() => {
     globalThis.fetch = originalFetch;
   });
@@ -27,8 +34,7 @@ describe('postDiscordEvent', () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const { postDiscordEvent } = await import('@discord/activity/forward.js');
-    await postDiscordEvent(fakeEvent());
+    await postDiscordEvent(config, fakeEvent());
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -46,8 +52,7 @@ describe('postDiscordEvent', () => {
         new Response('unknown_kind', { status: 422 }),
       ) as unknown as typeof fetch;
 
-    const { postDiscordEvent } = await import('@discord/activity/forward.js');
-    await expect(postDiscordEvent(fakeEvent())).rejects.toThrow(/422/);
+    await expect(postDiscordEvent(config, fakeEvent())).rejects.toThrow(/422/);
   });
 
   it('throws one Error on a 401 response', async () => {
@@ -57,8 +62,7 @@ describe('postDiscordEvent', () => {
         new Response('unauthorized', { status: 401 }),
       ) as unknown as typeof fetch;
 
-    const { postDiscordEvent } = await import('@discord/activity/forward.js');
-    await expect(postDiscordEvent(fakeEvent())).rejects.toThrow(/401/);
+    await expect(postDiscordEvent(config, fakeEvent())).rejects.toThrow(/401/);
   });
 
   it('throws one Error on a 500 response', async () => {
@@ -68,8 +72,7 @@ describe('postDiscordEvent', () => {
         new Response('boom', { status: 500 }),
       ) as unknown as typeof fetch;
 
-    const { postDiscordEvent } = await import('@discord/activity/forward.js');
-    await expect(postDiscordEvent(fakeEvent())).rejects.toThrow(/500/);
+    await expect(postDiscordEvent(config, fakeEvent())).rejects.toThrow(/500/);
   });
 
   it('propagates a network failure as one Error', async () => {
@@ -77,20 +80,16 @@ describe('postDiscordEvent', () => {
       .fn()
       .mockRejectedValue(new TypeError('fetch failed')) as unknown as typeof fetch;
 
-    const { postDiscordEvent } = await import('@discord/activity/forward.js');
-    await expect(postDiscordEvent(fakeEvent())).rejects.toThrow('fetch failed');
+    await expect(postDiscordEvent(config, fakeEvent())).rejects.toThrow('fetch failed');
   });
 });
 
 describe('deliverActivity', () => {
   const originalFetch = globalThis.fetch;
 
-  beforeEach(() => {
-    vi.resetModules();
-  });
-
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    resetActivityInFlightForTests();
   });
 
   it('logs once and does not throw on 500, 401, 429, and network failure', async () => {
@@ -106,11 +105,9 @@ describe('deliverActivity', () => {
       globalThis.fetch = vi
         .fn()
         .mockResolvedValue(new Response(body, { status })) as unknown as typeof fetch;
-      const { deliverActivity, resetActivityInFlightForTests } =
-        await import('@discord/activity/forward.js');
       resetActivityInFlightForTests();
       expect(() =>
-        deliverActivity(fakeEvent({ event_id: `msg-${status}` })),
+        deliverActivity(config, fakeEvent({ event_id: `msg-${status}` })),
       ).not.toThrow();
       await vi.waitFor(() => expect(errorSpy).toHaveBeenCalledTimes(1));
       expect(errorSpy.mock.calls[0]?.[0]).toBe('Activity post failed');
@@ -120,10 +117,10 @@ describe('deliverActivity', () => {
     globalThis.fetch = vi
       .fn()
       .mockRejectedValue(new TypeError('fetch failed')) as unknown as typeof fetch;
-    const { deliverActivity, resetActivityInFlightForTests } =
-      await import('@discord/activity/forward.js');
     resetActivityInFlightForTests();
-    expect(() => deliverActivity(fakeEvent({ event_id: 'msg-net' }))).not.toThrow();
+    expect(() =>
+      deliverActivity(config, fakeEvent({ event_id: 'msg-net' })),
+    ).not.toThrow();
     await vi.waitFor(() => expect(errorSpy).toHaveBeenCalledTimes(1));
     expect(errorSpy.mock.calls[0]?.[0]).toBe('Activity post failed');
     errorSpy.mockRestore();
@@ -141,13 +138,11 @@ describe('deliverActivity', () => {
       return new Response(null, { status: 200 });
     }) as unknown as typeof fetch;
 
-    const { deliverActivity, resetActivityInFlightForTests } =
-      await import('@discord/activity/forward.js');
     resetActivityInFlightForTests();
     for (let i = 0; i < 8; i += 1) {
-      deliverActivity(fakeEvent({ event_id: `held-${i}` }));
+      deliverActivity(config, fakeEvent({ event_id: `held-${i}` }));
     }
-    deliverActivity(fakeEvent({ event_id: 'shed-9' }));
+    deliverActivity(config, fakeEvent({ event_id: 'shed-9' }));
 
     expect(errorSpy).toHaveBeenCalledWith(
       'Activity post shed',

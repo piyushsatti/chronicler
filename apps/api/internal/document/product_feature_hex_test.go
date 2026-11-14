@@ -2,7 +2,16 @@ package document
 
 import (
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+func TestFrontmatterFromYAMLMalformed(t *testing.T) {
+	_, err := frontmatterFromYAML(pgtype.Text{String: "hex: [unterminated", Valid: true})
+	if err == nil {
+		t.Fatal("want unmarshal error for malformed YAML")
+	}
+}
 
 func TestFeatureHexFromFields(t *testing.T) {
 	feature, lore := "Feature", "Lore"

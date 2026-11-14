@@ -7452,6 +7452,15 @@
           "owner": "QUE01"
         },
         {
+          "name": "Ids",
+          "wire_name": "ids",
+          "go_type": "[]string",
+          "wire_type": "[ID!]",
+          "resolver_args": [],
+          "kind": "INPUT_OBJECT",
+          "owner": "QUE01"
+        },
+        {
           "name": "Kind",
           "wire_name": "kind",
           "go_type": "*string",
@@ -12483,6 +12492,14 @@
       "name": "MyQuestSignupsSpec",
       "package": "quest",
       "fields": [
+        {
+          "name": "ScheduledFrom",
+          "wire_name": "scheduledFrom",
+          "go_type": "*time.Time",
+          "sdl_type": "DateTime",
+          "default": "null",
+          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
+        },
         {
           "name": "Limit",
           "wire_name": "limit",

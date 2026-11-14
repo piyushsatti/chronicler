@@ -2567,7 +2567,7 @@ func (r *queryResolver) QuestGenreOptions(ctx context.Context) ([]string, error)
 }
 
 // MyQuestSignups is the resolver for the myQuestSignups field.
-func (r *queryResolver) MyQuestSignups(ctx context.Context, limit int, offset int) (*ParticipationPage, error) {
+func (r *queryResolver) MyQuestSignups(ctx context.Context, scheduledFrom *time.Time, limit int, offset int) (*ParticipationPage, error) {
 	if r.Services.QuestQueries == nil {
 		return nil, fmt.Errorf("quest queries unavailable")
 	}
@@ -2576,8 +2576,9 @@ func (r *queryResolver) MyQuestSignups(ctx context.Context, limit int, offset in
 		return nil, err
 	}
 	page, err := r.Services.QuestQueries.MyQuestSignups(ctx, actor, quest.MyQuestSignupsSpec{
-		Limit:  int32(limit),
-		Offset: int32(offset),
+		ScheduledFrom: scheduledFrom,
+		Limit:         int32(limit),
+		Offset:        int32(offset),
 	})
 	if err != nil {
 		return nil, err

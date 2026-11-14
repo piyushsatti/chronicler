@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +14,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/login"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/config"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/httpserver"
 )
 
 const testOrigin = "https://app.example.test"
@@ -26,6 +29,27 @@ func chainTestConfigAndToken(t *testing.T) (config.Config, string) {
 		t.Fatal(err)
 	}
 	return cfg, token
+}
+
+func TestProductionChainGraphQLUsesIdentityMiddleware(t *testing.T) {
+	cfg, token := chainTestConfigAndToken(t)
+	called := false
+	h := apiHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusNoContent)
+	}), cfg, func(context.Context, string) (auth.Authority, error) {
+		return auth.NewAuthority("member", nil, "inactive", "")
+	})
+	r := httptest.NewRequest(http.MethodPost, "/v1/graphql", nil)
+	r.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if !called || w.Code != http.StatusNoContent {
+		t.Fatalf("called=%v status=%d body=%s", called, w.Code, w.Body)
+	}
+	if got := w.Header().Get("Content-Type"); got == "application/problem+json" {
+		t.Fatalf("content type=%q", got)
+	}
 }
 
 func TestProductionChainAuthorityFailuresKeepCORS(t *testing.T) {
@@ -138,4 +162,84 @@ func TestProductionChainGraphQLHasDeadline(t *testing.T) {
 	if otherHas {
 		t.Fatal("non-graphql path has deadline")
 	}
+}
+
+func TestDefaultLoggerAddsRequestIDFromContext(t *testing.T) {
+	const wantID = "default-logger-req-1"
+	var logs bytes.Buffer
+	logger := newDefaultLogger(&logs)
+
+	var ctx context.Context
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("X-Request-Id", wantID)
+	httpserver.RequestID(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
+		ctx = req.Context()
+	})).ServeHTTP(httptest.NewRecorder(), r)
+
+	logger.InfoContext(ctx, "probe")
+	if got := chainLogRequestID(t, logs.Bytes(), "probe"); got != wantID {
+		t.Fatalf("request_id=%q logs=%s", got, logs.String())
+	}
+}
+
+func TestProductionChainRequestIDBeforeRecoverAndRequestLog(t *testing.T) {
+	const wantID = "chain-request-id-1"
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(newDefaultLogger(&logs))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	cfg, token := chainTestConfigAndToken(t)
+	live, err := auth.NewAuthority("member", []auth.Role{auth.Admin}, "active", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority := func(context.Context, string) (auth.Authority, error) { return live, nil }
+
+	panicHandler := apiHandler(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { panic("chain boom") }), cfg, authority)
+	r := httptest.NewRequest(http.MethodGet, "/v1/documents/private", nil)
+	r.Header.Set("Authorization", "Bearer "+token)
+	r.Header.Set("X-Request-Id", wantID)
+	w := httptest.NewRecorder()
+	panicHandler.ServeHTTP(w, r)
+	if got := w.Header().Get("X-Request-Id"); got != wantID {
+		t.Fatalf("X-Request-Id=%q", got)
+	}
+	if got := chainLogRequestID(t, logs.Bytes(), "panic"); got != wantID {
+		t.Fatalf("panic request_id=%q logs=%s", got, logs.String())
+	}
+
+	logs.Reset()
+	okHandler := apiHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}), cfg, authority)
+	r = httptest.NewRequest(http.MethodGet, "/v1/documents/private", nil)
+	r.Header.Set("Authorization", "Bearer "+token)
+	r.Header.Set("X-Request-Id", wantID)
+	w = httptest.NewRecorder()
+	okHandler.ServeHTTP(w, r)
+	if got := chainLogRequestID(t, logs.Bytes(), "request"); got != wantID {
+		t.Fatalf("request request_id=%q logs=%s", got, logs.String())
+	}
+}
+
+func chainLogRequestID(t *testing.T, raw []byte, msg string) string {
+	t.Helper()
+	for _, line := range bytes.Split(raw, []byte("\n")) {
+		if len(line) == 0 {
+			continue
+		}
+		var entry struct {
+			Msg       string `json:"msg"`
+			RequestID string `json:"request_id"`
+		}
+		if err := json.Unmarshal(line, &entry); err != nil {
+			t.Fatalf("unmarshal %s: %v", line, err)
+		}
+		if entry.Msg == msg {
+			return entry.RequestID
+		}
+	}
+	t.Fatalf("missing %q log in %s", msg, raw)
+	return ""
 }
