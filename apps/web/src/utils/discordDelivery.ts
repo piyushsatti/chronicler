@@ -40,6 +40,8 @@ const DISCORD_RATE_LIMIT_REASON = 'Discord is limiting how fast posts are sent';
 const DISCORD_UNAVAILABLE_REASON = 'Discord was unavailable';
 const DISCORD_NOT_CONFIGURED_REASON = 'Discord posting is not set up for this community';
 const DISCORD_UNREACHABLE_REASON = 'Discord could not be reached';
+const DISCORD_THREAD_MISSING_REASON =
+  'The quest discussion thread was never opened, so the player list cannot be posted';
 
 /** Shown when the failure text is not one of the known shapes. */
 export const DISCORD_GENERIC_REASON = 'Discord rejected the post';
@@ -57,6 +59,7 @@ const DISCORD_SAFE_ERROR_REASONS = new Map<string, string>([
   ['DISCORD_UNAVAILABLE', DISCORD_UNAVAILABLE_REASON],
   ['DISCORD_NOT_CONFIGURED', DISCORD_NOT_CONFIGURED_REASON],
   ['DISCORD_UNREACHABLE', DISCORD_UNREACHABLE_REASON],
+  ['DISCORD_THREAD_MISSING', DISCORD_THREAD_MISSING_REASON],
   ['DISCORD_REJECTED', DISCORD_GENERIC_REASON],
 ]);
 

@@ -13,7 +13,7 @@ import (
 func TestActiveAlertsExcludeQuestionFailuresAndKeepActionableJobs(t *testing.T) {
 	f := dbtest.NewProductFixture(t)
 	ctx := context.Background()
-	if _, err := f.Pool.Exec(ctx, `INSERT INTO bot_heartbeats(received_at) VALUES(clock_timestamp())`); err != nil {
+	if _, err := f.Pool.Exec(ctx, `INSERT INTO bot_heartbeats(payload,received_at) VALUES('{"gateway_ready":true}',clock_timestamp())`); err != nil {
 		t.Fatal(err)
 	}
 	want := map[string]bool{}

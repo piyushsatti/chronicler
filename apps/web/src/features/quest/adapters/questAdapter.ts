@@ -29,8 +29,7 @@ import {
   discordFailureReason,
   isDiscordDeliveryTerminal,
 } from '../../../utils/discordDelivery.js';
-
-const SEATED = new Set(['signed_up', 'played', 'selected']);
+import { hasSeat } from '../../../utils/questVocabulary.js';
 
 export type DiscordDeliveryView = {
   desiredRevision: number;
@@ -220,7 +219,7 @@ export function mapToBoardCardProps(
   quest: QuestBoardItemView,
   timeZone: string | null = null,
 ): QuestBoardCardPropsView {
-  const seated = quest.participants.filter((p) => SEATED.has(p.status));
+  const seated = quest.participants.filter((p) => hasSeat(p.status));
   return {
     code: quest.shortCode,
     title: quest.title,
