@@ -21,8 +21,8 @@ import PUBLISH_DOCUMENT from './publishDocument.graphql?raw';
 import EDIT_PUBLISHED from './editPublishedDocument.graphql?raw';
 import PREVIEW_BODY from './previewBody.graphql?raw';
 
-function commandMeta(idempotencyKey?: string): { idempotencyKey: string } {
-  return { idempotencyKey: idempotencyKey ?? crypto.randomUUID() };
+function commandMeta(idempotencyKey: string): { idempotencyKey: string } {
+  return { idempotencyKey };
 }
 
 const questResultSchema = z.object({
@@ -138,7 +138,7 @@ export function parseDocumentMutationResult(
 /** field-routing: createQuest → GraphQL Mutation.createQuest */
 export async function createQuest(
   input: QuestEditorInput,
-  idempotencyKey?: string,
+  idempotencyKey: string,
 ): Promise<EditorPublishResult> {
   try {
     const data = await graphqlRequest<CreateQuestMutation>(CREATE_QUEST, {
@@ -176,7 +176,7 @@ export async function updateQuest(
   questId: string,
   input: Partial<QuestEditorInput> & { title?: string; briefBody?: string },
   expectedUpdatedAt: string,
-  idempotencyKey?: string,
+  idempotencyKey: string,
 ): Promise<EditorPublishResult> {
   try {
     const data = await graphqlRequest<UpdateQuestMutation>(UPDATE_QUEST, {
@@ -216,7 +216,7 @@ export async function updateQuest(
 /** field-routing: createDocument → GraphQL Mutation.createDocument */
 export async function createDocument(
   input: DocumentEditorInput,
-  idempotencyKey?: string,
+  idempotencyKey: string,
 ): Promise<EditorPublishResult> {
   try {
     const data = await graphqlRequest<CreateDocumentMutation>(CREATE_DOCUMENT, {
@@ -254,7 +254,7 @@ export async function createDocument(
 export async function updateDocument(
   documentId: string,
   input: Partial<DocumentEditorInput> & { expectedRevision: number },
-  idempotencyKey?: string,
+  idempotencyKey: string,
 ): Promise<EditorPublishResult> {
   try {
     const data = await graphqlRequest<UpdateDocumentMutation>(UPDATE_DOCUMENT, {
@@ -292,7 +292,7 @@ export async function updateDocument(
 export async function publishDocument(
   documentId: string,
   expectedRevision: number,
-  idempotencyKey?: string,
+  idempotencyKey: string,
 ): Promise<EditorPublishResult> {
   try {
     const data = await graphqlRequest<PublishDocumentMutation>(PUBLISH_DOCUMENT, {
@@ -375,7 +375,7 @@ export async function editPublishedDocument(
     frontmatter?: Record<string, unknown>;
     expectedRevision: number;
   },
-  idempotencyKey?: string,
+  idempotencyKey: string,
 ): Promise<EditorPublishResult> {
   try {
     const data = await graphqlRequest<EditPublishedDocumentMutation>(EDIT_PUBLISHED, {

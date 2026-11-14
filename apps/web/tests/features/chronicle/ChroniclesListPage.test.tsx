@@ -36,16 +36,41 @@ describe('ChroniclesListPage', () => {
     expect((await screen.findAllByText('Session recap')).length).toBeGreaterThan(0);
     expect(screen.getByRole('group', { name: 'Chronicle date range' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'All', pressed: true })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Player summaries', pressed: true })).toBeVisible();
     expect(screen.getByText('Vault Delve — Session recap')).toBeInTheDocument();
+    expect(screen.queryByText("Ash's table notes")).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Read entry: Vault Delve — Session recap' })).toHaveAttribute(
       'href',
       '/chronicles/vault-delve-summary',
     );
     expect(screen.getByRole('button', { name: 'Search entries' })).toBeInTheDocument();
-    expect(screen.getByText('2 entries')).toBeInTheDocument();
+    expect(screen.getByText('1 entry')).toBeInTheDocument();
     expect(screen.getByText('Not yet dated')).toBeInTheDocument();
     expect(screen.queryByText('DMs only')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'New entry' })).not.toBeInTheDocument();
+  });
+
+  it('toggles between player and DM summary views', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ChroniclesListPage />);
+    expect(await screen.findByText('Vault Delve — Session recap')).toBeVisible();
+    expect(screen.queryByText("Ash's table notes")).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Player summaries', pressed: true })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'DM summaries', pressed: false })).toBeVisible();
+    const toolbar = screen.getByRole('region', { name: 'Filter chronicles' });
+    const audience = within(toolbar).getByRole('toolbar', { name: 'Chronicle summary author' });
+    expect([...audience.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
+      'Player summaries',
+      'DM summaries',
+    ]);
+    await user.click(screen.getByRole('button', { name: 'DM summaries' }));
+    expect(screen.getByRole('button', { name: 'DM summaries', pressed: true })).toBeVisible();
+    expect(screen.getByText("Ash's table notes")).toBeVisible();
+    expect(screen.queryByText('Vault Delve — Session recap')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Player summaries' }));
+    expect(screen.getByRole('button', { name: 'Player summaries', pressed: true })).toBeVisible();
+    expect(screen.getByText('Vault Delve — Session recap')).toBeVisible();
+    expect(screen.queryByText("Ash's table notes")).not.toBeInTheDocument();
   });
 
   it('uses the shared toolbar with the same segment size and spacing as Codex and Rules (owner item 8)', async () => {
@@ -80,7 +105,9 @@ describe('ChroniclesListPage', () => {
     );
     renderWithProviders(<ChroniclesListPage />);
     expect(await screen.findByText('Dev (@mira)')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'DM summaries' }));
     expect(screen.getByText('Dev (@ash)')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Player summaries' }));
     await user.type(await openSearch(user), 'mira');
     expect(screen.getByText('Vault Delve — Session recap')).toBeVisible();
     expect(screen.queryByText("Ash's table notes")).not.toBeInTheDocument();
@@ -93,6 +120,9 @@ describe('ChroniclesListPage', () => {
     await screen.findByText('Vault Delve — Session recap');
     await user.type(await openSearch(user), 'table notes');
     expect(screen.queryByText('Vault Delve — Session recap')).not.toBeInTheDocument();
+    expect(screen.queryByText("Ash's table notes")).not.toBeInTheDocument();
+    expect(screen.getByText('No entries match this view.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'DM summaries' }));
     expect(screen.getByText("Ash's table notes")).toBeInTheDocument();
   });
 
@@ -220,8 +250,11 @@ describe('ChroniclesListPage', () => {
       ),
     );
     renderWithProviders(<ChroniclesListPage />);
-    expect(await screen.findByText('Private session recap')).toBeVisible();
-    expect(screen.getByRole('group', { name: 'Entry types' })).toBeVisible();
+    expect(await screen.findByText('Public session recap')).toBeVisible();
+    expect(screen.queryByText('Private session recap')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'DM summaries' }));
+    expect(screen.getByText('Private session recap')).toBeVisible();
+    expect(screen.queryByRole('group', { name: 'Entry types' })).not.toBeInTheDocument();
     expect(screen.getByText('DMs only')).toBeVisible();
     const privateCard = screen.getByRole('heading', { name: 'Private session recap' }).closest('article');
     expect(privateCard).not.toBeNull();
@@ -232,7 +265,7 @@ describe('ChroniclesListPage', () => {
     expect(within(publicDm as HTMLElement).getByText('DM recap')).toBeVisible();
     expect(within(publicDm as HTMLElement).queryByText('DMs only')).not.toBeInTheDocument();
     await user.type(await openSearch(user), 'Private session recap');
-    expect(screen.queryByRole('group', { name: 'Entry types' })).not.toBeInTheDocument();
+    expect(screen.queryByText("Ash's table notes")).not.toBeInTheDocument();
   });
 
   it('offers a new entry to a DM only once the DM profile is approved', async () => {
@@ -342,7 +375,7 @@ describe('ChroniclesListPage', () => {
       ),
     );
     renderWithProviders(<ChroniclesListPage />);
-    expect(await screen.findByText('2 entries')).toBeInTheDocument();
+    expect(await screen.findByText('1 entry')).toBeInTheDocument();
     expect(screen.getByText('Not yet dated')).toBeInTheDocument();
   });
   it('groups newest publication dates first and places undated entries last', async () => {

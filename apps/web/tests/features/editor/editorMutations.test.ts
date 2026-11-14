@@ -24,12 +24,15 @@ describe('editorMutations parsers', () => {
       }),
     );
     await expect(
-      createDocument({
-        kind: 'codex_entry',
-        category: 'Lore',
-        title: 'A new story',
-        body: 'A body',
-      }),
+      createDocument(
+        {
+          kind: 'codex_entry',
+          category: 'Lore',
+          title: 'A new story',
+          body: 'A body',
+        },
+        '11111111-1111-4111-8111-111111111111',
+      ),
     ).resolves.toMatchObject({ redirectPath: '/codex/a-new-story', version: 1 });
   });
 

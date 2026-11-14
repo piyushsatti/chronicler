@@ -6,10 +6,11 @@ import { graphql, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { queryKeys } from '../../../src/api/queryKeys.js';
 import { createTestQueryClient } from '../../../src/providers.js';
-import { AuthProvider } from '../../../src/auth/AuthContext.js';
+import { AuthProvider, useAuth } from '../../../src/auth/AuthContext.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { server } from '../../../src/mocks/server.js';
 import { useQuestMutations } from '../../../src/features/quest/hooks/useQuestMutations.js';
+import goodMe from '../../fixtures/wire/me/good.json';
 
 const questId = '00000000-0000-4000-8000-000000000001';
 const characterId = '00000000-0000-4000-8000-000000000002';
@@ -22,9 +23,19 @@ function setup() {
       </MemoryRouter>
     </QueryClientProvider>
   );
+  const hook = renderHook(
+    () => ({
+      mutations: useQuestMutations('Q-1', questId),
+      auth: useAuth(),
+    }),
+    { wrapper },
+  );
+  act(() => {
+    client.setQueryData(queryKeys.me, { ...goodMe, roles: ['player'] });
+  });
   return {
     client,
-    ...renderHook(() => useQuestMutations('Q-1', questId), { wrapper }),
+    ...hook,
   };
 }
 function token() {
@@ -53,11 +64,20 @@ describe('Quest command replay guard', () => {
       }),
     );
     const { result, unmount, client } = setup();
+    await waitFor(() => expect(result.current.auth.sessionReady).toBe(true));
     let first: Promise<boolean> = Promise.resolve(false);
     await act(async () => {
-      first = result.current.execute({ kind: 'signup', questId, characterId });
+      first = result.current.mutations.execute({
+        kind: 'signup',
+        questId,
+        characterId,
+      });
       expect(
-        await result.current.execute({ kind: 'signup', questId, characterId }),
+        await result.current.mutations.execute({
+          kind: 'signup',
+          questId,
+          characterId,
+        }),
       ).toBe(false);
     });
     await waitFor(() => expect(keys).toHaveLength(1));
@@ -67,17 +87,22 @@ describe('Quest command replay guard', () => {
     });
     await act(async () => {
       expect(
-        await result.current.execute({ kind: 'signup', questId, characterId }),
+        await result.current.mutations.execute({
+          kind: 'signup',
+          questId,
+          characterId,
+        }),
       ).toBe(true);
     });
     expect(keys).toHaveLength(2);
     expect(keys[1]).toBe(keys[0]);
-    expect(result.current.message).toBe('You joined the waitlist.');
+    expect(result.current.mutations.message).toBe('You joined the waitlist.');
     unmount();
     client.clear();
   });
   it('invalidates every retained list and summary after closure while preserving unrelated cache', async () => {
     const { client, result, unmount } = setup();
+    await waitFor(() => expect(result.current.auth.sessionReady).toBe(true));
     const keys = [
       queryKeys.quest('Q-1'),
       queryKeys.questSummary('Q-1'),
@@ -91,7 +116,7 @@ describe('Quest command replay guard', () => {
     for (const key of [...keys, unrelated]) client.setQueryData(key, []);
     await act(async () => {
       expect(
-        await result.current.execute({
+        await result.current.mutations.execute({
           kind: 'close',
           questId,
           attendance: [],
