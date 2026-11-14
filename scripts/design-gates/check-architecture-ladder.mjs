@@ -310,6 +310,13 @@ export function scanSource(
     )
       add(node, 'no-generated-wire-in-view', 'dynamic generated-wire import');
     const info = callInfo(node.expression);
+    if (
+      file !== 'src/hooks/useFencedMutation.ts' &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.name.text === 'randomUUID' &&
+      unwrap(node.expression.expression)?.getText(sf) === 'crypto'
+    )
+      add(node, 'idempotency-key-origin', 'crypto.randomUUID');
     if (QUERY_KEY_OPTION_CALLS.has(info.name) && node.arguments[0])
       flagInlineQueryKey(queryKeyFromObjectArg(node.arguments[0]));
     if (QUERY_KEY_ARG_CALLS.has(info.name) && node.arguments[0])
@@ -423,26 +430,50 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       });
       originBudget.set(k, (originBudget.get(k) ?? 0) + 1);
     }
+    const keyOriginBudget = new Map();
+    for (const entry of allowlist.idempotencyKeyOrigin ?? []) {
+      const k = originKeyOf({
+        file: entry.file,
+        rule: entry.rule ?? 'idempotency-key-origin',
+        detail: entry.value ?? entry.detail,
+      });
+      keyOriginBudget.set(k, (keyOriginBudget.get(k) ?? 0) + 1);
+    }
     const ladderHits = [];
     const unlistedOrigin = [];
+    const unlistedKeyOrigin = [];
     for (const hit of hits) {
-      if (hit.rule !== 'query-key-origin') {
-        ladderHits.push(hit);
+      if (hit.rule === 'query-key-origin') {
+        const k = originKeyOf(hit);
+        const left = originBudget.get(k) ?? 0;
+        if (left > 0) originBudget.set(k, left - 1);
+        else unlistedOrigin.push(hit);
         continue;
       }
-      const k = originKeyOf(hit);
-      const left = originBudget.get(k) ?? 0;
-      if (left > 0) originBudget.set(k, left - 1);
-      else unlistedOrigin.push(hit);
+      if (hit.rule === 'idempotency-key-origin') {
+        const k = originKeyOf(hit);
+        const left = keyOriginBudget.get(k) ?? 0;
+        if (left > 0) keyOriginBudget.set(k, left - 1);
+        else unlistedKeyOrigin.push(hit);
+        continue;
+      }
+      ladderHits.push(hit);
     }
     const staleOrigin = [...originBudget]
       .filter(([, n]) => n > 0)
       .map(([k, n]) => `${k}${n > 1 ? ` (x${n})` : ''}`);
-    for (const hit of [...ladderHits, ...unlistedOrigin])
+    const staleKeyOrigin = [...keyOriginBudget]
+      .filter(([, n]) => n > 0)
+      .map(([k, n]) => `${k}${n > 1 ? ` (x${n})` : ''}`);
+    for (const hit of [...ladderHits, ...unlistedOrigin, ...unlistedKeyOrigin])
       console.error(`  ${hit.file}:${hit.line} [${hit.rule}] ${hit.detail}`);
     for (const s of staleOrigin)
       console.warn(
         `check:architecture-ladder stale queryKeyOrigin entry (remove it): ${s}`,
+      );
+    for (const s of staleKeyOrigin)
+      console.warn(
+        `check:architecture-ladder stale idempotencyKeyOrigin entry (remove it): ${s}`,
       );
     if (ladderHits.length)
       console.error(
@@ -452,11 +483,25 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       console.error(
         `check:architecture-ladder FAILED — ${unlistedOrigin.length} query-key-origin hit(s) not in queryKeyOrigin allowlist.`,
       );
-    if (!ladderHits.length && !unlistedOrigin.length && !exceptions.length)
+    if (unlistedKeyOrigin.length)
+      console.error(
+        `check:architecture-ladder FAILED — ${unlistedKeyOrigin.length} idempotency-key-origin hit(s) not in idempotencyKeyOrigin allowlist.`,
+      );
+    if (
+      !ladderHits.length &&
+      !unlistedOrigin.length &&
+      !unlistedKeyOrigin.length &&
+      !exceptions.length
+    )
       console.log(
-        `check:architecture-ladder OK — ladder clean; ${(allowlist.queryKeyOrigin ?? []).length} query-key-origin pending migration.`,
+        `check:architecture-ladder OK — ladder clean; ${(allowlist.queryKeyOrigin ?? []).length} query-key-origin and ${(allowlist.idempotencyKeyOrigin ?? []).length} idempotency-key-origin pending migration.`,
       );
     process.exitCode =
-      ladderHits.length || unlistedOrigin.length || exceptions.length ? 1 : 0;
+      ladderHits.length ||
+      unlistedOrigin.length ||
+      unlistedKeyOrigin.length ||
+      exceptions.length
+        ? 1
+        : 0;
   }
 }

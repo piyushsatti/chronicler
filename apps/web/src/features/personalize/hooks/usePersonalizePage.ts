@@ -25,7 +25,7 @@ export function usePersonalizePage() {
 
   const settingsMutation = useMutation({
     mutationFn: async (patch: Parameters<typeof updateMySettings>[0]) => ({
-      data: await updateMySettings(patch),
+      data: await updateMySettings(patch, crypto.randomUUID()),
       sessionToken: token,
       account: memberId,
     }),

@@ -1,24 +1,32 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
 import { queryKeys } from '../../../api/queryKeys.js';
-import { useAuth } from '../../../auth/AuthContext.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import { useFencedMutation } from '../../../hooks/useFencedMutation.js';
 import { executeQuestCommand, type QuestCommand } from '../adapters/questCommands.js';
 
 export function useQuestMutations(shortCode: string, questId: string) {
   const client = useQueryClient();
-  const { token, isCurrentSession } = useAuth();
-  const pending = useRef(false);
-  const keys = useRef(new Map<string, string>());
-  const mutation = useMutation({
-    mutationFn: async ({ command, key }: { command: QuestCommand; key: string }) => {
-      if (!isCurrentSession(token))
-        throw toAppError({ failure: 'Unauthorized' }, 'quest:session');
-      return executeQuestCommand(command, key);
+  const [message, setMessage] = useState<string | null>(null);
+  const lastResult = useRef<string | null>(null);
+  const fence = useFencedMutation({
+    context: 'quest:command',
+    run: async (command: QuestCommand, cmd) => {
+      try {
+        const result = await executeQuestCommand(command, cmd);
+        lastResult.current = result;
+        return result;
+      } catch (error) {
+        const app = toAppError(error, 'quest:command');
+        if (app.kind === 'forbidden' || app.kind === 'unauthorized') {
+          void client.invalidateQueries({ queryKey: queryKeys.me });
+          void client.invalidateQueries({ queryKey: ['questAuthority'] });
+        }
+        throw error;
+      }
     },
-    retry: false,
-    onSuccess: async () => {
-      await Promise.all([
+    invalidate: async () =>
+      Promise.all([
         client.invalidateQueries({
           queryKey: shortCode ? queryKeys.quest(shortCode) : ['quest'],
         }),
@@ -30,36 +38,19 @@ export function useQuestMutations(shortCode: string, questId: string) {
         client.invalidateQueries({ queryKey: queryKeys.notifications }),
         client.invalidateQueries({ queryKey: queryKeys.notificationsUnread }),
         client.invalidateQueries({ queryKey: ['questOptions'] }),
-      ]);
-    },
-    onError: (error) => {
-      const app = toAppError(error, 'quest:command');
-      if (app.kind === 'forbidden' || app.kind === 'unauthorized') {
-        void client.invalidateQueries({ queryKey: queryKeys.me });
-        void client.invalidateQueries({ queryKey: ['questAuthority'] });
-      }
-    },
+      ]),
   });
   const execute = async (command: QuestCommand): Promise<boolean> => {
-    if (pending.current || (questId && command.questId !== questId)) return false;
-    pending.current = true;
-    const signature = JSON.stringify(command);
-    const key = keys.current.get(signature) ?? crypto.randomUUID();
-    keys.current.set(signature, key);
-    try {
-      await mutation.mutateAsync({ command, key });
-      keys.current.delete(signature);
-      return true;
-    } catch {
-      return false;
-    } finally {
-      pending.current = false;
-    }
+    if (questId && command.questId !== questId) return false;
+    lastResult.current = null;
+    const ok = await fence.execute(command);
+    if (ok) setMessage(lastResult.current);
+    return ok;
   };
   return {
     execute,
-    pending: mutation.isPending,
-    error: mutation.error ? toAppError(mutation.error, 'quest:command') : null,
-    message: mutation.data ?? null,
+    pending: fence.pending,
+    error: fence.error,
+    message,
   };
 }
