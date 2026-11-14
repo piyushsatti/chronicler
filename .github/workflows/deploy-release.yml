@@ -23,7 +23,7 @@ name: deploy-release
 #   shared by caller and called workflow cancels the run, so none is set here.
 #
 # Required in the GitHub environment named by `environment`:
-#   Secrets, both environments: JWT_SECRET, INGEST_SECRET, DISCORD_CLIENT_ID,
+#   Secrets, both environments: JWT_SECRET, INGEST_SECRET, AGENT_WORKER_SECRET, DISCORD_CLIENT_ID,
 #            DISCORD_CLIENT_SECRET, DISCORD_BOT_TOKEN (API worker REST),
 #            BOT_DISCORD_TOKEN (gateway bot), GUILD_ID,
 #            DISCORD_ANNOUNCE_CHANNEL_ID (secret or variable),
@@ -174,6 +174,7 @@ jobs:
           CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
+          AGENT_WORKER_SECRET: ${{ secrets.AGENT_WORKER_SECRET }}
           DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
           DISCORD_CLIENT_SECRET: ${{ secrets.DISCORD_CLIENT_SECRET }}
           PLATFORM_OWNER_DISCORD_ID: ${{ secrets.PLATFORM_OWNER_DISCORD_ID }}
@@ -212,7 +213,7 @@ jobs:
           else
             names+=(DATABASE_URL)
           fi
-          names+=(JWT_SECRET INGEST_SECRET \
+          names+=(JWT_SECRET INGEST_SECRET AGENT_WORKER_SECRET \
             DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET DISCORD_BOT_TOKEN \
             BOT_DISCORD_TOKEN GUILD_ID DISCORD_ANNOUNCE_CHANNEL_ID \
             CORS_ORIGINS DISCORD_REDIRECT_URI API_PORT)

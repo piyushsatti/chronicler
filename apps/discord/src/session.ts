@@ -32,13 +32,13 @@ export interface StartedSession {
 export async function start(options: StartOptions): Promise<StartedSession> {
   const { config } = options;
   const client = options.client ?? createClient(config);
-  mountActivity(client, config);
   const disposeHealth = mountShardHealth(client, config, {
     heartbeatEnabled: config.heartbeatEnabled,
     exitOnTerminal: true,
     exit: options.exit,
   });
-  const agent = await mountAgent(client, config);
+  mountActivity(client, config, { gateway: disposeHealth });
+  const agent = await mountAgent(client, config, disposeHealth);
 
   client.once(Events.ClientReady, (readyClient) => {
     logger.info('Chronicler bot online', {

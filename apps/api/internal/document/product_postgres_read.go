@@ -105,29 +105,14 @@ func (p *ProductPostgres) ReadDocuments(ctx context.Context, actor auth.Authorit
 	if err != nil {
 		return DocumentListResult{}, err
 	}
-	countRow, err := p.queries().CountProductDocuments(ctx, dbgen.CountProductDocumentsParams{
-		ViewerAdmin: admin, ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerLiveDm: liveDM,
-		Kind: params.Kind, Category: params.Category, Status: params.Status, Visibility: params.Visibility,
-		AuthorID: params.AuthorID, Search: params.Search, RegionID: params.RegionID,
-	})
+	result, err := documentListFromPageRows(ctx, scope, rows)
 	if err != nil {
 		return DocumentListResult{}, err
 	}
-	if override, _ := countRow.AdminOverride.(bool); override {
-		AuditSQLOverride(ctx, scope, true, "documents", "count")
-	}
-	items := make([]DocumentView, 0, len(rows))
-	for _, row := range rows {
-		view, err := mapListProductDocumentRow(row, scope, ctx)
-		if err != nil {
-			return DocumentListResult{}, err
-		}
-		items = append(items, view)
-	}
-	if err := p.setDocumentCapabilities(ctx, actor, documentViewPointers(items)); err != nil {
+	if err := p.setDocumentCapabilities(ctx, actor, documentViewPointers(result.Items)); err != nil {
 		return DocumentListResult{}, err
 	}
-	return DocumentListResult{Items: items, Total: int32(countRow.Total)}, nil
+	return result, nil
 }
 
 func (p *ProductPostgres) ReadDocumentsTrash(ctx context.Context, _ auth.Authority, spec DocumentsTrashSpec) (DocumentListResult, error) {
@@ -137,19 +122,22 @@ func (p *ProductPostgres) ReadDocumentsTrash(ctx context.Context, _ auth.Authori
 	if err != nil {
 		return DocumentListResult{}, err
 	}
-	total, err := p.queries().CountProductDocumentsTrash(ctx)
-	if err != nil {
-		return DocumentListResult{}, err
-	}
+	var total int32
 	items := make([]DocumentView, 0, len(rows))
-	for _, row := range rows {
-		view, err := documentFromParts(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, pgtype.Timestamptz{}, row.DeletedAt, row.DeletedBy, row.UpdatedAt, row.Version)
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
+		view, err := documentFromParts(row.ID, row.Kind.String, row.Slug.String, row.Title.String, row.Status.String, row.Visibility.String, row.Body.String, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, pgtype.Timestamptz{}, row.DeletedAt, row.DeletedBy, row.UpdatedAt, row.Version.Int32)
 		if err != nil {
 			return DocumentListResult{}, err
 		}
 		items = append(items, view)
 	}
-	return DocumentListResult{Items: items, Total: int32(total)}, nil
+	return DocumentListResult{Items: items, Total: total}, nil
 }
 
 func (p *ProductPostgres) ReadDocumentRevisionParent(ctx context.Context, actor auth.Authority, documentID string) (*DocumentView, error) {
@@ -197,24 +185,27 @@ func (p *ProductPostgres) ReadDocumentRevisions(ctx context.Context, actor auth.
 	if err != nil {
 		return DocumentRevisionPage{}, err
 	}
-	total, err := p.queries().CountProductDocumentRevisions(ctx, docID)
-	if err != nil {
-		return DocumentRevisionPage{}, err
-	}
+	var total int32
 	items := make([]DocumentRevisionView, 0, len(rows))
-	for _, row := range rows {
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
 		item, err := mapRevision(row)
 		if err != nil {
 			return DocumentRevisionPage{}, err
 		}
-		projected, err := ProjectDocumentView(ctx, scope, *parent, row.Body)
+		projected, err := ProjectDocumentView(ctx, scope, *parent, row.Body.String)
 		if err != nil {
 			return DocumentRevisionPage{}, err
 		}
 		item.Body = *projected.EffectiveBody
 		items = append(items, item)
 	}
-	return DocumentRevisionPage{Items: items, Total: int32(total)}, nil
+	return DocumentRevisionPage{Items: items, Total: total}, nil
 }
 
 func (p *ProductPostgres) ReadDocumentBacklinks(ctx context.Context, actor auth.Authority, spec DocumentBacklinksSpec) ([]DocumentLinkView, error) {
@@ -283,20 +274,20 @@ func (p *ProductPostgres) ReadCodexDirectory(ctx context.Context, actor auth.Aut
 	if err != nil {
 		return CodexDirectoryResult{}, err
 	}
-	total, err := p.queries().CountProductCodexDirectory(ctx, dbgen.CountProductCodexDirectoryParams{
-		CategoryPrefix: params.CategoryPrefix, Search: params.Search,
-		ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
-	})
-	if err != nil {
-		return CodexDirectoryResult{}, err
-	}
+	var total int32
 	items := make([]DocumentView, 0, len(rows))
-	for _, row := range rows {
-		view, err := documentFromParts(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, pgtype.Timestamptz{}, pgtype.Timestamptz{}, pgtype.UUID{}, row.UpdatedAt, row.Version)
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
+		view, err := documentFromParts(row.ID, row.Kind.String, row.Slug.String, row.Title.String, row.Status.String, row.Visibility.String, row.Body.String, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, pgtype.Timestamptz{}, pgtype.Timestamptz{}, pgtype.UUID{}, row.UpdatedAt, row.Version.Int32)
 		if err != nil {
 			return CodexDirectoryResult{}, err
 		}
-		projected, err := ProjectDocumentView(ctx, scope, view, row.Body)
+		projected, err := ProjectDocumentView(ctx, scope, view, row.Body.String)
 		if err != nil {
 			return CodexDirectoryResult{}, err
 		}
@@ -305,7 +296,7 @@ func (p *ProductPostgres) ReadCodexDirectory(ctx context.Context, actor auth.Aut
 	if err := p.setDocumentCapabilities(ctx, actor, documentViewPointers(items)); err != nil {
 		return CodexDirectoryResult{}, err
 	}
-	return CodexDirectoryResult{Items: items, Total: int32(total)}, nil
+	return CodexDirectoryResult{Items: items, Total: total}, nil
 }
 
 func (p *ProductPostgres) ReadCodexEntry(ctx context.Context, actor auth.Authority, spec CodexEntrySpec) (*CodexEntryCardView, error) {

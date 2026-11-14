@@ -61,7 +61,7 @@ export async function changeDocumentLifecycle(
   id: string,
   expectedRevision: number,
   command: LifecycleAction,
-  idempotencyKey?: string,
+  idempotencyKey: string,
 ): Promise<void> {
   try {
     if (
@@ -81,7 +81,7 @@ export async function changeDocumentLifecycle(
     const variables = {
       id,
       expectedRevision,
-      meta: { idempotencyKey: idempotencyKey ?? crypto.randomUUID() },
+      meta: { idempotencyKey },
     };
     if (command.action === 'delete') {
       await graphqlRequest<EditorDeleteMutation>(DELETE, variables);

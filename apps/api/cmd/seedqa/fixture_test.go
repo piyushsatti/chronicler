@@ -236,7 +236,7 @@ func TestQAQuestionUsesCurrentAdapters(t *testing.T) {
 		t.Fatal("completion must precede question deadline")
 	}
 	mux := http.NewServeMux()
-	agent.New("qa-test-secret", nil, false).Routes(mux)
+	agent.New("qa-test-secret", "qa-test-secret", nil, false).Routes(mux)
 	base := "/v1/agent/questions"
 	if w := qaRequest(mux, "POST", base, qaJSON(t, job.Row["payload"])); w.Code != 202 {
 		t.Fatalf("submit status=%d body=%s", w.Code, w.Body)

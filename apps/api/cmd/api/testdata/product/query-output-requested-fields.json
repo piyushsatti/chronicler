@@ -213,8 +213,6 @@
     "SDL-SiteStatsV2Type-activeCharacters",
     "SDL-SiteStatsV2Type-activity",
     "SDL-SiteStatsV2Type-membersByRole",
-    "SDL-SiteStatsV2Type-publishedDocumentsByCategory",
-    "SDL-SiteStatsV2Type-publishedDocumentsByKind",
     "SDL-SiteStatsV2Type-totalDms",
     "SDL-SiteStatsV2Type-totalMaps",
     "SDL-SiteStatsV2Type-totalMembers",

@@ -30,7 +30,7 @@ func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock produc
 }
 
 func characterQueryPage(limit, offset int32) error {
-	if limit <= 0 || offset < 0 {
+	if !product.ValidPage(limit, offset) {
 		return apierr.New(apierr.Invalid, "invalid character page")
 	}
 	return nil

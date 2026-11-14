@@ -118,6 +118,22 @@ describe('mountShardHealth', () => {
     expect(meta).toMatchObject({ shardId: 0, gapMs: 500, eventsLost: true });
   });
 
+  it('notifies subscribers of session_lost after reconnect then shardReady', () => {
+    const { client, emit } = fakeClient();
+    const received: unknown[] = [];
+
+    const health = mountShardHealth(client, config, {
+      now: steppingClock(1000, 500),
+    });
+    health.subscribe((event) => {
+      received.push(event);
+    });
+    emit('shardReconnecting', 0);
+    emit('shardReady', 0, undefined);
+
+    expect(received).toEqual([{ type: 'session_lost', shardId: 0, gapMs: 500 }]);
+  });
+
   it('does not carry a resolved reconnect into the next shardReady', () => {
     const { client, emit } = fakeClient();
 

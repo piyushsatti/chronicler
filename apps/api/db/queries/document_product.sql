@@ -128,73 +128,77 @@ WITH population AS (
    AND (sqlc.narg(region_id)::uuid IS NULL OR EXISTS (
        SELECT 1 FROM document_links dl JOIN regions r ON r.id=dl.region_target_id
        WHERE dl.source_id=d.id AND r.public_id=sqlc.narg(region_id)::uuid))
+), filtered AS (
+ SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility,
+        d.body, d.frontmatter_yaml, d.policy, d.author_public_id AS author_id,
+        d.published_at, d.deleted_at, d.updated_at, d.version, d.created_at,
+        COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(
+          d.public_id,d.author_public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
+          sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
+          sqlc.arg(viewer_live_dm)::boolean,d.readable_document_ids),FALSE) AS admin_override
+ FROM population d
+ WHERE document_readable(d.public_id,d.author_public_id,d.status,d.visibility,d.policy,
+       sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+       sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,d.readable_document_ids)
+), counted AS (
+ SELECT count(*)::bigint AS total,
+        COALESCE(bool_or(admin_override),FALSE) AS count_admin_override
+ FROM filtered
+), page AS (
+ SELECT * FROM filtered
+ ORDER BY updated_at DESC, id DESC
+ LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
 )
-SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility,
-       d.body, d.frontmatter_yaml, d.policy, d.author_public_id AS author_id,
-       d.published_at, d.deleted_at, d.updated_at, d.version, d.created_at,
-       COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(
-         d.public_id,d.author_public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
-         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
-         sqlc.arg(viewer_live_dm)::boolean,d.readable_document_ids),FALSE) AS admin_override
-FROM population d
-WHERE document_readable(d.public_id,d.author_public_id,d.status,d.visibility,d.policy,
-      sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
-      sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,d.readable_document_ids)
-ORDER BY d.updated_at DESC,d.public_id DESC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
--- name: CountProductDocuments :one
-WITH population AS (
- SELECT d.*, author.public_id AS author_public_id,
-        COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
-                       WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid), ARRAY[]::uuid[]) AS readable_document_ids
- FROM documents d LEFT JOIN members author ON author.id=d.author_id
- WHERE d.deleted_at IS NULL
-   AND (sqlc.narg(kind)::text IS NULL OR d.kind=sqlc.narg(kind)::text)
-   AND (sqlc.narg(category)::text IS NULL OR d.category=sqlc.narg(category)::text)
-   AND (sqlc.narg(status)::text IS NULL OR d.status=sqlc.narg(status)::text)
-   AND (sqlc.narg(visibility)::text IS NULL OR d.visibility=sqlc.narg(visibility)::text)
-   AND (sqlc.narg(author_id)::uuid IS NULL OR author.public_id=sqlc.narg(author_id)::uuid)
-   AND (sqlc.narg(search)::text IS NULL OR d.title ILIKE '%'||replace(replace(replace(sqlc.narg(search)::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'%' ESCAPE chr(92))
-   AND (sqlc.narg(region_id)::uuid IS NULL OR EXISTS (
-       SELECT 1 FROM document_links dl JOIN regions r ON r.id=dl.region_target_id
-       WHERE dl.source_id=d.id AND r.public_id=sqlc.narg(region_id)::uuid))
-)
-SELECT count(*)::bigint AS total,
-       COALESCE(bool_or(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(
-         d.public_id,d.author_public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
-         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
-         sqlc.arg(viewer_live_dm)::boolean,d.readable_document_ids)),FALSE) AS admin_override
-FROM population d
-WHERE document_readable(d.public_id,d.author_public_id,d.status,d.visibility,d.policy,
-      sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
-      sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,d.readable_document_ids);
+SELECT counted.total, counted.count_admin_override,
+       page.id, page.kind, page.slug, page.title, page.category, page.status, page.visibility,
+       page.body, page.frontmatter_yaml, page.policy, page.author_id,
+       page.published_at, page.deleted_at, page.updated_at, page.version, page.created_at,
+       page.admin_override
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.updated_at DESC NULLS LAST, page.id DESC NULLS LAST;
 
 -- name: ListProductDocumentsTrash :many
-SELECT d.public_id AS id,d.kind,d.slug,d.title,d.category,d.status,d.visibility,d.body,
-       d.frontmatter_yaml,d.policy,author.public_id AS author_id,d.deleted_at,deleter.public_id AS deleted_by,
-       d.updated_at,d.version,d.created_at
-FROM documents d LEFT JOIN members author ON author.id=d.author_id
-LEFT JOIN members deleter ON deleter.id=d.deleted_by
-WHERE d.deleted_at IS NOT NULL
-ORDER BY d.deleted_at DESC,d.public_id DESC LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
--- name: CountProductDocumentsTrash :one
-SELECT count(*)::bigint AS total FROM documents d WHERE d.deleted_at IS NOT NULL;
+WITH filtered AS (
+ SELECT d.public_id AS id,d.kind,d.slug,d.title,d.category,d.status,d.visibility,d.body,
+        d.frontmatter_yaml,d.policy,author.public_id AS author_id,d.deleted_at,deleter.public_id AS deleted_by,
+        d.updated_at,d.version,d.created_at
+ FROM documents d LEFT JOIN members author ON author.id=d.author_id
+ LEFT JOIN members deleter ON deleter.id=d.deleted_by
+ WHERE d.deleted_at IS NOT NULL
+), counted AS (
+ SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+ SELECT * FROM filtered
+ ORDER BY deleted_at DESC, id DESC
+ LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.kind, page.slug, page.title, page.category, page.status, page.visibility,
+       page.body, page.frontmatter_yaml, page.policy, page.author_id, page.deleted_at, page.deleted_by,
+       page.updated_at, page.version, page.created_at
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.deleted_at DESC NULLS LAST, page.id DESC NULLS LAST;
 
 -- name: ListProductDocumentRevisions :many
-SELECT r.public_id AS id,d.public_id AS document_id,r.rev,r.reason,r.title,r.body,r.frontmatter_yaml,
-       r.policy,r.visibility,r.published_at,publisher.public_id AS published_by,
-       actor.public_id AS recorded_by,r.created_at AS recorded_at,r.old_value,r.new_value
-FROM document_revisions r JOIN documents d ON d.id=r.document_id
-LEFT JOIN members publisher ON publisher.id=r.published_by
-LEFT JOIN members actor ON actor.id=r.created_by
-WHERE d.public_id=sqlc.arg(document_id)::uuid
-ORDER BY r.rev DESC LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
--- name: CountProductDocumentRevisions :one
-SELECT count(*)::bigint AS total FROM document_revisions r JOIN documents d ON d.id=r.document_id
-WHERE d.public_id=sqlc.arg(document_id)::uuid;
+WITH filtered AS (
+ SELECT r.public_id AS id,d.public_id AS document_id,r.rev,r.reason,r.title,r.body,r.frontmatter_yaml,
+        r.policy,r.visibility,r.published_at,publisher.public_id AS published_by,
+        actor.public_id AS recorded_by,r.created_at AS recorded_at,r.old_value,r.new_value
+ FROM document_revisions r JOIN documents d ON d.id=r.document_id
+ LEFT JOIN members publisher ON publisher.id=r.published_by
+ LEFT JOIN members actor ON actor.id=r.created_by
+ WHERE d.public_id=sqlc.arg(document_id)::uuid
+), counted AS (
+ SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+ SELECT * FROM filtered
+ ORDER BY rev DESC
+ LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.document_id, page.rev, page.reason, page.title, page.body, page.frontmatter_yaml,
+       page.policy, page.visibility, page.published_at, page.published_by,
+       page.recorded_by, page.recorded_at, page.old_value, page.new_value
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.rev DESC NULLS LAST;
 
 -- name: ListProductCodexCategories :many
 SELECT d.category,count(*)::bigint AS count
@@ -219,27 +223,28 @@ FROM documents d LEFT JOIN members author ON author.id=d.author_id
 WHERE d.slug=sqlc.arg(slug)::text AND d.kind='codex_entry' AND d.deleted_at IS NULL;
 
 -- name: ListProductCodexDirectory :many
-SELECT d.public_id AS id,d.kind,d.slug,d.title,d.category,d.status,d.visibility,d.body,
-       d.frontmatter_yaml,d.policy,author.public_id AS author_id,d.updated_at,d.version
-FROM documents d LEFT JOIN members author ON author.id=d.author_id
-WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
-  AND (sqlc.narg(category_prefix)::text IS NULL OR d.category=sqlc.narg(category_prefix)::text OR d.category LIKE replace(replace(replace(sqlc.narg(category_prefix)::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'/%' ESCAPE chr(92))
-  AND (sqlc.narg(search)::text IS NULL OR d.title ILIKE '%'||replace(replace(replace(sqlc.narg(search)::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'%' ESCAPE chr(92))
-  AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
-      sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
-      sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,
-      COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))
-ORDER BY d.updated_at DESC,d.public_id DESC LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
--- name: CountProductCodexDirectory :one
-SELECT count(*)::bigint AS total FROM documents d LEFT JOIN members author ON author.id=d.author_id
-WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
-  AND (sqlc.narg(category_prefix)::text IS NULL OR d.category=sqlc.narg(category_prefix)::text OR d.category LIKE replace(replace(replace(sqlc.narg(category_prefix)::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'/%' ESCAPE chr(92))
-  AND (sqlc.narg(search)::text IS NULL OR d.title ILIKE '%'||replace(replace(replace(sqlc.narg(search)::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'%' ESCAPE chr(92))
-  AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
-      sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
-      sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,
-      COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]));
+WITH filtered AS (
+ SELECT d.public_id AS id,d.kind,d.slug,d.title,d.category,d.status,d.visibility,d.body,
+        d.frontmatter_yaml,d.policy,author.public_id AS author_id,d.updated_at,d.version
+ FROM documents d LEFT JOIN members author ON author.id=d.author_id
+ WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
+   AND (sqlc.narg(category_prefix)::text IS NULL OR d.category=sqlc.narg(category_prefix)::text OR d.category LIKE replace(replace(replace(sqlc.narg(category_prefix)::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'/%' ESCAPE chr(92))
+   AND (sqlc.narg(search)::text IS NULL OR d.title ILIKE '%'||replace(replace(replace(sqlc.narg(search)::text,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_')||'%' ESCAPE chr(92))
+   AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+       sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+       sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,
+       COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))
+), counted AS (
+ SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+ SELECT * FROM filtered
+ ORDER BY updated_at DESC, id DESC
+ LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int
+)
+SELECT counted.total, page.id, page.kind, page.slug, page.title, page.category, page.status, page.visibility,
+       page.body, page.frontmatter_yaml, page.policy, page.author_id, page.updated_at, page.version
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.updated_at DESC NULLS LAST, page.id DESC NULLS LAST;
 
 -- name: CountProductDocumentBacklinks :one
 SELECT count(*)::bigint AS total,

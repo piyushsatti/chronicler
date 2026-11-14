@@ -99,7 +99,7 @@ class AgentSettings:
             raise ValueError("AGENT_CONTEXT_FILE must not be empty")
         return cls(
             api_url=_required("API_URL").rstrip("/"),
-            ingest_secret=_required("INGEST_SECRET"),
+            ingest_secret=_required("AGENT_WORKER_SECRET"),
             claim_interval_seconds=float(
                 os.getenv("AGENT_CLAIM_INTERVAL_SECONDS", "2")
             ),
