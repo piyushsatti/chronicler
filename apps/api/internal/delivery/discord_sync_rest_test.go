@@ -15,6 +15,7 @@ import (
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/delivery"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
 )
 
 const (
@@ -427,6 +428,38 @@ func TestThreadFailureDoesNotBlockEventOrRevision(t *testing.T) {
 	}
 	if n := len(f.find(http.MethodPost, "/threads")); n != 1 {
 		t.Fatalf("thread attempts=%d want only the first", n)
+	}
+}
+
+func TestProcessOnePlayerListMissingThreadEndsDead(t *testing.T) {
+	body := jobs.QuestPlayerListPayload{
+		PublicID: testQuestID, Fingerprint: "123456789012345678",
+		DiscordIDs: []string{"123456789012345678"},
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := newFakeDiscord(t)
+	sync := newSync(f, &fakeQuests{quest: baseQuest(testVoice)}, fullSettings, nil)
+	sync.Players = &memPlayerLists{target: delivery.PlayerListTarget{Found: true, Status: "open"}}
+	store := &delivery.MemoryStore{Jobs: []jobs.Job{{
+		ID: "1", Key: jobs.QuestPlayerListKey(body.PublicID, body.Fingerprint), Kind: delivery.KindQuestPlayerList,
+		Lane: delivery.LaneDiscord, State: jobs.Queued, Payload: payload, NextRunAt: time.Now(),
+	}}}
+	ok, err := delivery.NewHandler(store, sync).ProcessOne(context.Background())
+	if err != nil || !ok {
+		t.Fatalf("ok=%v err=%v", ok, err)
+	}
+	job := store.Jobs[0]
+	if job.State != jobs.Dead || job.Attempts != 1 {
+		t.Fatalf("state=%s attempts=%d want dead/1", job.State, job.Attempts)
+	}
+	if job.SafeErrorCode != delivery.SafeCodeDiscordThreadMissing {
+		t.Fatalf("safe error code=%q want %q", job.SafeErrorCode, delivery.SafeCodeDiscordThreadMissing)
+	}
+	if n := len(f.summary()); n != 0 {
+		t.Fatalf("discord calls=%v want none", f.summary())
 	}
 }
 

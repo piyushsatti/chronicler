@@ -21,6 +21,9 @@ describe('discordSafeErrorReason', () => {
     expect(discordSafeErrorReason('DISCORD_NOT_CONFIGURED')).toBe(
       'Discord posting is not set up for this community',
     );
+    expect(discordSafeErrorReason('DISCORD_THREAD_MISSING')).toBe(
+      'The quest discussion thread was never opened, so the player list cannot be posted',
+    );
     expect(discordSafeErrorReason('DISCORD_REJECTED')).toBe(DISCORD_GENERIC_REASON);
     expect(discordSafeErrorReason('SOMETHING_ELSE')).toBeNull();
     expect(discordSafeErrorReason(null)).toBeNull();
