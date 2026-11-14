@@ -14,7 +14,6 @@ import goodSummaryDocuments from '../../../tests/fixtures/wire/quest/summary-doc
 export const endpoints = {} as const;
 
 export const queryKeys = {
-  questBoard: ['questBoard'] as const,
   questLists: ['quests'] as const,
   questList: (
     filters: Readonly<{ status?: string; displayStatus?: string }>,
