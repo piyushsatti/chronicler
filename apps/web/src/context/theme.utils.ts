@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { decodeJwtPayload } from '../auth/AuthContext.js';
 import { TOKEN_KEY } from '../auth/storage.js';
 
 export type ResolvedMode = 'dark' | 'light';
@@ -83,9 +84,7 @@ export function preferenceAccount(): string | null {
   try {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return null;
-    const payload: unknown = JSON.parse(
-      atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')),
-    );
+    const payload = decodeJwtPayload(token);
     const parsed = z
       .object({ member_id: z.string().min(1), exp: z.number() })
       .safeParse(payload);
