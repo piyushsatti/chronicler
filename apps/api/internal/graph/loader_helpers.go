@@ -23,6 +23,18 @@ func requireLoader[K comparable, V any](loader *Loader[K, V], name string) (*Loa
 	return loader, nil
 }
 
+func loadOne[K comparable, V any](ctx context.Context, pick func(*RequestLoaders) *Loader[K, V], name string, key K) (*V, error) {
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(pick(loaders), name)
+	if err != nil {
+		return nil, err
+	}
+	return loader.Load(ctx, key)
+}
+
 func canSeeDocumentAudience(actor auth.Authority, authorID string) bool {
 	if actor.Claims().Anonymous() {
 		return false

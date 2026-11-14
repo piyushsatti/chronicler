@@ -17,15 +17,9 @@ import (
 
 // ActiveAlerts is the resolver for the activeAlerts field.
 func (r *adminOperationsTypeResolver) ActiveAlerts(ctx context.Context, obj *AdminOperationsType, limit int, offset int) ([]*AdminHealthAlertType, error) {
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.ActiveAlerts, "activeAlerts")
-	if err != nil {
-		return nil, err
-	}
-	list, err := loader.Load(ctx, site.ActiveAlertsKey{Limit: int32(limit), Offset: int32(offset)})
+	list, err := loadOne(ctx, func(l *RequestLoaders) *Loader[site.ActiveAlertsKey, site.AlertList] {
+		return l.ActiveAlerts
+	}, "activeAlerts", site.ActiveAlertsKey{Limit: int32(limit), Offset: int32(offset)})
 	if err != nil {
 		return nil, err
 	}
@@ -48,15 +42,9 @@ func (r *codexEntryCardTypeResolver) Subjects(ctx context.Context, obj *CodexEnt
 	if obj == nil || obj.Document == nil || obj.Document.ID == "" {
 		return []*DocumentLinkType{}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.DocumentSubjects, "documentSubjects")
-	if err != nil {
-		return nil, err
-	}
-	list, err := loader.Load(ctx, document.DocumentSubjectsKey{
+	list, err := loadOne(ctx, func(l *RequestLoaders) *Loader[document.DocumentSubjectsKey, document.SubjectLinkList] {
+		return l.DocumentSubjects
+	}, "documentSubjects", document.DocumentSubjectsKey{
 		ParentID: obj.Document.ID,
 		Limit:    int32(limit),
 		Offset:   int32(offset),
@@ -76,7 +64,10 @@ func (r *documentTypeResolver) Policy(ctx context.Context, obj *DocumentType) ([
 		return nil, nil
 	}
 	actor, err := LiveAuthority(ctx)
-	if err != nil || !canSeeDocumentAudience(actor, obj.AuthorID) {
+	if err != nil {
+		return nil, err
+	}
+	if !canSeeDocumentAudience(actor, obj.AuthorID) {
 		// Do not leak policy principals to ordinary readers.
 		return nil, nil
 	}
@@ -89,7 +80,10 @@ func (r *documentTypeResolver) ReaderIds(ctx context.Context, obj *DocumentType)
 		return nil, nil
 	}
 	actor, err := LiveAuthority(ctx)
-	if err != nil || !canSeeDocumentAudience(actor, obj.AuthorID) {
+	if err != nil {
+		return nil, err
+	}
+	if !canSeeDocumentAudience(actor, obj.AuthorID) {
 		return nil, nil
 	}
 	// DocumentView keeps readers off the base DTO (go-seams). Prefer parent
@@ -100,15 +94,9 @@ func (r *documentTypeResolver) ReaderIds(ctx context.Context, obj *DocumentType)
 	if obj.ID == "" {
 		return []string{}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.DocumentReaders, "documentReaders")
-	if err != nil {
-		return nil, err
-	}
-	view, err := loader.Load(ctx, document.IDKey{ID: obj.ID})
+	view, err := loadOne(ctx, func(l *RequestLoaders) *Loader[document.IDKey, document.ReaderIDList] {
+		return l.DocumentReaders
+	}, "documentReaders", document.IDKey{ID: obj.ID})
 	if err != nil {
 		return nil, err
 	}
@@ -123,16 +111,13 @@ func (r *documentTypeResolver) Author(ctx context.Context, obj *DocumentType) (*
 	if obj == nil || obj.AuthorID == "" {
 		return nil, nil
 	}
-	loaders, err := requestLoaders(ctx)
+	view, err := loadOne(ctx, func(l *RequestLoaders) *Loader[member.IDKey, member.MemberView] {
+		return l.Members
+	}, "members", member.IDKey{ID: obj.AuthorID})
 	if err != nil {
 		return nil, err
 	}
-	loader, err := requireLoader(loaders.Members, "members")
-	if err != nil {
-		return nil, err
-	}
-	view, err := loader.Load(ctx, member.IDKey{ID: obj.AuthorID})
-	if err != nil || view == nil {
+	if view == nil {
 		return nil, nil
 	}
 	return &DocumentAuthorType{Handle: view.Handle}, nil
@@ -143,15 +128,9 @@ func (r *documentTypeResolver) SummaryDerived(ctx context.Context, obj *Document
 	if obj == nil || obj.ID == "" {
 		return nil, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.SummaryDerived, "summaryDerived")
-	if err != nil {
-		return nil, err
-	}
-	view, err := loader.Load(ctx, document.IDKey{ID: obj.ID})
+	view, err := loadOne(ctx, func(l *RequestLoaders) *Loader[document.IDKey, document.SummaryDerivedView] {
+		return l.SummaryDerived
+	}, "summaryDerived", document.IDKey{ID: obj.ID})
 	if err != nil {
 		return nil, err
 	}
@@ -213,15 +192,9 @@ func (r *mapTypeResolver) PointcrawlNodes(ctx context.Context, obj *MapType, lim
 	if obj == nil || obj.ID == "" {
 		return []*PointcrawlNodeType{}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.MapNodes, "mapNodes")
-	if err != nil {
-		return nil, err
-	}
-	list, err := loader.Load(ctx, spatial.MapNodesKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
+	list, err := loadOne(ctx, func(l *RequestLoaders) *Loader[spatial.MapNodesKey, spatial.NodeList] {
+		return l.MapNodes
+	}, "mapNodes", spatial.MapNodesKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
 	if err != nil {
 		return nil, err
 	}
@@ -240,15 +213,9 @@ func (r *mapTypeResolver) PointcrawlEdges(ctx context.Context, obj *MapType, lim
 	if obj == nil || obj.ID == "" {
 		return []*PointcrawlEdgeType{}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.MapNodeEdges, "mapNodeEdges")
-	if err != nil {
-		return nil, err
-	}
-	list, err := loader.Load(ctx, spatial.MapNodeEdgesKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
+	list, err := loadOne(ctx, func(l *RequestLoaders) *Loader[spatial.MapNodeEdgesKey, spatial.NodeEdgeList] {
+		return l.MapNodeEdges
+	}, "mapNodeEdges", spatial.MapNodeEdgesKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
 	if err != nil {
 		return nil, err
 	}
@@ -267,15 +234,9 @@ func (r *memberActivityStatsTypeResolver) VoiceByChannel(ctx context.Context, ob
 	if obj == nil || obj.MemberID == "" {
 		return []*ChannelVoiceMinutesType{}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.MemberVoiceChannels, "memberVoiceChannels")
-	if err != nil {
-		return nil, err
-	}
-	list, err := loader.Load(ctx, member.MemberVoiceChannelsKey{ParentID: obj.MemberID, Limit: int32(limit), Offset: int32(offset)})
+	list, err := loadOne(ctx, func(l *RequestLoaders) *Loader[member.MemberVoiceChannelsKey, member.VoiceChannelList] {
+		return l.MemberVoiceChannels
+	}, "memberVoiceChannels", member.MemberVoiceChannelsKey{ParentID: obj.MemberID, Limit: int32(limit), Offset: int32(offset)})
 	if err != nil {
 		return nil, err
 	}
@@ -290,15 +251,9 @@ func (r *memberActivityStatsTypeResolver) RecentSessions(ctx context.Context, ob
 	if obj == nil || obj.MemberID == "" {
 		return []*ActivityEventType{}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.MemberRecentSessions, "memberRecentSessions")
-	if err != nil {
-		return nil, err
-	}
-	list, err := loader.Load(ctx, member.MemberRecentSessionsKey{ParentID: obj.MemberID, Limit: int32(limit), Offset: int32(offset)})
+	list, err := loadOne(ctx, func(l *RequestLoaders) *Loader[member.MemberRecentSessionsKey, member.ActivityEventList] {
+		return l.MemberRecentSessions
+	}, "memberRecentSessions", member.MemberRecentSessionsKey{ParentID: obj.MemberID, Limit: int32(limit), Offset: int32(offset)})
 	if err != nil {
 		return nil, err
 	}
@@ -313,15 +268,9 @@ func (r *memberProfileTypeResolver) RecentWeeks(ctx context.Context, obj *Member
 	if obj == nil || obj.Member == nil || obj.Member.ID == "" {
 		return []*WeekActivityType{}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.MemberRecentWeeks, "memberRecentWeeks")
-	if err != nil {
-		return nil, err
-	}
-	list, err := loader.Load(ctx, member.MemberRecentWeeksKey{ParentID: obj.Member.ID, Limit: int32(limit), Offset: int32(offset)})
+	list, err := loadOne(ctx, func(l *RequestLoaders) *Loader[member.MemberRecentWeeksKey, member.WeekActivityList] {
+		return l.MemberRecentWeeks
+	}, "memberRecentWeeks", member.MemberRecentWeeksKey{ParentID: obj.Member.ID, Limit: int32(limit), Offset: int32(offset)})
 	if err != nil {
 		return nil, err
 	}
@@ -337,19 +286,19 @@ func (r *memberTypeResolver) DiscordID(ctx context.Context, obj *MemberType) (*s
 		return nil, nil
 	}
 	actor, err := LiveAuthority(ctx)
-	if err != nil || !canSeeDiscordID(actor, obj.ID) {
+	if err != nil {
+		return nil, err
+	}
+	if !canSeeDiscordID(actor, obj.ID) {
 		return nil, nil
 	}
-	loaders, err := requestLoaders(ctx)
+	view, err := loadOne(ctx, func(l *RequestLoaders) *Loader[member.IDKey, member.MemberView] {
+		return l.Members
+	}, "members", member.IDKey{ID: obj.ID})
 	if err != nil {
 		return nil, err
 	}
-	loader, err := requireLoader(loaders.Members, "members")
-	if err != nil {
-		return nil, err
-	}
-	view, err := loader.Load(ctx, member.IDKey{ID: obj.ID})
-	if err != nil || view == nil {
+	if view == nil {
 		return obj.DiscordID, nil
 	}
 	return view.DiscordId, nil
@@ -360,15 +309,9 @@ func (r *pointcrawlNodeTypeResolver) LinkedEntries(ctx context.Context, obj *Poi
 	if obj == nil || obj.ID == "" {
 		return []*PointcrawlEntryLinkType{}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.NodeLinks, "nodeLinks")
-	if err != nil {
-		return nil, err
-	}
-	list, err := loader.Load(ctx, spatial.NodeLinksKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
+	list, err := loadOne(ctx, func(l *RequestLoaders) *Loader[spatial.NodeLinksKey, spatial.NodeLinkList] {
+		return l.NodeLinks
+	}, "nodeLinks", spatial.NodeLinksKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
 	if err != nil {
 		return nil, err
 	}
@@ -387,15 +330,9 @@ func (r *questArcTypeResolver) Quests(ctx context.Context, obj *QuestArcType, li
 	if obj == nil || obj.ID == "" {
 		return []*QuestType{}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.ArcQuests, "arcQuests")
-	if err != nil {
-		return nil, err
-	}
-	list, err := loader.Load(ctx, quest.ArcQuestsKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
+	list, err := loadOne(ctx, func(l *RequestLoaders) *Loader[quest.ArcQuestsKey, quest.QuestList] {
+		return l.ArcQuests
+	}, "arcQuests", quest.ArcQuestsKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
 	if err != nil {
 		return nil, err
 	}
@@ -422,16 +359,13 @@ func (r *questTypeResolver) Dm(ctx context.Context, obj *QuestType) (*QuestDmTyp
 	if obj == nil || obj.DmID == "" {
 		return nil, nil
 	}
-	loaders, err := requestLoaders(ctx)
+	view, err := loadOne(ctx, func(l *RequestLoaders) *Loader[member.IDKey, member.MemberView] {
+		return l.Members
+	}, "members", member.IDKey{ID: obj.DmID})
 	if err != nil {
 		return nil, err
 	}
-	loader, err := requireLoader(loaders.Members, "members")
-	if err != nil {
-		return nil, err
-	}
-	view, err := loader.Load(ctx, member.IDKey{ID: obj.DmID})
-	if err != nil || view == nil {
+	if view == nil {
 		return nil, nil
 	}
 	return &QuestDmType{
@@ -458,20 +392,14 @@ func (r *questTypeResolver) Participants(ctx context.Context, obj *QuestType, st
 	if obj == nil || obj.ID == "" {
 		return []*QuestParticipantType{}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.Participants, "participants")
-	if err != nil {
-		return nil, err
-	}
 	key := quest.ParticipantsKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)}
 	if status != nil {
 		key.Status = *status
 		key.HasStatus = true
 	}
-	list, err := loader.Load(ctx, key)
+	list, err := loadOne(ctx, func(l *RequestLoaders) *Loader[quest.ParticipantsKey, quest.ParticipantList] {
+		return l.Participants
+	}, "participants", key)
 	if err != nil {
 		return nil, err
 	}
@@ -486,20 +414,14 @@ func (r *questTypeResolver) PointcrawlLinks(ctx context.Context, obj *QuestType,
 	if obj == nil || obj.ID == "" {
 		return []*QuestPointcrawlLinkType{}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.QuestPointcrawlLinks, "questPointcrawlLinks")
-	if err != nil {
-		return nil, err
-	}
 	key := quest.QuestHexesKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)}
 	if role != nil {
 		key.Role = *role
 		key.HasRole = true
 	}
-	list, err := loader.Load(ctx, key)
+	list, err := loadOne(ctx, func(l *RequestLoaders) *Loader[quest.QuestHexesKey, quest.HexList] {
+		return l.QuestPointcrawlLinks
+	}, "questPointcrawlLinks", key)
 	if err != nil {
 		return nil, err
 	}
@@ -514,15 +436,9 @@ func (r *questTypeResolver) Arc(ctx context.Context, obj *QuestType) (*QuestArcT
 	if obj == nil || obj.ArcID == nil || *obj.ArcID == "" {
 		return nil, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.Arcs, "arcs")
-	if err != nil {
-		return nil, err
-	}
-	view, err := loader.Load(ctx, quest.IDKey{ID: *obj.ArcID})
+	view, err := loadOne(ctx, func(l *RequestLoaders) *Loader[quest.IDKey, quest.QuestArcView] {
+		return l.Arcs
+	}, "arcs", quest.IDKey{ID: *obj.ArcID})
 	if err != nil || view == nil {
 		return nil, err
 	}
@@ -534,15 +450,9 @@ func (r *questTypeResolver) DmTable(ctx context.Context, obj *QuestType) (*Docum
 	if obj == nil || obj.DmID == "" {
 		return nil, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.DmTables, "dmTables")
-	if err != nil {
-		return nil, err
-	}
-	view, err := loader.Load(ctx, document.IDKey{ID: obj.DmID})
+	view, err := loadOne(ctx, func(l *RequestLoaders) *Loader[document.IDKey, document.DocumentView] {
+		return l.DmTables
+	}, "dmTables", document.IDKey{ID: obj.DmID})
 	if err != nil || view == nil {
 		return nil, err
 	}
@@ -554,15 +464,9 @@ func (r *questTypeResolver) DiscordDelivery(ctx context.Context, obj *QuestType)
 	if obj == nil || obj.ID == "" {
 		return &QuestDiscordDeliveryType{OverallStatus: "idle"}, nil
 	}
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.Delivery, "delivery")
-	if err != nil {
-		return nil, err
-	}
-	view, err := loader.Load(ctx, quest.IDKey{ID: obj.ID})
+	view, err := loadOne(ctx, func(l *RequestLoaders) *Loader[quest.IDKey, quest.QuestDiscordDeliveryView] {
+		return l.Delivery
+	}, "delivery", quest.IDKey{ID: obj.ID})
 	if err != nil {
 		return nil, err
 	}
