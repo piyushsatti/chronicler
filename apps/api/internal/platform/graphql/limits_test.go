@@ -67,6 +67,7 @@ func TestAliasLimitCountsRootAliasesAndFragments(t *testing.T) {
 		{"21 aliased roots rejected", "query Q{" + aliases(21) + "}", true},
 		{"20 aliased roots pass", "query Q{" + aliases(20) + "}", false},
 		{"fragment spread aliases count", `query Q{...F} fragment F on Query{` + aliases(21) + `}`, true},
+		{"21 unaliased roots allowed", `query Q{_contractLayoutStub characters{__typename} myCharacters{__typename} character{__typename} adminCharacterDirectory{__typename} quest{__typename} questBoard{__typename} questArcs{__typename} questGenreOptions questStateCounts{__typename} regions{__typename} timeAnchors{__typename} home{__typename} adminCommunityStats{__typename} searchableKinds{__typename} siteStats{__typename} discordDeliveryMode homeBanner{__typename} questAnnouncementRoleSetting{__typename} discordSettings{__typename} questVoiceChannels{__typename}}`, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewHandler(&graph.Resolver{}, Limits{MaxAliases: 20}, nil)
@@ -75,7 +76,7 @@ func TestAliasLimitCountsRootAliasesAndFragments(t *testing.T) {
 				if w.Code != http.StatusOK || !bytes.Contains(w.Body.Bytes(), []byte(`"code":"ALIAS_LIMIT_EXCEEDED"`)) {
 					t.Fatalf("status=%d body=%s", w.Code, w.Body)
 				}
-			} else if w.Code != http.StatusOK || bytes.Contains(w.Body.Bytes(), []byte(`"errors"`)) {
+			} else if w.Code != http.StatusOK || bytes.Contains(w.Body.Bytes(), []byte(`"code":"ALIAS_LIMIT_EXCEEDED"`)) {
 				t.Fatalf("status=%d body=%s", w.Code, w.Body)
 			}
 		})

@@ -53,18 +53,7 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 		return next(ctx)
 	})
 	srv.AddTransport(transport.POST{})
-	if limits.Introspection {
-		srv.Use(extension.Introspection{})
-	}
-	if limits.MaxDepth > 0 {
-		srv.Use(depthLimit{max: limits.MaxDepth})
-	}
-	if limits.MaxComplexity > 0 {
-		srv.Use(extension.FixedComplexityLimit(limits.MaxComplexity))
-	}
-	if limits.MaxAliases > 0 {
-		srv.Use(aliasLimit{max: limits.MaxAliases})
-	}
+	registerExtensions(srv, limits)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		if authority != nil {
@@ -87,6 +76,21 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 		}
 		srv.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func registerExtensions(srv *handler.Server, limits Limits) {
+	if limits.Introspection {
+		srv.Use(extension.Introspection{})
+	}
+	if limits.MaxDepth > 0 {
+		srv.Use(depthLimit{max: limits.MaxDepth})
+	}
+	if limits.MaxComplexity > 0 {
+		srv.Use(extension.FixedComplexityLimit(limits.MaxComplexity))
+	}
+	if limits.MaxAliases > 0 {
+		srv.Use(aliasLimit{max: limits.MaxAliases})
+	}
 }
 
 func writeRequestError(w http.ResponseWriter, r *http.Request, present func(context.Context, error) *gqlerror.Error, err error) {
