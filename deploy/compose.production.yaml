@@ -89,9 +89,10 @@ services:
     build:
       context: ..
       dockerfile: apps/discord/Dockerfile
+      args:
+        BOT_BUILD_ID: ${BOT_BUILD_ID:-unknown}
     environment:
       BOT_DISCORD_TOKEN: ${BOT_DISCORD_TOKEN:?set BOT_DISCORD_TOKEN}
-      BOT_CLIENT_ID: ${BOT_CLIENT_ID:?set BOT_CLIENT_ID}
       GUILD_ID: ${GUILD_ID:?set GUILD_ID}
       INGEST_SECRET: ${INGEST_SECRET:?set INGEST_SECRET}
       # Container-network traffic only; the bot refuses http unless allowed.

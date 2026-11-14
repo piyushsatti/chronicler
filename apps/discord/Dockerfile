@@ -13,7 +13,9 @@ RUN bun run --filter @pi/discord build
 
 FROM oven/bun:1.3.14-slim AS runtime
 WORKDIR /app
+ARG BOT_BUILD_ID=unknown
 ENV NODE_ENV=production
+ENV BOT_BUILD_ID=$BOT_BUILD_ID
 
 COPY --from=build --chown=bun:bun /app/node_modules ./node_modules
 COPY --from=build --chown=bun:bun /app/apps/discord/package.json ./apps/discord/package.json

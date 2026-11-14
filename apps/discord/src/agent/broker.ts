@@ -1,3 +1,5 @@
+import { createAgentApi, type AgentPort } from './api.js';
+import { createHttp, type FetchFn } from '../api/http.js';
 import type { BotConfig } from '../config.js';
 import type { QuestionRequest, QuestionResult, QuestionSource } from './types.js';
 
@@ -77,18 +79,13 @@ export function parseQuestionResult(
   };
 }
 
-const QUESTIONS_PATH = '/v1/agent/questions';
 export const WAIT_MS = 120_000;
 const POLL_MS = 1_000;
 
-function callSignal(signal: AbortSignal | undefined): AbortSignal {
-  const timeout = AbortSignal.timeout(10_000);
-  if (signal === undefined) return timeout;
-  if (typeof AbortSignal.any === 'function') {
-    return AbortSignal.any([signal, timeout]);
-  }
-  return signal.aborted ? signal : timeout;
-}
+export type AgentApiDeps = {
+  agent?: AgentPort;
+  fetch?: FetchFn;
+};
 
 function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -108,23 +105,32 @@ function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
   });
 }
 
+function agentFor(config: BotConfig, deps?: AgentApiDeps): AgentPort {
+  if (deps?.agent) return deps.agent;
+  return createAgentApi(
+    createHttp({
+      apiUrl: config.apiUrl,
+      secret: config.ingestSecret,
+      fetch: deps?.fetch,
+    }),
+  );
+}
+
 /** POST a question, then poll until the API returns a completed or failed result. */
 export async function submitQuestion(
   config: BotConfig,
   job: QuestionRequest,
   signal?: AbortSignal,
+  deps?: AgentApiDeps,
 ): Promise<QuestionResult> {
-  const created = await fetch(`${config.apiUrl}${QUESTIONS_PATH}`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'X-Ingest-Secret': config.ingestSecret,
-    },
-    body: JSON.stringify(job),
-    signal: callSignal(signal),
-  });
+  const api = agentFor(config, deps);
+  const created = await api.submit(job, signal);
   if (!created.ok) {
-    throw new Error(`agent question rejected: ${created.status}`);
+    throw new Error(
+      created.status === undefined
+        ? created.detail
+        : `agent question rejected: ${created.status}`,
+    );
   }
 
   const deadline = Date.now() + WAIT_MS;
@@ -133,16 +139,22 @@ export async function submitQuestion(
       throw signal.reason instanceof Error ? signal.reason : new Error('Aborted');
     }
     if (Date.now() > deadline) throw new Error('agent question timed out');
-    const response = await fetch(`${config.apiUrl}${QUESTIONS_PATH}/${job.job_id}`, {
-      headers: { 'X-Ingest-Secret': config.ingestSecret },
-      signal: callSignal(signal),
-    });
+    const response = await api.poll(job.job_id, signal);
+    if (!response.ok) {
+      if (response.status === undefined) throw new Error(response.detail);
+      if (response.status >= 200 && response.status < 300) {
+        throw new Error(response.detail);
+      }
+      throw new Error(`agent question status ${response.status}`);
+    }
     if (response.status === 202 || response.status === 204) {
       await sleep(POLL_MS, signal);
       continue;
     }
-    if (!response.ok) throw new Error(`agent question status ${response.status}`);
-    const body = Buffer.from(await response.text());
-    return parseQuestionResult(body, job.job_id, config.agentPublicOrigin);
+    return parseQuestionResult(
+      Buffer.from(response.text),
+      job.job_id,
+      config.agentPublicOrigin,
+    );
   }
 }

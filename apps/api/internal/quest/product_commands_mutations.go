@@ -827,7 +827,7 @@ func applyQuestRosterCorrection(ctx context.Context, repos ProductCommandRepos, 
 	}
 	view, skipped, err := repos.Quest.StoreCorrectQuestRoster(ctx, CorrectQuestRosterWrite{
 		At: at, ValidatedInput: spec, Quest: locked.Before, Roster: locked.Roster, Candidates: admissions,
-		Staff: fresh.Claims().Has(auth.Admin) || fresh.IsPlatformOwner(),
+		Staff: fresh.Claims().Has(auth.Admin) || fresh.IsPlatformOwner(), QuestRowID: locked.QuestRowID,
 	})
 	if err != nil || skipped {
 		return view, err
@@ -848,11 +848,16 @@ func (s ProductCommands) AttestQuestParticipation(ctx context.Context, actor aut
 		return nil, err
 	}
 	entries := make([]ParticipationAttestationFields, 0, len(spec.Entries))
+	seen := make(map[string]bool, len(spec.Entries))
 	for _, entry := range spec.Entries {
 		characterID := strings.TrimSpace(entry.CharacterId)
 		if err := commandPublicID(&characterID); err != nil {
 			return nil, err
 		}
+		if seen[characterID] {
+			return nil, apierr.New(apierr.Invalid, "attendance requires unique characters and played or no_show status")
+		}
+		seen[characterID] = true
 		entries = append(entries, ParticipationAttestationFields{CharacterId: characterID, Status: strings.TrimSpace(entry.Status)})
 	}
 	spec.QuestId, spec.Entries = questID, entries
