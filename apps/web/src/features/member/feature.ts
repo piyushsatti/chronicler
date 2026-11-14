@@ -44,7 +44,9 @@ export const graphql: FeatureGraphql = {
         },
       },
     }),
-  MemberUpcoming: () =>
+  MemberMyUpcomingSignups: () =>
+    HttpResponse.json({ data: { myQuestSignups: { total: 0, items: [] } } }),
+  MemberUpcomingQuests: () =>
     HttpResponse.json({ data: { quests: { total: 0, items: [] } } }),
   MemberRoster: () =>
     HttpResponse.json({ data: { myCharacters: { total: 0, items: [] } } }),

@@ -42,6 +42,18 @@ func questUUID(value string) (pgtype.UUID, error) {
 	return id, nil
 }
 
+func questPublicUUIDs(values []string) ([]pgtype.UUID, error) {
+	ids := make([]pgtype.UUID, 0, len(values))
+	for _, value := range values {
+		parsed, err := questUUID(value)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, parsed)
+	}
+	return ids, nil
+}
+
 func mapQuestListPageRow(row dbgen.ProductQuestListPageRow) *QuestView {
 	if !row.PublicID.Valid {
 		return nil
@@ -203,6 +215,7 @@ func questsListParams(spec QuestsSpec) (dbgen.ProductQuestListPageParams, error)
 		RowLimit:       spec.Limit,
 		RowOffset:      spec.Offset,
 		ShortCodes:     []string{},
+		Ids:            []pgtype.UUID{},
 	}
 	if spec.Filters != nil {
 		f := spec.Filters
@@ -221,9 +234,13 @@ func questsListParams(spec QuestsSpec) (dbgen.ProductQuestListPageParams, error)
 		if len(f.ShortCodes) > 0 {
 			params.ShortCodes = f.ShortCodes
 		}
+		var err error
+		params.Ids, err = questPublicUUIDs(f.Ids)
+		if err != nil {
+			return dbgen.ProductQuestListPageParams{}, err
+		}
 		params.ScheduledFrom = optionalTime(f.ScheduledFrom)
 		params.ScheduledTo = optionalTime(f.ScheduledTo)
-		var err error
 		params.DmID, err = optionalPublicUUID(f.DmId)
 		if err != nil {
 			return dbgen.ProductQuestListPageParams{}, err
@@ -561,10 +578,11 @@ func (p *ProductPostgres) ReadMyQuestSignups(ctx context.Context, actor auth.Aut
 		return ParticipationPage{}, apierr.New(apierr.Invalid, "invalid member id")
 	}
 	rows, err := p.queries().ProductQuestMySignupsPage(ctx, dbgen.ProductQuestMySignupsPageParams{
-		AsOf:      questAsOf(spec.AsOf),
-		MemberID:  memberID,
-		RowOffset: spec.Offset,
-		RowLimit:  spec.Limit,
+		AsOf:          questAsOf(spec.AsOf),
+		MemberID:      memberID,
+		ScheduledFrom: optionalTime(spec.ScheduledFrom),
+		RowOffset:     spec.Offset,
+		RowLimit:      spec.Limit,
 	})
 	if err != nil {
 		return ParticipationPage{}, err
