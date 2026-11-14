@@ -1,7 +1,12 @@
 import { useId } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
-import type { useBulkRoleBar } from '../hooks/useBulkRoleBar.js';
+import {
+  BLANK_BULK_ROLE_FORM,
+  useBulkRoleForm,
+  type useBulkRoleBar,
+} from '../hooks/useBulkRoleBar.js';
+import type { MemberRoleForm } from '../personRoles.js';
 import { memberLabeler } from '../../../utils/format.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import { Select } from '../../../components/primitives/Select.js';
@@ -11,24 +16,15 @@ export function BulkRoleBar({
 }: {
   view: ReturnType<typeof useBulkRoleBar>;
 }): React.JSX.Element {
-  const roleLabelId = useId();
   const {
     submittedMembers,
     report,
     requiresExplicitChoice,
-    form,
-    setForm,
-    touched,
-    setTouched,
+    homogeneousForm,
+    selectedKey,
     batch,
     selected,
   } = view;
-
-  const disabled = batch.isPending || selected.length === 0;
-  const labelFor = memberLabeler(submittedMembers);
-
-  const canSubmit =
-    !batch.isPending && (!requiresExplicitChoice || touched) && selected.length > 0;
 
   return (
     <Card className="stack" data-component="BulkRoleBar" data-el="admin.bulkRoleBar">
@@ -37,9 +33,48 @@ export function BulkRoleBar({
         Select members below and choose the roles to give them. Different roles
         require an explicit choice.
       </p>
+      <BulkRoleFields
+        key={selectedKey}
+        initial={homogeneousForm ?? BLANK_BULK_ROLE_FORM}
+        requiresExplicitChoice={requiresExplicitChoice}
+        batch={batch}
+        selected={selected}
+        submittedMembers={submittedMembers}
+        report={report}
+      />
+    </Card>
+  );
+}
+
+function BulkRoleFields({
+  initial,
+  requiresExplicitChoice,
+  batch,
+  selected,
+  submittedMembers,
+  report,
+}: {
+  initial: MemberRoleForm;
+  requiresExplicitChoice: boolean;
+  batch: ReturnType<typeof useBulkRoleBar>['batch'];
+  selected: ReturnType<typeof useBulkRoleBar>['selected'];
+  submittedMembers: ReturnType<typeof useBulkRoleBar>['submittedMembers'];
+  report: ReturnType<typeof useBulkRoleBar>['report'];
+}): React.JSX.Element {
+  const roleLabelId = useId();
+  const { form, setForm, touched, setTouched } = useBulkRoleForm(initial);
+  const disabled = batch.isPending || selected.length === 0;
+  const labelFor = memberLabeler(submittedMembers);
+  const canSubmit =
+    !batch.isPending && (!requiresExplicitChoice || touched) && selected.length > 0;
+
+  return (
+    <>
       <div className="row" data-wrap="1">
         <div className="stack">
-          <span className="type-label" id={roleLabelId}>Base role</span>
+          <span className="type-label" id={roleLabelId}>
+            Base role
+          </span>
           <Select
             label="Base role"
             labelId={roleLabelId}
@@ -49,8 +84,10 @@ export function BulkRoleBar({
               setTouched(true);
               setForm((f) => ({
                 ...f,
-                baseTier: value === 'Guest' || value === 'Player' || value === 'Guest + Player'
-                  ? value : 'Spectator',
+                baseTier:
+                  value === 'Guest' || value === 'Player' || value === 'Guest + Player'
+                    ? value
+                    : 'Spectator',
               }));
             }}
             options={[
@@ -82,7 +119,7 @@ export function BulkRoleBar({
           />
         ))}
       </div>
-      <Button type="button" disabled={!canSubmit} onClick={() => batch.mutate()}>
+      <Button type="button" disabled={!canSubmit} onClick={() => batch.mutate(form)}>
         Apply roles to selection
       </Button>
       {batch.isError ? (
@@ -103,6 +140,6 @@ export function BulkRoleBar({
           })}
         </ul>
       ) : null}
-    </Card>
+    </>
   );
 }

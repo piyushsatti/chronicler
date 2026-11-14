@@ -15,7 +15,12 @@ import type { AppError } from '../../../errors/types.js';
 import type { EditorLoadResult } from '../adapters/editorLoad.js';
 import type { EditorRouteProps, EditorTypeKey } from '../types.js';
 import { useEditorRecord } from './useEditorRecord.js';
-import { useEditorWorkspace, type EditorWorkspaceView } from './useEditorWorkspace.js';
+import {
+  useEditorWorkspace,
+  type EditorWorkspaceProps,
+  type EditorWorkspaceView,
+} from './useEditorWorkspace.js';
+import { editorDraftKey } from './useEditorDraft.js';
 
 export type EditorPageData =
   | {
@@ -108,10 +113,26 @@ export type CreateAccess =
   | { status: 'forbidden' }
   | { status: 'error'; error: AppError; retry?: () => void };
 
-export function useEditorPage(
+export type EditorPageGate =
+  | {
+      status: 'error';
+      error: AppError;
+      retry?: () => void;
+      canCreateNew?: boolean;
+    }
+  | { status: 'loading' }
+  | {
+      status: 'ready';
+      workspace: EditorWorkspaceProps;
+      draftKey: string;
+      denied: boolean;
+    };
+
+/** Record load and create-access only; the workspace (and draft) mounts under `draftKey`. */
+export function useEditorPageGate(
   { typeKey, mode }: EditorRouteProps,
   reviewAccess?: CreateAccess,
-): EditorPageData {
+): EditorPageGate {
   const params = useParams();
   const [search] = useSearchParams();
   const auth = useAuth();
@@ -147,10 +168,26 @@ export function useEditorPage(
     },
     enabled,
   );
-  const view = useEditorWorkspace({
+  const liveDm = useLiveDm(
+    mode === 'new' && createNeedsLiveDm(typeKey, me?.roles ?? []),
+  );
+  const access = createAccessFor(typeKey, mode, reviewAccess, meQuery, liveDm);
+  if (query.isError)
+    return {
+      status: 'error',
+      error: toAppError(query.error, 'editor:load'),
+      retry: () => void query.refetch(),
+      canCreateNew: me ? canCreate(typeKey, { roles: me.roles, liveDm: false }) : false,
+    };
+  if (access.status === 'error')
+    return { status: 'error', error: access.error, retry: access.retry };
+  if (query.isPending || !query.data || access.status === 'loading')
+    return { status: 'loading' };
+  const initial = query.data;
+  const workspace: EditorWorkspaceProps = {
     typeKey,
     mode,
-    initial: query.data ?? PENDING,
+    initial,
     timeZone: editorTimeZone(timeZone),
     paramHint: params.code ?? params.id ?? params.slug,
     category: params.category,
@@ -172,25 +209,35 @@ export function useEditorPage(
     onReload: async () => {
       await query.refetch();
     },
-  });
-  // Only a new quest or summary for a DM the roles cannot settle reads the DM profile.
-  const liveDm = useLiveDm(
-    mode === 'new' && createNeedsLiveDm(typeKey, me?.roles ?? []),
+  };
+  return {
+    status: 'ready',
+    workspace,
+    draftKey: editorDraftKey(typeKey, initial.recordId, {
+      actorId: auth.memberId,
+      canEditBody: Boolean(enabled && query.isSuccess && initial.canEditBody),
+    }),
+    denied: access.status === 'forbidden',
+  };
+}
+
+export function useEditorPage(
+  props: EditorRouteProps,
+  reviewAccess?: CreateAccess,
+): EditorPageData {
+  const gate = useEditorPageGate(props, reviewAccess);
+  const view = useEditorWorkspace(
+    gate.status === 'ready' ? gate.workspace : {
+      typeKey: props.typeKey,
+      mode: props.mode,
+      initial: PENDING,
+      timeZone: 'UTC',
+      enabled: false,
+    },
   );
-  const access = createAccessFor(typeKey, mode, reviewAccess, meQuery, liveDm);
-  if (query.isError)
-    return {
-      status: 'error',
-      error: toAppError(query.error, 'editor:load'),
-      retry: () => void query.refetch(),
-      canCreateNew: me ? canCreate(typeKey, { roles: me.roles, liveDm: false }) : false,
-    };
-  if (access.status === 'error')
-    return { status: 'error', error: access.error, retry: access.retry };
-  if (query.isPending || !query.data || access.status === 'loading')
-    return { status: 'loading' };
-  if (access.status === 'forbidden')
+  if (gate.status === 'error') return gate;
+  if (gate.status === 'loading') return gate;
+  if (gate.denied)
     return { status: 'ready', view: { ...view, denied: true, deniedAction: 'create' } };
-  // A valid new draft is ready, even when its fields are blank. Missing edits remain AppError.
   return { status: 'ready', view };
 }

@@ -13,9 +13,13 @@ import {
   useAuthorityFailures,
   panelState,
 } from './useAdminAuthority.js';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { loadGameCalendar, updateGameCalendar } from '../adapters/adminAdapter.js';
+import {
+  loadGameCalendar,
+  updateGameCalendar,
+  type GameCalendarView,
+} from '../adapters/adminAdapter.js';
 import { safeAppError } from '../../../errors/toAppError.js';
 import { TransportError } from '../../../errors/types.js';
 
@@ -28,28 +32,37 @@ function isRejectedDefinition(err: unknown): boolean {
 
 export function useGameCalendarPanel() {
   const authority = useAdminAuthority();
-  const queryClient = useQueryClient();
   const calendar = useQuery({
     enabled: authority.allowed,
     queryKey: [...KEY, authority.cacheKey],
     queryFn: ({ signal }) => authority.read(loadGameCalendar, signal),
   });
-  const [form, setForm] = useState<FormState>({
-    eraName: '',
-    eraAbbrev: '',
-    daysPerWeek: '',
-    weekdays: '',
-    rate: '',
-    periods: [],
-  });
-  const [definition, setDefinition] = useState<Record<string, unknown>>({});
-  const [message, setMessage] = useState<string | null>(null);
+  useAuthorityFailures(calendar.error);
+  return {
+    GREYHAWK_PRESET: calendarPreset.definition,
+    presetForm: calendarPreset.form,
+    calendar: panelState(
+      {
+        ...calendar,
+        retry: () => {
+          void calendar.refetch();
+        },
+      },
+      'admin:GameCalendarPanel',
+    ),
+  };
+}
 
-  useEffect(() => {
-    if (!calendar.data) return;
-    setDefinition(calendar.data.definition);
-    setForm(calendar.data.form);
-  }, [calendar.data]);
+export function useGameCalendarForm(
+  initial: GameCalendarView,
+  setMessage: (message: string | null) => void,
+) {
+  const authority = useAdminAuthority();
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState<FormState>(initial.form);
+  const [definition, setDefinition] = useState<Record<string, unknown>>(
+    initial.definition,
+  );
 
   const save = useMutation({
     mutationKey: ['adminCommand', authority.commandKey, 'useGameCalendarPanel'],
@@ -71,25 +84,14 @@ export function useGameCalendarPanel() {
     }),
     onSuccess: async () => {
       if (!authority.isCurrent()) return;
-      setMessage('Game calendar saved.');
       await queryClient.invalidateQueries({ queryKey: KEY });
+      setMessage('Game calendar saved.');
     },
   });
-  useAuthorityFailures(calendar.error, save.error);
+  useAuthorityFailures(save.error);
   const periodIssues = calendarPeriodIssues(form.periods);
   const eraIssues = calendarEraIssues(form, calendarWritesPeriods(definition, form));
   return {
-    GREYHAWK_PRESET: calendarPreset.definition,
-    presetForm: calendarPreset.form,
-    calendar: panelState(
-      {
-        ...calendar,
-        retry: () => {
-          void calendar.refetch();
-        },
-      },
-      'admin:GameCalendarPanel',
-    ),
     form,
     setForm,
     periodIssues,
@@ -99,7 +101,6 @@ export function useGameCalendarPanel() {
       hasCalendarPeriodIssues(periodIssues) || Boolean(eraIssues.name || eraIssues.abbrev),
     definition,
     setDefinition,
-    message,
     setMessage,
     save: panelState(save, 'admin:GameCalendarPanel'),
   };

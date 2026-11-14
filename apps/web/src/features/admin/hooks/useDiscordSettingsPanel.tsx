@@ -3,9 +3,13 @@ import {
   useAuthorityFailures,
   panelState,
 } from './useAdminAuthority.js';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { loadDiscordSettings, saveDiscordSettings } from '../adapters/adminAdapter.js';
+import {
+  loadDiscordSettings,
+  saveDiscordSettings,
+  type DiscordSettingsView,
+} from '../adapters/adminAdapter.js';
 import {
   discordSettingsInput,
   validateDiscordSettings,
@@ -18,32 +22,52 @@ const NO_ERRORS: DiscordSettingsErrors = { voiceChannels: {}, summary: [] };
 
 export function useDiscordSettingsPanel() {
   const authority = useAdminAuthority();
-  const queryClient = useQueryClient();
   const settingsQ = useQuery({
     enabled: authority.allowed,
     queryKey: [...KEY, authority.cacheKey],
     queryFn: ({ signal }) => authority.read(loadDiscordSettings, signal),
   });
+  useAuthorityFailures(settingsQ.error);
+  return {
+    settingsQ: panelState(
+      {
+        ...settingsQ,
+        retry: () => {
+          void settingsQ.refetch();
+        },
+      },
+      'admin:DiscordSettingsPanel',
+    ),
+  };
+}
+
+function voiceRowsFrom(
+  channels: DiscordSettingsView['voiceChannels'],
+  nextKey: { current: number },
+): VoiceChannelRow[] {
+  return channels.map((channel) => ({
+    key: nextKey.current++,
+    name: channel.name,
+    channelId: channel.channelId,
+  }));
+}
+
+export function useDiscordSettingsForm(
+  initial: DiscordSettingsView,
+  setSaveMessage: (message: string | null) => void,
+) {
+  const authority = useAdminAuthority();
+  const queryClient = useQueryClient();
   const nextKey = useRef(1);
-  const [announceChannelId, setAnnounceChannelId] = useState('');
-  const [roleId, setRoleId] = useState('');
-  const [voiceChannels, setVoiceChannels] = useState<VoiceChannelRow[]>([]);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [announceChannelId, setAnnounceChannelId] = useState(
+    initial.announceChannelId ?? '',
+  );
+  const [roleId, setRoleId] = useState(initial.roleId ?? '');
+  const [voiceChannels, setVoiceChannels] = useState(() =>
+    voiceRowsFrom(initial.voiceChannels, nextKey),
+  );
   const [errors, setErrors] = useState<DiscordSettingsErrors>(NO_ERRORS);
   const [summaryFocus, setSummaryFocus] = useState(0);
-
-  useEffect(() => {
-    if (!settingsQ.data) return;
-    setAnnounceChannelId(settingsQ.data.announceChannelId ?? '');
-    setRoleId(settingsQ.data.roleId ?? '');
-    setVoiceChannels(
-      settingsQ.data.voiceChannels.map((channel) => ({
-        key: nextKey.current++,
-        name: channel.name,
-        channelId: channel.channelId,
-      })),
-    );
-  }, [settingsQ.data]);
 
   const form = { announceChannelId, roleId, voiceChannels };
   const save = useMutation({
@@ -55,12 +79,12 @@ export function useDiscordSettingsPanel() {
     ),
     onSuccess: async () => {
       if (!authority.isCurrent()) return;
-      setSaveMessage('Discord settings saved.');
       await queryClient.invalidateQueries({ queryKey: KEY });
       await queryClient.invalidateQueries({ queryKey: ['editor', 'voiceChannels'] });
+      setSaveMessage('Discord settings saved.');
     },
   });
-  useAuthorityFailures(settingsQ.error, save.error);
+  useAuthorityFailures(save.error);
 
   const submit = (): void => {
     setSaveMessage(null);
@@ -74,15 +98,6 @@ export function useDiscordSettingsPanel() {
   };
 
   return {
-    settingsQ: panelState(
-      {
-        ...settingsQ,
-        retry: () => {
-          void settingsQ.refetch();
-        },
-      },
-      'admin:DiscordSettingsPanel',
-    ),
     announceChannelId,
     setAnnounceChannelId,
     roleId,
@@ -101,7 +116,6 @@ export function useDiscordSettingsPanel() {
       setVoiceChannels((rows) => rows.filter((row) => row.key !== key)),
     errors,
     summaryFocus,
-    saveMessage,
     submit,
     save: panelState(save, 'admin:DiscordSettingsPanel'),
   };

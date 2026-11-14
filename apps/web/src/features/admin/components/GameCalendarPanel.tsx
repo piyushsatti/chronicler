@@ -1,11 +1,15 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { AdminReadFailure } from './AdminReadFailure.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Select } from '../../../components/primitives/Select.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import type { CalendarPeriodDraft } from '../adapters/adminForms.js';
-import type { useGameCalendarPanel } from '../hooks/useGameCalendarPanel.js';
+import {
+  useGameCalendarForm,
+  type useGameCalendarPanel,
+} from '../hooks/useGameCalendarPanel.js';
+import type { GameCalendarView } from '../adapters/adminAdapter.js';
 
 const PERIOD_TYPES = [
   { value: 'month', label: 'Month' },
@@ -17,10 +21,39 @@ export function GameCalendarPanel({
 }: {
   view: ReturnType<typeof useGameCalendarPanel>;
 }): React.JSX.Element {
+  const { GREYHAWK_PRESET, presetForm, calendar } = view;
+  const [message, setMessage] = useState<string | null>(null);
+
+  if (calendar.isError) {
+    return <AdminReadFailure error={calendar.error} retry={calendar.retry} />;
+  }
+  if (calendar.isLoading || !calendar.data) return <StatePanel status="loading" />;
+
+  return (
+    <GameCalendarForm
+      initial={calendar.data}
+      GREYHAWK_PRESET={GREYHAWK_PRESET}
+      presetForm={presetForm}
+      message={message}
+      setMessage={setMessage}
+    />
+  );
+}
+
+function GameCalendarForm({
+  initial,
+  GREYHAWK_PRESET,
+  presetForm,
+  message,
+  setMessage,
+}: {
+  initial: GameCalendarView;
+  GREYHAWK_PRESET: Record<string, unknown>;
+  presetForm: ReturnType<typeof useGameCalendarPanel>['presetForm'];
+  message: string | null;
+  setMessage: (message: string | null) => void;
+}): React.JSX.Element {
   const {
-    GREYHAWK_PRESET,
-    presetForm,
-    calendar,
     form,
     setForm,
     periodIssues,
@@ -29,10 +62,8 @@ export function GameCalendarPanel({
     newPeriod,
     definition,
     setDefinition,
-    message,
-    setMessage,
     save,
-  } = view;
+  } = useGameCalendarForm(initial, setMessage);
   const labelId = useId();
   const setPeriods = (
     update: (periods: CalendarPeriodDraft[]) => CalendarPeriodDraft[],
@@ -71,11 +102,6 @@ export function GameCalendarPanel({
     pendingFocus.current = target ? `${target.id}:remove` : 'add';
     setPeriods(() => next);
   };
-
-  if (calendar.isError) {
-    return <AdminReadFailure error={calendar.error} retry={calendar.retry} />;
-  }
-  if (calendar.isLoading || !calendar.data) return <StatePanel status="loading" />;
 
   return (
     <Card

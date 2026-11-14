@@ -22,13 +22,21 @@ function mockSettings(
   },
   onSave?: (input: unknown) => void,
 ) {
+  let current = saved;
   mockGraphqlOps({
     AdminOperations: () => HttpResponse.json({ data: { adminOperations: goodOps } }),
-    AdminDiscordSettings: () => HttpResponse.json({ data: { discordSettings: saved } }),
+    AdminDiscordSettings: () =>
+      HttpResponse.json({ data: { discordSettings: current } }),
     UpdateDiscordSettings: (body) => {
-      onSave?.(body.variables?.['input']);
+      const input = body.variables?.['input'] as typeof saved;
+      onSave?.(input);
+      current = {
+        announceChannelId: input.announceChannelId,
+        roleId: input.roleId,
+        voiceChannels: input.voiceChannels,
+      };
       return HttpResponse.json({
-        data: { updateDiscordSettings: body.variables?.['input'] },
+        data: { updateDiscordSettings: current },
       });
     },
   });
