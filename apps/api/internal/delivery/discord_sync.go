@@ -138,14 +138,11 @@ type syncRun struct {
 func (s *syncRun) execute(ctx context.Context, revision int) error {
 	q := &s.quest
 	firstPost := q.AppliedRevision == 0 && q.ThreadID == ""
-	created, err := s.syncMessage(ctx, revision)
-	if err != nil {
-		return err
-	}
+	created, msgErr := s.syncMessage(ctx, revision)
 	// The thread is opened on the first post only, never again. It is best
 	// effort: a missing thread permission must not hold back the event or
 	// leave the delivery failing, so the error is logged and the sync goes on.
-	if firstPost && q.ThreadID == "" && !s.terminal() {
+	if firstPost && q.ThreadID == "" && !s.terminal() && q.MessageID != "" {
 		if id, err := s.startThread(ctx); err != nil {
 			slog.WarnContext(ctx, "discord thread not opened", "quest", s.questID, "message", q.MessageID, "error", err)
 		} else {
@@ -153,19 +150,15 @@ func (s *syncRun) execute(ctx context.Context, revision int) error {
 		}
 	}
 	if err := ctx.Err(); err != nil {
-		return err
+		return errors.Join(msgErr, err)
 	}
-	eventChanged, err := s.syncEvent(ctx)
-	if err != nil {
-		return err
-	}
-	if created || eventChanged {
+	eventChanged, eventErr := s.syncEvent(ctx)
+	var editErr error
+	if (created || eventChanged) && q.EventID != "" && q.MessageID != "" {
 		// The first post goes out before the event exists; replace Pending.
-		if q.EventID != "" {
-			return s.editMessage(ctx)
-		}
+		editErr = s.editMessage(ctx)
 	}
-	return nil
+	return errors.Join(msgErr, eventErr, editErr)
 }
 
 func (s *syncRun) syncMessage(ctx context.Context, revision int) (bool, error) {
@@ -295,16 +288,30 @@ func (s *syncRun) syncEvent(ctx context.Context) (bool, error) {
 			return false, err
 		}
 	}
-	if s.terminal() {
-		return false, nil
-	}
-	if !q.ScheduledAt.After(s.now()) {
+	if s.terminal() || !q.ScheduledAt.After(s.now()) {
 		return false, nil
 	}
 	name := q.Title
 	if utf8.RuneCountInString(name) > 100 {
 		name = string([]rune(name)[:99]) + "…"
 	}
+	body := s.eventBody(name)
+	if q.EventID != "" {
+		if _, err := s.call(ctx, http.MethodPatch, fmt.Sprintf("/guilds/%s/scheduled-events/%s", s.GuildID, q.EventID), body); err != nil {
+			return false, fmt.Errorf("discord patch event: %w", err)
+		}
+		return false, nil
+	}
+	// No announcement yet: only cancel/update an existing event; never create
+	// one whose description would link to a missing message.
+	if q.MessageID == "" {
+		return false, nil
+	}
+	return s.createOrAdoptEvent(ctx, name, body)
+}
+
+func (s *syncRun) eventBody(name string) map[string]any {
+	q := s.quest
 	body := map[string]any{
 		"name":                 name,
 		"privacy_level":        2, // GUILD_ONLY
@@ -323,11 +330,14 @@ func (s *syncRun) syncEvent(ctx context.Context) (bool, error) {
 		body["entity_type"], body["channel_id"] = 3, nil // EXTERNAL
 		body["entity_metadata"] = map[string]any{"location": string(location)}
 	}
-	if q.EventID != "" {
-		if _, err := s.call(ctx, http.MethodPatch, fmt.Sprintf("/guilds/%s/scheduled-events/%s", s.GuildID, q.EventID), body); err != nil {
-			return false, fmt.Errorf("discord patch event: %w", err)
-		}
-		return false, nil
+	return body
+}
+
+func (s *syncRun) createOrAdoptEvent(ctx context.Context, name string, body map[string]any) (bool, error) {
+	if id, err := s.findBotEvent(ctx, name, s.quest.ScheduledAt); err != nil {
+		return false, err
+	} else if id != "" {
+		return s.persistEventID(ctx, id)
 	}
 	raw, err := s.call(ctx, http.MethodPost, fmt.Sprintf("/guilds/%s/scheduled-events", s.GuildID), body)
 	if err != nil {
@@ -337,13 +347,81 @@ func (s *syncRun) syncEvent(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	q.EventID = id
+	return s.persistEventID(ctx, id)
+}
+
+func (s *syncRun) persistEventID(ctx context.Context, id string) (bool, error) {
+	s.quest.EventID = id
 	persist, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	if err := s.Quests.SetDiscordEvent(persist, s.questID, id, s.eventURL()); err != nil {
 		return false, fmt.Errorf("discord event id persist: %w", err)
 	}
 	return true, ctx.Err()
+}
+
+// botUserIDs caches GET /users/@me by bot token for the process lifetime
+// (one lookup per worker token).
+var botUserIDs sync.Map
+
+// ClearBotUserIDCache clears the bot user cache. Tests only.
+func ClearBotUserIDCache() {
+	botUserIDs.Range(func(key, _ any) bool {
+		botUserIDs.Delete(key)
+		return true
+	})
+}
+
+func (s *syncRun) botUserID(ctx context.Context) (string, error) {
+	if id, ok := botUserIDs.Load(s.Token); ok {
+		return id.(string), nil
+	}
+	raw, err := s.call(ctx, http.MethodGet, "/users/@me", nil)
+	if err != nil {
+		return "", fmt.Errorf("discord bot user: %w", err)
+	}
+	id, err := responseID(raw, "user")
+	if err != nil {
+		return "", err
+	}
+	if actual, loaded := botUserIDs.LoadOrStore(s.Token, id); loaded {
+		return actual.(string), nil
+	}
+	return id, nil
+}
+
+func (s *syncRun) findBotEvent(ctx context.Context, name string, start time.Time) (string, error) {
+	botID, err := s.botUserID(ctx)
+	if err != nil {
+		return "", err
+	}
+	raw, err := s.call(ctx, http.MethodGet, fmt.Sprintf("/guilds/%s/scheduled-events", s.GuildID), nil)
+	if err != nil {
+		return "", fmt.Errorf("discord list events: %w", err)
+	}
+	var events []struct {
+		ID                 string `json:"id"`
+		Name               string `json:"name"`
+		CreatorID          string `json:"creator_id"`
+		ScheduledStartTime string `json:"scheduled_start_time"`
+	}
+	if err := json.Unmarshal(raw, &events); err != nil {
+		return "", fmt.Errorf("discord list events: %w", err)
+	}
+	wantStart := start.UTC()
+	for _, event := range events {
+		if event.CreatorID != botID || event.Name != name {
+			continue
+		}
+		got, err := time.Parse(time.RFC3339, event.ScheduledStartTime)
+		if err != nil {
+			continue
+		}
+		if got.UTC().Equal(wantStart) {
+			return event.ID, nil
+		}
+	}
+	return "", nil
 }
 
 func (s *syncRun) reconcileStoredEvent(ctx context.Context) (bool, error) {
