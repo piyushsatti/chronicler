@@ -89,7 +89,8 @@ as `repair_required` with safe error code `DISCORD_PERMISSION` on the first
 attempt. The admin delivery panel shows it as **Needs repair** with a
 missing-permission reason. Grant the missing permission, then click **Retry
 delivery** on that row. Other failures still retry with backoff and end as
-`dead` (**Gave up**) after the attempt limit; the same button requeues those.
+`dead` (**Gave up**) after 20 attempts (about one hour of backoff, honouring
+Discord `Retry-After` when present); the same button requeues those.
 
 `ErrDiscordEventState` also parks delivery as `repair_required` immediately.
 Inspect the stored event when its GET returns `404`, its status is absent or

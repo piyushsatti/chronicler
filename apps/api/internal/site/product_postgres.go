@@ -19,6 +19,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 )
@@ -406,7 +407,7 @@ func mapAdminDeliveryJob(row dbgen.SiteAdminDeliveryJobsRow) AdminDeliveryJobVie
 	}
 	job := AdminDeliveryJobView{
 		Id: db.UUIDString(row.PublicID), State: state, FailureStreak: row.Attempts.Int32,
-		MaxAttempts: deliveryJobMaxAttempts, RedriveCount: row.RedriveCount.Int32,
+		MaxAttempts: jobs.DiscordMaxAttempts, RedriveCount: row.RedriveCount.Int32,
 	}
 	if row.CreatedAt.Valid {
 		job.CreatedAt = row.CreatedAt.Time
@@ -452,7 +453,7 @@ func mapAdminDeliveryJob(row dbgen.SiteAdminDeliveryJobsRow) AdminDeliveryJobVie
 func mapLockedDeliveryJob(row dbgen.SiteLockDiscordDeliveryJobRow) AdminDeliveryJobView {
 	job := AdminDeliveryJobView{
 		Id: db.UUIDString(row.PublicID), State: row.State, FailureStreak: row.Attempts,
-		MaxAttempts: deliveryJobMaxAttempts, RedriveCount: row.RedriveCount,
+		MaxAttempts: jobs.DiscordMaxAttempts, RedriveCount: row.RedriveCount,
 		CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time, NextAttemptAt: row.NextRunAt.Time,
 	}
 	if row.SafeErrorCode.Valid {
