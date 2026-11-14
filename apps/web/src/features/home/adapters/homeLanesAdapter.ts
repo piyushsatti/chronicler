@@ -26,6 +26,7 @@ import { toCardStatus } from '../../../view-models/questCard.js';
 import { formatScheduled, formatScheduledShort } from '../../../utils/format.js';
 import { isDiscordDeliveryTerminal } from '../../../utils/discordDelivery.js';
 import type { QuestCardProps } from '../../../components/domain/QuestCard.js';
+import { hasSeat } from '../../../utils/questVocabulary.js';
 
 export type DmAcceptingView = {
   memberId: string;
@@ -84,8 +85,6 @@ export type HomeLanesViewModel = {
     dmsAccepting: number;
   };
 };
-
-const SEATED = new Set(['signed_up', 'played', 'selected']);
 
 type WireQuestItem = (typeof questListWireSchema)['_output']['items'][number];
 
@@ -256,7 +255,7 @@ export function mapToQuestCardProps(
     timeZone?: string | null;
   } = {},
 ): QuestCardProps {
-  const seated = quest.participants.filter((p) => SEATED.has(p.status));
+  const seated = quest.participants.filter((p) => hasSeat(p.status));
   const own =
     quest.participants.find(
       (p) => p.memberId === opts.memberId && p.status === 'signed_up',

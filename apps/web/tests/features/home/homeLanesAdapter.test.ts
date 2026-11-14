@@ -50,6 +50,13 @@ describe('homeLanesAdapter', () => {
                 memberHandle: 'waiter',
                 status: 'waitlisted',
               },
+              {
+                memberId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+                characterId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02',
+                characterName: 'Ghost',
+                memberHandle: 'ghost',
+                status: 'no_show',
+              },
             ],
           },
         ],
