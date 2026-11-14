@@ -159,7 +159,7 @@ func TestAgentLeaseNumericResultReplayMatchesJSONB(t *testing.T) {
 		t.Fatal(claim, ok, e)
 	}
 	mux := http.NewServeMux()
-	agent.New("test", s).Routes(mux)
+	agent.New("test", s, false).Routes(mux)
 	send := func(body string, want int) {
 		t.Helper()
 		r := httptest.NewRequest("POST", "/v1/agent/questions/"+id+"/complete", strings.NewReader(body))
@@ -273,7 +273,7 @@ func TestAgentLeaseJSONBNumericStorageAdmission(t *testing.T) {
 	ctx := context.Background()
 	s := agent.NewPostgresStore(pool.Pool)
 	mux := http.NewServeMux()
-	agent.New("test", s).Routes(mux)
+	agent.New("test", s, false).Routes(mux)
 	for _, tc := range []struct {
 		name, number, field string
 		valid               bool
@@ -366,11 +366,10 @@ func TestAgentLeaseJSONBNumericStorageAdmission(t *testing.T) {
 }
 
 func TestAgentLeaseHTTPRenewal(t *testing.T) {
-	t.Setenv("AGENT_INLINE_COMPLETE", "0")
 	pool := integrationPool(t)
 	ctx := context.Background()
 	mux := http.NewServeMux()
-	agent.New("test", agent.NewPostgresStore(pool.Pool)).Routes(mux)
+	agent.New("test", agent.NewPostgresStore(pool.Pool), false).Routes(mux)
 	const requestTimeout = 5 * time.Second
 	send := func(t *testing.T, path, body string, want int) *httptest.ResponseRecorder {
 		t.Helper()

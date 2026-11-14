@@ -205,7 +205,6 @@ func assertQAResult(t *testing.T, w *httptest.ResponseRecorder, expected any) {
 }
 
 func TestQAQuestionUsesCurrentAdapters(t *testing.T) {
-	t.Setenv("AGENT_INLINE_COMPLETE", "")
 	job, question := qaQuestion(t)
 	id := job.Row["public_id"].(string)
 	if id != "00000018-0000-4000-8000-000000000007" || question.Refs["job_id"].PublicID != id {
@@ -237,7 +236,7 @@ func TestQAQuestionUsesCurrentAdapters(t *testing.T) {
 		t.Fatal("completion must precede question deadline")
 	}
 	mux := http.NewServeMux()
-	agent.New("qa-test-secret", nil).Routes(mux)
+	agent.New("qa-test-secret", nil, false).Routes(mux)
 	base := "/v1/agent/questions"
 	if w := qaRequest(mux, "POST", base, qaJSON(t, job.Row["payload"])); w.Code != 202 {
 		t.Fatalf("submit status=%d body=%s", w.Code, w.Body)

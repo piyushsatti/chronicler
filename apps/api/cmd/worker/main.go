@@ -15,9 +15,18 @@ import (
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	cfg, err := config.FromEnv()
+	if err != nil {
+		slog.Error("invalid configuration", "error", err)
+		os.Exit(1)
+	}
+	if err := cfg.ValidateProduction(); err != nil {
+		slog.Error("invalid configuration", "error", err)
+		os.Exit(1)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	if err := workerrun.Run(ctx, config.FromEnv()); err != nil {
+	if err := workerrun.Run(ctx, cfg); err != nil {
 		slog.Error("worker stopped", "error", err)
 	}
 }

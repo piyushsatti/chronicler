@@ -15,12 +15,17 @@ func TestPhase3TaskW04Acceptance(t *testing.T) {
 	t.Run("environment snapshot", func(t *testing.T) {
 		t.Setenv("PLATFORM_OWNER_MEMBER_ID", owner)
 		t.Setenv("PLATFORM_OWNER_DISCORD_ID", discordOwner)
-		t.Setenv("OPERATOR_DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/synthetic/token")
-		cfg := FromEnv()
+		cfg, err := FromEnv()
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Setenv("PLATFORM_OWNER_MEMBER_ID", "")
 		t.Setenv("PLATFORM_OWNER_DISCORD_ID", "")
-		t.Setenv("OPERATOR_DISCORD_WEBHOOK_URL", "")
-		if cfg.PlatformOwnerMemberID != owner || cfg.PlatformOwnerDiscordID != discordOwner || cfg.OperatorDiscordWebhookURL != "https://discord.com/api/webhooks/synthetic/token" || FromEnv().PlatformOwnerMemberID != "" || FromEnv().PlatformOwnerDiscordID != "" {
+		cleared, err := FromEnv()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.PlatformOwnerMemberID != owner || cfg.PlatformOwnerDiscordID != discordOwner || cleared.PlatformOwnerMemberID != "" || cleared.PlatformOwnerDiscordID != "" {
 			t.Fatal("configuration did not capture immutable environment values")
 		}
 	})
