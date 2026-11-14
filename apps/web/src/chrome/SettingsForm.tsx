@@ -18,9 +18,8 @@ import { Checkbox } from '../components/primitives/Checkbox.js';
 import { SegmentedControl } from '../components/primitives/SegmentedControl.js';
 import { effectById } from '../effects/catalog.js';
 import { toAppError } from '../errors/toAppError.js';
+import { usePersonalizePage } from '../hooks/usePersonalizePage.js';
 import { timeZoneOptions } from '../utils/timeZones.js';
-import { PersonalizePreview } from '../features/personalize/components/PersonalizePreview.js';
-import { usePersonalizePage } from '../features/personalize/hooks/usePersonalizePage.js';
 
 const EFFECTS: readonly BgEffectId[] = ['none', 'starfield-twinkle', 'glow-pulse', 'gradient-sweep'];
 const THEME_LABELS: Record<ColorTheme, string> = {
@@ -108,10 +107,10 @@ function accountSettings(
 
 export function SettingsForm({
   section,
-  previewCharacter,
+  preview,
 }: {
   section: SettingsSection;
-  previewCharacter?: { shortCode: string; name: string; status: string; imageUrl: string | null };
+  preview?: React.ReactNode;
 }): React.JSX.Element {
   const personalize = section === 'personalize';
   const { isAuthenticated, token, isCurrentSession } = useAuth();
@@ -220,7 +219,7 @@ export function SettingsForm({
                 data-density={form.density}
                 data-colorblind={form.colorblindSafe ? 'safe' : 'off'}
               >
-                <PersonalizePreview character={previewCharacter} />
+                {preview}
               </div>
               <Help title="Your profile preview">Your name and roles come from Discord. Appearance choices only affect your view. Preview controls do not open quests or change your account.</Help>
             </section>

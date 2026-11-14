@@ -94,16 +94,6 @@
       "rule": "shared-feature-import"
     },
     {
-      "file": "src/chrome/SettingsForm.tsx",
-      "line": 20,
-      "rule": "shared-feature-import"
-    },
-    {
-      "file": "src/chrome/SettingsForm.tsx",
-      "line": 21,
-      "rule": "shared-feature-import"
-    },
-    {
       "file": "src/chrome/SiteChrome.tsx",
       "line": 8,
       "rule": "shared-feature-import"
@@ -563,13 +553,13 @@
       "seenAtLine": 6
     },
     {
-      "file": "src/features/personalize/hooks/usePersonalizePage.ts",
+      "file": "src/hooks/usePersonalizePage.ts",
       "rule": "query-key-origin",
       "value": "[...queryKeys.personalization, memberId]",
       "seenAtLine": 13
     },
     {
-      "file": "src/features/personalize/hooks/usePersonalizePage.ts",
+      "file": "src/hooks/usePersonalizePage.ts",
       "rule": "query-key-origin",
       "value": "[...queryKeys.personalization, result.account]",
       "seenAtLine": 35

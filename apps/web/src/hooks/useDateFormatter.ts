@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext.js';
 import { useTheme } from '../context/ThemeContext.js';
-import { usePersonalization } from '../features/personalize/hooks/usePersonalizePage.js';
+import { usePersonalization } from './usePersonalizePage.js';
 import { formatInstant, formatScheduled, formatScheduledShort } from '../utils/format.js';
 
 export function useDateFormatter() {
