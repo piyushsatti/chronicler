@@ -38,16 +38,15 @@ func TestCharacterCommandBindingPreservesConfiguredOwner(t *testing.T) {
 	if err != nil || !poolActor.IsPlatformOwner() {
 		t.Fatalf("pool owner=%v err=%v", poolActor.IsPlatformOwner(), err)
 	}
-	policy, err := auth.NewPoolPolicy(fixture.Pool)
-	if err != nil {
-		t.Fatal(err)
-	}
 	tx, err := fixture.Pool.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(ctx)
-	repos := bindCharacterCommandRepos(tx, policy, store)
+	repos, err := bindCharacterCommandRepos(tx, ownerID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	actor, err := repos.Authority(ctx, ownerID)
 	if err != nil || !actor.IsPlatformOwner() || actor.Claims().Has(auth.Admin) {
 		t.Fatalf("bound owner=%v roles=%v err=%v", actor.IsPlatformOwner(), actor.Claims().Roles, err)
