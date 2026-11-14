@@ -5,7 +5,10 @@ import { URL } from 'node:url';
 import { scanSource } from '../check-architecture-ladder.mjs';
 
 const fixture = (name) =>
-  readFileSync(new URL(`./fixtures/idempotency-key-origin/${name}`, import.meta.url), 'utf8');
+  readFileSync(
+    new URL(`./fixtures/idempotency-key-origin/${name}`, import.meta.url),
+    'utf8',
+  );
 
 test('crypto.randomUUID outside the fence hook is flagged', () => {
   const hits = scanSource(
@@ -19,9 +22,6 @@ test('crypto.randomUUID outside the fence hook is flagged', () => {
 });
 
 test('crypto.randomUUID inside useFencedMutation passes', () => {
-  const hits = scanSource(
-    fixture('inside.ts.txt'),
-    'src/hooks/useFencedMutation.ts',
-  );
+  const hits = scanSource(fixture('inside.ts.txt'), 'src/hooks/useFencedMutation.ts');
   assert.equal(hits.filter((hit) => hit.rule === 'idempotency-key-origin').length, 0);
 });
