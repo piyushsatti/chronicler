@@ -21,7 +21,11 @@ extend type Query {
   questArcs(limit: Int! = 50, offset: Int! = 0): QuestArcListResult!
   questArc(id: ID!): QuestArcType
   questGenreOptions: [String!]!
-  myQuestSignups(limit: Int! = 50, offset: Int! = 0): ParticipationPage!
+  myQuestSignups(
+    scheduledFrom: DateTime = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): ParticipationPage!
   questSummaries(
     questId: ID!
     limit: Int! = 50

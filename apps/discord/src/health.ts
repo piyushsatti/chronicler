@@ -26,9 +26,11 @@
  * backfill in D23, which belongs here later and is deliberately not built yet.
  */
 
+import { writeFileSync } from 'node:fs';
 import os from 'node:os';
 import type { Client, CloseEvent } from 'discord.js';
 import { config } from './config.js';
+import { BOT_ALIVE_PATH } from './healthcheck.js';
 import { logger } from './log.js';
 
 /** Injectable clock, so tests do not depend on wall time. */
@@ -181,7 +183,14 @@ export function mountShardHealth(
     void poster(heartbeatStatus());
   };
 
+  const touchAlive = (): void => {
+    writeFileSync(BOT_ALIVE_PATH, '');
+  };
+
+  touchAlive();
+
   const timer = setInterval(() => {
+    touchAlive();
     if (options.heartbeatEnabled === false) {
       checkGatewayLiveness();
       return;

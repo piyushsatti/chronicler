@@ -43,6 +43,15 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 		slog.ErrorContext(ctx, "panic", "panic", v, "stack", string(debug.Stack()))
 		return apierr.New(apierr.Internal, "Internal error")
 	})
+	srv.AroundOperations(func(ctx context.Context, next gql.OperationHandler) gql.ResponseHandler {
+		op := gql.GetOperationContext(ctx)
+		name := op.OperationName
+		if name == "" && op.Operation != nil {
+			name = op.Operation.Name
+		}
+		slog.InfoContext(ctx, "graphql operation", "operation", name)
+		return next(ctx)
+	})
 	srv.AddTransport(transport.POST{})
 	srv.Use(extension.Introspection{})
 	if limits.MaxDepth > 0 {
