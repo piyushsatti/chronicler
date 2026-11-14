@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './settingsForm.module.css';
 import { useAuth } from '../auth/AuthContext.js';
 import { useTheme } from '../context/ThemeContext.js';
 import {
   RULED_THEMES,
+  mergeServerLookAndFeel,
+  resolveMode,
   type BgEffectId,
   type ColorTheme,
   type UserPreferences,
@@ -89,6 +91,21 @@ function SaveBar({
   );
 }
 
+function accountSettings(
+  data: NonNullable<ReturnType<typeof usePersonalizePage>['personalization']['data']>,
+  current: UserPreferences,
+): UserPreferences {
+  return {
+    ...mergeServerLookAndFeel(current, data),
+    timezone: data.timezone,
+    notifyCharacterVerification: data.notifyCharacterVerification ?? true,
+    notifyQuestSignup: data.notifyQuestSignup ?? true,
+    notifyDocumentActivity: data.notifyDocumentActivity ?? true,
+    notifyQuestScheduled: data.notifyQuestScheduled ?? true,
+    notifyDmMentioned: data.notifyDmMentioned ?? true,
+  };
+}
+
 export function SettingsForm({
   section,
   previewCharacter,
@@ -97,29 +114,53 @@ export function SettingsForm({
   previewCharacter?: { shortCode: string; name: string; status: string; imageUrl: string | null };
 }): React.JSX.Element {
   const personalize = section === 'personalize';
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token, isCurrentSession } = useAuth();
   const { prefs, setPreferences } = useTheme();
   const { personalization, settingsMutation, retryLoading } = usePersonalizePage();
   const device = useMemo(deviceTimeZone, []);
   const loading = isAuthenticated && personalization.isPending;
   const locked = loading || settingsMutation.isPending;
+  const saved = useMemo((): UserPreferences => {
+    if (isAuthenticated && personalization.data) {
+      return accountSettings(personalization.data, prefs);
+    }
+    return prefs;
+  }, [isAuthenticated, personalization.data, prefs]);
+  const [draft, setDraft] = useState<UserPreferences | null>(null);
+  useEffect(() => {
+    setDraft(null);
+  }, [personalization.dataUpdatedAt, isAuthenticated]);
+  const form = draft ?? saved;
+
   const change = (patch: Partial<UserPreferences>): void => {
     settingsMutation.reset();
-    setPreferences(patch);
+    if (!isAuthenticated) {
+      setPreferences(patch);
+      return;
+    }
+    setDraft((current) => ({ ...(current ?? saved), ...patch }));
   };
   const save = (): void => {
     if (!isAuthenticated || locked) return;
-    const { modeExplicit: _modeExplicit, ...patch } = prefs;
-    settingsMutation.mutate(patch);
+    const { modeExplicit: _modeExplicit, ...patch } = form;
+    const bgEffect = form.bgEffect;
+    const sessionToken = token;
+    settingsMutation.mutate(patch, {
+      onSuccess: () => {
+        if (!isCurrentSession(sessionToken)) return;
+        setPreferences({ bgEffect });
+      },
+    });
   };
 
   if (personalization.isError) {
     return <section className="stack"><StatePanel status="error" error={toAppError(personalization.error, 'personalize:page')} /><Button onClick={retryLoading}>Retry loading settings</Button></section>;
   }
 
-  const selectedZone = prefs.timezone ?? DEVICE_ZONE;
-  const zoneChoices = timeZoneOptions(prefs.timezone);
-  const sample = nowIn(prefs.timezone ?? device);
+  const selectedZone = form.timezone ?? DEVICE_ZONE;
+  const zoneChoices = timeZoneOptions(form.timezone);
+  const sample = nowIn(form.timezone ?? device);
+  const previewResolved = resolveMode(form.mode);
   const navItems = personalize
     ? [{ id: 'personalize-appearance', label: 'Appearance' }, { id: 'personalize-preview', label: 'Profile preview' }]
     : [{ id: 'settings-dates', label: 'Dates and times' }, { id: 'settings-accessibility', label: 'Accessibility' }, ...(isAuthenticated ? [{ id: 'settings-notifications', label: 'Notifications' }] : [])];
@@ -144,10 +185,10 @@ export function SettingsForm({
               <Card as="section">
                 <fieldset className="field-group stack" disabled={locked}>
                   <legend id="personalize-appearance-title" className="type-heading">Appearance</legend>
-                  <div className="field"><span className="field-label" id="personalize-theme">Theme</span><Select label="Theme" labelId="personalize-theme" value={prefs.theme} options={RULED_THEMES.map((theme) => ({ value: theme, label: themeLabel(theme) }))} onValueChange={(next) => { const theme = RULED_THEMES.find((value) => value === next); if (theme) change({ theme }); }} /></div>
-                  <div className="field"><span className="field-label" id="personalize-mode">Color mode</span><SegmentedControl aria-label="Color mode" value={prefs.mode} onValueChange={(mode) => change({ mode, modeExplicit: true })} options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} /></div>
-                  <div className="field"><span className="field-label" id="personalize-density">Density</span><SegmentedControl aria-label="Density" value={prefs.density} onValueChange={(density) => change({ density })} options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]} /></div>
-                  <div className="field"><span className="field-label" id="personalize-effect">Background effect</span><Select label="Background effect" labelId="personalize-effect" value={prefs.bgEffect} options={EFFECTS.map((effect) => ({ value: effect, label: effectLabel(effect) }))} onValueChange={(next) => { const bgEffect = EFFECTS.find((value) => value === next); if (bgEffect) change({ bgEffect }); }} /></div>
+                  <div className="field"><span className="field-label" id="personalize-theme">Theme</span><Select label="Theme" labelId="personalize-theme" value={form.theme} options={RULED_THEMES.map((theme) => ({ value: theme, label: themeLabel(theme) }))} onValueChange={(next) => { const theme = RULED_THEMES.find((value) => value === next); if (theme) change({ theme }); }} /></div>
+                  <div className="field"><span className="field-label" id="personalize-mode">Color mode</span><SegmentedControl aria-label="Color mode" value={form.mode} onValueChange={(mode) => change({ mode, modeExplicit: true })} options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} /></div>
+                  <div className="field"><span className="field-label" id="personalize-density">Density</span><SegmentedControl aria-label="Density" value={form.density} onValueChange={(density) => change({ density })} options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]} /></div>
+                  <div className="field"><span className="field-label" id="personalize-effect">Background effect</span><Select label="Background effect" labelId="personalize-effect" value={form.bgEffect} options={EFFECTS.map((effect) => ({ value: effect, label: effectLabel(effect) }))} onValueChange={(next) => { const bgEffect = EFFECTS.find((value) => value === next); if (bgEffect) change({ bgEffect }); }} /></div>
                 </fieldset>
               </Card>
               <Help title="Appearance">These choices change how Chronicler looks on your device. System mode follows your device theme, and density changes the space around page content.</Help>
@@ -159,12 +200,12 @@ export function SettingsForm({
                 <Help title="Time zone">Quest times, calendar days and deadlines follow the zone you choose. It never changes when a quest happens.</Help>
               </section>
               <section className={styles.sectionRow} id="settings-accessibility" aria-labelledby="settings-accessibility-title">
-                <Card as="section"><fieldset className="field-group stack" disabled={locked}><legend id="settings-accessibility-title" className="type-heading">Accessibility</legend><Checkbox label="Colorblind-safe accents" checked={prefs.colorblindSafe} disabled={locked} onCheckedChange={(colorblindSafe) => change({ colorblindSafe })} /><Checkbox label="Reduce motion" checked={prefs.reducedMotion} disabled={locked} onCheckedChange={(reducedMotion) => change({ reducedMotion })} /><p className="type-caption">Your device’s reduced-motion preference is always respected.</p></fieldset></Card>
+                <Card as="section"><fieldset className="field-group stack" disabled={locked}><legend id="settings-accessibility-title" className="type-heading">Accessibility</legend><Checkbox label="Colorblind-safe accents" checked={form.colorblindSafe} disabled={locked} onCheckedChange={(colorblindSafe) => change({ colorblindSafe })} /><Checkbox label="Reduce motion" checked={form.reducedMotion} disabled={locked} onCheckedChange={(reducedMotion) => change({ reducedMotion })} /><p className="type-caption">Your device’s reduced-motion preference is always respected.</p></fieldset></Card>
                 <Help title="Display preferences">Colorblind-safe accents use a palette that stays distinct without red and green. Reduce motion turns animation down.</Help>
               </section>
               {isAuthenticated ? (
                 <section className={styles.sectionRow} id="settings-notifications" aria-labelledby="settings-notifications-title">
-                  <Card as="section"><fieldset className="field-group stack" disabled={locked}><legend id="settings-notifications-title" className="type-heading">Notifications</legend>{NOTIFICATIONS.map(([key, label]) => <Checkbox key={key} label={label} checked={prefs[key]} disabled={locked} onCheckedChange={(value) => change({ [key]: value })} />)}</fieldset></Card>
+                  <Card as="section"><fieldset className="field-group stack" disabled={locked}><legend id="settings-notifications-title" className="type-heading">Notifications</legend>{NOTIFICATIONS.map(([key, label]) => <Checkbox key={key} label={label} checked={form[key]} disabled={locked} onCheckedChange={(value) => change({ [key]: value })} />)}</fieldset></Card>
                   <Help title="Notification list"><p>Choose which events reach your notification list. Turning one off does not delete what you already have.</p><ul className={styles.helpList}>{NOTIFICATIONS.map(([, label, hint]) => <li key={label}><strong>{label}.</strong> {hint}</li>)}</ul></Help>
                 </section>
               ) : null}
@@ -172,7 +213,15 @@ export function SettingsForm({
           )}
           {personalize ? (
             <section className={styles.sectionRow} id="personalize-preview" aria-labelledby="personalize-preview-title">
-              <PersonalizePreview character={previewCharacter} />
+              <div
+                data-theme={form.theme}
+                data-mode={previewResolved}
+                data-mode-pref={form.mode}
+                data-density={form.density}
+                data-colorblind={form.colorblindSafe ? 'safe' : 'off'}
+              >
+                <PersonalizePreview character={previewCharacter} />
+              </div>
               <Help title="Your profile preview">Your name and roles come from Discord. Appearance choices only affect your view. Preview controls do not open quests or change your account.</Help>
             </section>
           ) : null}

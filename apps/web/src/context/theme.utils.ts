@@ -181,6 +181,33 @@ export function applyPrefs(
   root.style.colorScheme = resolvedMode;
 }
 
+export function mergeServerLookAndFeel(
+  current: UserPreferences,
+  server: {
+    theme: ColorTheme | null;
+    mode: ColorMode | null;
+    effectsEnabled: boolean | null;
+    colorblindSafe: boolean | null;
+    reducedMotion: boolean | null;
+    density: 'comfortable' | 'compact' | null;
+  },
+): UserPreferences {
+  return {
+    ...current,
+    theme: server.theme ?? DEFAULT_PREFERENCES.theme,
+    mode: server.mode ?? DEFAULT_PREFERENCES.mode,
+    modeExplicit: server.mode !== null,
+    bgEffect: server.effectsEnabled
+      ? current.bgEffect === 'none'
+        ? 'starfield-twinkle'
+        : current.bgEffect
+      : 'none',
+    colorblindSafe: server.colorblindSafe ?? false,
+    reducedMotion: server.reducedMotion ?? false,
+    density: server.density ?? 'comfortable',
+  };
+}
+
 /** Read prefs, apply to document, return them — call once before first paint. */
 export function initPrefs(): UserPreferences {
   const prefs = loadPrefs();
