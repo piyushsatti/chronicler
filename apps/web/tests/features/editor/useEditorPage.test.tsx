@@ -6,9 +6,9 @@ import { server } from '../../../src/mocks/server.js';
 import { useEditorPage } from '../../../src/features/editor/hooks/useEditorPage.js';
 import { draftStorageKey } from '../../../src/features/editor/hooks/useEditorDraft.js';
 import { editorHarness, seedEditorSession } from './editor-test-utils.js';
-import { useTheme } from '../../../src/context/ThemeContext.js';
-import { DEFAULT_PREFERENCES, savePrefs } from '../../../src/context/theme.utils.js';
+import { queryKeys } from '../../../src/api/queryKeys.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
+import goodPersonalization from '../../fixtures/wire/personalize/good.json';
 
 function questWire(overrides: Record<string, unknown> = {}) {
   return {
@@ -73,47 +73,61 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
 
   it('uses saved timezone without rewriting loaded precision and blocks unresolved session saves', async () => {
     const source = '2026-11-01T01:30:19.123456-05:00';
-    savePrefs(
-      { ...DEFAULT_PREFERENCES, timezone: 'America/New_York' },
-      'discord-editor',
-    );
+    let timezone: string | null = 'America/New_York';
     server.use(
+      graphql.query('MyPersonalization', () =>
+        HttpResponse.json({
+          data: {
+            myPersonalization: {
+              settings: { ...goodPersonalization.settings, timezone },
+            },
+          },
+        }),
+      ),
       graphql.query('EditorQuestLoad', () =>
         HttpResponse.json({ data: { quest: questWire({ scheduledAt: source }) } }),
       ),
     );
+    const harness = editorHarness();
     const { result } = renderHook(
-      () => ({
-        page: useEditorPage({ typeKey: 'quest', mode: 'edit' }),
-        preferences: useTheme(),
-      }),
-      editorHarness(),
+      () => useEditorPage({ typeKey: 'quest', mode: 'edit' }),
+      harness,
     );
-    await waitFor(() => expect(result.current.page.status).toBe('ready'));
-    if (result.current.page.status !== 'ready') throw new Error('Expected ready');
-    expect(result.current.page.view.timeZone).toBe('America/New_York');
-    expect(result.current.page.view.meta.scheduledAt).toBe(source);
-    expect(result.current.page.view.saveLabel).toBe('Save quest');
-    act(() => result.current.preferences.setPreferences({ timezone: 'Asia/Kolkata' }));
-    if (result.current.page.status !== 'ready') throw new Error('Expected ready');
-    expect(result.current.page.view.timeZone).toBe('Asia/Kolkata');
-    expect(result.current.page.view.meta.scheduledAt).toBe(source);
-    act(() => result.current.preferences.setPreferences({ timezone: null }));
-    if (result.current.page.status !== 'ready') throw new Error('Expected ready');
-    expect(result.current.page.view.timeZone).toBe(
-      Intl.DateTimeFormat().resolvedOptions().timeZone,
-    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    if (result.current.status !== 'ready') throw new Error('Expected ready');
+    expect(result.current.view.timeZone).toBe('America/New_York');
+    expect(result.current.view.meta.scheduledAt).toBe(source);
+    expect(result.current.view.saveLabel).toBe('Save quest');
+    timezone = 'Asia/Kolkata';
+    await harness.queryClient.invalidateQueries({
+      queryKey: queryKeys.personalization,
+    });
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('Expected ready');
+      expect(result.current.view.timeZone).toBe('Asia/Kolkata');
+    });
+    expect(result.current.view.meta.scheduledAt).toBe(source);
+    timezone = null;
+    await harness.queryClient.invalidateQueries({
+      queryKey: queryKeys.personalization,
+    });
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('Expected ready');
+      expect(result.current.view.timeZone).toBe(
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+      );
+    });
     act(() => {
-      if (result.current.page.status === 'ready')
-        result.current.page.view.setMeta((meta) => ({
+      if (result.current.status === 'ready')
+        result.current.view.setMeta((meta) => ({
           ...meta,
           scheduledAt: '2026-11-01T01:30',
         }));
     });
-    if (result.current.page.status !== 'ready') throw new Error('Expected ready');
-    expect(result.current.page.view.saveDisabled).toBe(true);
-    expect(result.current.page.view.publishDisabled).toBe(true);
-    expect(result.current.page.view.isDirty).toBe(true);
+    if (result.current.status !== 'ready') throw new Error('Expected ready');
+    expect(result.current.view.saveDisabled).toBe(true);
+    expect(result.current.view.publishDisabled).toBe(true);
+    expect(result.current.view.isDirty).toBe(true);
   });
 
   it('owns loading then ready record state and route-specific cancel', async () => {
