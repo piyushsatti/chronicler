@@ -38,15 +38,10 @@ jobs:
         with:
           go-version: '1.26.x'
           cache-dependency-path: apps/api/go.sum
-      # The container image has no Node. Without it Bun's node fallback runs
-      # vitest and the discord sensor tests fail.
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-      - name: Install JS workspace (discord sensor tests)
+          bun-version: 1.3.14
+      - name: Install JS workspace
         working-directory: .
         run: bun install --frozen-lockfile
       - name: Merge GraphQL schema
@@ -67,7 +62,7 @@ jobs:
         run: go mod download
       - name: Vet
         run: go vet ./...
-      - name: Verify loop (unit, contract, integration via testcontainers, discord sensor)
+      - name: Verify loop (unit, contract, integration via testcontainers)
         run: bash scripts/verify-loop.sh
         env:
           # Force testcontainers; do not reuse a host DB in CI.

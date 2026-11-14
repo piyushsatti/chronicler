@@ -22,18 +22,22 @@ func (p *ProductPostgres) ReadCharacterLogs(ctx context.Context, _ auth.Authorit
 	if err != nil {
 		return CharacterLogListResult{}, err
 	}
-	total, err := p.queries().CharacterProductCountLogs(ctx, characterID)
-	if err != nil {
-		return CharacterLogListResult{}, err
-	}
-	out := CharacterLogListResult{Items: make([]CharacterLogView, 0, len(rows)), Total: total}
-	for _, row := range rows {
+	var total int32
+	out := CharacterLogListResult{Items: make([]CharacterLogView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
 		out.Items = append(out.Items, CharacterLogView{
-			Id: db.UUIDString(row.ID), CharacterId: db.UUIDString(row.CharacterID), Body: row.Body,
+			Id: db.UUIDString(row.ID), CharacterId: db.UUIDString(row.CharacterID), Body: row.Body.String,
 			CreatedAt: row.CreatedAt.Time, CreatedBy: characterUUIDPointer(row.CreatedBy),
 			QuestId: characterUUIDPointer(row.QuestID),
 		})
 	}
+	out.Total = total
 	return out, nil
 }
 
@@ -56,19 +60,21 @@ func (p *ProductPostgres) ReadBackstories(ctx context.Context, _ auth.Authority,
 	if err != nil {
 		return BackstoryPage{}, err
 	}
-	total, err := p.queries().CharacterProductCountBackstories(ctx, dbgen.CharacterProductCountBackstoriesParams{
-		IncludeRetired: arg.IncludeRetired, RegionID: arg.RegionID, Cohort: arg.Cohort,
-	})
-	if err != nil {
-		return BackstoryPage{}, err
-	}
-	out := BackstoryPage{Items: make([]BackstoryView, 0, len(rows)), Total: total}
-	for _, row := range rows {
+	var total int32
+	out := BackstoryPage{Items: make([]BackstoryView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
 		out.Items = append(out.Items, BackstoryView{
-			Id: db.UUIDString(row.ID), Name: row.Name, Lore: row.Lore, Cohort: row.Cohort,
-			Retired: row.Retired, SourceRegionId: characterUUIDPointer(row.SourceRegionID),
+			Id: db.UUIDString(row.ID), Name: row.Name.String, Lore: row.Lore.String, Cohort: row.Cohort.String,
+			Retired: row.Retired.Bool, SourceRegionId: characterUUIDPointer(row.SourceRegionID),
 		})
 	}
+	out.Total = total
 	return out, nil
 }
 
@@ -89,20 +95,22 @@ func (p *ProductPostgres) ReadCreationCatalog(ctx context.Context, _ auth.Author
 	if err != nil {
 		return CreationCatalogPage{}, err
 	}
-	total, err := p.queries().CharacterProductCountCreationCatalog(ctx, dbgen.CharacterProductCountCreationCatalogParams{
-		IncludeAll: arg.IncludeAll, Kind: arg.Kind, RegionID: arg.RegionID,
-	})
-	if err != nil {
-		return CreationCatalogPage{}, err
-	}
-	out := CreationCatalogPage{Items: make([]CreationCatalogEntryView, 0, len(rows)), Total: total}
-	for _, row := range rows {
+	var total int32
+	out := CreationCatalogPage{Items: make([]CreationCatalogEntryView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
 		out.Items = append(out.Items, CreationCatalogEntryView{
-			Id: db.UUIDString(row.ID), Kind: row.Kind, Name: row.Name, Available: row.Available,
-			Description: characterTextPointer(row.Description), Retired: row.Retired,
+			Id: db.UUIDString(row.ID), Kind: row.Kind.String, Name: row.Name.String, Available: row.Available.Bool,
+			Description: characterTextPointer(row.Description), Retired: row.Retired.Bool,
 			IntroducedByRegionId: characterUUIDPointer(row.IntroducedByRegionID),
 		})
 	}
+	out.Total = total
 	return out, nil
 }
 
@@ -112,21 +120,25 @@ func (p *ProductPostgres) ReadCoPlayers(ctx context.Context, _ auth.Authority, s
 		return CoPlayerPage{}, err
 	}
 	rows, err := p.queries().CharacterProductListCoPlayers(ctx, dbgen.CharacterProductListCoPlayersParams{
-		PublicID: characterID, Limit: spec.Limit, Offset: spec.Offset,
+		PublicID: characterID, RowLimit: spec.Limit, RowOffset: spec.Offset,
 	})
 	if err != nil {
 		return CoPlayerPage{}, err
 	}
-	total, err := p.queries().CharacterProductCountCoPlayers(ctx, characterID)
-	if err != nil {
-		return CoPlayerPage{}, err
-	}
-	out := CoPlayerPage{Items: make([]CoPlayerView, 0, len(rows)), Total: total}
-	for _, row := range rows {
+	var total int32
+	out := CoPlayerPage{Items: make([]CoPlayerView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.CharacterID.Valid {
+			continue
+		}
 		out.Items = append(out.Items, CoPlayerView{
-			CharacterId: db.UUIDString(row.CharacterID), MemberId: db.UUIDString(row.MemberID), QuestCount: row.QuestCount,
+			CharacterId: db.UUIDString(row.CharacterID), MemberId: db.UUIDString(row.MemberID), QuestCount: row.QuestCount.Int32,
 		})
 	}
+	out.Total = total
 	return out, nil
 }
 
@@ -136,23 +148,27 @@ func (p *ProductPostgres) ReadDowntimeProjects(ctx context.Context, _ auth.Autho
 		return DowntimeProjectListResult{}, err
 	}
 	rows, err := p.queries().CharacterProductListDowntimeProjects(ctx, dbgen.CharacterProductListDowntimeProjectsParams{
-		PublicID: characterID, Limit: spec.Limit, Offset: spec.Offset,
+		PublicID: characterID, RowLimit: spec.Limit, RowOffset: spec.Offset,
 	})
 	if err != nil {
 		return DowntimeProjectListResult{}, err
 	}
-	total, err := p.queries().CharacterProductCountDowntimeProjects(ctx, characterID)
-	if err != nil {
-		return DowntimeProjectListResult{}, err
-	}
-	out := DowntimeProjectListResult{Items: make([]DowntimeProjectView, 0, len(rows)), Total: total}
-	for _, row := range rows {
+	var total int32
+	out := DowntimeProjectListResult{Items: make([]DowntimeProjectView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
 		out.Items = append(out.Items, DowntimeProjectView{
-			Id: db.UUIDString(row.ID), CharacterId: db.UUIDString(row.CharacterID), Name: row.Name,
+			Id: db.UUIDString(row.ID), CharacterId: db.UUIDString(row.CharacterID), Name: row.Name.String,
 			Target: int32PointerFromInt4(row.Target), Goal: characterTextPointer(row.Goal), Notes: characterTextPointer(row.Notes),
-			Progress: row.Progress, Status: row.Status, UpdatedAt: row.UpdatedAt.Time,
+			Progress: row.Progress.Int32, Status: row.Status.String, UpdatedAt: row.UpdatedAt.Time,
 		})
 	}
+	out.Total = total
 	return out, nil
 }
 
@@ -175,24 +191,28 @@ func (p *ProductPostgres) ReadParticipationsByCharacter(ctx context.Context, _ a
 		return ParticipationPageView{}, err
 	}
 	rows, err := p.queries().CharacterProductListParticipations(ctx, dbgen.CharacterProductListParticipationsParams{
-		PublicID: characterID, Limit: spec.Limit, Offset: spec.Offset,
+		PublicID: characterID, RowLimit: spec.Limit, RowOffset: spec.Offset,
 	})
 	if err != nil {
 		return ParticipationPageView{}, err
 	}
-	total, err := p.queries().CharacterProductCountParticipations(ctx, characterID)
-	if err != nil {
-		return ParticipationPageView{}, err
-	}
-	out := ParticipationPageView{Items: make([]ParticipationView, 0, len(rows)), Total: total}
-	for _, row := range rows {
+	var total int32
+	out := ParticipationPageView{Items: make([]ParticipationView, 0, len(rows))}
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.QuestID.Valid {
+			continue
+		}
 		out.Items = append(out.Items, ParticipationView{
 			QuestID: db.UUIDString(row.QuestID), MemberID: db.UUIDString(row.MemberID), CharacterID: db.UUIDString(row.CharacterID),
-			Status: row.Status, Manual: row.Manual, CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
-			CharacterName: row.CharacterName, MemberHandle: row.MemberHandle, MemberDisplayName: row.MemberDisplayName,
+			Status: row.Status.String, Manual: row.Manual.Bool, CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
+			CharacterName: row.CharacterName.String, MemberHandle: row.MemberHandle.String, MemberDisplayName: row.MemberDisplayName.String,
 			MemberAvatarURL: characterTextPointer(row.MemberAvatarUrl),
 		})
 	}
+	out.Total = total
 	return out, nil
 }
 
@@ -214,15 +234,15 @@ func (p *ProductPostgres) ReadCharacterSummaries(ctx context.Context, actor auth
 	if err != nil {
 		return document.DocumentListResult{}, err
 	}
-	total, err := p.queries().CharacterProductCountSummaries(ctx, dbgen.CharacterProductCountSummariesParams{
-		CharacterID: characterID, ViewerID: viewer.ID, ViewerRoles: viewer.Roles, ViewerHandle: viewer.Handle,
-		ViewerAdmin: viewer.Admin, ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
-	})
-	if err != nil {
-		return document.DocumentListResult{}, err
-	}
+	var total int32
 	items := make([]document.DocumentView, 0, len(rows))
-	for _, row := range rows {
+	for i, row := range rows {
+		if i == 0 {
+			total = int32(row.Total)
+		}
+		if !row.ID.Valid {
+			continue
+		}
 		var policyTokens []string
 		if len(row.Policy) > 0 {
 			_ = json.Unmarshal(row.Policy, &policyTokens)
@@ -232,10 +252,10 @@ func (p *ProductPostgres) ReadCharacterSummaries(ctx context.Context, actor auth
 			fm = json.RawMessage(row.FrontmatterYaml.String)
 		}
 		items = append(items, document.DocumentView{
-			Id: db.UUIDString(row.ID), Kind: row.Kind, Slug: row.Slug, Title: row.Title, Category: characterTextPointer(row.Category),
-			Status: row.Status, Visibility: row.Visibility, Policy: policyTokens, Frontmatter: fm, AuthorId: db.UUIDString(row.AuthorID),
+			Id: db.UUIDString(row.ID), Kind: row.Kind.String, Slug: row.Slug.String, Title: row.Title.String, Category: characterTextPointer(row.Category),
+			Status: row.Status.String, Visibility: row.Visibility.String, Policy: policyTokens, Frontmatter: fm, AuthorId: db.UUIDString(row.AuthorID),
 			PublishedAt: characterTimePointer(row.PublishedAt), DeletedAt: characterTimePointer(row.DeletedAt),
-			DeletedBy: characterUUIDPointer(row.DeletedBy), UpdatedAt: row.UpdatedAt.Time, Version: row.Version,
+			DeletedBy: characterUUIDPointer(row.DeletedBy), UpdatedAt: row.UpdatedAt.Time, Version: row.Version.Int32,
 		})
 	}
 	return document.DocumentListResult{Items: items, Total: total}, nil
