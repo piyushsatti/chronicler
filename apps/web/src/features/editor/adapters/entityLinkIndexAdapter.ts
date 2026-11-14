@@ -90,7 +90,7 @@ export function parseEntityLinkIndex(wire: {
 /** Aggregate quest codes + codex titles for LiveEditor wikilink autocomplete. */
 export async function loadEntityLinkIndex(): Promise<EntityLinkIndex> {
   try {
-    const quests = [];
+    const quests: EntityLinkQuestBoardQuery['questBoard']['items'] = [];
     for (;;) {
       const questData = await graphqlRequest<EntityLinkQuestBoardQuery>(BOARD_QUERY, {
         limit: 100,

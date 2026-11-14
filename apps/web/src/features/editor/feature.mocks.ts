@@ -113,8 +113,8 @@ export const graphql: FeatureGraphql = {
   EditorDocumentBySlug: () =>
     HttpResponse.json({ data: { document: editorDocumentWire } }),
   EntityLinkQuestBoard: ({ variables }) => {
-    const offset = Number(variables.offset ?? 0);
-    const limit = Number(variables.limit ?? 100);
+    const offset = Number(variables?.offset ?? 0);
+    const limit = Number(variables?.limit ?? 100);
     const items = [
       {
         id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
