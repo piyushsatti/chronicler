@@ -2,7 +2,7 @@
 # Requires API migration 0015's public.archive_documents_v1 ID-eligibility view.
 # Requires staged assets and an API with ingest secret and public GraphQL.
 # Usage:
-#   export INGEST_SECRET=... ARCHIVE_MCP_TOKEN=... LITELLM_BASE_URL=... LITELLM_API_KEY=...
+#   export AGENT_WORKER_SECRET=... ARCHIVE_MCP_TOKEN=... LITELLM_BASE_URL=... LITELLM_API_KEY=...
 #   docker compose -f deploy/compose/agent-archive.yml up --build
 name: chronicler-agent-archive
 
@@ -62,7 +62,7 @@ services:
         CHRONICLER_BUILD_SHA: ${CHRONICLER_BUILD_SHA:-unknown}
     environment:
       API_URL: ${API_URL:-http://host.docker.internal:8080}
-      INGEST_SECRET: ${INGEST_SECRET:?set INGEST_SECRET}
+      AGENT_WORKER_SECRET: ${AGENT_WORKER_SECRET:?set AGENT_WORKER_SECRET}
       ARCHIVE_MCP_URL: http://archive:8000/mcp
       ARCHIVE_MCP_TOKEN: ${ARCHIVE_MCP_TOKEN:?set ARCHIVE_MCP_TOKEN}
       LITELLM_BASE_URL: ${LITELLM_BASE_URL:?set LITELLM_BASE_URL}

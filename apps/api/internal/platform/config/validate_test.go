@@ -12,8 +12,9 @@ func validProd() Config {
 		DiscordSecret:   "s",
 		DiscordClientID: "c",
 		JWTSecret:       strings.Repeat("j", 32),
-		IngestSecret:    strings.Repeat("i", 32),
-		DiscordRedirect: "https://app.example.com/auth/discord/callback",
+		IngestSecret:      strings.Repeat("i", 32),
+		AgentWorkerSecret: strings.Repeat("w", 32),
+		DiscordRedirect:   "https://app.example.com/auth/discord/callback",
 		CORSOrigins:     []string{"https://app.example.com"},
 		Discord: DiscordConfig{
 			BotToken: "bot-token",
@@ -23,7 +24,7 @@ func validProd() Config {
 }
 
 func TestValidateProductionRequiresStrongMachineSecrets(t *testing.T) {
-	for _, variable := range []string{"JWT_SECRET", "INGEST_SECRET"} {
+	for _, variable := range []string{"JWT_SECRET", "INGEST_SECRET", "AGENT_WORKER_SECRET"} {
 		for _, encoding := range []struct{ name, character string }{
 			{"ASCII", "s"},
 			{"multibyte", "é"},
@@ -32,10 +33,13 @@ func TestValidateProductionRequiresStrongMachineSecrets(t *testing.T) {
 				t.Run(variable+"/"+encoding.name+"/"+strconv.Itoa(length), func(t *testing.T) {
 					c := validProd()
 					value := strings.Repeat(encoding.character, length)
-					if variable == "JWT_SECRET" {
+					switch variable {
+					case "JWT_SECRET":
 						c.JWTSecret = value
-					} else {
+					case "INGEST_SECRET":
 						c.IngestSecret = value
+					default:
+						c.AgentWorkerSecret = value
 					}
 					err := c.ValidateProduction()
 					if length == 32 {
@@ -74,6 +78,7 @@ func TestValidateProduction(t *testing.T) {
 		"DISCORD_CLIENT_ID":     func(c *Config) { c.DiscordClientID = "" },
 		"JWT_SECRET":            func(c *Config) { c.JWTSecret = "dev-only-change-me" },
 		"INGEST_SECRET":         func(c *Config) { c.IngestSecret = "" },
+		"AGENT_WORKER_SECRET":   func(c *Config) { c.AgentWorkerSecret = "" },
 	} {
 		c := validProd()
 		mut(&c)
@@ -90,11 +95,13 @@ func TestValidateProduction(t *testing.T) {
 func TestFromEnvAndValidateProductionTable(t *testing.T) {
 	strong := strings.Repeat("j", 32)
 	ingest := strings.Repeat("i", 32)
+	worker := strings.Repeat("w", 32)
 	setProdBase := func(t *testing.T) {
 		t.Helper()
 		t.Setenv("CHRONICLER_ENV", "production")
 		t.Setenv("JWT_SECRET", strong)
 		t.Setenv("INGEST_SECRET", ingest)
+		t.Setenv("AGENT_WORKER_SECRET", worker)
 		t.Setenv("DISCORD_CLIENT_ID", "c")
 		t.Setenv("DISCORD_CLIENT_SECRET", "s")
 		t.Setenv("DISCORD_REDIRECT_URI", "https://app.example.com/auth/discord/callback")

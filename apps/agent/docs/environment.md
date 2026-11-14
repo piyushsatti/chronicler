@@ -19,11 +19,11 @@ Variables for the HTTP-first Q&A path. Values are never committed. Archive requi
 | `AGENT_QUEUE_CAPACITY`          | Discord               | optional       | optional  | Default 25                                                                                               |
 | `AGENT_PUBLIC_ORIGIN`           | Discord               | yes            | yes       | HTTPS origin for source URL checks                                                                       |
 | `API_URL` / Discord `apiUrl`    | Discord               | yes            | yes       | Base URL for agent REST                                                                                  |
-| `INGEST_SECRET`                 | Discord + API + Agent | yes            | yes       | Shared ingest header value                                                                               |
+| `INGEST_SECRET`                 | Discord + API         | yes            | yes       | Bot ingest, heartbeat, question submit and read                                                          |
 | `AGENT_INLINE_COMPLETE`         | API                   | optional       | **unset** | `1` = stub complete; local/dev only — production refuses to start if set                                 |
 | `DATABASE_URL`                  | API                   | yes            | yes       | Owns `agent_questions` / jobs                                                                            |
 | `API_URL`                       | Agent worker          | yes            | yes       | Base URL for claim/complete (Phase C)                                                                    |
-| `INGEST_SECRET`                 | Agent worker          | yes            | yes       | Same secret as Discord                                                                                   |
+| `AGENT_WORKER_SECRET`           | Agent worker + API    | yes            | yes       | Worker claim, complete, renew and retry (`X-Ingest-Secret`)                                              |
 | `AGENT_CLAIM_INTERVAL_SECONDS`  | Agent                 | optional       | optional  | Poll backoff (Phase C)                                                                                   |
 | `LITELLM_BASE_URL`              | Agent + Archive       | yes            | yes       | Gateway; benchmark defaults to `http://127.0.0.1:4000`                                                   |
 | `LITELLM_API_KEY`               | Agent + Archive       | yes            | yes       | May differ per role                                                                                      |
