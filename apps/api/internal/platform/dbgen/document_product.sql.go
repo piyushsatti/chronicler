@@ -676,6 +676,120 @@ func (q *Queries) GetProductDocumentRevisionParent(ctx context.Context, arg GetP
 	return i, err
 }
 
+const getProductDocumentsByIDs = `-- name: GetProductDocumentsByIDs :many
+SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.category,
+       d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id AS author_internal_id,
+       author.public_id AS author_id, d.published_at, publisher.public_id AS published_by,
+       d.deleted_at, deleter.public_id AS deleted_by, d.created_at, d.updated_at, d.version,
+       COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
+                      WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids,
+       document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
+         $2::text[],$3::text,$4::boolean,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])) AS readable,
+       COALESCE($4::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
+         $2::text[],$3::text,FALSE,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override,
+       COALESCE(ARRAY(SELECT member.public_id FROM lieutenant_assignments la JOIN members member ON member.id=la.member_id
+                      WHERE la.npc_document_id=d.id ORDER BY member.public_id), ARRAY[]::uuid[]) AS lieutenant_ids,
+       COALESCE(ARRAY(SELECT q.public_id FROM document_links l JOIN quests q ON q.id=l.quest_target_id
+                      WHERE l.source_id=d.id AND l.target_type='quest' ORDER BY q.public_id), ARRAY[]::uuid[]) AS linked_quest_ids
+FROM documents d
+LEFT JOIN members author ON author.id=d.author_id
+LEFT JOIN members publisher ON publisher.id=d.published_by
+LEFT JOIN members deleter ON deleter.id=d.deleted_by
+WHERE d.public_id = ANY($6::uuid[]) AND d.deleted_at IS NULL
+`
+
+type GetProductDocumentsByIDsParams struct {
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	DocumentIds  []pgtype.UUID `json:"document_ids"`
+}
+
+type GetProductDocumentsByIDsRow struct {
+	InternalID       int64              `json:"internal_id"`
+	ID               pgtype.UUID        `json:"id"`
+	Kind             string             `json:"kind"`
+	Slug             string             `json:"slug"`
+	Title            string             `json:"title"`
+	Category         pgtype.Text        `json:"category"`
+	Status           string             `json:"status"`
+	Visibility       string             `json:"visibility"`
+	Policy           []byte             `json:"policy"`
+	Body             string             `json:"body"`
+	FrontmatterYaml  pgtype.Text        `json:"frontmatter_yaml"`
+	AuthorInternalID pgtype.Int8        `json:"author_internal_id"`
+	AuthorID         pgtype.UUID        `json:"author_id"`
+	PublishedAt      pgtype.Timestamptz `json:"published_at"`
+	PublishedBy      pgtype.UUID        `json:"published_by"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	DeletedBy        pgtype.UUID        `json:"deleted_by"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Version          int32              `json:"version"`
+	ReaderIds        interface{}        `json:"reader_ids"`
+	Readable         bool               `json:"readable"`
+	AdminOverride    interface{}        `json:"admin_override"`
+	LieutenantIds    interface{}        `json:"lieutenant_ids"`
+	LinkedQuestIds   interface{}        `json:"linked_quest_ids"`
+}
+
+func (q *Queries) GetProductDocumentsByIDs(ctx context.Context, arg GetProductDocumentsByIDsParams) ([]GetProductDocumentsByIDsRow, error) {
+	rows, err := q.db.Query(ctx, getProductDocumentsByIDs,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerAdmin,
+		arg.ViewerLiveDm,
+		arg.DocumentIds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetProductDocumentsByIDsRow{}
+	for rows.Next() {
+		var i GetProductDocumentsByIDsRow
+		if err := rows.Scan(
+			&i.InternalID,
+			&i.ID,
+			&i.Kind,
+			&i.Slug,
+			&i.Title,
+			&i.Category,
+			&i.Status,
+			&i.Visibility,
+			&i.Policy,
+			&i.Body,
+			&i.FrontmatterYaml,
+			&i.AuthorInternalID,
+			&i.AuthorID,
+			&i.PublishedAt,
+			&i.PublishedBy,
+			&i.DeletedAt,
+			&i.DeletedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Version,
+			&i.ReaderIds,
+			&i.Readable,
+			&i.AdminOverride,
+			&i.LieutenantIds,
+			&i.LinkedQuestIds,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertFeatureHexLink = `-- name: InsertFeatureHexLink :exec
 INSERT INTO pointcrawl_entry_links(map_id,node_id,document_id,relation,created_at,created_by)
 SELECT $1,$2,d.id,'subject',$3,actor.id

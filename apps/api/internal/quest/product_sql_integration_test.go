@@ -265,7 +265,7 @@ func assertQuestReadFiltersAndPages(t *testing.T, fixture *dbtest.ProductFixture
 		"arc_id": nil, "kind": "standard", "region_id": nil,
 		"tag_filter_set": true, "tag_variants": []string{"north"},
 		"genre_filter_set": true, "genre_variants": []string{"mystery"},
-		"short_codes": []string{}, "scheduled_from": nil, "scheduled_to": nil,
+		"short_codes": []string{}, "ids": []pgtype.UUID{}, "scheduled_from": nil, "scheduled_to": nil,
 		"search": "Q-TEST", "row_limit": int32(10), "row_offset": int32(0),
 	}
 	listRows, err := fixture.Pool.Query(ctx, productNamedSQL(t, "ProductQuestListPage"), listArgs)
@@ -416,7 +416,7 @@ func assertQuestSignupCapacityAndRoster(t *testing.T, fixture *dbtest.ProductFix
 	}
 	mySignupRows, err := fixture.Pool.Query(ctx, productNamedSQL(t, "ProductQuestMySignupsPage"), pgx.StrictNamedArgs{
 		"member_id": db.MustUUID(dmID), "as_of": time.Date(2026, 10, 17, 0, 0, 0, 0, time.UTC),
-		"row_limit": int32(10), "row_offset": int32(0),
+		"scheduled_from": nil, "row_limit": int32(10), "row_offset": int32(0),
 	})
 	if err != nil {
 		t.Fatalf("execute current Quest signups page: %v", err)
