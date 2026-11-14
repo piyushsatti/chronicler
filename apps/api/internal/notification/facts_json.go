@@ -1,6 +1,9 @@
 package notification
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"errors"
+)
 
 func (f *Facts) UnmarshalJSON(raw []byte) error {
 	type wire Facts
@@ -22,7 +25,7 @@ func (f *Facts) UnmarshalJSON(raw []byte) error {
 	case QuestScheduled:
 		names = []string{"oldScheduledAt", "newScheduledAt", "changedFields", "recipientMemberIds"}
 	default:
-		return opaqueNotificationProofError()
+		return opaqueNotificationProofError(errors.New("unsupported notification event kind"))
 	}
 	for _, name := range names {
 		allowed[name] = true
@@ -33,7 +36,7 @@ func (f *Facts) UnmarshalJSON(raw []byte) error {
 	}
 	for name := range fields {
 		if !allowed[name] {
-			return opaqueNotificationProofError()
+			return opaqueNotificationProofError(errors.New("unexpected notification facts field"))
 		}
 	}
 	*f = Facts(decoded)

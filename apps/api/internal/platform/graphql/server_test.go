@@ -13,6 +13,7 @@ import (
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/httpserver"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
@@ -368,6 +369,61 @@ func mustJSON(s string) string {
 		panic(err)
 	}
 	return string(b)
+}
+
+func TestGraphQLErrorPresenterLogsWrappedInternalNotBareNotFound(t *testing.T) {
+	cause := errors.New("database blip")
+	for _, tc := range []struct {
+		name string
+		err  error
+		code string
+		log  bool
+	}{
+		{"wrapped internal", apierr.Wrap(apierr.Internal, "Internal error", cause), "INTERNAL", true},
+		{"bare not found", apierr.New(apierr.NotFound, "document not found"), "NOT_FOUND", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var logs bytes.Buffer
+			previous := slog.Default()
+			slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
+			t.Cleanup(func() { slog.SetDefault(previous) })
+
+			handler := NewHandler(&graph.Resolver{Services: graph.Services{DocumentQueries: testDocumentQueries(t, documentErrorRepo{err: tc.err})}}, Limits{}, func(context.Context, string) (auth.Authority, error) {
+				return auth.Authority{}, nil
+			})
+			request := httptest.NewRequest(http.MethodPost, "/v1/graphql", bytes.NewBufferString(`{"query":"{documentById(id:\"11111111-1111-4111-8111-111111111111\"){id}}"}`))
+			request.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, request)
+			var result struct {
+				Errors []struct {
+					Message    string `json:"message"`
+					Extensions struct {
+						Code string `json:"code"`
+					} `json:"extensions"`
+				} `json:"errors"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != 200 {
+				t.Fatalf("status=%d body=%s err=%v", w.Code, w.Body, err)
+			}
+			if len(result.Errors) != 1 || result.Errors[0].Extensions.Code != tc.code {
+				t.Fatalf("response=%s want code=%s", w.Body, tc.code)
+			}
+			if tc.log {
+				if result.Errors[0].Message != "Internal error" {
+					t.Fatalf("client message=%q", result.Errors[0].Message)
+				}
+				if !bytes.Contains(logs.Bytes(), []byte("database blip")) {
+					t.Fatalf("missing cause log: %s", logs.String())
+				}
+				if bytes.Contains(w.Body.Bytes(), []byte("database blip")) {
+					t.Fatalf("cause leaked to client: %s", w.Body)
+				}
+			} else if bytes.Contains(logs.Bytes(), []byte("unexpected GraphQL error")) {
+				t.Fatalf("unexpected error log for bare not found: %s", logs.String())
+			}
+		})
+	}
 }
 
 func TestDocumentGraphQLErrorPresenter(t *testing.T) {

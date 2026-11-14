@@ -156,7 +156,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/design-gates/**/*.{mjs,js}'],
+    files: ['scripts/**/*.{mjs,js}'],
     languageOptions: {
       globals: {
         console: 'readonly',
