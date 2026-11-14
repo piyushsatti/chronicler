@@ -85,11 +85,11 @@ func (r *producerReceipt) Complete(ctx context.Context, claim idempotency.Claim,
 func appendNotificationProofs(result json.RawMessage, proofs []inboxProof) (json.RawMessage, error) {
 	encoded, err := json.Marshal(proofs)
 	if err != nil {
-		return nil, opaqueNotificationProofError()
+		return nil, opaqueNotificationProofError(err)
 	}
 	stored, err := idempotency.AppendNotificationProofs(result, encoded)
 	if err != nil {
-		return nil, opaqueNotificationProofError()
+		return nil, opaqueNotificationProofError(err)
 	}
 	return stored, nil
 }
@@ -98,18 +98,21 @@ func appendNotificationProofs(result json.RawMessage, proofs []inboxProof) (json
 func DecodeCommandReceipt(receipt json.RawMessage) (json.RawMessage, error) {
 	result, proofJSON, err := idempotency.PeelNotificationProofs(receipt)
 	if err != nil {
-		return nil, opaqueNotificationProofError()
+		return nil, opaqueNotificationProofError(err)
 	}
 	if proofJSON == nil {
 		return result, nil
 	}
 	var proofs []inboxProof
-	if err := strictNotificationJSON(proofJSON, &proofs); err != nil || len(proofs) == 0 {
-		return nil, opaqueNotificationProofError()
+	if err := strictNotificationJSON(proofJSON, &proofs); err != nil {
+		return nil, err
+	}
+	if len(proofs) == 0 {
+		return nil, opaqueNotificationProofError(errors.New("empty notification proof list"))
 	}
 	for _, proof := range proofs {
 		if !canonicalNotificationID(proof.NotificationID) || !canonicalNotificationID(proof.RecipientID) || validatePayload(proof.Payload) != nil {
-			return nil, opaqueNotificationProofError()
+			return nil, opaqueNotificationProofError(errors.New("invalid notification proof entry"))
 		}
 	}
 	return result, nil
@@ -117,13 +120,13 @@ func DecodeCommandReceipt(receipt json.RawMessage) (json.RawMessage, error) {
 
 func validatePayload(payload inboxPayload) error {
 	if !validNotificationOrigin(payload) {
-		return opaqueNotificationProofError()
+		return opaqueNotificationProofError(errors.New("invalid notification origin"))
 	}
 	if err := validateEvent(payload.Event); err != nil {
-		return opaqueNotificationProofError()
+		return opaqueNotificationProofError(err)
 	}
 	if !validNotificationRecipients(payload.Recipients) {
-		return opaqueNotificationProofError()
+		return opaqueNotificationProofError(errors.New("invalid notification recipients"))
 	}
 	var addressed []string
 	switch payload.Event.Kind {
@@ -136,7 +139,7 @@ func validatePayload(payload inboxPayload) error {
 		expected := make([]string, 0, len(addressed))
 		for _, id := range addressed {
 			if !canonicalNotificationID(id) {
-				return opaqueNotificationProofError()
+				return opaqueNotificationProofError(errors.New("invalid addressed member id"))
 			}
 			if id != payload.Event.ActorID {
 				expected = append(expected, id)
@@ -145,7 +148,7 @@ func validatePayload(payload inboxPayload) error {
 		slices.Sort(expected)
 		expected = slices.Compact(expected)
 		if !slices.Equal(expected, payload.Recipients) {
-			return opaqueNotificationProofError()
+			return opaqueNotificationProofError(errors.New("recipients do not match addressed members"))
 		}
 	}
 	return nil
@@ -166,7 +169,7 @@ func validNotificationRecipients(recipients []string) bool {
 
 func strictNotificationJSON(raw []byte, target any) error {
 	if err := idempotency.StrictJSON(raw, target); err != nil {
-		return opaqueNotificationProofError()
+		return opaqueNotificationProofError(err)
 	}
 	return nil
 }

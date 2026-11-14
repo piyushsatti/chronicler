@@ -416,6 +416,28 @@ func TestRedriveDiscordDeliveryReportsQuestRevisionsAndClearsSafeCode(t *testing
 	}
 }
 
+func TestReadAdminOperationsDefaultsWhenSettingsAbsent(t *testing.T) {
+	fixture := dbtest.NewProductFixture(t)
+	ctx := context.Background()
+	adapter, err := NewProductPostgres(fixture.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, err := adapter.ReadAdminOperations(ctx, auth.Authority{}, AdminOperationsSpec{Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if view.Config.DeliveryMode != defaultDiscordDeliveryMode {
+		t.Fatalf("deliveryMode=%q, want %q", view.Config.DeliveryMode, defaultDiscordDeliveryMode)
+	}
+	if view.Config.PublicOrigin != "" {
+		t.Fatalf("publicOrigin=%q, want empty", view.Config.PublicOrigin)
+	}
+	if view.Config.AnnouncementRoleId != nil {
+		t.Fatalf("announcementRoleId=%v, want nil", view.Config.AnnouncementRoleId)
+	}
+}
+
 func TestReadAdminOperationsReturnsLatestMaintenanceJobPerKind(t *testing.T) {
 	fixture := dbtest.NewProductFixture(t)
 	ctx := context.Background()

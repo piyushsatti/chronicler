@@ -167,20 +167,9 @@ func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, actor auth.Au
 	if err != nil {
 		return AdminOperationsView{}, err
 	}
-	publicOrigin := ""
-	if originRow, err := p.readSetting(ctx, settingPublicOrigin); err == nil {
-		publicOrigin = parsePublicOrigin(originRow.Payload)
-	}
-	announcementRole, _ := p.ReadQuestAnnouncementRoleSetting(ctx, auth.Authority{}, QuestAnnouncementRoleSettingSpec{})
-	deliveryMode, _ := p.ReadDiscordDeliveryMode(ctx, auth.Authority{}, DiscordDeliveryModeSpec{})
-	config := AdminDeliveryConfigView{
-		DeliveryMode:           deliveryMode,
-		PublicOrigin:           publicOrigin,
-		AnnouncementRoleId:     announcementRole.RoleId,
-		AnnouncementRoleSource: "site_settings",
-	}
-	if announcementRole.RoleId != nil {
-		config.AnnouncementRoleSource = "site_settings"
+	config, err := p.readAdminDeliveryConfig(ctx)
+	if err != nil {
+		return AdminOperationsView{}, err
 	}
 	deliveries := make([]AdminDeliveryJobView, 0)
 	overridden := false
@@ -208,6 +197,29 @@ func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, actor auth.Au
 		PendingDeliveryCount:  counts.PendingCount,
 		TerminalDeliveryCount: counts.TerminalCount,
 		ScheduledWork:         scheduled,
+	}, nil
+}
+
+func (p *ProductPostgres) readAdminDeliveryConfig(ctx context.Context) (AdminDeliveryConfigView, error) {
+	publicOrigin := ""
+	if originRow, err := p.readSetting(ctx, settingPublicOrigin); err == nil {
+		publicOrigin = parsePublicOrigin(originRow.Payload)
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return AdminDeliveryConfigView{}, err
+	}
+	announcementRole, err := p.ReadQuestAnnouncementRoleSetting(ctx, auth.Authority{}, QuestAnnouncementRoleSettingSpec{})
+	if err != nil {
+		return AdminDeliveryConfigView{}, err
+	}
+	deliveryMode, err := p.ReadDiscordDeliveryMode(ctx, auth.Authority{}, DiscordDeliveryModeSpec{})
+	if err != nil {
+		return AdminDeliveryConfigView{}, err
+	}
+	return AdminDeliveryConfigView{
+		DeliveryMode:           deliveryMode,
+		PublicOrigin:           publicOrigin,
+		AnnouncementRoleId:     announcementRole.RoleId,
+		AnnouncementRoleSource: "site_settings",
 	}, nil
 }
 
