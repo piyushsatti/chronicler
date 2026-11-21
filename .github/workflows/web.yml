@@ -17,9 +17,7 @@ on:
 
 jobs:
   web:
-    # Self-hosted Triton runners (no GitHub minutes). Fork and Dependabot
-    # pull requests run on GitHub-hosted runners.
-    runs-on: ${{ (github.event.pull_request.head.repo.fork || github.event.pull_request.user.login == 'dependabot[bot]') && 'ubuntu-latest' || 'triton' }}
+    runs-on: ubuntu-latest
     # Fresh container per job. The image ships Chromium for this exact
     # @playwright/test version; bump the tag with the package.
     container:
