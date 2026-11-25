@@ -1314,7 +1314,7 @@ func (p *ProductPostgres) StorePublishQuestPlayerList(ctx context.Context, write
 	if err != nil {
 		return PublishQuestPlayerListResult{}, err
 	}
-	released, err := p.releaseHeldSeats(ctx, questID, write.At)
+	released, err := p.publishHeldSeats(ctx, questID, write.At)
 	if err != nil {
 		return PublishQuestPlayerListResult{}, err
 	}

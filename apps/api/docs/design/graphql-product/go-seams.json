@@ -21544,7 +21544,8 @@
         "LockWithdrawFromQuest(ctx context.Context, spec quest.WithdrawFromQuestSpec) (quest.WithdrawFromQuestState, error)",
         "StoreWithdrawFromQuest(ctx context.Context, write quest.WithdrawFromQuestWrite) (quest.QuestParticipantView, error)",
         "StoreCorrectQuestRoster(ctx context.Context, write quest.CorrectQuestRosterWrite) (quest.QuestParticipantView, bool, error)",
-        "WaitlistedCharacterIDs(ctx context.Context, questID string) ([]string, error)"
+        "WaitlistedCharacterIDs(ctx context.Context, questID string) ([]string, error)",
+        "ReleaseHeldSeats(ctx context.Context, questID string) ([]string, error)"
       ],
       "owner": "QUE02",
       "provider": "QUE04"

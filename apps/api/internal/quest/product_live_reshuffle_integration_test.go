@@ -286,3 +286,24 @@ func TestLiveReshuffleWithdrawalPromotionIsHeld(t *testing.T) {
 		t.Fatal("held withdrawal promotion not announced at publish")
 	}
 }
+
+// TestLiveReshuffleMarkPlayedSendsHeldNotices checks that a quest marked played
+// without a published list still tells the fill players about their seats, once.
+func TestLiveReshuffleMarkPlayedSendsHeldNotices(t *testing.T) {
+	f := newLiveReshuffleFixture(t)
+	ctx := context.Background()
+	f.fill(t)
+	if f.promotions(t, f.recent)+f.promotions(t, f.older) != 0 {
+		t.Fatal("fill sent seat notices while live")
+	}
+	if _, err := f.commands.TransitionQuestStatus(ctx, f.actor, TransitionQuestStatusSpec{Id: f.questID, To: "played"}, product.CommandMeta{IdempotencyKey: uuid.NewString()}); err != nil {
+		t.Fatalf("mark played: %v", err)
+	}
+	if f.promotions(t, f.recent) != 1 || f.promotions(t, f.older) != 1 {
+		t.Fatalf("notices recent=%d older=%d", f.promotions(t, f.recent), f.promotions(t, f.older))
+	}
+	var held int
+	if err := f.fixture.Pool.QueryRow(ctx, `SELECT count(*) FROM quest_participants qp JOIN quests q ON q.id=qp.quest_id WHERE q.public_id=$1 AND qp.seat_notice_held`, f.questID).Scan(&held); err != nil || held != 0 {
+		t.Fatalf("held=%d err=%v", held, err)
+	}
+}

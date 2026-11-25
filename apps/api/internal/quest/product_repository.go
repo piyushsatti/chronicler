@@ -77,6 +77,7 @@ type QuestWriteRepository interface {
 	StoreWithdrawFromQuest(ctx context.Context, write WithdrawFromQuestWrite) (QuestParticipantView, error)
 	StoreCorrectQuestRoster(ctx context.Context, write CorrectQuestRosterWrite) (QuestParticipantView, bool, error)
 	WaitlistedCharacterIDs(ctx context.Context, questID string) ([]string, error)
+	ReleaseHeldSeats(ctx context.Context, questID string) ([]string, error)
 }
 
 type ProductBatchRepository interface {

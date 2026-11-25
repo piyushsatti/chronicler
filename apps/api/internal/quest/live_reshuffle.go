@@ -20,6 +20,7 @@ import (
 //   - a later signup takes an open seat, or takes the lowest-priority held seat
 //     when it ranks above that seat in Last Game Played order;
 //   - DM picks and manual adds are never held, so they never move.
+//   - marking the quest played without a published list also sends the held notices.
 //
 // Pattern: the seat-priority query stays the one specification of seat order. A
 // signup re-applies it to the newcomer inside the signup transaction
@@ -139,12 +140,27 @@ func (p *ProductPostgres) holdSelectedSeats(ctx context.Context, write SelectQue
 	return true, nil
 }
 
-// releaseHeldSeats closes the live window at publish. It returns the characters
-// still seated whose held notice is now due.
-func (p *ProductPostgres) releaseHeldSeats(ctx context.Context, questID pgtype.UUID, at time.Time) ([]string, error) {
+// publishHeldSeats closes the live window at the first publish and releases the held seats.
+func (p *ProductPostgres) publishHeldSeats(ctx context.Context, questID pgtype.UUID, at time.Time) ([]string, error) {
 	if _, err := p.queries().ProductQuestMarkPlayerListPublished(ctx, dbgen.ProductQuestMarkPlayerListPublishedParams{At: pgtype.Timestamptz{Time: at.UTC(), Valid: true}, QuestID: questID}); err != nil {
 		return nil, err
 	}
+	return p.releaseHeldSeats(ctx, questID)
+}
+
+// ReleaseHeldSeats releases the held seats of a quest the DM marked played without
+// publishing a player list (owner decision 2026-11-25), so their notices still go out.
+func (p *ProductPostgres) ReleaseHeldSeats(ctx context.Context, questID string) ([]string, error) {
+	id, err := questUUID(questID)
+	if err != nil {
+		return nil, err
+	}
+	return p.releaseHeldSeats(ctx, id)
+}
+
+// releaseHeldSeats clears every held flag on the quest. It returns the characters
+// still seated, sorted, whose held notice is now due.
+func (p *ProductPostgres) releaseHeldSeats(ctx context.Context, questID pgtype.UUID) ([]string, error) {
 	rows, err := p.queries().ProductQuestReleaseHeldSeats(ctx, questID)
 	if err != nil {
 		return nil, err
