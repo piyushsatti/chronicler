@@ -111,6 +111,8 @@ export type QuestDetailView = Omit<QuestBoardItemView, 'participants'> & {
   kinds: string[];
   /** `last_game_played` or `dm_pick`; null when the API has none. */
   signupType: string | null;
+  /** Last Game Played: fill seats can still change until the DM publishes the player list. */
+  liveReshuffle: boolean;
   dmId: string;
   updatedAt: string;
   arc: { id: string; name: string } | null;
@@ -303,6 +305,7 @@ export function parseQuestDetail(
       genres: parsed.data.genres,
       kinds: parsed.data.kinds,
       signupType: parsed.data.signupType ?? null,
+      liveReshuffle: parsed.data.liveReshuffle,
       dmId: parsed.data.dmId,
       updatedAt: parsed.data.updatedAt,
       arc: parsed.data.arc,

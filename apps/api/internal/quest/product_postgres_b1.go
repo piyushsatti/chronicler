@@ -72,6 +72,7 @@ func (p *ProductPostgres) ReadDmSessionHistory(ctx context.Context, _ auth.Autho
 			ArcPublicID: row.ArcPublicID, ScheduledAt: row.ScheduledAt, DurationHours: row.DurationHours,
 			SlotsMax: row.SlotsMax, FilledCount: row.FilledCount, DocumentPublicID: row.DocumentPublicID,
 			Tags: row.Tags, Genres: row.Genres, Apl: row.Apl, SignupType: row.SignupType,
+			LiveFillStartedAt: row.LiveFillStartedAt, PlayerListPublishedAt: row.PlayerListPublishedAt,
 			DiscordDesiredRevision: row.DiscordDesiredRevision, DiscordAppliedRevision: row.DiscordAppliedRevision,
 			DiscordMessageID: row.DiscordMessageID, DiscordEventID: row.DiscordEventID, EventUrl: row.EventUrl,
 			CreatedByPublicID: row.CreatedByPublicID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,

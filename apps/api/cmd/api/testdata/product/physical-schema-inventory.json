@@ -1559,6 +1559,11 @@
           "source": "apps/api/db/migrations/0009_quest_participant_dm_picked.sql",
           "stage": "m9_quest_participant_dm_picked"
         },
+        "seat_notice_held": {
+          "declaration": "BOOLEAN DEFAULT FALSE NOT NULL",
+          "source": "apps/api/db/migrations/0020_quest_live_reshuffle.sql",
+          "stage": "m20_quest_live_reshuffle"
+        },
         "created_at": {
           "declaration": "TIMESTAMPTZ DEFAULT NOW() NOT NULL",
           "source": "apps/api/db/migrations/0001_init.sql",
@@ -1708,6 +1713,16 @@
           "declaration": "TEXT",
           "source": "apps/api/db/migrations/0019_quest_discord_channel.sql",
           "stage": "m19_quest_discord_channel"
+        },
+        "live_fill_started_at": {
+          "declaration": "TIMESTAMPTZ",
+          "source": "apps/api/db/migrations/0020_quest_live_reshuffle.sql",
+          "stage": "m20_quest_live_reshuffle"
+        },
+        "player_list_published_at": {
+          "declaration": "TIMESTAMPTZ",
+          "source": "apps/api/db/migrations/0020_quest_live_reshuffle.sql",
+          "stage": "m20_quest_live_reshuffle"
         },
         "discord_event_id": {
           "declaration": "TEXT",

@@ -161,8 +161,10 @@ type QuestParticipantView struct {
 	MemberHandle      string
 	MemberId          string
 	QuestId           string
-	Status            string
-	UpdatedAt         time.Time
+	// SeatNoticeHeld is a seat given out while the list is live; its notice waits for publish.
+	SeatNoticeHeld bool
+	Status         string
+	UpdatedAt      time.Time
 }
 
 type QuestPcxpAwardFields struct {
@@ -261,15 +263,18 @@ type QuestView struct {
 	Genres           []string
 	Id               string
 	Kinds            []string
-	Regions          []string
-	ScheduledAt      time.Time
-	ShortCode        string
-	SignupType       *string
-	SlotsMax         int32
-	Status           string
-	Tags             []string
-	UpdatedAt        time.Time
-	VoiceChannelId   *string
+	// LiveFillStartedAt and PlayerListPublishedAt bound the Last Game Played live window.
+	LiveFillStartedAt     *time.Time
+	PlayerListPublishedAt *time.Time
+	Regions               []string
+	ScheduledAt           time.Time
+	ShortCode             string
+	SignupType            *string
+	SlotsMax              int32
+	Status                string
+	Tags                  []string
+	UpdatedAt             time.Time
+	VoiceChannelId        *string
 }
 
 type RewardCoverage string
@@ -814,6 +819,13 @@ type SyncQuestDiscordWrite struct {
 	DecisionID     *string
 	RevisionID     *string
 	EventKey       *string
+}
+
+// PublishQuestPlayerListResult is the publish receipt plus the held live-window
+// seats whose waitlist-promotion notice is now due.
+type PublishQuestPlayerListResult struct {
+	Receipt       DeliveryReceipt
+	ReleasedSeats []string
 }
 
 type PublishQuestPlayerListWrite struct {

@@ -15,6 +15,7 @@ query Quest($id: ID, $shortCode: String) {
     slotsMax
     kinds
     signupType
+    liveReshuffle
     filledCount
     displayStatus
     genres

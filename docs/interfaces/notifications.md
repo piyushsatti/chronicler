@@ -18,7 +18,7 @@ This is the retained event vocabulary and recipient contract. It is not evidence
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `CHARACTER_VERIFICATION_DECIDED`        | The character's owner                                                                                                                                          |
 | `QUEST_SIGNUP_CONFIRMED`                | The signing-up member; signup is self-service, not an approval                                                                                                 |
-| `QUEST_WAITLIST_PROMOTED`               | The promoted member, not the withdrawing actor                                                                                                                 |
+| `QUEST_WAITLIST_PROMOTED`               | The promoted member, not the withdrawing actor. A seat given out inside a Last Game Played live window is announced once, at the first player-list publish     |
 | `DOCUMENT_EDITED`, `DOCUMENT_PUBLISHED` | The document author, excluding the actor                                                                                                                       |
 | `DM_MENTIONED`                          | Newly named, resolvable `[!dm:@handle]` members, excluding the actor; editing an unchanged mention does not notify again                                       |
 | `QUEST_SCHEDULED`                       | Signed-up and waitlisted members, excluding the actor; includes rescheduling and the recorded quest-change variants                                            |

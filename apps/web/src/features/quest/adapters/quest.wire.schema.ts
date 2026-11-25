@@ -77,6 +77,7 @@ export const questDetailWireSchema = questBoardItemWireSchema.extend({
   genres: z.array(z.string()).optional().default([]),
   kinds: z.array(z.string()).optional().default([]),
   signupType: z.string().nullable().optional(),
+  liveReshuffle: z.boolean().optional().default(false),
 });
 
 export const questRegionCatalogWireSchema = z.array(

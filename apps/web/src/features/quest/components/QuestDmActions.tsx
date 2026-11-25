@@ -124,6 +124,13 @@ export function QuestDmActions({
               Publish player list
             </Button>
           </div>
+          {quest.liveReshuffle ? (
+            <p className="type-caption" role="status">
+              Live list: until you publish the player list, a later signup who played
+              longer ago takes a seat from Add by Last Game Played. Your two picks stay.
+              Players hear about their seats when you publish.
+            </p>
+          ) : null}
           {quest.participants.some(
             (participant) => participant.status === 'waitlisted',
           ) ? (

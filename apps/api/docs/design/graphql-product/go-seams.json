@@ -7031,6 +7031,15 @@
           "owner": "QUE01"
         },
         {
+          "name": "SeatNoticeHeld",
+          "wire_name": null,
+          "go_type": "bool",
+          "kind": "INTERNAL",
+          "owner": "QUE01",
+          "json_tag": "-",
+          "meaning": "Seat given out inside the Last Game Played live window; its waitlist-promotion notice waits for the first publish (#213). Never serialized."
+        },
+        {
           "name": "Status",
           "wire_name": "status",
           "go_type": "string",
@@ -7713,6 +7722,24 @@
           "wire_name": "kinds",
           "go_type": "[]string",
           "wire_type": "[String!]!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "QUE01"
+        },
+        {
+          "name": "LiveFillStartedAt",
+          "wire_name": null,
+          "go_type": "*time.Time",
+          "kind": "INTERNAL",
+          "owner": "QUE01",
+          "json_tag": "-",
+          "meaning": "Last Game Played live window start (#213); the wire exposes the derived liveReshuffle flag."
+        },
+        {
+          "name": "PlayerListPublishedAt",
+          "wire_name": "playerListPublishedAt",
+          "go_type": "*time.Time",
+          "wire_type": "DateTime",
           "resolver_args": [],
           "kind": "OBJECT",
           "owner": "QUE01"
@@ -21507,7 +21534,7 @@
         "LockSyncQuestDiscord(ctx context.Context, spec quest.SyncQuestDiscordSpec) (quest.SyncQuestDiscordState, error)",
         "StoreSyncQuestDiscord(ctx context.Context, write quest.SyncQuestDiscordWrite) (quest.DeliveryReceipt, error)",
         "LockPublishQuestPlayerList(ctx context.Context, spec quest.PublishQuestPlayerListSpec) (quest.PublishQuestPlayerListState, error)",
-        "StorePublishQuestPlayerList(ctx context.Context, write quest.PublishQuestPlayerListWrite) (quest.DeliveryReceipt, error)",
+        "StorePublishQuestPlayerList(ctx context.Context, write quest.PublishQuestPlayerListWrite) (quest.PublishQuestPlayerListResult, error)",
         "LockTransitionQuestStatus(ctx context.Context, spec quest.TransitionQuestStatusSpec) (quest.TransitionQuestStatusState, error)",
         "StoreTransitionQuestStatus(ctx context.Context, write quest.TransitionQuestStatusWrite) (quest.QuestView, error)",
         "LockUpdateQuest(ctx context.Context, spec quest.UpdateQuestSpec) (quest.UpdateQuestState, error)",

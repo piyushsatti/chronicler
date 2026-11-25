@@ -50,6 +50,7 @@ function quest(signupType: string): QuestDetailView {
     genres: [],
     kinds: ['standard'],
     signupType,
+    liveReshuffle: false,
     dmId,
     updatedAt: '2026-10-20T19:00:00Z',
     arc: null,

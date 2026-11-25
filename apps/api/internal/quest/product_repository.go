@@ -66,7 +66,7 @@ type QuestWriteRepository interface {
 	LockSyncQuestDiscord(ctx context.Context, spec SyncQuestDiscordSpec) (SyncQuestDiscordState, error)
 	StoreSyncQuestDiscord(ctx context.Context, write SyncQuestDiscordWrite) (DeliveryReceipt, error)
 	LockPublishQuestPlayerList(ctx context.Context, spec PublishQuestPlayerListSpec) (PublishQuestPlayerListState, error)
-	StorePublishQuestPlayerList(ctx context.Context, write PublishQuestPlayerListWrite) (DeliveryReceipt, error)
+	StorePublishQuestPlayerList(ctx context.Context, write PublishQuestPlayerListWrite) (PublishQuestPlayerListResult, error)
 	LockTransitionQuestStatus(ctx context.Context, spec TransitionQuestStatusSpec) (TransitionQuestStatusState, error)
 	StoreTransitionQuestStatus(ctx context.Context, write TransitionQuestStatusWrite) (QuestView, error)
 	LockUpdateQuest(ctx context.Context, spec UpdateQuestSpec) (UpdateQuestState, error)

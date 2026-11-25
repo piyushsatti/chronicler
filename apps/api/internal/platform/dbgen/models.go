@@ -403,6 +403,8 @@ type Quest struct {
 	DiscordVoiceChannelID  pgtype.Text        `json:"discord_voice_channel_id"`
 	DiscordThreadID        pgtype.Text        `json:"discord_thread_id"`
 	DiscordChannelID       pgtype.Text        `json:"discord_channel_id"`
+	LiveFillStartedAt      pgtype.Timestamptz `json:"live_fill_started_at"`
+	PlayerListPublishedAt  pgtype.Timestamptz `json:"player_list_published_at"`
 }
 
 type QuestArc struct {
@@ -419,14 +421,15 @@ type QuestDisplayStatus struct {
 }
 
 type QuestParticipant struct {
-	QuestID     int64              `json:"quest_id"`
-	MemberID    int64              `json:"member_id"`
-	CharacterID int64              `json:"character_id"`
-	Status      string             `json:"status"`
-	Manual      bool               `json:"manual"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DmPicked    bool               `json:"dm_picked"`
+	QuestID        int64              `json:"quest_id"`
+	MemberID       int64              `json:"member_id"`
+	CharacterID    int64              `json:"character_id"`
+	Status         string             `json:"status"`
+	Manual         bool               `json:"manual"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	DmPicked       bool               `json:"dm_picked"`
+	SeatNoticeHeld bool               `json:"seat_notice_held"`
 }
 
 type QuestPointcrawlNode struct {

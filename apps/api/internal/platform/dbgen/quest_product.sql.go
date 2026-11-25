@@ -119,7 +119,7 @@ WITH filtered AS (
            dm.public_id AS dm_public_id, q.arc_id, arc.public_id AS arc_public_id,
            q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
            doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-           q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
+           q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision, q.discord_applied_revision,
            q.discord_message_id, q.discord_event_id, q.event_url,
            creator.public_id AS created_by_public_id, q.created_at, q.updated_at
     FROM quests q
@@ -136,13 +136,13 @@ WITH filtered AS (
       ))
 ), counted AS (SELECT count(*)::bigint AS total FROM filtered),
 page AS (
-    SELECT id, public_id, short_code, kinds, status, display_status, dm_public_id, arc_id, arc_public_id, scheduled_at, duration_hours, slots_max, filled_count, document_public_id, tags, genres, apl, signup_type, discord_desired_revision, discord_applied_revision, discord_message_id, discord_event_id, event_url, created_by_public_id, created_at, updated_at FROM filtered ORDER BY scheduled_at, public_id
+    SELECT id, public_id, short_code, kinds, status, display_status, dm_public_id, arc_id, arc_public_id, scheduled_at, duration_hours, slots_max, filled_count, document_public_id, tags, genres, apl, signup_type, live_fill_started_at, player_list_published_at, discord_desired_revision, discord_applied_revision, discord_message_id, discord_event_id, event_url, created_by_public_id, created_at, updated_at FROM filtered ORDER BY scheduled_at, public_id
     LIMIT $4::integer OFFSET $3::integer
 )
 SELECT counted.total, page.id, page.public_id, page.short_code, page.kinds,
        page.status, page.display_status, page.dm_public_id, page.arc_public_id,
        page.scheduled_at, page.duration_hours, page.slots_max, page.filled_count,
-       page.document_public_id, page.tags, page.genres, page.apl, page.signup_type,
+       page.document_public_id, page.tags, page.genres, page.apl, page.signup_type, page.live_fill_started_at, page.player_list_published_at,
        page.discord_desired_revision, page.discord_applied_revision,
        page.discord_message_id, page.discord_event_id, page.event_url,
        page.created_by_public_id, page.created_at, page.updated_at
@@ -176,6 +176,8 @@ type ProductQuestBoardPageRow struct {
 	Genres                 []string           `json:"genres"`
 	Apl                    pgtype.Int4        `json:"apl"`
 	SignupType             pgtype.Text        `json:"signup_type"`
+	LiveFillStartedAt      pgtype.Timestamptz `json:"live_fill_started_at"`
+	PlayerListPublishedAt  pgtype.Timestamptz `json:"player_list_published_at"`
 	DiscordDesiredRevision pgtype.Int4        `json:"discord_desired_revision"`
 	DiscordAppliedRevision pgtype.Int4        `json:"discord_applied_revision"`
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
@@ -219,6 +221,8 @@ func (q *Queries) ProductQuestBoardPage(ctx context.Context, arg ProductQuestBoa
 			&i.Genres,
 			&i.Apl,
 			&i.SignupType,
+			&i.LiveFillStartedAt,
+			&i.PlayerListPublishedAt,
 			&i.DiscordDesiredRevision,
 			&i.DiscordAppliedRevision,
 			&i.DiscordMessageID,
@@ -439,6 +443,31 @@ func (q *Queries) ProductQuestCountParticipants(ctx context.Context, arg Product
 	return total, err
 }
 
+const productQuestDemoteHeldSeat = `-- name: ProductQuestDemoteHeldSeat :one
+UPDATE quest_participants participant
+SET status = 'waitlisted', seat_notice_held = false, updated_at = $1::timestamptz
+FROM quests q, characters c
+WHERE participant.quest_id = q.id AND participant.character_id = c.id
+  AND q.public_id = $2::uuid AND c.public_id = $3::uuid
+  AND participant.status = 'signed_up' AND participant.seat_notice_held
+RETURNING c.public_id AS character_id
+`
+
+type ProductQuestDemoteHeldSeatParams struct {
+	At          pgtype.Timestamptz `json:"at"`
+	QuestID     pgtype.UUID        `json:"quest_id"`
+	CharacterID pgtype.UUID        `json:"character_id"`
+}
+
+// Live reshuffle: a later signup took this held seat, so it returns to the waitlist.
+// Only a held seat moves; its player was never told they had it.
+func (q *Queries) ProductQuestDemoteHeldSeat(ctx context.Context, arg ProductQuestDemoteHeldSeatParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, productQuestDemoteHeldSeat, arg.At, arg.QuestID, arg.CharacterID)
+	var character_id pgtype.UUID
+	err := row.Scan(&character_id)
+	return character_id, err
+}
+
 const productQuestDisplayStatusAt = `-- name: ProductQuestDisplayStatusAt :one
 SELECT quest_display_status_at($1::text, $2::integer, $3::timestamptz, $4::double precision, $5::timestamptz)::text AS display_status
 `
@@ -471,7 +500,7 @@ WITH filtered AS (
            dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
            q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
            doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-           q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
+           q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision, q.discord_applied_revision,
            q.discord_message_id, q.discord_event_id, q.event_url,
            creator.public_id AS created_by_public_id, q.created_at, q.updated_at, q.closed_at,
            recap.public_id AS recap_public_id, recap.kind AS recap_kind, recap.slug AS recap_slug,
@@ -498,14 +527,14 @@ WITH filtered AS (
 ), counted AS (
     SELECT count(*)::bigint AS total FROM filtered
 ), page AS (
-    SELECT id, public_id, short_code, kinds, status, display_status, dm_public_id, arc_public_id, scheduled_at, duration_hours, slots_max, filled_count, document_public_id, tags, genres, apl, signup_type, discord_desired_revision, discord_applied_revision, discord_message_id, discord_event_id, event_url, created_by_public_id, created_at, updated_at, closed_at, recap_public_id, recap_kind, recap_slug, recap_title, recap_status, recap_visibility, recap_author_public_id, recap_created_at, recap_updated_at FROM filtered
+    SELECT id, public_id, short_code, kinds, status, display_status, dm_public_id, arc_public_id, scheduled_at, duration_hours, slots_max, filled_count, document_public_id, tags, genres, apl, signup_type, live_fill_started_at, player_list_published_at, discord_desired_revision, discord_applied_revision, discord_message_id, discord_event_id, event_url, created_by_public_id, created_at, updated_at, closed_at, recap_public_id, recap_kind, recap_slug, recap_title, recap_status, recap_visibility, recap_author_public_id, recap_created_at, recap_updated_at FROM filtered
     ORDER BY scheduled_at DESC, public_id DESC
     LIMIT $4::integer OFFSET $3::integer
 )
 SELECT counted.total, page.public_id, page.short_code, page.kinds, page.status, page.display_status,
        page.dm_public_id, page.arc_public_id, page.scheduled_at, page.duration_hours,
        page.slots_max, page.filled_count, page.document_public_id, page.tags, page.genres, page.apl,
-       page.signup_type, page.discord_desired_revision, page.discord_applied_revision,
+       page.signup_type, page.live_fill_started_at, page.player_list_published_at, page.discord_desired_revision, page.discord_applied_revision,
        page.discord_message_id, page.discord_event_id, page.event_url,
        page.created_by_public_id, page.created_at, page.updated_at, page.closed_at,
        page.recap_public_id, page.recap_kind, page.recap_slug, page.recap_title,
@@ -540,6 +569,8 @@ type ProductQuestDmSessionHistoryPageRow struct {
 	Genres                 []string           `json:"genres"`
 	Apl                    pgtype.Int4        `json:"apl"`
 	SignupType             pgtype.Text        `json:"signup_type"`
+	LiveFillStartedAt      pgtype.Timestamptz `json:"live_fill_started_at"`
+	PlayerListPublishedAt  pgtype.Timestamptz `json:"player_list_published_at"`
 	DiscordDesiredRevision pgtype.Int4        `json:"discord_desired_revision"`
 	DiscordAppliedRevision pgtype.Int4        `json:"discord_applied_revision"`
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
@@ -593,6 +624,8 @@ func (q *Queries) ProductQuestDmSessionHistoryPage(ctx context.Context, arg Prod
 			&i.Genres,
 			&i.Apl,
 			&i.SignupType,
+			&i.LiveFillStartedAt,
+			&i.PlayerListPublishedAt,
 			&i.DiscordDesiredRevision,
 			&i.DiscordAppliedRevision,
 			&i.DiscordMessageID,
@@ -1139,7 +1172,7 @@ WITH filtered AS (
            q.dm_id, dm.public_id AS dm_public_id, q.arc_id, arc.public_id AS arc_public_id,
            q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
            q.document_id, doc.public_id AS document_public_id, q.tags, q.genres,
-           q.avg_party_level AS apl, q.signup_type, q.discord_desired_revision,
+           q.avg_party_level AS apl, q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision,
            q.discord_applied_revision, q.discord_message_id, q.discord_event_id,
            q.event_url, q.created_by, creator.public_id AS created_by_public_id,
            q.created_at, q.updated_at, q.closed_at, q.deleted_at,
@@ -1170,14 +1203,14 @@ WITH filtered AS (
 ), counted AS (
     SELECT count(*)::bigint AS total FROM filtered
 ), page AS (
-    SELECT id, public_id, short_code, kinds, status, display_status, dm_id, dm_public_id, arc_id, arc_public_id, scheduled_at, duration_hours, slots_max, filled_count, document_id, document_public_id, tags, genres, apl, signup_type, discord_desired_revision, discord_applied_revision, discord_message_id, discord_event_id, event_url, created_by, created_by_public_id, created_at, updated_at, closed_at, deleted_at, deleted_by_public_id FROM filtered
+    SELECT id, public_id, short_code, kinds, status, display_status, dm_id, dm_public_id, arc_id, arc_public_id, scheduled_at, duration_hours, slots_max, filled_count, document_id, document_public_id, tags, genres, apl, signup_type, live_fill_started_at, player_list_published_at, discord_desired_revision, discord_applied_revision, discord_message_id, discord_event_id, event_url, created_by, created_by_public_id, created_at, updated_at, closed_at, deleted_at, deleted_by_public_id FROM filtered
     ORDER BY scheduled_at ASC, public_id ASC
     LIMIT $18::integer OFFSET $17::integer
 )
 SELECT counted.total, page.id, page.public_id, page.short_code, page.kinds,
        page.status, page.display_status, page.dm_public_id, page.arc_public_id,
        page.scheduled_at, page.duration_hours, page.slots_max, page.filled_count,
-       page.document_public_id, page.tags, page.genres, page.apl, page.signup_type,
+       page.document_public_id, page.tags, page.genres, page.apl, page.signup_type, page.live_fill_started_at, page.player_list_published_at,
        page.discord_desired_revision, page.discord_applied_revision,
        page.discord_message_id, page.discord_event_id, page.event_url,
        page.created_by_public_id, page.created_at, page.updated_at, page.closed_at,
@@ -1226,6 +1259,8 @@ type ProductQuestListPageRow struct {
 	Genres                 []string           `json:"genres"`
 	Apl                    pgtype.Int4        `json:"apl"`
 	SignupType             pgtype.Text        `json:"signup_type"`
+	LiveFillStartedAt      pgtype.Timestamptz `json:"live_fill_started_at"`
+	PlayerListPublishedAt  pgtype.Timestamptz `json:"player_list_published_at"`
 	DiscordDesiredRevision pgtype.Int4        `json:"discord_desired_revision"`
 	DiscordAppliedRevision pgtype.Int4        `json:"discord_applied_revision"`
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
@@ -1288,6 +1323,8 @@ func (q *Queries) ProductQuestListPage(ctx context.Context, arg ProductQuestList
 			&i.Genres,
 			&i.Apl,
 			&i.SignupType,
+			&i.LiveFillStartedAt,
+			&i.PlayerListPublishedAt,
 			&i.DiscordDesiredRevision,
 			&i.DiscordAppliedRevision,
 			&i.DiscordMessageID,
@@ -1347,7 +1384,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status, q.dm_id,
        q.discord_message_id, q.discord_event_id, q.event_url,
        q.created_by, q.created_at, q.updated_at, q.closed_at, q.deleted_at,
        q.deleted_by, q.discord_voice_channel_id, q.discord_thread_id,
-       q.discord_channel_id
+       q.discord_channel_id, q.live_fill_started_at, q.player_list_published_at
 FROM quests q
 WHERE q.public_id = $1::uuid
 FOR UPDATE OF q
@@ -1387,6 +1424,8 @@ func (q *Queries) ProductQuestLockByID(ctx context.Context, questID pgtype.UUID)
 		&i.DiscordVoiceChannelID,
 		&i.DiscordThreadID,
 		&i.DiscordChannelID,
+		&i.LiveFillStartedAt,
+		&i.PlayerListPublishedAt,
 	)
 	return i, err
 }
@@ -1415,6 +1454,25 @@ func (q *Queries) ProductQuestLockCapacity(ctx context.Context, questID int64) (
 		&i.FilledCount,
 	)
 	return i, err
+}
+
+const productQuestMarkPlayerListPublished = `-- name: ProductQuestMarkPlayerListPublished :one
+UPDATE quests SET player_list_published_at = COALESCE(player_list_published_at, $1::timestamptz)
+WHERE public_id = $2::uuid
+RETURNING player_list_published_at
+`
+
+type ProductQuestMarkPlayerListPublishedParams struct {
+	At      pgtype.Timestamptz `json:"at"`
+	QuestID pgtype.UUID        `json:"quest_id"`
+}
+
+// The first publish ends the live window. Later publishes keep the first time.
+func (q *Queries) ProductQuestMarkPlayerListPublished(ctx context.Context, arg ProductQuestMarkPlayerListPublishedParams) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, productQuestMarkPlayerListPublished, arg.At, arg.QuestID)
+	var player_list_published_at pgtype.Timestamptz
+	err := row.Scan(&player_list_published_at)
+	return player_list_published_at, err
 }
 
 const productQuestMemberPublicID = `-- name: ProductQuestMemberPublicID :one
@@ -1652,22 +1710,24 @@ func (q *Queries) ProductQuestOpenSeatsPage(ctx context.Context, arg ProductQues
 
 const productQuestPromoteParticipants = `-- name: ProductQuestPromoteParticipants :many
 UPDATE quest_participants participant
-SET status = 'signed_up', manual = false, dm_picked = $1::boolean, updated_at = $2::timestamptz
+SET status = 'signed_up', manual = false, dm_picked = $1::boolean,
+    seat_notice_held = $2::boolean, updated_at = $3::timestamptz
 FROM quests q, characters c, members owner
 WHERE participant.quest_id = q.id AND participant.character_id = c.id AND participant.member_id = owner.id
-  AND q.public_id = $3::uuid AND c.public_id = ANY($4::uuid[])
+  AND q.public_id = $4::uuid AND c.public_id = ANY($5::uuid[])
   AND participant.status = 'waitlisted'
 RETURNING q.public_id AS quest_id, c.public_id AS character_id, owner.public_id AS member_id,
           c.name AS character_name, owner.handle AS member_handle, owner.display_name AS member_display_name,
           owner.avatar_url AS member_avatar_url, participant.status, participant.manual, participant.dm_picked,
-          participant.created_at, participant.updated_at
+          participant.created_at, participant.updated_at, participant.seat_notice_held
 `
 
 type ProductQuestPromoteParticipantsParams struct {
-	DmPicked     bool               `json:"dm_picked"`
-	At           pgtype.Timestamptz `json:"at"`
-	QuestID      pgtype.UUID        `json:"quest_id"`
-	CharacterIds []pgtype.UUID      `json:"character_ids"`
+	DmPicked       bool               `json:"dm_picked"`
+	SeatNoticeHeld bool               `json:"seat_notice_held"`
+	At             pgtype.Timestamptz `json:"at"`
+	QuestID        pgtype.UUID        `json:"quest_id"`
+	CharacterIds   []pgtype.UUID      `json:"character_ids"`
 }
 
 type ProductQuestPromoteParticipantsRow struct {
@@ -1683,11 +1743,14 @@ type ProductQuestPromoteParticipantsRow struct {
 	DmPicked          bool               `json:"dm_picked"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	SeatNoticeHeld    bool               `json:"seat_notice_held"`
 }
 
+// seat_notice_held marks a seat given out while a Last Game Played list is live.
 func (q *Queries) ProductQuestPromoteParticipants(ctx context.Context, arg ProductQuestPromoteParticipantsParams) ([]ProductQuestPromoteParticipantsRow, error) {
 	rows, err := q.db.Query(ctx, productQuestPromoteParticipants,
 		arg.DmPicked,
+		arg.SeatNoticeHeld,
 		arg.At,
 		arg.QuestID,
 		arg.CharacterIds,
@@ -1712,6 +1775,7 @@ func (q *Queries) ProductQuestPromoteParticipants(ctx context.Context, arg Produ
 			&i.DmPicked,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SeatNoticeHeld,
 		); err != nil {
 			return nil, err
 		}
@@ -1773,7 +1837,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        dm.public_id AS dm_public_id, q.arc_id, arc.public_id AS arc_public_id,
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-       q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
+       q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision, q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
        q.closed_at, q.deleted_at, deleted_by.public_id AS deleted_by_public_id
@@ -1810,6 +1874,8 @@ type ProductQuestReadByIDRow struct {
 	Genres                 []string           `json:"genres"`
 	Apl                    pgtype.Int4        `json:"apl"`
 	SignupType             pgtype.Text        `json:"signup_type"`
+	LiveFillStartedAt      pgtype.Timestamptz `json:"live_fill_started_at"`
+	PlayerListPublishedAt  pgtype.Timestamptz `json:"player_list_published_at"`
 	DiscordDesiredRevision int32              `json:"discord_desired_revision"`
 	DiscordAppliedRevision int32              `json:"discord_applied_revision"`
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
@@ -1846,6 +1912,8 @@ func (q *Queries) ProductQuestReadByID(ctx context.Context, arg ProductQuestRead
 		&i.Genres,
 		&i.Apl,
 		&i.SignupType,
+		&i.LiveFillStartedAt,
+		&i.PlayerListPublishedAt,
 		&i.DiscordDesiredRevision,
 		&i.DiscordAppliedRevision,
 		&i.DiscordMessageID,
@@ -1868,7 +1936,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        dm.public_id AS dm_public_id, q.arc_id, arc.public_id AS arc_public_id,
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-       q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
+       q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision, q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
        q.closed_at, q.deleted_at, deleted_by.public_id AS deleted_by_public_id
@@ -1905,6 +1973,8 @@ type ProductQuestReadByShortCodeRow struct {
 	Genres                 []string           `json:"genres"`
 	Apl                    pgtype.Int4        `json:"apl"`
 	SignupType             pgtype.Text        `json:"signup_type"`
+	LiveFillStartedAt      pgtype.Timestamptz `json:"live_fill_started_at"`
+	PlayerListPublishedAt  pgtype.Timestamptz `json:"player_list_published_at"`
 	DiscordDesiredRevision int32              `json:"discord_desired_revision"`
 	DiscordAppliedRevision int32              `json:"discord_applied_revision"`
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
@@ -1941,6 +2011,8 @@ func (q *Queries) ProductQuestReadByShortCode(ctx context.Context, arg ProductQu
 		&i.Genres,
 		&i.Apl,
 		&i.SignupType,
+		&i.LiveFillStartedAt,
+		&i.PlayerListPublishedAt,
 		&i.DiscordDesiredRevision,
 		&i.DiscordAppliedRevision,
 		&i.DiscordMessageID,
@@ -2105,7 +2177,7 @@ WITH filtered AS (
            dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
            q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
            doc.public_id AS document_public_id, q.tags, q.genres,
-           q.avg_party_level AS apl, q.signup_type, q.discord_desired_revision,
+           q.avg_party_level AS apl, q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision,
            q.discord_applied_revision, q.discord_message_id, q.discord_event_id,
            q.event_url, creator.public_id AS created_by_public_id,
            q.created_at, q.updated_at, q.closed_at
@@ -2124,10 +2196,10 @@ WITH filtered AS (
       ))
 ), counted AS (SELECT count(*)::bigint AS total FROM filtered),
 page AS (
-    SELECT id, public_id, short_code, kinds, status, display_status, dm_public_id, arc_public_id, scheduled_at, duration_hours, slots_max, filled_count, document_public_id, tags, genres, apl, signup_type, discord_desired_revision, discord_applied_revision, discord_message_id, discord_event_id, event_url, created_by_public_id, created_at, updated_at, closed_at FROM filtered ORDER BY closed_at DESC, public_id DESC
+    SELECT id, public_id, short_code, kinds, status, display_status, dm_public_id, arc_public_id, scheduled_at, duration_hours, slots_max, filled_count, document_public_id, tags, genres, apl, signup_type, live_fill_started_at, player_list_published_at, discord_desired_revision, discord_applied_revision, discord_message_id, discord_event_id, event_url, created_by_public_id, created_at, updated_at, closed_at FROM filtered ORDER BY closed_at DESC, public_id DESC
     LIMIT $5::integer OFFSET $4::integer
 )
-SELECT counted.total, page.id, page.public_id, page.short_code, page.kinds, page.status, page.display_status, page.dm_public_id, page.arc_public_id, page.scheduled_at, page.duration_hours, page.slots_max, page.filled_count, page.document_public_id, page.tags, page.genres, page.apl, page.signup_type, page.discord_desired_revision, page.discord_applied_revision, page.discord_message_id, page.discord_event_id, page.event_url, page.created_by_public_id, page.created_at, page.updated_at, page.closed_at
+SELECT counted.total, page.id, page.public_id, page.short_code, page.kinds, page.status, page.display_status, page.dm_public_id, page.arc_public_id, page.scheduled_at, page.duration_hours, page.slots_max, page.filled_count, page.document_public_id, page.tags, page.genres, page.apl, page.signup_type, page.live_fill_started_at, page.player_list_published_at, page.discord_desired_revision, page.discord_applied_revision, page.discord_message_id, page.discord_event_id, page.event_url, page.created_by_public_id, page.created_at, page.updated_at, page.closed_at
 FROM counted LEFT JOIN page ON TRUE
 ORDER BY page.closed_at DESC NULLS LAST, page.public_id DESC NULLS LAST
 `
@@ -2159,6 +2231,8 @@ type ProductQuestRecentlyClosedPageRow struct {
 	Genres                 []string           `json:"genres"`
 	Apl                    pgtype.Int4        `json:"apl"`
 	SignupType             pgtype.Text        `json:"signup_type"`
+	LiveFillStartedAt      pgtype.Timestamptz `json:"live_fill_started_at"`
+	PlayerListPublishedAt  pgtype.Timestamptz `json:"player_list_published_at"`
 	DiscordDesiredRevision pgtype.Int4        `json:"discord_desired_revision"`
 	DiscordAppliedRevision pgtype.Int4        `json:"discord_applied_revision"`
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
@@ -2204,6 +2278,8 @@ func (q *Queries) ProductQuestRecentlyClosedPage(ctx context.Context, arg Produc
 			&i.Genres,
 			&i.Apl,
 			&i.SignupType,
+			&i.LiveFillStartedAt,
+			&i.PlayerListPublishedAt,
 			&i.DiscordDesiredRevision,
 			&i.DiscordAppliedRevision,
 			&i.DiscordMessageID,
@@ -2259,7 +2335,7 @@ func (q *Queries) ProductQuestRegionInternalIDs(ctx context.Context, regionIds [
 
 const productQuestRejoinParticipant = `-- name: ProductQuestRejoinParticipant :one
 UPDATE quest_participants SET status = $1::text, manual = false, dm_picked = false,
-       created_at = $2::timestamptz, updated_at = $2::timestamptz
+       seat_notice_held = false, created_at = $2::timestamptz, updated_at = $2::timestamptz
 WHERE quest_id = $3::bigint AND character_id = $4::bigint AND status = 'withdrawn'
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at
 `
@@ -2301,6 +2377,42 @@ func (q *Queries) ProductQuestRejoinParticipant(ctx context.Context, arg Product
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const productQuestReleaseHeldSeats = `-- name: ProductQuestReleaseHeldSeats :many
+UPDATE quest_participants participant
+SET seat_notice_held = false
+FROM quests q, characters c
+WHERE participant.quest_id = q.id AND participant.character_id = c.id
+  AND q.public_id = $1::uuid AND participant.seat_notice_held
+RETURNING c.public_id AS character_id, participant.status
+`
+
+type ProductQuestReleaseHeldSeatsRow struct {
+	CharacterID pgtype.UUID `json:"character_id"`
+	Status      string      `json:"status"`
+}
+
+// At the first publish every held seat is announced. Held flags on rows that left
+// their seat are cleared too, so a later return to a seat starts clean.
+func (q *Queries) ProductQuestReleaseHeldSeats(ctx context.Context, questID pgtype.UUID) ([]ProductQuestReleaseHeldSeatsRow, error) {
+	rows, err := q.db.Query(ctx, productQuestReleaseHeldSeats, questID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductQuestReleaseHeldSeatsRow{}
+	for rows.Next() {
+		var i ProductQuestReleaseHeldSeatsRow
+		if err := rows.Scan(&i.CharacterID, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const productQuestReplacePointcrawlLinks = `-- name: ProductQuestReplacePointcrawlLinks :exec
@@ -2372,7 +2484,7 @@ func (q *Queries) ProductQuestRewardCoverage(ctx context.Context, questIds []pgt
 
 const productQuestSeatPriority = `-- name: ProductQuestSeatPriority :many
 SELECT qp.character_id, c.public_id AS character_public_id, qp.status, qp.manual, qp.dm_picked,
-       qp.created_at, last_game.last_played_at
+       qp.seat_notice_held, qp.created_at, last_game.last_played_at
 FROM quest_participants qp
 JOIN quests q ON q.id = qp.quest_id
 JOIN characters c ON c.id = qp.character_id
@@ -2393,6 +2505,7 @@ type ProductQuestSeatPriorityRow struct {
 	Status            string             `json:"status"`
 	Manual            bool               `json:"manual"`
 	DmPicked          bool               `json:"dm_picked"`
+	SeatNoticeHeld    bool               `json:"seat_notice_held"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	LastPlayedAt      pgtype.Timestamptz `json:"last_played_at"`
 }
@@ -2414,6 +2527,7 @@ func (q *Queries) ProductQuestSeatPriority(ctx context.Context, questID pgtype.U
 			&i.Status,
 			&i.Manual,
 			&i.DmPicked,
+			&i.SeatNoticeHeld,
 			&i.CreatedAt,
 			&i.LastPlayedAt,
 		); err != nil {
@@ -2529,6 +2643,22 @@ func (q *Queries) ProductQuestSetStatus(ctx context.Context, arg ProductQuestSet
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const productQuestStartLiveFill = `-- name: ProductQuestStartLiveFill :exec
+UPDATE quests SET live_fill_started_at = $1::timestamptz
+WHERE id = $2::bigint AND live_fill_started_at IS NULL
+`
+
+type ProductQuestStartLiveFillParams struct {
+	At      pgtype.Timestamptz `json:"at"`
+	QuestID int64              `json:"quest_id"`
+}
+
+// The first fill by last played starts the live window. A published list stays published.
+func (q *Queries) ProductQuestStartLiveFill(ctx context.Context, arg ProductQuestStartLiveFillParams) error {
+	_, err := q.db.Exec(ctx, productQuestStartLiveFill, arg.At, arg.QuestID)
+	return err
 }
 
 const productQuestStateCounts = `-- name: ProductQuestStateCounts :many
@@ -2912,7 +3042,7 @@ func (q *Queries) ProductQuestUpdateMetadata(ctx context.Context, arg ProductQue
 
 const productQuestUpdateParticipant = `-- name: ProductQuestUpdateParticipant :one
 UPDATE quest_participants SET status = $1::text, manual = $2::boolean,
-       updated_at = $3::timestamptz
+       seat_notice_held = false, updated_at = $3::timestamptz
 WHERE quest_id = $4::bigint AND character_id = $5::bigint
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at
 `

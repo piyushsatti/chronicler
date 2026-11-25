@@ -163,8 +163,11 @@ func (p *ProductPostgres) promoteQuestWaitlist(ctx context.Context, effects *cha
 		if len(selected) != 1 {
 			return apierr.New(apierr.Internal, "promotion result missing")
 		}
-		from, to := "waitlisted", "signed_up"
 		effects.PromotedMemberIDs = append(effects.PromotedMemberIDs, candidate.MemberId)
+		if selected[0].SeatNoticeHeld {
+			break // a live-window seat is announced at publish
+		}
+		from, to := "waitlisted", "signed_up"
 		effects.Events = append(effects.Events, notification.Event{Key: "quest-promotion:" + questID + ":" + candidate.CharacterId + ":" + plan.OwnedCharacterID + ":" + strconv.FormatInt(previous.UpdatedAt.UnixNano(), 10), Kind: notification.QuestWaitlistPromoted, SubjectType: "quest", SubjectID: questID, ActorID: actorID, OccurredAt: at, Facts: notification.Facts{Version: 1, EventKind: notification.QuestWaitlistPromoted, CharacterID: &candidate.CharacterId, FromStatus: &from, ToStatus: &to}})
 		break
 	}

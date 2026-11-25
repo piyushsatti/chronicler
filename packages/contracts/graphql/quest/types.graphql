@@ -169,6 +169,10 @@ type QuestType {
   genres: [String!]!
   apl: Int
   signupType: String
+  # Last Game Played only. True from the DM's fill by last played until the first
+  # player-list publish: a later signup who played longer ago can take a fill seat.
+  liveReshuffle: Boolean!
+  playerListPublishedAt: DateTime
   voiceChannelId: String
   createdBy: ID!
   createdAt: DateTime!

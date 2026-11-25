@@ -18,7 +18,8 @@ type Participant struct {
 }
 
 // placeQuestSignup is the participant status a signup writes. Open seats and
-// signup type do not matter: signup never takes a seat and never bumps one.
+// signup type do not matter: the signup itself never takes a seat. The one
+// exception follows the write: a Last Game Played live window (live_reshuffle.go).
 func placeQuestSignup() string { return "waitlisted" }
 
 func canSignUp(q LegacyQuestView) error {

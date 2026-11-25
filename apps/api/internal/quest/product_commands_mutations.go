@@ -551,7 +551,12 @@ func (s ProductCommands) SignupForQuest(ctx context.Context, actor auth.Authorit
 			from = &previous.Status
 		}
 		key := "quest-signup:" + questID + ":" + characterID + ":" + meta.IdempotencyKey
-		if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestSignupConfirmed, key, questID, characterID, from, result.Status, at); err != nil {
+		// A held live-window seat is not announced yet: the signup is confirmed as waitlisted.
+		noticeStatus := result.Status
+		if result.SeatNoticeHeld {
+			noticeStatus = placeQuestSignup()
+		}
+		if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestSignupConfirmed, key, questID, characterID, from, noticeStatus, at); err != nil {
 			return QuestParticipantView{}, err
 		}
 		if bumpedCharacterID != "" {
@@ -772,6 +777,9 @@ func selectQuestParticipants(ctx context.Context, repos ProductCommandRepos, fre
 func recordQuestPromotions(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, questID string, participants []QuestParticipantView, key string) error {
 	from := "waitlisted"
 	for _, participant := range participants {
+		if participant.SeatNoticeHeld {
+			continue // a live-window seat is announced at publish
+		}
 		idempotencyKey := "quest-selection:" + questID + ":" + participant.CharacterId + ":" + key
 		if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestWaitlistPromoted, idempotencyKey, questID, participant.CharacterId, &from, "signed_up", at); err != nil {
 			return err
@@ -1018,10 +1026,21 @@ func (s ProductCommands) PublishQuestPlayerList(ctx context.Context, actor auth.
 		if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
 			return DeliveryReceipt{}, err
 		}
-		return repos.Quest.StorePublishQuestPlayerList(ctx, PublishQuestPlayerListWrite{
+		published, err := repos.Quest.StorePublishQuestPlayerList(ctx, PublishQuestPlayerListWrite{
 			ActorID: fresh.Claims().MemberID, At: at,
 			ValidatedInput: PublishQuestPlayerListSpec{QuestId: questID, AsOf: at}, Locked: locked,
 		})
+		if err != nil {
+			return DeliveryReceipt{}, err
+		}
+		from := "waitlisted"
+		for _, characterID := range published.ReleasedSeats {
+			key := "quest-seat-published:" + questID + ":" + characterID
+			if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestWaitlistPromoted, key, questID, characterID, &from, "signed_up", at); err != nil {
+				return DeliveryReceipt{}, err
+			}
+		}
+		return published.Receipt, nil
 	})
 }
 
