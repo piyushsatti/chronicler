@@ -141,13 +141,9 @@ func (p *ProductPostgres) promoteQuestWaitlist(ctx context.Context, effects *cha
 	if locked.Before != nil && locked.Before.SignupType != nil && *locked.Before.SignupType == dmPickSignup && locked.Before.FilledCount > locked.Before.SlotsMax {
 		return nil
 	}
-	candidates := locked.Roster
-	if locked.Before != nil && locked.Before.SignupType != nil && *locked.Before.SignupType == lastGamePlayedSignup {
-		ordered, err := p.waitlistBySeatPriority(ctx, questID, locked.Roster)
-		if err != nil {
-			return err
-		}
-		candidates = ordered
+	candidates, err := p.withdrawalPromotionCandidates(ctx, questID, locked)
+	if err != nil {
+		return err
 	}
 	for _, candidate := range candidates {
 		if candidate.Status != "waitlisted" || candidate.CharacterId == plan.OwnedCharacterID || !eligibleWithdrawalCandidate(admissions, candidate.CharacterId) {
@@ -172,6 +168,15 @@ func (p *ProductPostgres) promoteQuestWaitlist(ctx context.Context, effects *cha
 		break
 	}
 	return nil
+}
+
+// withdrawalPromotionCandidates orders the roster for a withdrawal promotion: Last
+// Game Played seat order on those quests, signup order otherwise.
+func (p *ProductPostgres) withdrawalPromotionCandidates(ctx context.Context, questID string, locked WithdrawFromQuestState) ([]QuestParticipantView, error) {
+	if locked.Before == nil || locked.Before.SignupType == nil || *locked.Before.SignupType != lastGamePlayedSignup {
+		return locked.Roster, nil
+	}
+	return p.waitlistBySeatPriority(ctx, questID, locked.Roster)
 }
 
 func eligibleWithdrawalCandidate(admissions []character.Admission, characterID string) bool {
