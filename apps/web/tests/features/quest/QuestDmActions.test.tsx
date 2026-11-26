@@ -65,6 +65,7 @@ function quest(signupType: string): QuestDetailView {
     genres: [],
     kinds: ['standard'],
     signupType,
+    liveReshuffle: false,
     dmId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
     updatedAt: '2026-10-20T19:00:00Z',
     arc: null,
@@ -227,5 +228,29 @@ describe('QuestDmActions waitlist selection', () => {
       ]);
       view.unmount();
     }
+  });
+
+  it('tells the DM the list is live until the player list is published', () => {
+    const live = renderWithProviders(
+      <QuestDmActions
+        quest={{ ...quest('last_game_played'), liveReshuffle: true }}
+        pending={false}
+        execute={async () => true}
+        error={null}
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /until you publish the player list, a later signup who played longer ago takes a seat/,
+    );
+    live.unmount();
+    renderWithProviders(
+      <QuestDmActions
+        quest={quest('last_game_played')}
+        pending={false}
+        execute={async () => true}
+        error={null}
+      />,
+    );
+    expect(screen.queryByText(/Live list:/)).not.toBeInTheDocument();
   });
 });

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Last Game Played quests reshuffle live ([#213](https://github.com/piyushsatti/chronicler/issues/213)). After the DM fills by last played, a later signup takes an open seat, or the fill seat with the most recent last game when they played longer ago. DM picks and manual adds stay. Seat notices wait for the first player-list publish, or for Mark played. The quest page tells DMs and players while seats can still change.
 - Production release workflow `deploy-production.yml`: a CalVer tag on `main` deploys the backend to one VM and the frontend to Vercel. Production runs the API behind a Cloudflare Tunnel (`chronicler-cloudflared`) with Supabase PostgreSQL through `DATABASE_URL`, takes a `pg_dump` restore point before migrations (`scripts/backup-db -u`), and publishes at `chronicler-prod-api.piyushsatti.com`. The production runner carries only the `chronicler-production` label, and its pre-job hook (`deploy/runner/production-job-started.sh`) refuses every other job. Decision: [D51](docs/decisions/D51-Production-On-One-VM-Behind-Cloudflare-Tunnel.md).
 - New Discord sign-ins start as guests; approving their first character grants player eligibility for quest signup. Existing members retain their roles.
 - Agent HTTP-first port: `apps/agent` uv project (`pi.chronicler.agent` / `archive` / `qa`), API claim/complete job pipeline, Archive MCP + LanceDB, deploy compose without RabbitMQ, `agent.yml` CI. Docs: [agent-qa-http](docs/interfaces/agent-qa-http.md), D43.

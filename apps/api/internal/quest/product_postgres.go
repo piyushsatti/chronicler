@@ -95,6 +95,8 @@ func mapQuestListPageRow(row dbgen.ProductQuestListPageRow) *QuestView {
 	if row.SignupType.Valid {
 		view.SignupType = &row.SignupType.String
 	}
+	view.LiveFillStartedAt = timePtr(row.LiveFillStartedAt)
+	view.PlayerListPublishedAt = timePtr(row.PlayerListPublishedAt)
 	if row.Apl.Valid {
 		view.Apl = &row.Apl.Int32
 	}
@@ -117,6 +119,7 @@ func mapQuestBoardPageRow(row dbgen.ProductQuestBoardPageRow) *QuestView {
 		ArcPublicID: row.ArcPublicID, ScheduledAt: row.ScheduledAt, DurationHours: row.DurationHours,
 		SlotsMax: row.SlotsMax, FilledCount: row.FilledCount, DocumentPublicID: row.DocumentPublicID,
 		Tags: row.Tags, Genres: row.Genres, Apl: row.Apl, SignupType: row.SignupType,
+		LiveFillStartedAt: row.LiveFillStartedAt, PlayerListPublishedAt: row.PlayerListPublishedAt,
 		DiscordDesiredRevision: row.DiscordDesiredRevision, DiscordAppliedRevision: row.DiscordAppliedRevision,
 		DiscordMessageID: row.DiscordMessageID, DiscordEventID: row.DiscordEventID, EventUrl: row.EventUrl,
 		CreatedByPublicID: row.CreatedByPublicID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
@@ -130,6 +133,7 @@ func mapQuestRecentlyClosedPageRow(row dbgen.ProductQuestRecentlyClosedPageRow) 
 		ArcPublicID: row.ArcPublicID, ScheduledAt: row.ScheduledAt, DurationHours: row.DurationHours,
 		SlotsMax: row.SlotsMax, FilledCount: row.FilledCount, DocumentPublicID: row.DocumentPublicID,
 		Tags: row.Tags, Genres: row.Genres, Apl: row.Apl, SignupType: row.SignupType,
+		LiveFillStartedAt: row.LiveFillStartedAt, PlayerListPublishedAt: row.PlayerListPublishedAt,
 		DiscordDesiredRevision: row.DiscordDesiredRevision, DiscordAppliedRevision: row.DiscordAppliedRevision,
 		DiscordMessageID: row.DiscordMessageID, DiscordEventID: row.DiscordEventID, EventUrl: row.EventUrl,
 		CreatedByPublicID: row.CreatedByPublicID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
@@ -173,6 +177,8 @@ func mapQuestReadByIDRow(row dbgen.ProductQuestReadByIDRow) *QuestView {
 	if row.SignupType.Valid {
 		view.SignupType = &row.SignupType.String
 	}
+	view.LiveFillStartedAt = timePtr(row.LiveFillStartedAt)
+	view.PlayerListPublishedAt = timePtr(row.PlayerListPublishedAt)
 	if row.Apl.Valid {
 		view.Apl = &row.Apl.Int32
 	}

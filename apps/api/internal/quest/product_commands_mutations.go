@@ -397,10 +397,22 @@ func (s ProductCommands) TransitionQuestStatus(ctx context.Context, actor auth.A
 		if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
 			return QuestView{}, err
 		}
-		return repos.Quest.StoreTransitionQuestStatus(ctx, TransitionQuestStatusWrite{
+		view, err := repos.Quest.StoreTransitionQuestStatus(ctx, TransitionQuestStatusWrite{
 			ActorID: fresh.Claims().MemberID, At: at, Input: spec,
 			ValidatedInput: TransitionQuestStatusSpec{Id: questID, To: to, AsOf: at}, Locked: locked,
 		})
+		if err != nil || to != "played" {
+			return view, err
+		}
+		// Marked played without a published list: held live-window seats are announced now.
+		released, err := repos.Quest.ReleaseHeldSeats(ctx, questID)
+		if err != nil {
+			return QuestView{}, err
+		}
+		if err := recordHeldSeatNotices(ctx, repos, fresh, at, questID, released); err != nil {
+			return QuestView{}, err
+		}
+		return view, nil
 	})
 }
 
@@ -551,7 +563,12 @@ func (s ProductCommands) SignupForQuest(ctx context.Context, actor auth.Authorit
 			from = &previous.Status
 		}
 		key := "quest-signup:" + questID + ":" + characterID + ":" + meta.IdempotencyKey
-		if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestSignupConfirmed, key, questID, characterID, from, result.Status, at); err != nil {
+		// A held live-window seat is not announced yet: the signup is confirmed as waitlisted.
+		noticeStatus := result.Status
+		if result.SeatNoticeHeld {
+			noticeStatus = placeQuestSignup()
+		}
+		if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestSignupConfirmed, key, questID, characterID, from, noticeStatus, at); err != nil {
 			return QuestParticipantView{}, err
 		}
 		if bumpedCharacterID != "" {
@@ -769,9 +786,25 @@ func selectQuestParticipants(ctx context.Context, repos ProductCommandRepos, fre
 	return result, nil
 }
 
+// recordHeldSeatNotices sends the waitlist-promotion notice a live-window seat held
+// back. A seat is held once, so the key needs no command key.
+func recordHeldSeatNotices(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, questID string, characterIDs []string) error {
+	from := "waitlisted"
+	for _, characterID := range characterIDs {
+		key := "quest-seat-published:" + questID + ":" + characterID
+		if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestWaitlistPromoted, key, questID, characterID, &from, "signed_up", at); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func recordQuestPromotions(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, questID string, participants []QuestParticipantView, key string) error {
 	from := "waitlisted"
 	for _, participant := range participants {
+		if participant.SeatNoticeHeld {
+			continue // a live-window seat is announced at publish
+		}
 		idempotencyKey := "quest-selection:" + questID + ":" + participant.CharacterId + ":" + key
 		if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestWaitlistPromoted, idempotencyKey, questID, participant.CharacterId, &from, "signed_up", at); err != nil {
 			return err
@@ -1018,10 +1051,17 @@ func (s ProductCommands) PublishQuestPlayerList(ctx context.Context, actor auth.
 		if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
 			return DeliveryReceipt{}, err
 		}
-		return repos.Quest.StorePublishQuestPlayerList(ctx, PublishQuestPlayerListWrite{
+		published, err := repos.Quest.StorePublishQuestPlayerList(ctx, PublishQuestPlayerListWrite{
 			ActorID: fresh.Claims().MemberID, At: at,
 			ValidatedInput: PublishQuestPlayerListSpec{QuestId: questID, AsOf: at}, Locked: locked,
 		})
+		if err != nil {
+			return DeliveryReceipt{}, err
+		}
+		if err := recordHeldSeatNotices(ctx, repos, fresh, at, questID, published.ReleasedSeats); err != nil {
+			return DeliveryReceipt{}, err
+		}
+		return published.Receipt, nil
 	})
 }
 

@@ -205,6 +205,12 @@ export function QuestDetailPage(): React.JSX.Element {
             Who’s signed up · {quest.filledCount} of {quest.slotsMax}
           </Card.Eyebrow>
         </div>
+        {quest.liveReshuffle ? (
+          <p className="type-caption">
+            Seats can still change until the DM publishes the player list. A later
+            signup who has waited longer since their last game can take a seat.
+          </p>
+        ) : null}
         {seated.length === 0 ? (
           <EmptyState
             kind="no-characters"

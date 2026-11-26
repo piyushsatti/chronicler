@@ -2341,7 +2341,9 @@ export type QuestType = {
   genres: Array<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   kinds: Array<Scalars['String']['output']>;
+  liveReshuffle: Scalars['Boolean']['output'];
   participants: Array<QuestParticipantType>;
+  playerListPublishedAt?: Maybe<Scalars['DateTime']['output']>;
   pointcrawlLinks: Array<QuestPointcrawlLinkType>;
   regions: Array<Scalars['ID']['output']>;
   scheduledAt: Scalars['DateTime']['output'];

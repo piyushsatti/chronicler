@@ -753,14 +753,25 @@ func (p *ProductPostgres) storeQuestSignup(ctx context.Context, write SignupForQ
 	}, previous != nil); err != nil {
 		return QuestParticipantView{}, "", err
 	}
-	// Signup never takes a seat, never bumps one, and never touches Discord.
+	// Signup lands on the waitlist and never touches Discord. Only inside a Last Game
+	// Played live window may it then take a seat, held until publish (live_reshuffle.go).
+	held := false
+	if write.Locked.Before.LiveReshuffle() {
+		if held, err = p.placeLiveSignup(ctx, write); err != nil {
+			return QuestParticipantView{}, "", err
+		}
+		if held {
+			participantStatus = "signed_up"
+		}
+	}
 	return QuestParticipantView{
-		QuestId:     write.ValidatedInput.QuestId,
-		MemberId:    db.UUIDString(character.OwnerPublicID),
-		CharacterId: write.ValidatedInput.CharacterId,
-		Status:      participantStatus,
-		CreatedAt:   write.At.UTC(),
-		UpdatedAt:   write.At.UTC(),
+		QuestId:        write.ValidatedInput.QuestId,
+		MemberId:       db.UUIDString(character.OwnerPublicID),
+		CharacterId:    write.ValidatedInput.CharacterId,
+		Status:         participantStatus,
+		SeatNoticeHeld: held,
+		CreatedAt:      write.At.UTC(),
+		UpdatedAt:      write.At.UTC(),
 	}, "", nil
 }
 
@@ -1007,6 +1018,10 @@ func (p *ProductPostgres) StoreSelectQuestParticipants(ctx context.Context, writ
 	if err := validateQuestSelection(write.Locked, ids); err != nil {
 		return nil, err
 	}
+	held, err := p.holdSelectedSeats(ctx, write, dmPicked)
+	if err != nil {
+		return nil, err
+	}
 	if len(ids) == 0 {
 		return []QuestParticipantView{}, nil
 	}
@@ -1028,7 +1043,7 @@ func (p *ProductPostgres) StoreSelectQuestParticipants(ctx context.Context, writ
 	for _, id := range ids {
 		characterIDs = append(characterIDs, mustUUID(id))
 	}
-	rows, err := p.queries().ProductQuestPromoteParticipants(ctx, dbgen.ProductQuestPromoteParticipantsParams{QuestID: questID, CharacterIds: characterIDs, At: at, DmPicked: dmPicked})
+	rows, err := p.queries().ProductQuestPromoteParticipants(ctx, dbgen.ProductQuestPromoteParticipantsParams{QuestID: questID, CharacterIds: characterIDs, At: at, DmPicked: dmPicked, SeatNoticeHeld: held})
 	if err != nil {
 		return nil, err
 	}
@@ -1038,7 +1053,7 @@ func (p *ProductPostgres) StoreSelectQuestParticipants(ctx context.Context, writ
 	selected := make(map[string]QuestParticipantView, len(rows))
 	for _, row := range rows {
 		id := db.UUIDString(row.CharacterID)
-		selected[id] = QuestParticipantView{QuestId: db.UUIDString(row.QuestID), CharacterId: id, MemberId: db.UUIDString(row.MemberID), CharacterName: row.CharacterName, MemberHandle: row.MemberHandle, MemberDisplayName: row.MemberDisplayName, MemberAvatarUrl: textPtr(row.MemberAvatarUrl), Status: row.Status, Manual: row.Manual, CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time}
+		selected[id] = QuestParticipantView{QuestId: db.UUIDString(row.QuestID), CharacterId: id, MemberId: db.UUIDString(row.MemberID), CharacterName: row.CharacterName, MemberHandle: row.MemberHandle, MemberDisplayName: row.MemberDisplayName, MemberAvatarUrl: textPtr(row.MemberAvatarUrl), Status: row.Status, Manual: row.Manual, SeatNoticeHeld: row.SeatNoticeHeld, CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time}
 	}
 	result := make([]QuestParticipantView, 0, len(ids))
 	for _, id := range ids {
@@ -1273,35 +1288,42 @@ func (p *ProductPostgres) LockPublishQuestPlayerList(ctx context.Context, spec P
 	return state, nil
 }
 
-func (p *ProductPostgres) StorePublishQuestPlayerList(ctx context.Context, write PublishQuestPlayerListWrite) (DeliveryReceipt, error) {
+func (p *ProductPostgres) StorePublishQuestPlayerList(ctx context.Context, write PublishQuestPlayerListWrite) (PublishQuestPlayerListResult, error) {
 	if !write.Locked.Exists {
-		return DeliveryReceipt{}, apierr.New(apierr.NotFound, "quest not found")
+		return PublishQuestPlayerListResult{}, apierr.New(apierr.NotFound, "quest not found")
 	}
 	if write.Locked.Status != "open" && write.Locked.Status != "full" {
-		return DeliveryReceipt{}, apierr.New(apierr.Conflict, "quest is not open for a player list")
+		return PublishQuestPlayerListResult{}, apierr.New(apierr.Conflict, "quest is not open for a player list")
 	}
 	if write.Locked.ThreadID == "" {
-		return DeliveryReceipt{}, apierr.New(apierr.Conflict, "quest discord thread is not ready")
+		return PublishQuestPlayerListResult{}, apierr.New(apierr.Conflict, "quest discord thread is not ready")
 	}
 	questID, err := questUUID(write.ValidatedInput.QuestId)
 	if err != nil {
-		return DeliveryReceipt{}, err
+		return PublishQuestPlayerListResult{}, err
 	}
 	ids, err := seatedDiscordIDs(ctx, p, questID)
 	if err != nil {
-		return DeliveryReceipt{}, err
+		return PublishQuestPlayerListResult{}, err
 	}
 	fingerprint := strings.Join(ids, ",")
 	if err := p.enqueueQuestPlayerList(ctx, write.ValidatedInput.QuestId, fingerprint, ids); err != nil {
-		return DeliveryReceipt{}, err
+		return PublishQuestPlayerListResult{}, err
 	}
 	row, err := p.queries().BackgroundJobByKey(ctx, jobs.QuestPlayerListKey(write.ValidatedInput.QuestId, fingerprint))
 	if err != nil {
-		return DeliveryReceipt{}, err
+		return PublishQuestPlayerListResult{}, err
 	}
-	return DeliveryReceipt{
-		JobId:          db.UUIDString(row.PublicID),
-		DeliveryStatus: playerListDeliveryStatus(row.State, row.CompletionPayload),
+	released, err := p.publishHeldSeats(ctx, questID, write.At)
+	if err != nil {
+		return PublishQuestPlayerListResult{}, err
+	}
+	return PublishQuestPlayerListResult{
+		Receipt: DeliveryReceipt{
+			JobId:          db.UUIDString(row.PublicID),
+			DeliveryStatus: playerListDeliveryStatus(row.State, row.CompletionPayload),
+		},
+		ReleasedSeats: released,
 	}, nil
 }
 

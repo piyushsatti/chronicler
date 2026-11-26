@@ -598,6 +598,30 @@ describe('QuestDetailPage', () => {
   );
 
   it.each([
+    [true, true],
+    [false, false],
+  ])('marks seats as still changing while the list is live (%s)', async (liveReshuffle, shown) => {
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: { quest: { ...detailGood, signupType: 'last_game_played', liveReshuffle } },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    await userEvent.click(await screen.findByRole('tab', { name: 'Cast' }));
+    const roster = screen.getByRole('region', { name: 'Roster' });
+    const note = within(roster).queryByText(/Seats can still change until the DM publishes/);
+    if (shown) expect(note).toBeInTheDocument();
+    else expect(note).not.toBeInTheDocument();
+  });
+
+  it.each([
     ['last_game_played', true],
     ['dm_pick', false],
   ] as const)(

@@ -358,6 +358,19 @@ export type VerificationVerdict =
   | 'APPROVED'
   | 'REJECTED';
 
+export type MyPersonalizationQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyPersonalizationQuery = { myPersonalization: { settings: { memberId: string, theme: Theme, mode: ColorMode, effectsEnabled: boolean, colorblindSafe: boolean, reducedMotion: boolean, density: Density, timezone: string | null, updatedAt: string | null, notifyCharacterVerification: boolean, notifyQuestSignup: boolean, notifyDocumentActivity: boolean, notifyQuestScheduled: boolean, notifyDmMentioned: boolean } | null } | null };
+
+export type UpdateMySettingsMutationVariables = Exact<{
+  input: MemberSettingsPatch;
+  meta: CommandMeta;
+}>;
+
+
+export type UpdateMySettingsMutation = { updateMySettings: { memberId: string, theme: Theme, mode: ColorMode, effectsEnabled: boolean, colorblindSafe: boolean, reducedMotion: boolean, density: Density, timezone: string | null, updatedAt: string | null, notifyCharacterVerification: boolean, notifyQuestSignup: boolean, notifyDocumentActivity: boolean, notifyQuestScheduled: boolean, notifyDmMentioned: boolean } };
+
 export type QuestArcsPageQueryVariables = Exact<{
   offset: number;
 }>;
@@ -1586,19 +1599,6 @@ export type RetainedUpsertArcMutationVariables = Exact<{
 
 export type RetainedUpsertArcMutation = { upsertQuestArc: { id: string, name: string, createdBy: string, createdAt: string, questCount: number } };
 
-export type MyPersonalizationQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type MyPersonalizationQuery = { myPersonalization: { settings: { memberId: string, theme: Theme, mode: ColorMode, effectsEnabled: boolean, colorblindSafe: boolean, reducedMotion: boolean, density: Density, timezone: string | null, updatedAt: string | null, notifyCharacterVerification: boolean, notifyQuestSignup: boolean, notifyDocumentActivity: boolean, notifyQuestScheduled: boolean, notifyDmMentioned: boolean } | null } | null };
-
-export type UpdateMySettingsMutationVariables = Exact<{
-  input: MemberSettingsPatch;
-  meta: CommandMeta;
-}>;
-
-
-export type UpdateMySettingsMutation = { updateMySettings: { memberId: string, theme: Theme, mode: ColorMode, effectsEnabled: boolean, colorblindSafe: boolean, reducedMotion: boolean, density: Density, timezone: string | null, updatedAt: string | null, notifyCharacterVerification: boolean, notifyQuestSignup: boolean, notifyDocumentActivity: boolean, notifyQuestScheduled: boolean, notifyDmMentioned: boolean } };
-
 export type DmTableBySlugQueryVariables = Exact<{
   slug: string;
 }>;
@@ -1746,7 +1746,7 @@ export type QuestQueryVariables = Exact<{
 }>;
 
 
-export type QuestQuery = { quest: { id: string, shortCode: string, status: string, dmId: string, updatedAt: string, arcId: string | null, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, signupType: string | null, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, regions: Array<string>, arc: { id: string, name: string } | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null, frontmatter: unknown } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, status: string, lastPlayedAt: string | null }>, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string, name: string }> } | null };
+export type QuestQuery = { quest: { id: string, shortCode: string, status: string, dmId: string, updatedAt: string, arcId: string | null, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, signupType: string | null, liveReshuffle: boolean, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, regions: Array<string>, arc: { id: string, name: string } | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null, frontmatter: unknown } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, status: string, lastPlayedAt: string | null }>, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string, name: string }> } | null };
 
 export type QuestListQueryVariables = Exact<{
   filters: QuestFiltersInput;

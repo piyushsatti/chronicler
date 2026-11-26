@@ -45,7 +45,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        dm.public_id AS dm_public_id, q.arc_id, arc.public_id AS arc_public_id,
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-       q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
+       q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision, q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
        q.closed_at, q.deleted_at, deleted_by.public_id AS deleted_by_public_id
@@ -62,7 +62,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        dm.public_id AS dm_public_id, q.arc_id, arc.public_id AS arc_public_id,
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-       q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
+       q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision, q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
        q.closed_at, q.deleted_at, deleted_by.public_id AS deleted_by_public_id
@@ -81,7 +81,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status, q.dm_id,
        q.discord_message_id, q.discord_event_id, q.event_url,
        q.created_by, q.created_at, q.updated_at, q.closed_at, q.deleted_at,
        q.deleted_by, q.discord_voice_channel_id, q.discord_thread_id,
-       q.discord_channel_id
+       q.discord_channel_id, q.live_fill_started_at, q.player_list_published_at
 FROM quests q
 WHERE q.public_id = @quest_id::uuid
 FOR UPDATE OF q;
@@ -114,7 +114,7 @@ WITH filtered AS (
            q.dm_id, dm.public_id AS dm_public_id, q.arc_id, arc.public_id AS arc_public_id,
            q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
            q.document_id, doc.public_id AS document_public_id, q.tags, q.genres,
-           q.avg_party_level AS apl, q.signup_type, q.discord_desired_revision,
+           q.avg_party_level AS apl, q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision,
            q.discord_applied_revision, q.discord_message_id, q.discord_event_id,
            q.event_url, q.created_by, creator.public_id AS created_by_public_id,
            q.created_at, q.updated_at, q.closed_at, q.deleted_at,
@@ -152,7 +152,7 @@ WITH filtered AS (
 SELECT counted.total, page.id, page.public_id, page.short_code, page.kinds,
        page.status, page.display_status, page.dm_public_id, page.arc_public_id,
        page.scheduled_at, page.duration_hours, page.slots_max, page.filled_count,
-       page.document_public_id, page.tags, page.genres, page.apl, page.signup_type,
+       page.document_public_id, page.tags, page.genres, page.apl, page.signup_type, page.live_fill_started_at, page.player_list_published_at,
        page.discord_desired_revision, page.discord_applied_revision,
        page.discord_message_id, page.discord_event_id, page.event_url,
        page.created_by_public_id, page.created_at, page.updated_at, page.closed_at,
@@ -166,7 +166,7 @@ WITH filtered AS (
            dm.public_id AS dm_public_id, q.arc_id, arc.public_id AS arc_public_id,
            q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
            doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-           q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
+           q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision, q.discord_applied_revision,
            q.discord_message_id, q.discord_event_id, q.event_url,
            creator.public_id AS created_by_public_id, q.created_at, q.updated_at
     FROM quests q
@@ -189,7 +189,7 @@ page AS (
 SELECT counted.total, page.id, page.public_id, page.short_code, page.kinds,
        page.status, page.display_status, page.dm_public_id, page.arc_public_id,
        page.scheduled_at, page.duration_hours, page.slots_max, page.filled_count,
-       page.document_public_id, page.tags, page.genres, page.apl, page.signup_type,
+       page.document_public_id, page.tags, page.genres, page.apl, page.signup_type, page.live_fill_started_at, page.player_list_published_at,
        page.discord_desired_revision, page.discord_applied_revision,
        page.discord_message_id, page.discord_event_id, page.event_url,
        page.created_by_public_id, page.created_at, page.updated_at
@@ -202,7 +202,7 @@ WITH filtered AS (
            dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
            q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
            doc.public_id AS document_public_id, q.tags, q.genres,
-           q.avg_party_level AS apl, q.signup_type, q.discord_desired_revision,
+           q.avg_party_level AS apl, q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision,
            q.discord_applied_revision, q.discord_message_id, q.discord_event_id,
            q.event_url, creator.public_id AS created_by_public_id,
            q.created_at, q.updated_at, q.closed_at
@@ -434,7 +434,7 @@ VALUES (@quest_id::bigint, @member_id::bigint, @character_id::bigint,
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
 -- name: ProductQuestUpdateParticipant :one
 UPDATE quest_participants SET status = @status::text, manual = @manual::boolean,
-       updated_at = @at::timestamptz
+       seat_notice_held = false, updated_at = @at::timestamptz
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
 
@@ -453,7 +453,7 @@ RETURNING c.public_id AS character_id, owner.public_id AS owner_id, qp.status;
 -- Rejoining is always an ordinary signup, never a DM pick: clear any dm_picked left over
 -- from a prior DM selection of this same character, or it would wrongly stay bump-immune.
 UPDATE quest_participants SET status = @status::text, manual = false, dm_picked = false,
-       created_at = @at::timestamptz, updated_at = @at::timestamptz
+       seat_notice_held = false, created_at = @at::timestamptz, updated_at = @at::timestamptz
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint AND status = 'withdrawn'
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
 
@@ -468,7 +468,7 @@ WHERE q.public_id = @quest_id::uuid AND qp.dm_picked;
 -- Seated and waitlisted participants in Last Game Played seat order: players who have never
 -- played another quest first, then the oldest last played game, then the earlier signup.
 SELECT qp.character_id, c.public_id AS character_public_id, qp.status, qp.manual, qp.dm_picked,
-       qp.created_at, last_game.last_played_at
+       qp.seat_notice_held, qp.created_at, last_game.last_played_at
 FROM quest_participants qp
 JOIN quests q ON q.id = qp.quest_id
 JOIN characters c ON c.id = qp.character_id
@@ -482,8 +482,10 @@ WHERE q.public_id = @quest_id::uuid AND qp.status IN ('signed_up', 'waitlisted')
 ORDER BY (last_game.last_played_at IS NOT NULL), last_game.last_played_at,
          qp.created_at, c.public_id;
 -- name: ProductQuestPromoteParticipants :many
+-- seat_notice_held marks a seat given out while a Last Game Played list is live.
 UPDATE quest_participants participant
-SET status = 'signed_up', manual = false, dm_picked = @dm_picked::boolean, updated_at = @at::timestamptz
+SET status = 'signed_up', manual = false, dm_picked = @dm_picked::boolean,
+    seat_notice_held = @seat_notice_held::boolean, updated_at = @at::timestamptz
 FROM quests q, characters c, members owner
 WHERE participant.quest_id = q.id AND participant.character_id = c.id AND participant.member_id = owner.id
   AND q.public_id = @quest_id::uuid AND c.public_id = ANY(@character_ids::uuid[])
@@ -491,7 +493,35 @@ WHERE participant.quest_id = q.id AND participant.character_id = c.id AND partic
 RETURNING q.public_id AS quest_id, c.public_id AS character_id, owner.public_id AS member_id,
           c.name AS character_name, owner.handle AS member_handle, owner.display_name AS member_display_name,
           owner.avatar_url AS member_avatar_url, participant.status, participant.manual, participant.dm_picked,
-          participant.created_at, participant.updated_at;
+          participant.created_at, participant.updated_at, participant.seat_notice_held;
+-- name: ProductQuestDemoteHeldSeat :one
+-- Live reshuffle: a later signup took this held seat, so it returns to the waitlist.
+-- Only a held seat moves; its player was never told they had it.
+UPDATE quest_participants participant
+SET status = 'waitlisted', seat_notice_held = false, updated_at = @at::timestamptz
+FROM quests q, characters c
+WHERE participant.quest_id = q.id AND participant.character_id = c.id
+  AND q.public_id = @quest_id::uuid AND c.public_id = @character_id::uuid
+  AND participant.status = 'signed_up' AND participant.seat_notice_held
+RETURNING c.public_id AS character_id;
+-- name: ProductQuestStartLiveFill :exec
+-- The first fill by last played starts the live window. A published list stays published.
+UPDATE quests SET live_fill_started_at = @at::timestamptz
+WHERE id = @quest_id::bigint AND live_fill_started_at IS NULL;
+-- name: ProductQuestMarkPlayerListPublished :one
+-- The first publish ends the live window. Later publishes keep the first time.
+UPDATE quests SET player_list_published_at = COALESCE(player_list_published_at, @at::timestamptz)
+WHERE public_id = @quest_id::uuid
+RETURNING player_list_published_at;
+-- name: ProductQuestReleaseHeldSeats :many
+-- At the first publish every held seat is announced. Held flags on rows that left
+-- their seat are cleared too, so a later return to a seat starts clean.
+UPDATE quest_participants participant
+SET seat_notice_held = false
+FROM quests q, characters c
+WHERE participant.quest_id = q.id AND participant.character_id = c.id
+  AND q.public_id = @quest_id::uuid AND participant.seat_notice_held
+RETURNING c.public_id AS character_id, participant.status;
 -- name: ProductQuestLockCapacity :one
 SELECT q.id, q.public_id, q.status, q.slots_max, q.filled_count
 FROM quests q WHERE q.id = @quest_id::bigint FOR UPDATE OF q;
@@ -545,7 +575,7 @@ WITH filtered AS (
            dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
            q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
            doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-           q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
+           q.signup_type, q.live_fill_started_at, q.player_list_published_at, q.discord_desired_revision, q.discord_applied_revision,
            q.discord_message_id, q.discord_event_id, q.event_url,
            creator.public_id AS created_by_public_id, q.created_at, q.updated_at, q.closed_at,
            recap.public_id AS recap_public_id, recap.kind AS recap_kind, recap.slug AS recap_slug,
@@ -579,7 +609,7 @@ WITH filtered AS (
 SELECT counted.total, page.public_id, page.short_code, page.kinds, page.status, page.display_status,
        page.dm_public_id, page.arc_public_id, page.scheduled_at, page.duration_hours,
        page.slots_max, page.filled_count, page.document_public_id, page.tags, page.genres, page.apl,
-       page.signup_type, page.discord_desired_revision, page.discord_applied_revision,
+       page.signup_type, page.live_fill_started_at, page.player_list_published_at, page.discord_desired_revision, page.discord_applied_revision,
        page.discord_message_id, page.discord_event_id, page.event_url,
        page.created_by_public_id, page.created_at, page.updated_at, page.closed_at,
        page.recap_public_id, page.recap_kind, page.recap_slug, page.recap_title,

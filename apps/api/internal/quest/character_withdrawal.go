@@ -141,13 +141,9 @@ func (p *ProductPostgres) promoteQuestWaitlist(ctx context.Context, effects *cha
 	if locked.Before != nil && locked.Before.SignupType != nil && *locked.Before.SignupType == dmPickSignup && locked.Before.FilledCount > locked.Before.SlotsMax {
 		return nil
 	}
-	candidates := locked.Roster
-	if locked.Before != nil && locked.Before.SignupType != nil && *locked.Before.SignupType == lastGamePlayedSignup {
-		ordered, err := p.waitlistBySeatPriority(ctx, questID, locked.Roster)
-		if err != nil {
-			return err
-		}
-		candidates = ordered
+	candidates, err := p.withdrawalPromotionCandidates(ctx, questID, locked)
+	if err != nil {
+		return err
 	}
 	for _, candidate := range candidates {
 		if candidate.Status != "waitlisted" || candidate.CharacterId == plan.OwnedCharacterID || !eligibleWithdrawalCandidate(admissions, candidate.CharacterId) {
@@ -163,12 +159,24 @@ func (p *ProductPostgres) promoteQuestWaitlist(ctx context.Context, effects *cha
 		if len(selected) != 1 {
 			return apierr.New(apierr.Internal, "promotion result missing")
 		}
-		from, to := "waitlisted", "signed_up"
 		effects.PromotedMemberIDs = append(effects.PromotedMemberIDs, candidate.MemberId)
+		if selected[0].SeatNoticeHeld {
+			break // a live-window seat is announced at publish
+		}
+		from, to := "waitlisted", "signed_up"
 		effects.Events = append(effects.Events, notification.Event{Key: "quest-promotion:" + questID + ":" + candidate.CharacterId + ":" + plan.OwnedCharacterID + ":" + strconv.FormatInt(previous.UpdatedAt.UnixNano(), 10), Kind: notification.QuestWaitlistPromoted, SubjectType: "quest", SubjectID: questID, ActorID: actorID, OccurredAt: at, Facts: notification.Facts{Version: 1, EventKind: notification.QuestWaitlistPromoted, CharacterID: &candidate.CharacterId, FromStatus: &from, ToStatus: &to}})
 		break
 	}
 	return nil
+}
+
+// withdrawalPromotionCandidates orders the roster for a withdrawal promotion: Last
+// Game Played seat order on those quests, signup order otherwise.
+func (p *ProductPostgres) withdrawalPromotionCandidates(ctx context.Context, questID string, locked WithdrawFromQuestState) ([]QuestParticipantView, error) {
+	if locked.Before == nil || locked.Before.SignupType == nil || *locked.Before.SignupType != lastGamePlayedSignup {
+		return locked.Roster, nil
+	}
+	return p.waitlistBySeatPriority(ctx, questID, locked.Roster)
 }
 
 func eligibleWithdrawalCandidate(admissions []character.Admission, characterID string) bool {

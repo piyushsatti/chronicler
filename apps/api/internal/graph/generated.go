@@ -998,38 +998,40 @@ type ComplexityRoot struct {
 	}
 
 	QuestType struct {
-		AnnounceError    func(childComplexity int) int
-		Apl              func(childComplexity int) int
-		Arc              func(childComplexity int) int
-		ArcID            func(childComplexity int) int
-		BriefDocument    func(childComplexity int) int
-		CreatedAt        func(childComplexity int) int
-		CreatedBy        func(childComplexity int) int
-		DiscordDelivery  func(childComplexity int) int
-		DiscordEventID   func(childComplexity int) int
-		DiscordMessageID func(childComplexity int) int
-		DisplayStatus    func(childComplexity int) int
-		Dm               func(childComplexity int) int
-		DmID             func(childComplexity int) int
-		DmTable          func(childComplexity int) int
-		DocumentID       func(childComplexity int) int
-		DurationHours    func(childComplexity int) int
-		EventURL         func(childComplexity int) int
-		FilledCount      func(childComplexity int) int
-		Genres           func(childComplexity int) int
-		ID               func(childComplexity int) int
-		Kinds            func(childComplexity int) int
-		Participants     func(childComplexity int, status *string, limit int, offset int) int
-		PointcrawlLinks  func(childComplexity int, role *string, limit int, offset int) int
-		Regions          func(childComplexity int) int
-		ScheduledAt      func(childComplexity int) int
-		ShortCode        func(childComplexity int) int
-		SignupType       func(childComplexity int) int
-		SlotsMax         func(childComplexity int) int
-		Status           func(childComplexity int) int
-		Tags             func(childComplexity int) int
-		UpdatedAt        func(childComplexity int) int
-		VoiceChannelID   func(childComplexity int) int
+		AnnounceError         func(childComplexity int) int
+		Apl                   func(childComplexity int) int
+		Arc                   func(childComplexity int) int
+		ArcID                 func(childComplexity int) int
+		BriefDocument         func(childComplexity int) int
+		CreatedAt             func(childComplexity int) int
+		CreatedBy             func(childComplexity int) int
+		DiscordDelivery       func(childComplexity int) int
+		DiscordEventID        func(childComplexity int) int
+		DiscordMessageID      func(childComplexity int) int
+		DisplayStatus         func(childComplexity int) int
+		Dm                    func(childComplexity int) int
+		DmID                  func(childComplexity int) int
+		DmTable               func(childComplexity int) int
+		DocumentID            func(childComplexity int) int
+		DurationHours         func(childComplexity int) int
+		EventURL              func(childComplexity int) int
+		FilledCount           func(childComplexity int) int
+		Genres                func(childComplexity int) int
+		ID                    func(childComplexity int) int
+		Kinds                 func(childComplexity int) int
+		LiveReshuffle         func(childComplexity int) int
+		Participants          func(childComplexity int, status *string, limit int, offset int) int
+		PlayerListPublishedAt func(childComplexity int) int
+		PointcrawlLinks       func(childComplexity int, role *string, limit int, offset int) int
+		Regions               func(childComplexity int) int
+		ScheduledAt           func(childComplexity int) int
+		ShortCode             func(childComplexity int) int
+		SignupType            func(childComplexity int) int
+		SlotsMax              func(childComplexity int) int
+		Status                func(childComplexity int) int
+		Tags                  func(childComplexity int) int
+		UpdatedAt             func(childComplexity int) int
+		VoiceChannelID        func(childComplexity int) int
 	}
 
 	RealDatePage struct {
@@ -6869,6 +6871,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.QuestType.Kinds(childComplexity), true
 
+	case "QuestType.liveReshuffle":
+		if e.complexity.QuestType.LiveReshuffle == nil {
+			break
+		}
+
+		return e.complexity.QuestType.LiveReshuffle(childComplexity), true
+
 	case "QuestType.participants":
 		if e.complexity.QuestType.Participants == nil {
 			break
@@ -6880,6 +6889,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.QuestType.Participants(childComplexity, args["status"].(*string), args["limit"].(int), args["offset"].(int)), true
+
+	case "QuestType.playerListPublishedAt":
+		if e.complexity.QuestType.PlayerListPublishedAt == nil {
+			break
+		}
+
+		return e.complexity.QuestType.PlayerListPublishedAt(childComplexity), true
 
 	case "QuestType.pointcrawlLinks":
 		if e.complexity.QuestType.PointcrawlLinks == nil {
@@ -9400,6 +9416,10 @@ type QuestType {
   genres: [String!]!
   apl: Int
   signupType: String
+  # Last Game Played only. True from the DM's fill by last played until the first
+  # player-list publish: a later signup who played longer ago can take a fill seat.
+  liveReshuffle: Boolean!
+  playerListPublishedAt: DateTime
   voiceChannelId: String
   createdBy: ID!
   createdAt: DateTime!
@@ -21910,6 +21930,10 @@ func (ec *executionContext) fieldContext_DmLastSessionType_quest(_ context.Conte
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "liveReshuffle":
+				return ec.fieldContext_QuestType_liveReshuffle(ctx, field)
+			case "playerListPublishedAt":
+				return ec.fieldContext_QuestType_playerListPublishedAt(ctx, field)
 			case "voiceChannelId":
 				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
@@ -33257,6 +33281,10 @@ func (ec *executionContext) fieldContext_Mutation_createQuest(ctx context.Contex
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "liveReshuffle":
+				return ec.fieldContext_QuestType_liveReshuffle(ctx, field)
+			case "playerListPublishedAt":
+				return ec.fieldContext_QuestType_playerListPublishedAt(ctx, field)
 			case "voiceChannelId":
 				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
@@ -33378,6 +33406,10 @@ func (ec *executionContext) fieldContext_Mutation_updateQuest(ctx context.Contex
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "liveReshuffle":
+				return ec.fieldContext_QuestType_liveReshuffle(ctx, field)
+			case "playerListPublishedAt":
+				return ec.fieldContext_QuestType_playerListPublishedAt(ctx, field)
 			case "voiceChannelId":
 				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
@@ -33499,6 +33531,10 @@ func (ec *executionContext) fieldContext_Mutation_transitionQuestStatus(ctx cont
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "liveReshuffle":
+				return ec.fieldContext_QuestType_liveReshuffle(ctx, field)
+			case "playerListPublishedAt":
+				return ec.fieldContext_QuestType_playerListPublishedAt(ctx, field)
 			case "voiceChannelId":
 				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
@@ -33620,6 +33656,10 @@ func (ec *executionContext) fieldContext_Mutation_closeQuest(ctx context.Context
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "liveReshuffle":
+				return ec.fieldContext_QuestType_liveReshuffle(ctx, field)
+			case "playerListPublishedAt":
+				return ec.fieldContext_QuestType_playerListPublishedAt(ctx, field)
 			case "voiceChannelId":
 				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
@@ -33909,6 +33949,10 @@ func (ec *executionContext) fieldContext_Mutation_removeQuestFromArc(ctx context
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "liveReshuffle":
+				return ec.fieldContext_QuestType_liveReshuffle(ctx, field)
+			case "playerListPublishedAt":
+				return ec.fieldContext_QuestType_playerListPublishedAt(ctx, field)
 			case "voiceChannelId":
 				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
@@ -34705,6 +34749,10 @@ func (ec *executionContext) fieldContext_Mutation_restoreQuest(ctx context.Conte
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "liveReshuffle":
+				return ec.fieldContext_QuestType_liveReshuffle(ctx, field)
+			case "playerListPublishedAt":
+				return ec.fieldContext_QuestType_playerListPublishedAt(ctx, field)
 			case "voiceChannelId":
 				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
@@ -42073,6 +42121,10 @@ func (ec *executionContext) fieldContext_Query_quest(ctx context.Context, field 
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "liveReshuffle":
+				return ec.fieldContext_QuestType_liveReshuffle(ctx, field)
+			case "playerListPublishedAt":
+				return ec.fieldContext_QuestType_playerListPublishedAt(ctx, field)
 			case "voiceChannelId":
 				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
@@ -44703,6 +44755,10 @@ func (ec *executionContext) fieldContext_QuestArcType_quests(ctx context.Context
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "liveReshuffle":
+				return ec.fieldContext_QuestType_liveReshuffle(ctx, field)
+			case "playerListPublishedAt":
+				return ec.fieldContext_QuestType_playerListPublishedAt(ctx, field)
 			case "voiceChannelId":
 				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
@@ -45416,6 +45472,10 @@ func (ec *executionContext) fieldContext_QuestListResult_items(_ context.Context
 				return ec.fieldContext_QuestType_apl(ctx, field)
 			case "signupType":
 				return ec.fieldContext_QuestType_signupType(ctx, field)
+			case "liveReshuffle":
+				return ec.fieldContext_QuestType_liveReshuffle(ctx, field)
+			case "playerListPublishedAt":
+				return ec.fieldContext_QuestType_playerListPublishedAt(ctx, field)
 			case "voiceChannelId":
 				return ec.fieldContext_QuestType_voiceChannelId(ctx, field)
 			case "createdBy":
@@ -47309,6 +47369,91 @@ func (ec *executionContext) fieldContext_QuestType_signupType(_ context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QuestType_liveReshuffle(ctx context.Context, field graphql.CollectedField, obj *QuestType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_QuestType_liveReshuffle(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LiveReshuffle, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_QuestType_liveReshuffle(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QuestType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QuestType_playerListPublishedAt(ctx context.Context, field graphql.CollectedField, obj *QuestType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_QuestType_playerListPublishedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PlayerListPublishedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalODateTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_QuestType_playerListPublishedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QuestType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type DateTime does not have child fields")
 		},
 	}
 	return fc, nil
@@ -65949,6 +66094,13 @@ func (ec *executionContext) _QuestType(ctx context.Context, sel ast.SelectionSet
 			out.Values[i] = ec._QuestType_apl(ctx, field, obj)
 		case "signupType":
 			out.Values[i] = ec._QuestType_signupType(ctx, field, obj)
+		case "liveReshuffle":
+			out.Values[i] = ec._QuestType_liveReshuffle(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "playerListPublishedAt":
+			out.Values[i] = ec._QuestType_playerListPublishedAt(ctx, field, obj)
 		case "voiceChannelId":
 			out.Values[i] = ec._QuestType_voiceChannelId(ctx, field, obj)
 		case "createdBy":
