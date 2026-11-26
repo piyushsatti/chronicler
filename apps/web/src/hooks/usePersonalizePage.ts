@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext.js';
 export function usePersonalization() {
   const { isAuthenticated, memberId, sessionReady } = useAuth();
   return useQuery({
-    queryKey: [...queryKeys.personalization, memberId],
+    queryKey: queryKeys.personalizationFor(memberId),
     queryFn: loadPersonalization,
     enabled: isAuthenticated && sessionReady,
     staleTime: Infinity,
@@ -29,7 +29,7 @@ export function usePersonalizePage() {
     onSuccess: (result) => {
       if (!isCurrentMember(result.account)) return;
       queryClient.setQueryData(
-        [...queryKeys.personalization, result.account],
+        queryKeys.personalizationFor(result.account),
         result.data,
       );
     },

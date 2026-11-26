@@ -1,3 +1,4 @@
+import { queryKeys } from '../api/queryKeys.js';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext.js';
 import { hasRole } from '../auth/roles.js';
@@ -6,7 +7,7 @@ import type { AppError } from '../errors/types.js';
 import {
   isLiveDm,
   loadAuthoringAuthority,
-} from '../features/quest/adapters/questOptionsAdapter.js';
+} from '../adapters/questOptionsAdapter.js';
 import { useMe } from './useMe.js';
 
 export type LiveDmState =
@@ -25,7 +26,7 @@ export function useLiveDm(needed = true): LiveDmState {
   const me = useMe();
   const dm = hasRole(me.data?.roles, 'dm');
   const authority = useQuery({
-    queryKey: ['liveDm', me.data?.id, me.data?.handle],
+    queryKey: queryKeys.liveDm(me.data?.id, me.data?.handle),
     queryFn: () => loadAuthoringAuthority(me.data?.handle ?? ''),
     enabled: needed && isAuthenticated && dm,
     retry: false,

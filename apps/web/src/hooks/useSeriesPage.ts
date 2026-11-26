@@ -15,8 +15,8 @@ import {
   loadSeriesAuthority,
   upsertSeriesArc,
   type SeriesView,
-} from '../features/onboarding/adapters/seriesAdapter.js';
-import { isSeriesIdentity } from '../features/onboarding/seriesIdentity.js';
+} from '../adapters/seriesAdapter.js';
+import { isSeriesIdentity } from '../adapters/seriesIdentity.js';
 
 export const SERIES_NAME_MAX = 200;
 
@@ -70,7 +70,7 @@ export function useSeriesPage(identity: string) {
       ? { token, memberId: me.data.id, actorIdentity }
       : undefined;
   const arc = useQuery({
-    queryKey: ['series', identity],
+    queryKey: queryKeys.series(identity),
     queryFn: () => loadSeriesArc(identity),
     enabled: validId,
     retry: false,
@@ -98,7 +98,7 @@ export function useSeriesPage(identity: string) {
   ): boolean => {
     if (!current(attempt)) return false;
     if (target) {
-      const stored = client.getQueryState<SeriesView | null>(['series', identity]);
+      const stored = client.getQueryState<SeriesView | null>(queryKeys.series(identity));
       return (
         stored?.status === 'success' &&
         stored.data?.id === target &&
@@ -141,7 +141,7 @@ export function useSeriesPage(identity: string) {
     },
     retry: false,
     onSuccess: async (_value, attempt) => {
-      if (current(attempt)) await client.invalidateQueries({ queryKey: ['series'] });
+      if (current(attempt)) await client.invalidateQueries({ queryKey: queryKeys.seriesAll });
     },
     onError: (error, attempt) => {
       if (!current(attempt)) return;

@@ -3,6 +3,7 @@
 | Path          | Purpose                                     |
 | ------------- | ------------------------------------------- |
 | `api/`        | GraphQL and REST transport                  |
+| `adapters/`   | Adapters shared by more than one feature    |
 | `auth/`       | JWT lifecycle (identity only)               |
 | `components/` | Foundation, domain, chrome                  |
 | `errors/`     | Boundary error types                        |

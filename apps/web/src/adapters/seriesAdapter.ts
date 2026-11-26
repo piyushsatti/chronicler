@@ -3,14 +3,14 @@ import type {
   RetainedSeriesArcQuery,
   RetainedSeriesAuthorityQuery,
   RetainedUpsertArcMutation,
-} from '../../../api/graphql.operations.gen.js';
-import { graphqlRequest } from '../../../api/graphql.js';
-import { safeAppError, toAppError } from '../../../errors/toAppError.js';
-import { TransportError } from '../../../errors/types.js';
+} from '../api/graphql.operations.gen.js';
+import { graphqlRequest } from '../api/graphql.js';
+import { safeAppError, toAppError } from '../errors/toAppError.js';
+import { TransportError } from '../errors/types.js';
 import ARC from './seriesArc.graphql?raw';
 import AUTHORITY from './seriesAuthority.graphql?raw';
 import UPSERT from './seriesUpsert.graphql?raw';
-import { arcIdSchema } from '../seriesIdentity.js';
+import { arcIdSchema } from './seriesIdentity.js';
 
 const arcSchema = z.object({
   id: arcIdSchema,

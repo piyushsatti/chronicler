@@ -15,6 +15,8 @@ export const queryKeys = {
   questOptionsAll: ['questOptions'] as const,
   questAll: ['quest'] as const,
   questSummaryAll: ['questSummary'] as const,
+  liveDm: (memberId: string | undefined, handle: string | undefined) =>
+    ['liveDm', memberId, handle] as const,
   questRosterCharacters: (name: string) => ['questRosterCharacters', name] as const,
   questList: (
     filters: Readonly<{ status?: string; displayStatus?: string }>,

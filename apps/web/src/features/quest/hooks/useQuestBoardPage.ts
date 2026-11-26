@@ -17,7 +17,7 @@ import {
   type QuestBoardCardPropsView,
   type QuestListFilters,
 } from '../adapters/questAdapter.js';
-import { loadQuestAuthoringAuthority } from '../adapters/questOptionsAdapter.js';
+import { loadQuestAuthoringAuthority } from '../../../adapters/questOptionsAdapter.js';
 import { useQuestMutations } from './useQuestMutations.js';
 import { useInfiniteScroll } from '../../../components/primitives/useInfiniteScroll.js';
 import { dayRangeInZone, personLabels } from '../../../utils/format.js';

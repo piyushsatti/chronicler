@@ -1,13 +1,13 @@
-import type { MemberMeQuery } from '../../../api/graphql.operations.gen.js';
-import { graphqlRequest } from '../../../api/graphql.js';
-import { restRequest } from '../../../api/rest.js';
-import { AUTH_CALLBACK_PATH } from '../../../api/endpoints.js';
-import { toAppError } from '../../../errors/toAppError.js';
-import type { AdapterResult } from '../../../errors/types.js';
+import type { MemberMeQuery } from '../api/graphql.operations.gen.js';
+import { graphqlRequest } from '../api/graphql.js';
+import { restRequest } from '../api/rest.js';
+import { AUTH_CALLBACK_PATH } from '../api/endpoints.js';
+import { toAppError } from '../errors/toAppError.js';
+import type { AdapterResult } from '../errors/types.js';
 import { memberMeWireSchema } from './member.wire.schema.js';
 import MEMBER_ME_QUERY from './memberMe.graphql?raw';
 import { z } from 'zod';
-import type { MemberViewModel } from '../../../view-models/member.js';
+import type { MemberViewModel } from '../view-models/member.js';
 
 export type { MemberViewModel };
 
@@ -69,4 +69,4 @@ export async function loadMe(): Promise<MemberViewModel> {
   }
 }
 
-export { canAccessVerify, isAdmin, isDm } from '../../../auth/roles.js';
+export { canAccessVerify, isAdmin, isDm } from '../auth/roles.js';

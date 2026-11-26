@@ -1,3 +1,4 @@
+import { queryKeys } from '../api/queryKeys.js';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { canCreateRecord } from '../auth/createRules.js';
@@ -18,7 +19,7 @@ export function useDmDashboard(questScope: 'page' | 'all' = 'page') {
   const [questOffset, setQuestOffset] = useState(0);
   const query = useQuery({
     enabled: authority.allowed && me.isSuccess,
-    queryKey: ['dmDashboard', authority.cacheKey, questOffset, questScope],
+    queryKey: queryKeys.dmDashboard(authority.cacheKey, questOffset, questScope),
     queryFn: ({ signal }) =>
       authority.read(
         (request) => loadDmDashboard(me.data!.id, questOffset, request, questScope),

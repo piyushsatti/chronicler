@@ -5,12 +5,7 @@
   "hooksBoundary": [
     {
       "file": "src/hooks/useDmDashboard.ts",
-      "line": 6,
-      "rule": "shared-feature-import"
-    },
-    {
-      "file": "src/hooks/useDmDashboard.ts",
-      "line": 11,
+      "line": 7,
       "rule": "shared-feature-import"
     },
     {
@@ -19,28 +14,8 @@
       "rule": "shared-feature-import"
     },
     {
-      "file": "src/hooks/useLiveDm.ts",
-      "line": 9,
-      "rule": "shared-feature-import"
-    },
-    {
-      "file": "src/hooks/useMarkerMemberSearch.ts",
-      "line": 2,
-      "rule": "shared-feature-import"
-    },
-    {
-      "file": "src/hooks/useMe.ts",
-      "line": 6,
-      "rule": "shared-feature-import"
-    },
-    {
-      "file": "src/hooks/useMemberProfile.ts",
-      "line": 2,
-      "rule": "shared-feature-import"
-    },
-    {
-      "file": "src/hooks/useProfileActivity.ts",
-      "line": 4,
+      "file": "src/hooks/useDmDashboard.ts",
+      "line": 13,
       "rule": "shared-feature-import"
     },
     {
@@ -51,16 +26,6 @@
     {
       "file": "src/hooks/useProfileActivity.ts",
       "line": 6,
-      "rule": "shared-feature-import"
-    },
-    {
-      "file": "src/hooks/useSeriesPage.ts",
-      "line": 18,
-      "rule": "shared-feature-import"
-    },
-    {
-      "file": "src/hooks/useSeriesPage.ts",
-      "line": 19,
       "rule": "shared-feature-import"
     },
     {
@@ -302,78 +267,5 @@
       "seenAtLine": 52
     }
   ],
-  "queryKeyOrigin": [
-    {
-      "file": "src/hooks/usePersonalizePage.ts",
-      "rule": "query-key-origin",
-      "value": "[...queryKeys.personalization, memberId]",
-      "seenAtLine": 13
-    },
-    {
-      "file": "src/hooks/usePersonalizePage.ts",
-      "rule": "query-key-origin",
-      "value": "[...queryKeys.personalization, result.account]",
-      "seenAtLine": 35
-    },
-    {
-      "file": "src/hooks/useDmDashboard.ts",
-      "rule": "query-key-origin",
-      "value": "['dmDashboard', authority.cacheKey, questOffset, questScope]",
-      "seenAtLine": 21
-    },
-    {
-      "file": "src/hooks/useLiveDm.ts",
-      "rule": "query-key-origin",
-      "value": "['liveDm', me.data?.id, me.data?.handle]",
-      "seenAtLine": 28
-    },
-    {
-      "file": "src/hooks/useMarkerMemberSearch.ts",
-      "rule": "query-key-origin",
-      "value": "['editor', 'audience-members', 'marker', term]",
-      "seenAtLine": 12
-    },
-    {
-      "file": "src/hooks/useMemberProfile.ts",
-      "rule": "query-key-origin",
-      "value": "['memberProfile', normalized]",
-      "seenAtLine": 7
-    },
-    {
-      "file": "src/hooks/useProfileActivity.ts",
-      "rule": "query-key-origin",
-      "value": "['profileCharacters', memberId, characterPage]",
-      "seenAtLine": 18
-    },
-    {
-      "file": "src/hooks/useProfileActivity.ts",
-      "rule": "query-key-origin",
-      "value": "['profileActivity', memberId]",
-      "seenAtLine": 28
-    },
-    {
-      "file": "src/hooks/useProfileActivity.ts",
-      "rule": "query-key-origin",
-      "value": "['profileHistory', memberId]",
-      "seenAtLine": 33
-    },
-    {
-      "file": "src/hooks/useSeriesPage.ts",
-      "rule": "query-key-origin",
-      "value": "['series', identity]",
-      "seenAtLine": 73
-    },
-    {
-      "file": "src/hooks/useSeriesPage.ts",
-      "rule": "query-key-origin",
-      "value": "['series', identity]",
-      "seenAtLine": 101
-    },
-    {
-      "file": "src/hooks/useSeriesPage.ts",
-      "rule": "query-key-origin",
-      "value": "['series']",
-      "seenAtLine": 144
-    }
-  ]
+  "queryKeyOrigin": []
 }

@@ -92,6 +92,15 @@ const moved: ReadonlyArray<readonly [string, QueryKey, QueryKey]> = [
   ['calendarQuests', queryKeys.calendarQuests(filters, 'UTC'), ['calendarQuests', filters, 'UTC']],
   ['calendarRealDates', queryKeys.calendarRealDates(4, 1), ['calendarRealDates', 4, 1]],
   ['retainedDocument', queryKeys.retainedDocument('doc'), ['retainedDocument', 'doc']],
+  ['dmDashboard', queryKeys.dmDashboard(cache, 10, 'all'), ['dmDashboard', cache, 10, 'all']],
+  ['liveDm', queryKeys.liveDm('m1', 'h1'), ['liveDm', 'm1', 'h1']],
+  ['markerMembers', queryKeys.markerMembers('bo'), ['editor', 'audience-members', 'marker', 'bo']],
+  ['profileCharacters', queryKeys.profileCharacters('m1', 2), ['profileCharacters', 'm1', 2]],
+  ['profileActivity', queryKeys.profileActivity('m1'), ['profileActivity', 'm1']],
+  ['profileHistory', queryKeys.profileHistory('m1'), ['profileHistory', 'm1']],
+  ['personalizationFor', queryKeys.personalizationFor('m1'), [...queryKeys.personalization, 'm1']],
+  ['series', queryKeys.series('arc-1'), ['series', 'arc-1']],
+  ['seriesAll', queryKeys.seriesAll, ['series']],
   ['rulesHubFor', queryKeys.rulesHubFor(null), [...queryKeys.rulesHub, null]],
 ];
 
@@ -122,6 +131,8 @@ const families: ReadonlyArray<readonly [string, QueryKey, readonly QueryKey[]]> 
   ['notificationsUnread', queryKeys.notificationsUnread, [queryKeys.notificationsUnreadFor('auth')]],
   ['chronicleList', queryKeys.chronicleList, [queryKeys.chronicleListFor('auth')]],
   ['rulesHub', queryKeys.rulesHub, [queryKeys.rulesHubFor('auth')]],
+  ['series', queryKeys.seriesAll, [queryKeys.series('arc-1')]],
+  ['personalization', queryKeys.personalization, [queryKeys.personalizationFor('m1')]],
   ['codexDirectory', queryKeys.codexDirectory('Lore'), [queryKeys.codexDirectorySearch('Lore', 'elf')]],
 ];
 

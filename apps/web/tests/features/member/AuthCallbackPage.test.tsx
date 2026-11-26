@@ -7,7 +7,7 @@ import { AUTH_CALLBACK_PATH } from '../../../src/api/endpoints.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { storeIntendedPath } from '../../../src/auth/intendedPath.js';
 import { beginOAuthState, OAUTH_STATE_KEY } from '../../../src/auth/oauthState.js';
-import * as memberAdapter from '../../../src/features/member/adapters/memberAdapter.js';
+import * as memberAdapter from '../../../src/adapters/memberAdapter.js';
 import { AuthCallbackPage } from '../../../src/features/member/pages/AuthCallbackPage.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';

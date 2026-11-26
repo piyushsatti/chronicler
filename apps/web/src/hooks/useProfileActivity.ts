@@ -1,9 +1,10 @@
+import { queryKeys } from '../api/queryKeys.js';
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthContext.js';
 import { useQuery } from '@tanstack/react-query';
 import { loadCharacterDirectory } from '../features/character/adapters/characterDirectoryAdapter.js';
 import { loadCharacterParticipations } from '../features/character/adapters/characterTabsAdapter.js';
-import { loadProfileActivity } from '../features/profile/adapters/profileActivityAdapter.js';
+import { loadProfileActivity } from '../adapters/profileActivityAdapter.js';
 
 /** `loadHistory` loads quest history without the profile's own tab state (the /me history route). */
 export function useProfileActivity(
@@ -15,7 +16,7 @@ export function useProfileActivity(
   const [tab, setTab] = useState('about');
   const [characterPage, setCharacterPage] = useState(1);
   const characters = useQuery({
-    queryKey: ['profileCharacters', memberId, characterPage],
+    queryKey: queryKeys.profileCharacters(memberId, characterPage),
     // An empty member id would read the whole directory, not one member's characters.
     enabled: sessionReady && Boolean(memberId),
     queryFn: ({ signal }) =>
@@ -25,12 +26,12 @@ export function useProfileActivity(
       }),
   });
   const activity = useQuery({
-    queryKey: ['profileActivity', memberId],
+    queryKey: queryKeys.profileActivity(memberId),
     enabled: sessionReady && Boolean(memberId),
     queryFn: ({ signal }) => loadProfileActivity(memberId, { signal, headers }),
   });
   const history = useQuery({
-    queryKey: ['profileHistory', memberId],
+    queryKey: queryKeys.profileHistory(memberId),
     enabled: sessionReady && Boolean(memberId) && (loadHistory || tab === 'history'),
     queryFn: async ({ signal }) => {
       const roster = [];

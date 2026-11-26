@@ -1,7 +1,7 @@
-import type { MemberProfileQuery } from '../../../api/graphql.operations.gen.js';
-import { graphqlRequest } from '../../../api/graphql.js';
-import { toAppError } from '../../../errors/toAppError.js';
-import type { AdapterResult } from '../../../errors/types.js';
+import type { MemberProfileQuery } from '../api/graphql.operations.gen.js';
+import { graphqlRequest } from '../api/graphql.js';
+import { toAppError } from '../errors/toAppError.js';
+import type { AdapterResult } from '../errors/types.js';
 import MEMBER_PROFILE_QUERY from './memberProfile.graphql?raw';
 import {
   memberProfileWireSchema,

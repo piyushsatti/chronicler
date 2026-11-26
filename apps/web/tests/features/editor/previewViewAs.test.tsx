@@ -16,7 +16,7 @@ import {
 import { editorHarness } from './editor-test-utils.js';
 
 const loadAudienceMembers = vi.hoisted(() => vi.fn());
-vi.mock('../../../src/features/editor/adapters/editorAudienceMembers.js', () => ({
+vi.mock('../../../src/adapters/editorAudienceMembers.js', () => ({
   loadAudienceMembers,
   loadAudienceReader: vi.fn(),
 }));

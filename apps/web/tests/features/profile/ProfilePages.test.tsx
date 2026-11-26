@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { Link, Route, Routes } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { DMProfilePage, PlayerProfilePage } from '../../../src/features/profile/pages/ProfilePages.js';
-import { loadMemberProfile } from '../../../src/features/profile/adapters/memberProfileAdapter.js';
+import { loadMemberProfile } from '../../../src/adapters/memberProfileAdapter.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
 import { profileActor, signInProfile } from './profileAuth.js';
