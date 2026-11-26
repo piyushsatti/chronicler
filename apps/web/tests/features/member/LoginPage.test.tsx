@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
-import { LoginRoute } from '../../../src/chrome/LoginRoute.js';
+import { LoginRoute } from '../../../src/features/member/pages/LoginRoute.js';
 import type { GraphqlRequestBody } from '../../../src/chrome/featureModule.js';
 import { server } from '../../../src/mocks/server.js';
 import adminMe from '../../fixtures/wire/me/admin-good.json';

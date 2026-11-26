@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useAdminPage } from './useAdminPage.js';
 import {
   useAdminAuthority,
@@ -14,7 +15,6 @@ import {
   type AdminBackstoryRow,
 } from '../adapters/adminAdapter.js';
 
-const KEY = ['adminBackstories'] as const;
 
 type FormState = {
   backstoryId: string | null;
@@ -40,7 +40,7 @@ export function useBackstoriesPanel() {
   const [cohort, setCohort] = useState('');
   const [regionId, setRegionId] = useState('');
   const { query: backstories, pagination } = useAdminPage(
-    KEY,
+    queryKeys.adminBackstories,
     authority,
     { cohort, regionId },
     (page, request) =>
@@ -54,7 +54,7 @@ export function useBackstoriesPanel() {
   );
   const regions = useQuery({
     enabled: authority.allowed,
-    queryKey: ['adminRegionOptions', authority.cacheKey],
+    queryKey: queryKeys.adminRegionOptions(authority.cacheKey),
     queryFn: ({ signal }) => authority.read(loadAllAdminRegions, signal),
   });
   const [form, setForm] = useState<FormState>(BLANK);
@@ -95,7 +95,7 @@ export function useBackstoriesPanel() {
       setMessage(`Backstory "${form.name.trim()}" saved.`);
       setEditing(false);
       setForm(BLANK);
-      await queryClient.invalidateQueries({ queryKey: KEY });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminBackstories });
     },
   });
 

@@ -20,7 +20,7 @@ export function useAdminOperations() {
   const [alertOffset, setAlertOffset] = useState(0);
   const query = useQuery({
     enabled: authority.allowed,
-    queryKey: ['adminOperations', authority.cacheKey, deliveryOffset, alertOffset],
+    queryKey: queryKeys.adminOperationsPage(authority.cacheKey, deliveryOffset, alertOffset),
     queryFn: ({ signal }) =>
       authority.read(
         (request) =>

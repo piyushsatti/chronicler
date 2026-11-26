@@ -1,0 +1,7 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+const KEY = ['items'] as const;
+export function useItems() {
+  const client = useQueryClient();
+  void client.invalidateQueries({ queryKey: KEY });
+  return useQuery({ queryKey: KEY, queryFn: async () => [] });
+}

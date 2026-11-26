@@ -43,7 +43,7 @@ export function useNotificationsPage({ markOnView = true, enabled = true }: { ma
     ids: ReadonlySet<string>;
   } | null>(null);
   const q = useInfiniteQuery({
-    queryKey: [...queryKeys.notificationsInbox(PAGE_SIZE), session?.authority ?? null],
+    queryKey: queryKeys.notificationsInboxFor(PAGE_SIZE, session?.authority ?? null),
     queryFn: async ({ pageParam, signal }) => {
       const active = requireCurrent(session);
       const page = await loadNotifications({

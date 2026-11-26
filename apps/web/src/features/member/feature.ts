@@ -20,6 +20,9 @@ export const endpoints = {
 export const queryKeys = {
   me: ['me'] as const,
   myPrivateNotes: (memberId: string) => ['myPrivateNotes', memberId] as const,
+  memberHub: (memberId: string) => ['memberHub', memberId] as const,
+  myCharacters: (memberId: string) => ['characters', 'mine', memberId] as const,
+  myUpcomingQuests: (memberId: string) => ['quests', 'mine-upcoming', memberId] as const,
   currentAccess: (kind?: string, identity?: string | null) =>
     kind === undefined
       ? (['currentAccess'] as const)
@@ -30,7 +33,7 @@ export const routes: readonly FeatureRoute[] = [
   {
     path: '/login',
     element: lazyElement(() =>
-      import('../../chrome/LoginRoute.js').then((module) => ({
+      import('./pages/LoginRoute.js').then((module) => ({
         default: module.LoginRoute,
       })),
     ),

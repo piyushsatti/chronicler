@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { loadAdminCharacters, loadAllAdminRegions } from '../adapters/adminAdapter.js';
@@ -12,7 +13,7 @@ export function useCharacterDirectoryPanel({
   const [status, setStatus] = useState('');
   const [regionId, setRegionId] = useState('');
   const page = useAdminPage(
-    ['adminCharacters'],
+    queryKeys.adminCharacters,
     authority,
     { namePrefix, status, regionId },
     (pagination, request) =>
@@ -29,7 +30,7 @@ export function useCharacterDirectoryPanel({
   // Same cache entry the Content tab's region filters read.
   const regions = useQuery({
     enabled: authority.allowed && withRegionOptions,
-    queryKey: ['adminRegionOptions', authority.cacheKey],
+    queryKey: queryKeys.adminRegionOptions(authority.cacheKey),
     queryFn: ({ signal }) => authority.read(loadAllAdminRegions, signal),
   });
   return {

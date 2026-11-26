@@ -5,6 +5,7 @@ export const endpoints = {} as const;
 
 export const queryKeys = {
   rulesHub: ['rulesHub'] as const,
+  rulesHubFor: (authority: string | null) => ['rulesHub', authority] as const,
   ruleDetail: (slug: string, family: 'guides' | 'rulings') =>
     ['ruleDetail', slug, family] as const,
 };

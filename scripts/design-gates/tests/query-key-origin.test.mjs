@@ -25,3 +25,15 @@ test('factory queryKey passes', () => {
   );
   assert.equal(hits.filter((hit) => hit.rule === 'query-key-origin').length, 0);
 });
+
+test('queryKey held in a const literal is flagged', () => {
+  const hits = scanSource(
+    fixture('const.ts.txt'),
+    'src/features/items/hooks/useItems.ts',
+  );
+  assert.equal(
+    hits.filter((hit) => hit.rule === 'query-key-origin').length,
+    2,
+    `expected two query-key-origin hits; saw ${JSON.stringify(hits)}`,
+  );
+});

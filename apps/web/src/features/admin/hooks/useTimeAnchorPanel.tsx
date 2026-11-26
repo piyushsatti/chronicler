@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { safeAppError } from '../../../errors/toAppError.js';
 import { timeAnchorInput } from '../adapters/adminForms.js';
 import { useAdminPage } from './useAdminPage.js';
@@ -14,7 +15,6 @@ import {
   updateTimeAnchor,
 } from '../adapters/adminAdapter.js';
 
-const KEY = ['adminTimeAnchors'] as const;
 
 type FormState = {
   realUtc: string;
@@ -29,7 +29,7 @@ export function useTimeAnchorPanel() {
   const authority = useAdminAuthority();
   const queryClient = useQueryClient();
   const { query: anchors, pagination } = useAdminPage(
-    KEY,
+    queryKeys.adminTimeAnchors,
     authority,
     {},
     (page, request) => loadTimeAnchors(page, request),
@@ -54,7 +54,7 @@ export function useTimeAnchorPanel() {
       setMessage(editingId === 'new' ? 'Time anchor created.' : 'Time anchor updated.');
       setEditingId(null);
       setForm(BLANK);
-      await queryClient.invalidateQueries({ queryKey: KEY });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminTimeAnchors });
     },
   });
   useAuthorityFailures(anchors.error, save.error);

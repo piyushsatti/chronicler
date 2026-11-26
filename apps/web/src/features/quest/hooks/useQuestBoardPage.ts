@@ -60,7 +60,7 @@ export function useQuestBoardPage() {
   const [boardFilters, setBoardFilters] = useState<QuestBoardFilters>(NO_BOARD_FILTERS);
   const serverFilters = toServerFilters(boardFilters, timeZone);
   const query = useInfiniteQuery({
-    queryKey: ['quests', 'pages', serverFilters],
+    queryKey: queryKeys.questBoardPages(serverFilters),
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       loadQuestList({ filters: serverFilters, limit: PAGE_SIZE, offset: pageParam }),
@@ -75,17 +75,17 @@ export function useQuestBoardPage() {
       loadQuestList({ filters: { displayStatus: 'live' }, limit: PAGE_SIZE, offset: 0 }),
   });
   const chrome = useQuery({
-    queryKey: ['questBoardChrome'],
+    queryKey: queryKeys.questBoardChrome,
     queryFn: loadQuestBoardChrome,
   });
   const characters = useQuery({
-    queryKey: ['questCharacters', me.data?.id],
+    queryKey: queryKeys.questCharacters(me.data?.id),
     queryFn: loadMyCharacters,
     enabled: isAuthenticated && Boolean(me.data),
     retry: false,
   });
   const authority = useQuery({
-    queryKey: ['questAuthority', me.data?.id, me.data?.handle],
+    queryKey: queryKeys.questAuthority(me.data?.id, me.data?.handle),
     queryFn: () => loadQuestAuthoringAuthority(me.data?.handle ?? ''),
     enabled: isAuthenticated && Boolean(me.data),
   });

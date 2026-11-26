@@ -6,6 +6,7 @@ export const endpoints = {} as const;
 
 export const queryKeys = {
   chronicleList: ['chronicleList'] as const,
+  chronicleListFor: (authority: string | null) => ['chronicleList', authority] as const,
   chronicleDetail: (id: string) => ['chronicleDetail', id] as const,
 };
 

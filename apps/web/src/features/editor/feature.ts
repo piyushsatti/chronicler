@@ -23,6 +23,20 @@ export const queryKeys = {
   genres: ['editor', 'questGenreOptions'] as const,
   guideGroups: ['editor', 'guideGroups'] as const,
   seriesOptions: ['editor', 'seriesOptions'] as const,
+  seriesOptionsFor: (viewerMemberId: string | null, viewerIsAdmin: boolean) =>
+    ['editor', 'seriesOptions', viewerMemberId, viewerIsAdmin] as const,
+  audienceMembers: (scopeKey: string, search: string, offset: number) =>
+    ['editor', 'audience-members', scopeKey, search, offset] as const,
+  audienceReaders: (scopeKey: string, selectedIds: readonly string[]) =>
+    ['editor', 'audience-readers', scopeKey, ...selectedIds] as const,
+  revisions: (documentId: string | null, offset: number) =>
+    ['editor', 'revisions', documentId, offset] as const,
+  summaryQuests: (scopeKey: string, search: string, offset: number) =>
+    ['editor', 'summary-quests', scopeKey, search, offset] as const,
+  summaryCharacters: (scopeKey: string, offset: number) =>
+    ['editor', 'summary-characters', scopeKey, offset] as const,
+  questOptionMaps: ['questOptions', 'maps'] as const,
+  questOptionNodes: (atlasCode: string) => ['questOptions', 'nodes', atlasCode] as const,
   voiceChannels: ['editor', 'voiceChannels'] as const,
   entityLinkIndex: ['editor', 'entityLinkIndex'] as const,
 } as const;

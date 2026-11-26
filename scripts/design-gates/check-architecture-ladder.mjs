@@ -217,14 +217,26 @@ export function scanSource(
       ].includes(info.name)
     );
   };
-  const isInlineQueryKey = (node) => {
+  const isInlineQueryKey = (node, seen = new Set()) => {
     node = unwrap(node);
-    return Boolean(
-      node &&
-      (ts.isArrayLiteralExpression(node) ||
-        ts.isStringLiteral(node) ||
-        ts.isNoSubstitutionTemplateLiteral(node)),
-    );
+    if (!node) return false;
+    if (
+      ts.isArrayLiteralExpression(node) ||
+      ts.isStringLiteral(node) ||
+      ts.isNoSubstitutionTemplateLiteral(node)
+    )
+      return true;
+    if (!ts.isIdentifier(node)) return false;
+    // A literal parked in a const is still an inline key.
+    const declaration = checker.getSymbolAtLocation(node)?.valueDeclaration;
+    if (
+      !declaration ||
+      seen.has(declaration) ||
+      !ts.isVariableDeclaration(declaration) ||
+      !declaration.initializer
+    )
+      return false;
+    return isInlineQueryKey(declaration.initializer, new Set([...seen, declaration]));
   };
   const queryKeyFromObjectArg = (arg) => {
     arg = unwrap(arg);

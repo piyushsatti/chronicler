@@ -1,3 +1,4 @@
+import { queryKeys } from '../feature.js';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { loadEditorRevisions } from '../adapters/editorLifecycle.js';
@@ -11,7 +12,7 @@ export function useEditorHistory(documentId: string | null, enabled: boolean) {
   const setOpen = (next: (value: boolean) => boolean) =>
     setNavigation({ documentId, offset, open: next(open) });
   const query = useQuery({
-    queryKey: ['editor', 'revisions', documentId, offset],
+    queryKey: queryKeys.revisions(documentId, offset),
     queryFn: () => loadEditorRevisions(documentId ?? '', offset),
     enabled: enabled && documentId !== null,
   });

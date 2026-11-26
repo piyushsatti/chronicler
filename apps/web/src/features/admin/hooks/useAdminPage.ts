@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useQuery } from '@tanstack/react-query';
 import type { AdminReadRequest } from '../adapters/adminRequest.js';
 import type { AdminPage, AdminPageRequest } from '../adapters/adminPage.js';
@@ -37,7 +38,7 @@ export function useAdminPage<T>(
     }));
   const query = useQuery({
     enabled: authority.allowed,
-    queryKey: [...key, authority.cacheKey, filters, offset],
+    queryKey: queryKeys.adminPage(key, authority.cacheKey, filters, offset),
     queryFn: ({ signal }) =>
       authority.read((request) => load({ offset, limit: 50 }, request), signal),
   });

@@ -14,7 +14,6 @@ import {
 } from '../adapters/adminAdapter.js';
 import { useBulkRoleBar } from './useBulkRoleBar.js';
 
-const MEMBERS_KEY = ['adminMembers'] as const;
 
 const ROLE_OPTIONS = [
   'guest',
@@ -43,7 +42,7 @@ export function useMembersPanel() {
   const [role, setRole] = useState('');
   const [status, setStatus] = useState('');
   const { query: directory, pagination } = useAdminPage(
-    MEMBERS_KEY,
+    queryKeys.adminMembers,
     authority,
     { search, role, status },
     (page, request) =>
@@ -72,7 +71,7 @@ export function useMembersPanel() {
       if (!authority.isCurrent()) return;
       if (selected?.id === authority.actorId)
         await queryClient.invalidateQueries({ queryKey: queryKeys.me });
-      await queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminMembers });
     },
   });
 
@@ -96,7 +95,7 @@ export function useMembersPanel() {
         for (const id of succeededIds) next.delete(id);
         return next;
       });
-      void queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminMembers });
     },
   });
   useAuthorityFailures(directory.error, saveRoles.error);

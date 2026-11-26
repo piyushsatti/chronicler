@@ -1,3 +1,4 @@
+import { queryKeys } from '../feature.js';
 import { personLabels } from '../../../utils/format.js';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -28,12 +29,12 @@ export function useEditorAudience({
     .map((value) => value.trim())
     .filter(Boolean);
   const directory = useQuery({
-    queryKey: ['editor', 'audience-members', scopeKey, search, offset],
+    queryKey: queryKeys.audienceMembers(scopeKey, search, offset),
     queryFn: () => loadAudienceMembers(search.trim(), offset),
     enabled: enabled && search.trim().length > 0,
   });
   const selected = useQuery({
-    queryKey: ['editor', 'audience-readers', scopeKey, ...selectedIds],
+    queryKey: queryKeys.audienceReaders(scopeKey, selectedIds),
     queryFn: () =>
       Promise.all(
         selectedIds.map(async (id) => ({ id, member: await loadAudienceReader(id) })),

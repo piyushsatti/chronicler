@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import {
   useAdminAuthority,
   useAuthorityFailures,
@@ -17,14 +18,13 @@ import {
   type VoiceChannelRow,
 } from '../adapters/discordSettingsForm.js';
 
-const KEY = ['adminDiscordSettings'] as const;
 const NO_ERRORS: DiscordSettingsErrors = { voiceChannels: {}, summary: [] };
 
 export function useDiscordSettingsPanel() {
   const authority = useAdminAuthority();
   const settingsQ = useQuery({
     enabled: authority.allowed,
-    queryKey: [...KEY, authority.cacheKey],
+    queryKey: queryKeys.adminDiscordSettings(authority.cacheKey),
     queryFn: ({ signal }) => authority.read(loadDiscordSettings, signal),
   });
   useAuthorityFailures(settingsQ.error);
@@ -79,8 +79,8 @@ export function useDiscordSettingsForm(
     ),
     onSuccess: async () => {
       if (!authority.isCurrent()) return;
-      await queryClient.invalidateQueries({ queryKey: KEY });
-      await queryClient.invalidateQueries({ queryKey: ['editor', 'voiceChannels'] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminDiscordSettings() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.voiceChannels });
       setSaveMessage('Discord settings saved.');
     },
   });

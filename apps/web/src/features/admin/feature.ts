@@ -9,6 +9,39 @@ export const queryKeys = {
   pendingCharacters: ['pendingCharacters'] as const,
   adminOperations: ['adminOperations'] as const,
   adminCharacters: ['adminCharacters'] as const,
+  adminOperationsPage: (
+    cacheKey: string | null,
+    deliveryOffset: number,
+    alertOffset: number,
+  ) => ['adminOperations', cacheKey, deliveryOffset, alertOffset] as const,
+  adminPage: (
+    base: readonly unknown[],
+    cacheKey: string | null,
+    filters: object,
+    offset: number,
+  ) => [...base, cacheKey, filters, offset] as const,
+  adminCommunityStats: (cacheKey: string | null) =>
+    ['adminCommunityStats', cacheKey] as const,
+  adminRegionOptions: (cacheKey?: string | null) =>
+    cacheKey === undefined
+      ? (['adminRegionOptions'] as const)
+      : (['adminRegionOptions', cacheKey] as const),
+  adminRegions: (cacheKey?: string | null) =>
+    cacheKey === undefined
+      ? (['adminRegions'] as const)
+      : (['adminRegions', cacheKey] as const),
+  adminDiscordSettings: (cacheKey?: string | null) =>
+    cacheKey === undefined
+      ? (['adminDiscordSettings'] as const)
+      : (['adminDiscordSettings', cacheKey] as const),
+  adminGameCalendar: (cacheKey?: string | null) =>
+    cacheKey === undefined
+      ? (['adminGameCalendar'] as const)
+      : (['adminGameCalendar', cacheKey] as const),
+  adminBackstories: ['adminBackstories'] as const,
+  adminCreationCatalog: ['adminCreationCatalog'] as const,
+  adminMembers: ['adminMembers'] as const,
+  adminTimeAnchors: ['adminTimeAnchors'] as const,
 };
 
 export const routes: readonly FeatureRoute[] = [

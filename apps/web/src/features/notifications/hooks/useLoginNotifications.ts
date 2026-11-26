@@ -25,7 +25,7 @@ export function useLoginNotifications(enabled: boolean) {
     useNotificationSession();
   const unreadQ = useUnreadCount(enabled);
   const listQ = useQuery({
-    queryKey: [...queryKeys.notificationsPreview(20), session?.authority ?? null],
+    queryKey: queryKeys.notificationsPreviewFor(20, session?.authority ?? null),
     queryFn: async ({ signal }) => {
       const active = requireCurrent(session);
       const page = await loadNotifications({

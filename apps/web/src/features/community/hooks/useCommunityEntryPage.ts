@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useQuery } from '@tanstack/react-query';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
@@ -10,7 +11,7 @@ type CommunityEntryPageState =
 
 export function useCommunityEntryPage(slug: string): CommunityEntryPageState {
   const query = useQuery({
-    queryKey: ['communityEntry', slug],
+    queryKey: queryKeys.communityEntry(slug),
     queryFn: () => loadCommunityEntry(slug),
     enabled: Boolean(slug),
   });
@@ -26,7 +27,7 @@ export function useCommunityEntryPage(slug: string): CommunityEntryPageState {
 
 export function useCommunityEntryRelated(authorId: string) {
   const query = useQuery({
-    queryKey: ['communityEntryRelated', authorId],
+    queryKey: queryKeys.communityEntryRelated(authorId),
     queryFn: () => loadCommunityEntryRelated(authorId),
     enabled: Boolean(authorId),
   });

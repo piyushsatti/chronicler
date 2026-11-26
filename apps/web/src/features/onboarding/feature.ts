@@ -6,6 +6,13 @@ import { SeriesRedirect } from './SeriesRedirect.js';
 export const endpoints = {} as const;
 
 export const queryKeys = {
+  calendar: (month: string | undefined, day: string | undefined) =>
+    ['calendar', month, day] as const,
+  calendarQuests: (state: object | null, timeZone: string | null) =>
+    ['calendarQuests', state, timeZone] as const,
+  calendarRealDates: (gameDay: number | undefined, realPage: number | undefined) =>
+    ['calendarRealDates', gameDay, realPage] as const,
+  retainedDocument: (identity: string | undefined) => ['retainedDocument', identity] as const,
   seriesAuthority: (actorIdentity?: string | null) =>
     actorIdentity === undefined
       ? (['seriesAuthority'] as const)

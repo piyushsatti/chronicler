@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useQuery } from '@tanstack/react-query';
 import { useMe } from '../../../hooks/useMe.js';
 import { loadMemberRoster } from '../adapters/memberHubAdapter.js';
@@ -10,7 +11,7 @@ import { loadMemberRoster } from '../adapters/memberHubAdapter.js';
 export function useOwnsCharacter(code: string | null): boolean {
   const memberId = useMe().data?.id;
   const roster = useQuery({
-    queryKey: ['characters', 'mine', memberId ?? ''],
+    queryKey: queryKeys.myCharacters(memberId ?? ''),
     queryFn: loadMemberRoster,
     enabled: Boolean(memberId) && code !== null,
   });

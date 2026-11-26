@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useQuery } from '@tanstack/react-query';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
@@ -10,7 +11,7 @@ type CodexEntryAliasPageView =
 
 export function useCodexEntryAliasPage(id: string): CodexEntryAliasPageView {
   const query = useQuery({
-    queryKey: ['codexEntryById', id],
+    queryKey: queryKeys.codexEntryById(id),
     queryFn: () => loadCodexEntrySlug(id),
   });
   if (query.isError) {

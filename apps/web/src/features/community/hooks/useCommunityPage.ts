@@ -37,12 +37,12 @@ export function useCommunityPage(): PageData<CommunityHubView> {
 export function useCommunityCharacters() {
   const [limit, setLimit] = useState(100);
   const regions = useQuery({
-    queryKey: ['communityRegions'],
+    queryKey: queryKeys.communityRegions,
     queryFn: loadCommunityRegionNames,
     staleTime: 5 * 60 * 1000,
   });
   const query = useQuery({
-    queryKey: ['communityCharacters', limit],
+    queryKey: queryKeys.communityCharacters(limit),
     queryFn: () => loadCommunityCharacters(limit),
   });
   const hasMore = query.data !== undefined && query.data.items.length < query.data.total;
@@ -61,7 +61,7 @@ export function useCommunityCharacters() {
 /** The Hall of Fame page: one shared Document that everyone reads and admins edit. */
 export function useHallOfFame() {
   const query = useQuery({
-    queryKey: ['communityHallOfFame'],
+    queryKey: queryKeys.communityHallOfFame,
     queryFn: loadHallOfFame,
   });
   return {

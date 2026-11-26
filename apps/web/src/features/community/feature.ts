@@ -6,6 +6,14 @@ export const endpoints = {} as const;
 
 export const queryKeys = {
   communityHub: ['communityHub'] as const,
+  communityMembersAll: ['communityMembers'] as const,
+  communityDirectory: (role: string, search: string, acceptingOnly: boolean, page: number) =>
+    ['communityMembers', role, search, acceptingOnly, page] as const,
+  communityEntry: (slug: string) => ['communityEntry', slug] as const,
+  communityEntryRelated: (authorId: string) => ['communityEntryRelated', authorId] as const,
+  communityRegions: ['communityRegions'] as const,
+  communityCharacters: (limit: number) => ['communityCharacters', limit] as const,
+  communityHallOfFame: ['communityHallOfFame'] as const,
   communityMembers: (role: string) => ['communityMembers', role] as const,
 };
 

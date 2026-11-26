@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useQuery } from '@tanstack/react-query';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
@@ -34,17 +35,17 @@ function slice<T>(
 /** Everything the /me hub shows beyond identity: stats, roster, upcoming sign-ups. */
 export function useMemberHub(memberId: string): MemberHub {
   const hubQ = useQuery({
-    queryKey: ['memberHub', memberId],
+    queryKey: queryKeys.memberHub(memberId),
     queryFn: () => loadMemberHub(memberId),
     enabled: Boolean(memberId),
   });
   const rosterQ = useQuery({
-    queryKey: ['characters', 'mine', memberId],
+    queryKey: queryKeys.myCharacters(memberId),
     queryFn: loadMemberRoster,
     enabled: Boolean(memberId),
   });
   const upcomingQ = useQuery({
-    queryKey: ['quests', 'mine-upcoming', memberId],
+    queryKey: queryKeys.myUpcomingQuests(memberId),
     queryFn: () => loadUpcomingSignups(memberId, new Date().toISOString()),
     enabled: Boolean(memberId),
   });

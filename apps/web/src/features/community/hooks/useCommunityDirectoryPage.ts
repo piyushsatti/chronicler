@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -36,7 +37,7 @@ export function useCommunityDirectoryPage(
   const [acceptingOnly, setAcceptingOnly] = useState(false);
   const [page, setPage] = useState(1);
   const query = useQuery({
-    queryKey: ['communityMembers', role, search, acceptingOnly, page],
+    queryKey: queryKeys.communityDirectory(role, search, acceptingOnly, page),
     queryFn: () =>
       loadCommunityMembers(
         role,
