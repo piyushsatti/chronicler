@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   loadAudienceMembers,
   loadAudienceReader,
-} from '../adapters/editorAudienceMembers.js';
+} from '../../../adapters/editorAudienceMembers.js';
 
 export function useEditorAudience({
   readerIds,

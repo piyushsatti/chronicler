@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { characterWireSchema } from '../../../src/features/character/adapters/character.wire.schema.js';
 import { questDetailWireSchema } from '../../../src/features/quest/adapters/quest.wire.schema.js';
-import { memberMeWireSchema } from '../../../src/features/member/adapters/member.wire.schema.js';
+import { memberMeWireSchema } from '../../../src/adapters/member.wire.schema.js';
 import questTemplate from '../../fixtures/wire/quest/detail-good.json' with { type: 'json' };
 import characterTemplate from '../../fixtures/wire/character/good.json' with { type: 'json' };
 import goodMe from '../../fixtures/wire/me/good.json' with { type: 'json' };

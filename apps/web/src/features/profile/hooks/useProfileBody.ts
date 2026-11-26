@@ -3,7 +3,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
 import {
   type MemberProfileView,
-} from '../adapters/memberProfileAdapter.js';
+} from '../../../adapters/memberProfileAdapter.js';
 
 function normalizeHandle(raw: string | undefined): string {
   if (!raw) return '';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseMemberProfile } from '../../../src/features/profile/adapters/memberProfileAdapter.js';
+import { parseMemberProfile } from '../../../src/adapters/memberProfileAdapter.js';
 import badProfile from '../../fixtures/wire/profile/member-profile-bad.json';
 import goodProfile from '../../fixtures/wire/profile/member-profile-good.json';
 

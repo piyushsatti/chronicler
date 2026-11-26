@@ -14,7 +14,7 @@ import {
 import {
   loadSeriesArc,
   loadSeriesAuthority,
-} from '../../../src/features/onboarding/adapters/seriesAdapter.js';
+} from '../../../src/adapters/seriesAdapter.js';
 import { loadRetainedDocument } from '../../../src/features/onboarding/adapters/retainedDocumentAdapter.js';
 import good from '../../fixtures/wire/onboarding/retained-good.json';
 

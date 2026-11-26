@@ -29,6 +29,7 @@ export const queryKeys = {
     ['editor', 'audience-members', scopeKey, search, offset] as const,
   audienceReaders: (scopeKey: string, selectedIds: readonly string[]) =>
     ['editor', 'audience-readers', scopeKey, ...selectedIds] as const,
+  markerMembers: (term: string) => ['editor', 'audience-members', 'marker', term] as const,
   revisions: (documentId: string | null, offset: number) =>
     ['editor', 'revisions', documentId, offset] as const,
   summaryQuests: (scopeKey: string, search: string, offset: number) =>

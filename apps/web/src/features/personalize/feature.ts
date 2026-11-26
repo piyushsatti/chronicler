@@ -5,6 +5,7 @@ export const endpoints = {} as const;
 
 export const queryKeys = {
   personalization: ['personalization'] as const,
+  personalizationFor: (memberId: string | null) => ['personalization', memberId] as const,
 };
 
 export const routes: readonly FeatureRoute[] = [

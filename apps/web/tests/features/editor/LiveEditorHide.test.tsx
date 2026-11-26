@@ -14,7 +14,7 @@ import { LiveEditor } from '../../../src/components/interactive/markdown-editor/
 import { createTestQueryClient } from '../../../src/providers.js';
 
 const loadAudienceMembers = vi.hoisted(() => vi.fn());
-vi.mock('../../../src/features/editor/adapters/editorAudienceMembers.js', () => ({
+vi.mock('../../../src/adapters/editorAudienceMembers.js', () => ({
   loadAudienceMembers,
   loadAudienceReader: vi.fn(),
 }));

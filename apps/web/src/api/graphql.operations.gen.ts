@@ -358,10 +358,77 @@ export type VerificationVerdict =
   | 'APPROVED'
   | 'REJECTED';
 
+export type EditorAudienceMemberQueryVariables = Exact<{
+  id: string;
+}>;
+
+
+export type EditorAudienceMemberQuery = { member: { id: string, handle: string, displayName: string } | null };
+
+export type EditorAudienceMembersQueryVariables = Exact<{
+  search?: string | null | undefined;
+  offset: number;
+}>;
+
+
+export type EditorAudienceMembersQuery = { communityDirectory: { total: number, entries: Array<{ memberId: string, handle: string, displayName: string }> } };
+
+export type MemberMeQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MemberMeQuery = { memberMe: { id: string, handle: string, displayName: string, roles: Array<string> } };
+
+export type MemberProfileQueryVariables = Exact<{
+  handle: string;
+}>;
+
+
+export type MemberProfileQuery = { memberProfile: { member: { id: string, handle: string, displayName: string, avatarUrl: string | null, roles: Array<string>, status: string, joinedAt: string }, dmProfile: { memberId: string, tagline: string | null, philosophy: string | null, houseRules: string | null, tableInfo: unknown, acceptingPlayers: boolean, status: string, reviewRevision: number } | null, availability: Array<{ day: string, startTime: string, endTime: string, note: string | null }>, activitySummary: { voiceMinutes: number, messages: number, reactions: number } } | null };
+
 export type MyPersonalizationQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type MyPersonalizationQuery = { myPersonalization: { settings: { memberId: string, theme: Theme, mode: ColorMode, effectsEnabled: boolean, colorblindSafe: boolean, reducedMotion: boolean, density: Density, timezone: string | null, updatedAt: string | null, notifyCharacterVerification: boolean, notifyQuestSignup: boolean, notifyDocumentActivity: boolean, notifyQuestScheduled: boolean, notifyDmMentioned: boolean } | null } | null };
+
+export type ProfileActivityQueryVariables = Exact<{
+  memberId: string;
+  limit: number;
+  offset: number;
+}>;
+
+
+export type ProfileActivityQuery = { memberActivityStats: { questsPlayed: number, summariesAuthored: number } | null, documents: { total: number, items: Array<{ id: string, slug: string, title: string, publishedAt: string | null }> } };
+
+export type QuestAuthoringAuthorityQueryVariables = Exact<{
+  handle: string;
+}>;
+
+
+export type QuestAuthoringAuthorityQuery = { memberProfile: { member: { id: string, roles: Array<string>, status: string }, dmProfile: { status: string } | null } | null };
+
+export type RetainedSeriesArcQueryVariables = Exact<{
+  id: string;
+  offset: number;
+}>;
+
+
+export type RetainedSeriesArcQuery = { questArc: { id: string, name: string, createdBy: string, createdAt: string, questCount: number, quests: Array<{ id: string, shortCode: string, status: string, displayStatus: string | null, scheduledAt: string, slotsMax: number, dm: { handle: string, displayName: string } | null, briefDocument: { title: string, effectiveBody: string | null } | null, participants: Array<{ characterId: string, characterName: string, memberAvatarUrl: string | null, status: string }> }> } | null };
+
+export type RetainedSeriesAuthorityQueryVariables = Exact<{
+  handle: string;
+}>;
+
+
+export type RetainedSeriesAuthorityQuery = { memberProfile: { member: { id: string, roles: Array<string>, status: string }, dmProfile: { status: string } | null } | null };
+
+export type RetainedUpsertArcMutationVariables = Exact<{
+  id?: string | null | undefined;
+  name: string;
+  meta: CommandMeta;
+}>;
+
+
+export type RetainedUpsertArcMutation = { upsertQuestArc: { id: string, name: string, createdBy: string, createdAt: string, questCount: number } };
 
 export type UpdateMySettingsMutationVariables = Exact<{
   input: MemberSettingsPatch;
@@ -1011,21 +1078,6 @@ export type EditorAudienceMutationVariables = Exact<{
 
 export type EditorAudienceMutation = { setDocumentVisibility: { id: string, slug: string, version: number } };
 
-export type EditorAudienceMemberQueryVariables = Exact<{
-  id: string;
-}>;
-
-
-export type EditorAudienceMemberQuery = { member: { id: string, handle: string, displayName: string } | null };
-
-export type EditorAudienceMembersQueryVariables = Exact<{
-  search?: string | null | undefined;
-  offset: number;
-}>;
-
-
-export type EditorAudienceMembersQuery = { communityDirectory: { total: number, entries: Array<{ memberId: string, handle: string, displayName: string }> } };
-
 export type EditorDeleteMutationVariables = Exact<{
   id: string;
   expectedRevision: number;
@@ -1463,11 +1515,6 @@ export type MemberHubQueryVariables = Exact<{
 
 export type MemberHubQuery = { member: { id: string, joinedAt: string, avatarUrl: string | null } | null, memberActivityStats: { questsPlayed: number, summariesAuthored: number, messages: number, voiceMinutes: number, longestSessionHours: number | null, recentSessions: Array<{ kind: string, occurredAt: string, amount: number }> } | null };
 
-export type MemberMeQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type MemberMeQuery = { memberMe: { id: string, handle: string, displayName: string, roles: Array<string> } };
-
 export type MemberMyPrivateNotesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -1575,30 +1622,6 @@ export type RetainedDocumentBySlugQueryVariables = Exact<{
 
 export type RetainedDocumentBySlugQuery = { document: { id: string, slug: string, kind: string, category: string | null, title: string } | null };
 
-export type RetainedSeriesArcQueryVariables = Exact<{
-  id: string;
-  offset: number;
-}>;
-
-
-export type RetainedSeriesArcQuery = { questArc: { id: string, name: string, createdBy: string, createdAt: string, questCount: number, quests: Array<{ id: string, shortCode: string, status: string, displayStatus: string | null, scheduledAt: string, slotsMax: number, dm: { handle: string, displayName: string } | null, briefDocument: { title: string, effectiveBody: string | null } | null, participants: Array<{ characterId: string, characterName: string, memberAvatarUrl: string | null, status: string }> }> } | null };
-
-export type RetainedSeriesAuthorityQueryVariables = Exact<{
-  handle: string;
-}>;
-
-
-export type RetainedSeriesAuthorityQuery = { memberProfile: { member: { id: string, roles: Array<string>, status: string }, dmProfile: { status: string } | null } | null };
-
-export type RetainedUpsertArcMutationVariables = Exact<{
-  id?: string | null | undefined;
-  name: string;
-  meta: CommandMeta;
-}>;
-
-
-export type RetainedUpsertArcMutation = { upsertQuestArc: { id: string, name: string, createdBy: string, createdAt: string, questCount: number } };
-
 export type DmTableBySlugQueryVariables = Exact<{
   slug: string;
 }>;
@@ -1614,22 +1637,6 @@ export type DmTableScheduleQueryVariables = Exact<{
 
 
 export type DmTableScheduleQuery = { quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, briefDocument: { title: string } | null }> } };
-
-export type MemberProfileQueryVariables = Exact<{
-  handle: string;
-}>;
-
-
-export type MemberProfileQuery = { memberProfile: { member: { id: string, handle: string, displayName: string, avatarUrl: string | null, roles: Array<string>, status: string, joinedAt: string }, dmProfile: { memberId: string, tagline: string | null, philosophy: string | null, houseRules: string | null, tableInfo: unknown, acceptingPlayers: boolean, status: string, reviewRevision: number } | null, availability: Array<{ day: string, startTime: string, endTime: string, note: string | null }>, activitySummary: { voiceMinutes: number, messages: number, reactions: number } } | null };
-
-export type ProfileActivityQueryVariables = Exact<{
-  memberId: string;
-  limit: number;
-  offset: number;
-}>;
-
-
-export type ProfileActivityQuery = { memberActivityStats: { questsPlayed: number, summariesAuthored: number } | null, documents: { total: number, items: Array<{ id: string, slug: string, title: string, publishedAt: string | null }> } };
 
 export type ProfileDmDetailsQueryVariables = Exact<{
   memberId: string;
@@ -1709,13 +1716,6 @@ export type QuestAttestParticipationMutationVariables = Exact<{
 
 
 export type QuestAttestParticipationMutation = { attestQuestParticipation: Array<{ characterId: string, status: string }> };
-
-export type QuestAuthoringAuthorityQueryVariables = Exact<{
-  handle: string;
-}>;
-
-
-export type QuestAuthoringAuthorityQuery = { memberProfile: { member: { id: string, roles: Array<string>, status: string }, dmProfile: { status: string } | null } | null };
 
 export type QuestBoardQueryVariables = Exact<{
   limit: number;

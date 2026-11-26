@@ -1,5 +1,6 @@
+import { queryKeys } from '../api/queryKeys.js';
 import { useQuery } from '@tanstack/react-query';
-import { loadAudienceMembers } from '../features/editor/adapters/editorAudienceMembers.js';
+import { loadAudienceMembers } from '../adapters/editorAudienceMembers.js';
 
 /**
  * Member search for the Hide menu's "Only for a member…" picker. Same
@@ -9,7 +10,7 @@ import { loadAudienceMembers } from '../features/editor/adapters/editorAudienceM
 export function useMarkerMemberSearch(search: string) {
   const term = search.trim();
   const directory = useQuery({
-    queryKey: ['editor', 'audience-members', 'marker', term],
+    queryKey: queryKeys.markerMembers(term),
     queryFn: () => loadAudienceMembers(term, 0),
     enabled: term.length > 0,
   });

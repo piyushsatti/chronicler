@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { graphqlRequest } from '../../../api/graphql.js';
+import { graphqlRequest } from '../api/graphql.js';
 import type {
   EditorAudienceMembersQuery,
   EditorAudienceMemberQuery,
-} from '../../../api/graphql.operations.gen.js';
-import { toAppError } from '../../../errors/toAppError.js';
+} from '../api/graphql.operations.gen.js';
+import { toAppError } from '../errors/toAppError.js';
 import MEMBERS from './editorAudienceMembers.graphql?raw';
 import MEMBER from './editorAudienceMember.graphql?raw';
 const member = z.object({

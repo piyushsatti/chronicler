@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { graphql, HttpResponse } from 'msw';
 import { server } from '../../../src/mocks/server.js';
-import { loadQuestAuthoringAuthority } from '../../../src/features/quest/adapters/questOptionsAdapter.js';
+import { loadQuestAuthoringAuthority } from '../../../src/adapters/questOptionsAdapter.js';
 
 const id = (value: number) =>
   `00000000-0000-4000-8000-${String(value).padStart(12, '0')}`;

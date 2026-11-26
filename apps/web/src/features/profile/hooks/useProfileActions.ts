@@ -5,7 +5,7 @@ import { useAuth } from '../../../auth/AuthContext.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
 import { useMe } from '../../../hooks/useMe.js';
-import { loadMemberProfile } from '../adapters/memberProfileAdapter.js';
+import { loadMemberProfile } from '../../../adapters/memberProfileAdapter.js';
 import {
   writeProfileCommand,
   type ProfileCommand,

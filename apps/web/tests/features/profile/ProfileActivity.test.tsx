@@ -3,7 +3,7 @@ import { graphql, HttpResponse } from 'msw';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProfileActivity } from '../../../src/features/profile/components/ProfileActivity.js';
-import { loadProfileActivity } from '../../../src/features/profile/adapters/profileActivityAdapter.js';
+import { loadProfileActivity } from '../../../src/adapters/profileActivityAdapter.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
 import character from '../../fixtures/wire/character/good.json';

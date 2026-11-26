@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import type { QuestAuthoringAuthorityQuery } from '../../../api/graphql.operations.gen.js';
-import { graphqlRequest } from '../../../api/graphql.js';
-import { toAppError } from '../../../errors/toAppError.js';
+import type { QuestAuthoringAuthorityQuery } from '../api/graphql.operations.gen.js';
+import { graphqlRequest } from '../api/graphql.js';
+import { toAppError } from '../errors/toAppError.js';
 import AUTHORITY from './questAuthority.graphql?raw';
 
 /**

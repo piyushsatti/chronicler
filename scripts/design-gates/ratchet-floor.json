@@ -2,7 +2,7 @@
   "_comment": "Ceilings for allowlist section lengths. May only fall or hold.",
   "tokens": 0,
   "boundary": 0,
-  "hooksBoundary": 21,
+  "hooksBoundary": 14,
   "responsive": 0,
   "layout": 0,
   "duplication": 0,
@@ -14,5 +14,5 @@
   "pageLayout": 12,
   "pageLayoutPendingMigration": 0,
   "idempotencyKeyOrigin": 18,
-  "queryKeyOrigin": 12
+  "queryKeyOrigin": 0
 }

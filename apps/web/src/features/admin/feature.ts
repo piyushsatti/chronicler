@@ -42,6 +42,8 @@ export const queryKeys = {
   adminCreationCatalog: ['adminCreationCatalog'] as const,
   adminMembers: ['adminMembers'] as const,
   adminTimeAnchors: ['adminTimeAnchors'] as const,
+  dmDashboard: (cacheKey: string | null, questOffset: number, questScope: string) =>
+    ['dmDashboard', cacheKey, questOffset, questScope] as const,
 };
 
 export const routes: readonly FeatureRoute[] = [

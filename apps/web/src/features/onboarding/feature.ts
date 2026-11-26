@@ -6,6 +6,8 @@ import { SeriesRedirect } from './SeriesRedirect.js';
 export const endpoints = {} as const;
 
 export const queryKeys = {
+  seriesAll: ['series'] as const,
+  series: (identity: string) => ['series', identity] as const,
   calendar: (month: string | undefined, day: string | undefined) =>
     ['calendar', month, day] as const,
   calendarQuests: (state: object | null, timeZone: string | null) =>

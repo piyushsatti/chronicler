@@ -6,7 +6,7 @@ import { consumeIntendedPath } from '../../../auth/intendedPath.js';
 import { consumeOAuthState } from '../../../auth/oauthState.js';
 import { safeAppError, toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
-import { exchangeAuthCallback } from '../adapters/memberAdapter.js';
+import { exchangeAuthCallback } from '../../../adapters/memberAdapter.js';
 
 type AuthCallbackView = {
   error: AppError | null;

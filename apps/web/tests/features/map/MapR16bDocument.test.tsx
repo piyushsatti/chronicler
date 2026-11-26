@@ -5,7 +5,7 @@ import { Route, Routes, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../src/auth/AuthContext.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { useMe } from '../../../src/hooks/useMe.js';
-import type { MemberViewModel } from '../../../src/features/member/adapters/memberAdapter.js';
+import type { MemberViewModel } from '../../../src/adapters/memberAdapter.js';
 import type { MapDirectory } from '../../../src/features/map/adapters/mapAdapter.js';
 import { queryKeys } from '../../../src/features/map/feature.js';
 import { MapPage } from '../../../src/features/map/pages/MapPage.js';

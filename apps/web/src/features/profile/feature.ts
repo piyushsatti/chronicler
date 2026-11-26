@@ -10,6 +10,10 @@ export const queryKeys = {
     ['dm-table', 'schedule', memberId, page] as const,
   profileDmDetails: (memberId: string) => ['profileDmDetails', memberId] as const,
   profileDmTier: ['profileDmTier'] as const,
+  profileCharacters: (memberId: string, page: number) =>
+    ['profileCharacters', memberId, page] as const,
+  profileActivity: (memberId: string) => ['profileActivity', memberId] as const,
+  profileHistory: (memberId: string) => ['profileHistory', memberId] as const,
 } as const;
 
 export const routes: readonly FeatureRoute[] = [

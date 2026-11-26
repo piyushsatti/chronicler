@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { graphqlRequest } from '../../../api/graphql.js';
-import type { ProfileActivityQuery } from '../../../api/graphql.operations.gen.js';
-import { toAppError } from '../../../errors/toAppError.js';
+import { graphqlRequest } from '../api/graphql.js';
+import type { ProfileActivityQuery } from '../api/graphql.operations.gen.js';
+import { toAppError } from '../errors/toAppError.js';
 import QUERY from './profileActivity.graphql?raw';
 
 const schema = z.object({
