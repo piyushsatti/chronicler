@@ -8,6 +8,12 @@ export const queryKeys = {
   notificationsPreview: (limit: number) => ['notifications', 'preview', limit] as const,
   notificationsInbox: (limit: number) => ['notifications', 'inbox', limit] as const,
   notificationsUnread: ['notificationsUnread'] as const,
+  notificationsPreviewFor: (limit: number, authority: string | null) =>
+    ['notifications', 'preview', limit, authority] as const,
+  notificationsInboxFor: (limit: number, authority: string | null) =>
+    ['notifications', 'inbox', limit, authority] as const,
+  notificationsUnreadFor: (authority: string | null) =>
+    ['notificationsUnread', authority] as const,
 };
 
 export const routes: readonly FeatureRoute[] = [

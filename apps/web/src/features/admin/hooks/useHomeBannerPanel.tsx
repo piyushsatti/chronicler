@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import {
   useAdminAuthority,
   useAuthorityFailures,
@@ -11,13 +12,12 @@ import {
   type HomeBannerView,
 } from '../adapters/adminAdapter.js';
 
-const BANNER_KEY = ['homeBanner'] as const;
 
 export function useHomeBannerPanel() {
   const authority = useAdminAuthority();
   const bannerQ = useQuery({
     enabled: authority.allowed,
-    queryKey: [...BANNER_KEY, authority.cacheKey],
+    queryKey: queryKeys.homeBanner(authority.cacheKey),
     queryFn: ({ signal }) => authority.read(loadHomeBanner, signal),
   });
   useAuthorityFailures(bannerQ.error);
@@ -70,7 +70,7 @@ export function useHomeBannerForm(
     ),
     onSuccess: async () => {
       if (!authority.isCurrent()) return;
-      await queryClient.invalidateQueries({ queryKey: BANNER_KEY });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.homeBanner() });
       setSaveMessage('Home banner saved.');
     },
   });

@@ -6,6 +6,9 @@ export const queryKeys = {
   map: (atlasCode: string) => ['map', atlasCode] as const,
   mapContainment: (atlasCode: string) => ['mapContainment', atlasCode] as const,
   mapDirectory: ['mapDirectory'] as const,
+  mapContainmentAll: ['mapContainment'] as const,
+  mapDocumentAll: ['mapDocument'] as const,
+  mapDocumentsAll: ['mapDocuments'] as const,
   mapRegionAssignments: (regionId: string) =>
     ['mapRegionAssignments', regionId] as const,
   mapRegionCounts: (regionId: string) => ['mapRegionCounts', regionId] as const,

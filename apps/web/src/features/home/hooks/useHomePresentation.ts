@@ -45,9 +45,9 @@ export function useHomePresentation(quests: HomeQuestView[]) {
         [
           queryKeys.homeLanes,
           queryKeys.questLists,
-          ['quest'],
-          ['questSummary'],
-          ['questOptions'],
+          queryKeys.questAll,
+          queryKeys.questSummaryAll,
+          queryKeys.questOptionsAll,
           queryKeys.notifications,
           queryKeys.notificationsUnread,
         ].map((queryKey) => client.invalidateQueries({ queryKey })),

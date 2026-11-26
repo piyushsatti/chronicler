@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { regionInput, type RegionDraft } from '../adapters/adminForms.js';
@@ -18,7 +19,6 @@ import {
 } from './useAdminAuthority.js';
 import { useAdminPage } from './useAdminPage.js';
 
-const KEY = ['adminRegions'] as const;
 type RegionEditor =
   | { status: 'loading'; region: AdminRegionRow }
   | { status: 'error'; region: AdminRegionRow; error: AppError }
@@ -45,7 +45,7 @@ export function useRegionsPanel() {
   const client = useQueryClient();
   const [filterKind, setFilterKind] = useState('');
   const { query: regions, pagination } = useAdminPage(
-    KEY,
+    queryKeys.adminRegions(),
     authority,
     { filterKind },
     async (page, request) => {
@@ -78,8 +78,8 @@ export function useRegionsPanel() {
       if (!authority.isCurrent()) return;
       setMessage(`Region "${region.name}" created.`);
       setName('');
-      await client.invalidateQueries({ queryKey: KEY });
-      await client.invalidateQueries({ queryKey: ['adminRegionOptions'] });
+      await client.invalidateQueries({ queryKey: queryKeys.adminRegions() });
+      await client.invalidateQueries({ queryKey: queryKeys.adminRegionOptions() });
     },
   });
   const beginEdit = async (region: AdminRegionRow) => {
@@ -146,8 +146,8 @@ export function useRegionsPanel() {
           setMessage(`Region "${result.region.name}" saved.`);
           setEditing(null);
         }
-        await client.invalidateQueries({ queryKey: KEY });
-        await client.invalidateQueries({ queryKey: ['adminRegionOptions'] });
+        await client.invalidateQueries({ queryKey: queryKeys.adminRegions() });
+        await client.invalidateQueries({ queryKey: queryKeys.adminRegionOptions() });
       },
     },
   );
@@ -157,10 +157,10 @@ export function useRegionsPanel() {
     hasCurrentAdvanceAuthority(target) && target.selection === selection.current;
   const refreshRegionReads = async (target: RegionAdvance) => {
     if (!hasCurrentAdvanceAuthority(target)) return;
-    await client.invalidateQueries({ queryKey: [...KEY, authority.cacheKey] });
+    await client.invalidateQueries({ queryKey: queryKeys.adminRegions(authority.cacheKey) });
     if (!hasCurrentAdvanceAuthority(target)) return;
     await client.invalidateQueries({
-      queryKey: ['adminRegionOptions', authority.cacheKey],
+      queryKey: queryKeys.adminRegionOptions(authority.cacheKey),
     });
   };
   const advanceMutation = useMutation<AdminRegionRow, unknown, RegionAdvance>({

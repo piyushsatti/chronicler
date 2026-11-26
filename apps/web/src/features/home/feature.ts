@@ -6,6 +6,10 @@ export const endpoints = {} as const;
 export const queryKeys = {
   homeLanes: ['homeLanes'] as const,
   siteStats: ['siteStats'] as const,
+  homeBanner: (cacheKey?: string | null) =>
+    cacheKey === undefined
+      ? (['homeBanner'] as const)
+      : (['homeBanner', cacheKey] as const),
   homeRecentChronicles: (authenticated: boolean) =>
     ['homeRecentChronicles', authenticated] as const,
 };

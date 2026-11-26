@@ -6,6 +6,16 @@ export const endpoints = {} as const;
 
 export const queryKeys = {
   questLists: ['quests'] as const,
+  questBoardPages: (filters: object) => ['quests', 'pages', filters] as const,
+  questBoardChrome: ['questBoardChrome'] as const,
+  questCharacters: (memberId: string | undefined) => ['questCharacters', memberId] as const,
+  questAuthorityAll: ['questAuthority'] as const,
+  questAuthority: (memberId: string | undefined, handle: string | undefined) =>
+    ['questAuthority', memberId, handle] as const,
+  questOptionsAll: ['questOptions'] as const,
+  questAll: ['quest'] as const,
+  questSummaryAll: ['questSummary'] as const,
+  questRosterCharacters: (name: string) => ['questRosterCharacters', name] as const,
   questList: (
     filters: Readonly<{ status?: string; displayStatus?: string }>,
     limit: number,

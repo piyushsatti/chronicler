@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import {
   calendarEraIssues,
   calendarPeriodIssues,
@@ -23,7 +24,6 @@ import {
 import { safeAppError } from '../../../errors/toAppError.js';
 import { TransportError } from '../../../errors/types.js';
 
-const KEY = ['adminGameCalendar'] as const;
 
 function isRejectedDefinition(err: unknown): boolean {
   const cause = err && typeof err === 'object' && 'cause' in err ? err.cause : err;
@@ -34,7 +34,7 @@ export function useGameCalendarPanel() {
   const authority = useAdminAuthority();
   const calendar = useQuery({
     enabled: authority.allowed,
-    queryKey: [...KEY, authority.cacheKey],
+    queryKey: queryKeys.adminGameCalendar(authority.cacheKey),
     queryFn: ({ signal }) => authority.read(loadGameCalendar, signal),
   });
   useAuthorityFailures(calendar.error);
@@ -84,7 +84,7 @@ export function useGameCalendarForm(
     }),
     onSuccess: async () => {
       if (!authority.isCurrent()) return;
-      await queryClient.invalidateQueries({ queryKey: KEY });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminGameCalendar() });
       setMessage('Game calendar saved.');
     },
   });

@@ -68,7 +68,7 @@ export function useOwnerActions({ character }: { character: CharacterViewModel }
     await Promise.all([
       client.invalidateQueries({ queryKey: queryKeys.character(character.shortCode) }),
       client.invalidateQueries({ queryKey: queryKeys.character(character.id) }),
-      client.invalidateQueries({ queryKey: ['characters'] }),
+      client.invalidateQueries({ queryKey: queryKeys.charactersAll }),
     ]);
   };
   const write = useMutation({

@@ -23,7 +23,7 @@ type CodexPageData = (
 
 export function useCodexPage(categoryPrefix: string, search = ''): CodexPageData {
   const q = useInfiniteQuery({
-    queryKey: [...queryKeys.codexDirectory(categoryPrefix), search.trim()],
+    queryKey: queryKeys.codexDirectorySearch(categoryPrefix, search.trim()),
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       loadCodexDirectory({

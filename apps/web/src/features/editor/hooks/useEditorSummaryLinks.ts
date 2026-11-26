@@ -1,3 +1,4 @@
+import { queryKeys } from '../feature.js';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { loadSummaryCharacters, loadSummaryQuests } from '../adapters/editorSummary.js';
@@ -42,12 +43,12 @@ export function useEditorSummaryLinks({
   const refs =
     known.scopeKey === scopeKey ? known.quests : (initial.summary?.quests ?? []);
   const quests = useQuery({
-    queryKey: ['editor', 'summary-quests', scopeKey, page.search, page.questOffset],
+    queryKey: queryKeys.summaryQuests(scopeKey, page.search, page.questOffset),
     queryFn: () => loadSummaryQuests(page.search.trim(), page.questOffset),
     enabled: editable,
   });
   const characters = useQuery({
-    queryKey: ['editor', 'summary-characters', scopeKey, page.characterOffset],
+    queryKey: queryKeys.summaryCharacters(scopeKey, page.characterOffset),
     queryFn: () => loadSummaryCharacters(page.characterOffset),
     enabled: editable,
   });

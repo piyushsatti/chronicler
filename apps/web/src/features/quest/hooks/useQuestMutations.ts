@@ -20,7 +20,7 @@ export function useQuestMutations(shortCode: string, questId: string) {
         const app = toAppError(error, 'quest:command');
         if (app.kind === 'forbidden' || app.kind === 'unauthorized') {
           void client.invalidateQueries({ queryKey: queryKeys.me });
-          void client.invalidateQueries({ queryKey: ['questAuthority'] });
+          void client.invalidateQueries({ queryKey: queryKeys.questAuthorityAll });
         }
         throw error;
       }
@@ -37,7 +37,7 @@ export function useQuestMutations(shortCode: string, questId: string) {
         client.invalidateQueries({ queryKey: queryKeys.homeLanes }),
         client.invalidateQueries({ queryKey: queryKeys.notifications }),
         client.invalidateQueries({ queryKey: queryKeys.notificationsUnread }),
-        client.invalidateQueries({ queryKey: ['questOptions'] }),
+        client.invalidateQueries({ queryKey: queryKeys.questOptionsAll }),
       ]),
   });
   const execute = async (command: QuestCommand): Promise<boolean> => {

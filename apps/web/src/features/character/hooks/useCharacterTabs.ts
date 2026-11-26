@@ -48,7 +48,7 @@ export function useCharacterProgression(characterId: string) {
 
 export function useCharacterHistory(characterId: string) {
   const q = useQuery({
-    queryKey: ['characterParticipations', characterId],
+    queryKey: queryKeys.characterParticipations(characterId),
     queryFn: () => loadCharacterParticipations(characterId),
     enabled: Boolean(characterId),
   });
@@ -57,7 +57,7 @@ export function useCharacterHistory(characterId: string) {
 
 export function useCharacterConnections(characterId: string) {
   const q = useQuery({
-    queryKey: ['characterCoPlayers', characterId],
+    queryKey: queryKeys.characterCoPlayers(characterId),
     queryFn: () => loadCoPlayers(characterId),
     enabled: Boolean(characterId),
   });
@@ -66,7 +66,7 @@ export function useCharacterConnections(characterId: string) {
 
 export function useCharacterSummaries(characterId: string) {
   const q = useQuery({
-    queryKey: ['characterSummaries', characterId],
+    queryKey: queryKeys.characterSummaries(characterId),
     queryFn: () => loadCharacterSummaries(characterId),
     enabled: Boolean(characterId),
   });

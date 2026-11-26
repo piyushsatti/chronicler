@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { useMe } from '../../../hooks/useMe.js';
@@ -18,7 +19,7 @@ export function useQuestDetailPage(code: string) {
     (me.data.id === quest.dmId || isAdmin(me.data.roles)),
   );
   const characters = useQuery({
-    queryKey: ['questCharacters', me.data?.id],
+    queryKey: queryKeys.questCharacters(me.data?.id),
     queryFn: loadMyCharacters,
     enabled: auth.isAuthenticated && Boolean(me.data),
     retry: false,

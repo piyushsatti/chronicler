@@ -43,7 +43,7 @@ export function useChroniclesPage(): PageData<ChronicleListView> {
     );
   }
   const q = useQuery({
-    queryKey: [...queryKeys.chronicleList, authority],
+    queryKey: queryKeys.chronicleListFor(authority),
     enabled: isCurrent(session),
     retry: false,
     queryFn: ({ signal }) => {

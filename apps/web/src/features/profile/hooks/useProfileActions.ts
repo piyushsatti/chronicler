@@ -32,9 +32,9 @@ export function useProfileActions(handle: string) {
   const refresh = async (session: Session) => {
     if (!current(session)) return;
     await Promise.all([
-      client.invalidateQueries({ queryKey: ['memberProfile', handle] }),
-      client.invalidateQueries({ queryKey: ['communityHub'] }),
-      client.invalidateQueries({ queryKey: ['communityMembers'] }),
+      client.invalidateQueries({ queryKey: queryKeys.memberProfile(handle) }),
+      client.invalidateQueries({ queryKey: queryKeys.communityHub }),
+      client.invalidateQueries({ queryKey: queryKeys.communityMembersAll }),
       client.invalidateQueries({ queryKey: queryKeys.me }),
     ]);
   };
@@ -99,7 +99,7 @@ export function useProfileActions(handle: string) {
       setReloading(true);
       try {
         const profile = await client.fetchQuery({
-          queryKey: ['memberProfile', handle],
+          queryKey: queryKeys.memberProfile(handle),
           queryFn: async () => {
             if (!current(session))
               throw toAppError({ failure: 'Unauthorized' }, 'profile:session');

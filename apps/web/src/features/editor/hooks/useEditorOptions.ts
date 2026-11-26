@@ -59,7 +59,7 @@ export function useEditorOptions(
     staleTime: 300_000,
   });
   const series = useQuery({
-    queryKey: [...queryKeys.seriesOptions, viewerMemberId, viewerIsAdmin],
+    queryKey: queryKeys.seriesOptionsFor(viewerMemberId, viewerIsAdmin),
     queryFn: () => loadEditorSeriesOptions(viewerMemberId ?? '', viewerIsAdmin),
     enabled: enabled && Boolean(viewerMemberId) && schema.some((field) => field.type === 'series'),
   });
@@ -78,12 +78,12 @@ export function useEditorOptions(
   const wantsPlaces = enabled && schema.some((field) => field.type === 'pointcrawl');
   const [atlasCode, setAtlasCode] = useState('');
   const maps = useQuery({
-    queryKey: ['questOptions', 'maps'],
+    queryKey: queryKeys.questOptionMaps,
     queryFn: loadEditorMapOptions,
     enabled: wantsPlaces,
   });
   const places = useQuery({
-    queryKey: ['questOptions', 'nodes', atlasCode],
+    queryKey: queryKeys.questOptionNodes(atlasCode),
     queryFn: () => loadEditorMapPlaces(atlasCode),
     enabled: wantsPlaces && atlasCode !== '',
   });

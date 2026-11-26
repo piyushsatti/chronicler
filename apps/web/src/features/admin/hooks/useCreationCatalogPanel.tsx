@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useAdminPage } from './useAdminPage.js';
 import {
   useAdminAuthority,
@@ -13,7 +14,6 @@ import {
   type AdminCatalogEntry,
 } from '../adapters/adminAdapter.js';
 
-const KEY = ['adminCreationCatalog'] as const;
 
 type FormState = {
   optionId: string | null;
@@ -41,7 +41,7 @@ export function useCreationCatalogPanel() {
   const [filterKind, setFilterKind] = useState('');
   const [filterRegion, setFilterRegion] = useState('');
   const { query: catalog, pagination } = useAdminPage(
-    KEY,
+    queryKeys.adminCreationCatalog,
     authority,
     { filterKind, filterRegion },
     (page, request) =>
@@ -55,7 +55,7 @@ export function useCreationCatalogPanel() {
   );
   const regions = useQuery({
     enabled: authority.allowed,
-    queryKey: ['adminRegionOptions', authority.cacheKey],
+    queryKey: queryKeys.adminRegionOptions(authority.cacheKey),
     queryFn: ({ signal }) => authority.read(loadAllAdminRegions, signal),
   });
   const [form, setForm] = useState<FormState>(BLANK);
@@ -85,7 +85,7 @@ export function useCreationCatalogPanel() {
       setMessage(`Catalog entry "${form.name.trim()}" saved.`);
       setEditing(false);
       setForm(BLANK);
-      await queryClient.invalidateQueries({ queryKey: KEY });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminCreationCatalog });
     },
   });
 

@@ -26,7 +26,7 @@ export function useCharacterActivity(characterId: string) {
     memberId: string;
   } | null>(null);
   const query = useQuery({
-    queryKey: ['characterActivity', characterId, page],
+    queryKey: queryKeys.characterActivity(characterId, page),
     queryFn: () => loadCharacterActivity(characterId, (page - 1) * ACTIVITY_PAGE_SIZE),
   });
   const current = (attempt: { token: string | null; memberId: string } | undefined) => {
@@ -48,11 +48,11 @@ export function useCharacterActivity(characterId: string) {
       if (!current(attempt)) return;
       if (replay.current === attempt) replay.current = null;
       await Promise.all([
-        client.invalidateQueries({ queryKey: ['characterActivity', characterId] }),
+        client.invalidateQueries({ queryKey: queryKeys.characterActivity(characterId) }),
         client.invalidateQueries({
           queryKey: queryKeys.characterProgression(characterId),
         }),
-        client.invalidateQueries({ queryKey: ['character'] }),
+        client.invalidateQueries({ queryKey: queryKeys.characterAll }),
       ]);
     },
     onSettled: (_value, _error, attempt) => {

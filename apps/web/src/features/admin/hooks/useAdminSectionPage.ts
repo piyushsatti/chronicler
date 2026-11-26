@@ -58,7 +58,7 @@ function useAdminCommunityStats() {
   const authority = useAdminAuthority();
   const query = useQuery({
     enabled: authority.allowed,
-    queryKey: ['adminCommunityStats', authority.cacheKey],
+    queryKey: queryKeys.adminCommunityStats(authority.cacheKey),
     queryFn: ({ signal }) =>
       authority.read((request) => loadAdminCommunityStats(request), signal),
   });

@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useState } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../../auth/AuthContext.js';
@@ -41,7 +42,7 @@ export function useCharacterListPage(): CharacterListPageData {
   const { token, sessionReady } = useAuth();
   const me = useMe();
   const regionNames = useQuery({
-    queryKey: ['characterRegions'],
+    queryKey: queryKeys.characterRegions,
     queryFn: loadCharacterRegionNames,
     staleTime: 5 * 60 * 1000,
   });
@@ -55,7 +56,7 @@ export function useCharacterListPage(): CharacterListPageData {
     ownerId: mine ? me.data?.id : undefined,
   };
   const query = useQuery({
-    queryKey: ['characters', 'directory', filters, page],
+    queryKey: queryKeys.characterDirectory(filters, page),
     queryFn: () =>
       loadCharacterDirectory(
         filters,
@@ -69,7 +70,7 @@ export function useCharacterListPage(): CharacterListPageData {
   ))];
   const owners = useQueries({
     queries: ownerIds.map((ownerId) => ({
-      queryKey: ['characterOwner', ownerId],
+      queryKey: queryKeys.characterOwner(ownerId),
       enabled: sessionReady,
       queryFn: ({ signal }: { signal: AbortSignal }) => loadCharacterOwner(ownerId, { signal, headers: { Authorization: token ? `Bearer ${token}` : '' } }),
     })),

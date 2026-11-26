@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
@@ -17,7 +18,7 @@ export function useCalendarPage() {
   const parsed = parseCalendarState(params, today);
   const state = parsed.success ? parsed.data : null;
   const calendar = useQuery({
-    queryKey: ['calendar', state?.month, state?.day],
+    queryKey: queryKeys.calendar(state?.month, state?.day),
     queryFn: () => {
       if (!state) throw new Error('Invalid calendar location');
       return loadCalendar(state);
@@ -26,7 +27,7 @@ export function useCalendarPage() {
     retry: false,
   });
   const quests = useQuery({
-    queryKey: ['calendarQuests', state, timeZone],
+    queryKey: queryKeys.calendarQuests(state, timeZone),
     queryFn: () => {
       if (!state) throw new Error('Invalid calendar location');
       return loadCalendarQuests(state, timeZone);
@@ -35,7 +36,7 @@ export function useCalendarPage() {
     retry: false,
   });
   const realDates = useQuery({
-    queryKey: ['calendarRealDates', state?.gameDay, state?.realPage],
+    queryKey: queryKeys.calendarRealDates(state?.gameDay, state?.realPage),
     queryFn: () => {
       if (!state || state.gameDay === undefined) throw new Error('Select a game day');
       return loadRealDates(state.gameDay, state.realPage);

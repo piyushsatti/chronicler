@@ -1,3 +1,4 @@
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -10,12 +11,12 @@ export function useProfileDmDetails(memberId: string, enabled: boolean) {
   const { token, sessionReady } = useAuth();
   const [schedulePage, setSchedulePage] = useState(1);
   const details = useQuery({
-    queryKey: ['profileDmDetails', memberId],
+    queryKey: queryKeys.profileDmDetails(memberId),
     enabled: sessionReady && enabled,
     queryFn: ({ signal }) => loadProfileDmDetails(memberId, { signal, headers: { Authorization: token ? `Bearer ${token}` : '' } }),
   });
   const schedule = useQuery({
-    queryKey: ['dm-table', 'schedule', memberId, schedulePage],
+    queryKey: queryKeys.dmTableSchedule(memberId, schedulePage),
     enabled: sessionReady && enabled,
     queryFn: () =>
       loadDmTableSchedule(memberId, (schedulePage - 1) * DM_SCHEDULE_PAGE_SIZE),

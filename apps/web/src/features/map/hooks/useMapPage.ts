@@ -9,7 +9,7 @@ import {
   loadMapDocument,
 } from '../adapters/mapAdapter.js';
 import { toAppError } from '../../../errors/toAppError.js';
-import { queryKeys } from '../feature.js';
+import { queryKeys } from '../../../api/queryKeys.js';
 import type { MapEdit } from './useMapEdit.js';
 
 export function useMapPage(atlasCode: string) {
@@ -140,11 +140,11 @@ export function useMapPage(atlasCode: string) {
   const refreshMutation = useMutation({
     mutationFn: async () => {
       await Promise.all([
-        client.invalidateQueries({ queryKey: ['me'] }),
+        client.invalidateQueries({ queryKey: queryKeys.me }),
         client.invalidateQueries({ queryKey: queryKeys.mapDirectory }),
-        client.invalidateQueries({ queryKey: ['mapContainment'] }),
-        client.invalidateQueries({ queryKey: ['mapDocuments'] }),
-        client.invalidateQueries({ queryKey: ['mapDocument'] }),
+        client.invalidateQueries({ queryKey: queryKeys.mapContainmentAll }),
+        client.invalidateQueries({ queryKey: queryKeys.mapDocumentsAll }),
+        client.invalidateQueries({ queryKey: queryKeys.mapDocumentAll }),
         client.invalidateQueries({ queryKey: queryKeys.map(selectedAtlas) }),
       ]);
     },

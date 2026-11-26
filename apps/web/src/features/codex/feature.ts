@@ -7,6 +7,9 @@ export const endpoints = {} as const;
 export const queryKeys = {
   codexDirectory: (prefix: string) => ['codexDirectory', prefix] as const,
   codexEntry: (slug: string) => ['codexEntry', slug] as const,
+  codexEntryById: (id: string) => ['codexEntryById', id] as const,
+  codexDirectorySearch: (prefix: string, search: string) =>
+    ['codexDirectory', prefix, search] as const,
 };
 
 function alias(path: string, by: 'slug' | 'id'): FeatureRoute {

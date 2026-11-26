@@ -28,7 +28,7 @@ export function useCharacterCreation() {
     memberId: string;
   } | null>(null);
   const query = useQuery({
-    queryKey: ['characterCreationOptions', regionId],
+    queryKey: queryKeys.characterCreationOptions(regionId),
     queryFn: () => loadCreationOptions(regionId),
     // Keep the form mounted while a region change reloads its catalog.
     placeholderData: keepPreviousData,
@@ -53,7 +53,7 @@ export function useCharacterCreation() {
     onSuccess: async (character, attempt) => {
       if (!current(attempt)) return;
       if (replay.current === attempt) replay.current = null;
-      await client.invalidateQueries({ queryKey: ['characters'] });
+      await client.invalidateQueries({ queryKey: queryKeys.charactersAll });
       if (!current(attempt)) return;
       navigate(`/characters/${character.shortCode}`);
     },

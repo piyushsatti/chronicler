@@ -46,7 +46,7 @@ export function useRulesPage(): PageData<RulesHubView> {
     );
   }
   const q = useQuery({
-    queryKey: [...queryKeys.rulesHub, authority],
+    queryKey: queryKeys.rulesHubFor(authority),
     enabled: isCurrent(session),
     retry: false,
     queryFn: ({ signal }) => {
