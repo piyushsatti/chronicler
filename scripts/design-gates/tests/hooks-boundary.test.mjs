@@ -31,12 +31,41 @@ test('hooks importing a feature-root file is flagged', () => {
   );
 });
 
-test('collectViolations walks shared folders outside features', () => {
-  const found = collectViolations();
-  assert.ok(
-    found.some(
-      (v) => v.rule === 'shared-feature-import' && v.file.startsWith('src/hooks/'),
-    ),
-    `expected shared-feature-import under src/hooks/; saw none among ${found.filter((v) => v.rule === 'shared-feature-import').length} shared hits`,
+test('featureParts may import a feature parts entry, nothing deeper', () => {
+  const file = join(webSrc, 'chrome', 'featureParts.ts');
+  const ok = scanFile(file, "import * as member from '../features/member/parts.js';\n");
+  assert.deepEqual(ok, []);
+  const deep = scanFile(
+    file,
+    "import { useMemberHub } from '../features/member/hooks/useMemberHub.js';\n",
   );
+  assert.equal(deep.length, 1);
+  assert.equal(deep[0].rule, 'shared-feature-import');
+});
+
+test('featureRegistry may not import a parts entry, and other chrome may not import either', () => {
+  const registry = scanFile(
+    join(webSrc, 'chrome', 'featureRegistry.ts'),
+    "import * as member from '../features/member/parts.js';\n",
+  );
+  assert.equal(registry.length, 1);
+  const chrome = scanFile(
+    join(webSrc, 'chrome', 'SiteChrome.tsx'),
+    "import * as member from '../features/member/parts.js';\n",
+  );
+  assert.equal(chrome.length, 1);
+});
+
+test('a feature importing another feature parts entry is cross-feature', () => {
+  const found = scanFile(
+    join(webSrc, 'features', 'member', 'pages', 'MePage.tsx'),
+    "import { parts } from '../../admin/parts.js';\n",
+  );
+  assert.equal(found.length, 1);
+  assert.equal(found[0].rule, 'cross-feature');
+});
+
+test('shared folders reach features only through the composition roots', () => {
+  const shared = collectViolations().filter((v) => v.rule === 'shared-feature-import');
+  assert.deepEqual(shared, []);
 });

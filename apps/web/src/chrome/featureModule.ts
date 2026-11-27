@@ -61,3 +61,28 @@ export function mergeEndpointSlices(
   }
   return merged;
 }
+
+/** A feature's `parts.ts`: what shared code and other features may use from it. */
+export type FeaturePartsModule = { readonly parts: object };
+
+export type MergedParts<S extends readonly FeaturePartsModule[]> = S extends readonly [
+  infer Head extends FeaturePartsModule,
+  ...infer Tail extends readonly FeaturePartsModule[],
+]
+  ? Head['parts'] & MergedParts<Tail>
+  : unknown;
+
+export function mergeFeatureParts<S extends readonly FeaturePartsModule[]>(
+  modules: S,
+): MergedParts<S> {
+  const merged: Record<string, unknown> = {};
+  for (const module of modules) {
+    for (const [key, value] of Object.entries(module.parts)) {
+      if (key in merged) {
+        throw new Error(`Duplicate feature part: ${key}`);
+      }
+      merged[key] = value;
+    }
+  }
+  return merged as MergedParts<S>;
+}

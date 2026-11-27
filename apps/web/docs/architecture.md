@@ -38,6 +38,8 @@ Normative rules for `@pi/web`. Wire shapes live in [`/packages/contracts`](/pack
 
 Hard rules: pages call composition hooks (or one query hook); hooks call adapters; no cross-feature hook imports; no `useEffect` for fetching.
 
+Features plug in through two composition roots. `chrome/featureRegistry.ts` collects each `features/<x>/feature.ts` (routes, query keys, endpoints). `chrome/featureParts.ts` collects each `features/<x>/parts.ts`: the components and hooks that the chrome, shared hooks and other features use, such as the notification bell, the search dialog and the Me page's DM work. Code outside a feature imports it only through these two files, and `check:boundary` enforces that. Read a part at render time (`<featureParts.NotificationBell />`), not at module load.
+
 `PageData<T>` is `loading` | `error` | `empty` | `ready`. Pages branch error, then loading, then empty, then ready.
 
 Two-query pages (home): error if either required query errors without waiting on the other; else loading if either is loading; else empty if the heading source is empty; else ready.

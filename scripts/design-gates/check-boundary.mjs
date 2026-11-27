@@ -2,7 +2,8 @@
 /**
  * features/<X> must not import features/<Y>.
  * Shared folders (hooks/chrome/auth/src top-level) must not import into features/<X>/,
- * except features/<x>/feature(.js) from chrome/featureRegistry.ts or routes.tsx.
+ * except features/<x>/feature(.js) from chrome/featureRegistry.ts or routes.tsx, and
+ * features/<x>/parts(.js) from chrome/featureParts.ts.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, dirname, resolve } from 'node:path';
@@ -14,7 +15,11 @@ const webSrc = join(repoRoot, 'apps', 'web', 'src');
 const featuresRoot = join(webSrc, 'features');
 const allowlistPath = join(__dirname, 'allowlist.json');
 
-const COMPOSITION_ROOTS = new Set(['src/chrome/featureRegistry.ts', 'src/routes.tsx']);
+const COMPOSITION_ROOTS = new Map([
+  ['src/chrome/featureRegistry.ts', /\/features\/[^/]+\/feature(\.js)?$/],
+  ['src/routes.tsx', /\/features\/[^/]+\/feature(\.js)?$/],
+  ['src/chrome/featureParts.ts', /\/features\/[^/]+\/parts(\.js)?$/],
+]);
 
 function walk(dir) {
   const out = [];
@@ -55,8 +60,8 @@ function targetFeature(file, spec) {
   return null;
 }
 
-function isFeatureEntry(resolved) {
-  return /\/features\/[^/]+\/feature(\.js)?$/.test(resolved);
+function isFeatureEntry(rel, resolved) {
+  return COMPOSITION_ROOTS.get(rel)?.test(resolved) ?? false;
 }
 
 const importFromRe = /from\s+['"]([^'"]+)['"]/g;
@@ -88,7 +93,7 @@ export function scanFile(file, content = readFileSync(file, 'utf8')) {
         }
         continue;
       }
-      if (COMPOSITION_ROOTS.has(rel) && isFeatureEntry(hit.resolved)) continue;
+      if (isFeatureEntry(rel, hit.resolved)) continue;
       violations.push({
         file: rel,
         line: idx + 1,

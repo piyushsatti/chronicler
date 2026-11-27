@@ -1,16 +1,16 @@
-import { queryKeys } from '../api/queryKeys.js';
+import { queryKeys } from '../../../api/queryKeys.js';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { canCreateRecord } from '../auth/createRules.js';
-import { useLiveDm } from './useLiveDm.js';
-import { useMe } from './useMe.js';
-import { loadDmDashboard } from '../features/admin/adapters/dmDashboardAdapter.js';
+import { canCreateRecord } from '../../../auth/createRules.js';
+import { useLiveDm } from '../../../hooks/useLiveDm.js';
+import { useMe } from '../../../hooks/useMe.js';
+import { loadDmDashboard } from '../adapters/dmDashboardAdapter.js';
 import {
   panelState,
   useAdminAuthority,
   useAuthorityFailures,
-} from '../features/admin/hooks/useAdminAuthority.js';
-import type { AdminPaginationState } from '../features/admin/hooks/useAdminPage.js';
+} from './useAdminAuthority.js';
+import type { AdminPaginationState } from './useAdminPage.js';
 
 export function useDmDashboard(questScope: 'page' | 'all' = 'page') {
   const authority = useAdminAuthority('dm');
