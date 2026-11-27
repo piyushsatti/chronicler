@@ -6,7 +6,6 @@ import { z } from 'zod';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { NotificationsPage } from '../../../src/features/notifications/pages/NotificationsPage.js';
-import { LoginNotificationsPanel } from '../../../src/features/notifications/components/LoginNotificationsPanel.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
 import { dispatchFeatureGraphql, graphqlOperationName } from './graphql-test-utils.js';
@@ -16,7 +15,6 @@ const bodySchema = z.object({
   query: z.string(),
   variables: z.record(z.string(), z.unknown()).optional(),
 });
-const empty = { items: [], hasMore: false, nextBefore: null };
 const genericFailure = () =>
   HttpResponse.json({
     errors: [{ message: 'private failure', extensions: { code: 'INTERNAL' } }],
@@ -118,49 +116,6 @@ describe('notification retry and completion feedback', () => {
       await screen.findByRole('link', { name: 'Recovered signup' }),
     ).toBeInTheDocument();
     expect(calls).toBe(2);
-  });
-
-  it('shows acknowledgement failure, a retry action, and confirmed success', async () => {
-    const keys: string[] = [];
-    server.use(
-      http.post(GRAPHQL_PATH, async ({ request }) => {
-        const body = bodySchema.parse(await request.json());
-        const operation = graphqlOperationName(body.query);
-        if (operation === 'MyNotifications')
-          return HttpResponse.json({ data: { myNotifications: empty } });
-        if (operation !== 'AcknowledgeSuppressedNotifications')
-          return dispatchFeatureGraphql(body);
-        keys.push(
-          z
-            .object({ meta: z.object({ idempotencyKey: z.string() }) })
-            .parse(body.variables).meta.idempotencyKey,
-        );
-        return keys.length === 1
-          ? genericFailure()
-          : HttpResponse.json({
-              data: {
-                acknowledgeSuppressedNotifications: {
-                  replayed: true,
-                  affectedCount: 3,
-                },
-              },
-            });
-      }),
-    );
-    renderWithProviders(<LoginNotificationsPanel enabled />);
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Clear alerts for removed pages' }),
-    );
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Something went wrong. Please try again.',
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Retry clearing' }));
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Cleared 3 alerts for removed pages.',
-    );
-    expect(keys).toHaveLength(2);
-    expect(keys[0]).toBe(keys[1]);
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('shows each retained Document destination and an explicit orphan explanation in the real row component', async () => {

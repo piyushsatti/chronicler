@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type {
-  AcknowledgeSuppressedNotificationsMutation,
   MarkNotificationsReadMutation,
   MyNotificationsQuery,
   MyUnreadNotificationCountQuery,
@@ -9,7 +8,6 @@ import { graphqlRequest } from '../../../api/graphql.js';
 import NOTIFICATIONS_QUERY from './myNotifications.graphql?raw';
 import UNREAD_COUNT_QUERY from './myUnreadNotificationCount.graphql?raw';
 import MARK_READ_MUTATION from './markNotificationsRead.graphql?raw';
-import ACK_MUTATION from './acknowledgeSuppressedNotifications.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 
@@ -176,28 +174,6 @@ export async function loadUnreadCount(
     return result.data;
   } catch (err) {
     throw toAppError(err, 'notifications:unread');
-  }
-}
-
-export async function acknowledgeSuppressedNotifications(
-  session: NotificationWriteSession,
-): Promise<z.infer<typeof writeReceiptSchema>> {
-  try {
-    session.signal.throwIfAborted();
-    const data = await graphqlRequest<AcknowledgeSuppressedNotificationsMutation>(
-      ACK_MUTATION,
-      { limit: 100, meta: { idempotencyKey: session.idempotencyKey } },
-      { signal: session.signal, headers: { Authorization: `Bearer ${session.token}` } },
-    );
-    const parsed = writeReceiptSchema.safeParse(
-      data.acknowledgeSuppressedNotifications,
-    );
-    if (!parsed.success) {
-      throw toAppError({ failure: 'InvalidWire' }, 'notifications:ack');
-    }
-    return parsed.data;
-  } catch (err) {
-    throw toAppError(err, 'notifications:ack');
   }
 }
 

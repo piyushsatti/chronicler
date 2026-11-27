@@ -17,10 +17,6 @@ export const graphql: FeatureGraphql = {
     }),
   MarkNotificationsRead: () =>
     HttpResponse.json({ data: { markNotificationsRead: writeReceipt } }),
-  AcknowledgeSuppressedNotifications: () =>
-    HttpResponse.json({
-      data: { acknowledgeSuppressedNotifications: writeReceipt },
-    }),
 };
 
 export const handlers: FeatureHandlers = [];

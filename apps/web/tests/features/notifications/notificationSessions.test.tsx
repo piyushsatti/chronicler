@@ -9,10 +9,10 @@ import { queryKeys } from '../../../src/api/queryKeys.js';
 import { AuthProvider, useAuth } from '../../../src/auth/AuthContext.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { useMe } from '../../../src/hooks/useMe.js';
-import { useLoginNotifications } from '../../../src/features/notifications/hooks/useLoginNotifications.js';
+import { useNotificationsPage } from '../../../src/features/notifications/hooks/useNotificationsPage.js';
+import { useUnreadCount } from '../../../src/features/notifications/hooks/useUnreadCount.js';
 import { useMarkNotificationsRead } from '../../../src/features/notifications/hooks/useMarkNotificationsRead.js';
 import { NotificationsPage } from '../../../src/features/notifications/pages/NotificationsPage.js';
-import { LoginNotificationsPanel } from '../../../src/features/notifications/components/LoginNotificationsPanel.js';
 import { server } from '../../../src/mocks/server.js';
 import { createTestQueryClient } from '../../../src/providers.js';
 import goodMe from '../../fixtures/wire/me/good.json';
@@ -69,9 +69,15 @@ function harness<T>(hook: () => T) {
     },
   };
 }
+type Preview = ReturnType<typeof preview>;
+function titles(h: Preview): string[] | null {
+  const view = h.result.current.page;
+  return view.status === 'ready' ? view.items.map((item) => item.title ?? '') : null;
+}
 function preview() {
   return harness(() => ({
-    login: useLoginNotifications(true),
+    page: useNotificationsPage({ markOnView: false }),
+    unread: useUnreadCount(true),
     auth: useAuth(),
     me: useMe(),
   }));
@@ -147,8 +153,7 @@ describe('notification current-session reads', () => {
             },
           });
         if (
-          operation === 'MarkNotificationsRead' ||
-          operation === 'AcknowledgeSuppressedNotifications'
+          operation === 'MarkNotificationsRead'
         ) {
           if (changed) writesAfterChange += 1;
         }
@@ -166,7 +171,6 @@ describe('notification current-session reads', () => {
     const rendered = renderWithProviders(
       <>
         <NotificationsPage />
-        <LoginNotificationsPanel enabled />
         <AccountScope />
       </>,
       { route: '/notifications' },
@@ -174,7 +178,7 @@ describe('notification current-session reads', () => {
     try {
       await waitFor(() =>
         expect(screen.getAllByRole('link', { name: 'Private DM notice' })).toHaveLength(
-          2,
+          1,
         ),
       );
       await waitFor(() => {
@@ -202,13 +206,7 @@ describe('notification current-session reads', () => {
           authority,
         ]),
       ).toBeUndefined();
-      expect(
-        rendered.queryClient.getQueryData([
-          ...queryKeys.notificationsPreview(20),
-          authority,
-        ]),
-      ).toBeUndefined();
-      await waitFor(() => expect(freshLists).toBe(2));
+      await waitFor(() => expect(freshLists).toBe(1));
       await act(async () => gate.release());
       await waitFor(() =>
         expect(
@@ -220,14 +218,6 @@ describe('notification current-session reads', () => {
         document.querySelector('a[href="/codex/private-dm-destination"]'),
       ).toBeNull();
       expect(writesAfterChange).toBe(0);
-      await waitFor(() =>
-        expect(
-          rendered.queryClient.getQueryData([
-            ...queryKeys.notificationsUnread,
-            authority,
-          ]),
-        ).toBe(0),
-      );
     } finally {
       gate.release();
       rendered.unmount();
@@ -236,7 +226,7 @@ describe('notification current-session reads', () => {
   });
 
   it.each(['token', 'member', 'roles'])(
-    'discards delayed list/count responses and retained retries after the %s changes',
+    'discards delayed list/count responses after the %s changes',
     async (transition) => {
       const oldToken = localStorage.getItem(TOKEN_KEY);
       const gate = deferred();
@@ -288,7 +278,6 @@ describe('notification current-session reads', () => {
       const h = preview();
       try {
         await waitFor(() => expect(oldRequests).toBe(2));
-        const retryOldSession = h.result.current.login.retry;
         changed = true;
         if (transition === 'token')
           act(() => h.result.current.auth.storeToken(currentToken('new')));
@@ -296,22 +285,15 @@ describe('notification current-session reads', () => {
           await act(async () => {
             await h.client.invalidateQueries({ queryKey: queryKeys.me });
           });
-        await waitFor(() =>
-          expect(h.result.current.login.listQ.data?.items[0]?.title).toBe(
-            'Current notice',
-          ),
-        );
-        await waitFor(() => expect(h.result.current.login.unreadQ.data).toBe(5));
+        await waitFor(() => expect(titles(h)).toEqual(['Current notice']));
+        await waitFor(() => expect(h.result.current.unread.data).toBe(5));
         const completedFreshRequests = freshRequests;
         await act(async () => {
-          retryOldSession();
           gate.release();
         });
         await waitFor(() => expect(h.client.isFetching()).toBe(0));
-        expect(h.result.current.login.listQ.data?.items[0]?.title).toBe(
-          'Current notice',
-        );
-        expect(h.result.current.login.unreadQ.data).toBe(5);
+        expect(titles(h)).toEqual(['Current notice']);
+        expect(h.result.current.unread.data).toBe(5);
         expect(freshRequests).toBe(completedFreshRequests);
         expect(count).toBeGreaterThanOrEqual(1);
         expect(h.result.current.auth.isAuthenticated).toBe(true);
@@ -379,10 +361,10 @@ describe('notification current-session reads', () => {
       await waitFor(() => expect(metadataStarted).toBe(true));
       changed = true;
       act(() => h.result.current.auth.storeToken(currentToken('new')));
-      await waitFor(() => expect(h.result.current.login.listQ.data?.items).toEqual([]));
+      await waitFor(() => expect(titles(h)).toEqual([]));
       await act(async () => gate.release());
       await waitFor(() => expect(h.client.isFetching()).toBe(0));
-      expect(h.result.current.login.listQ.data?.items).toEqual([]);
+      expect(titles(h)).toEqual([]);
     } finally {
       gate.release();
       h.dispose();
@@ -390,111 +372,7 @@ describe('notification current-session reads', () => {
   });
 });
 
-describe('notification command retries and feedback', () => {
-  it('reuses the exact acknowledgement key after failure and rejects late feedback or old callbacks after account change', async () => {
-    const gate = deferred();
-    const writes: { key: string; authorization: string | null }[] = [];
-    server.use(
-      http.post(GRAPHQL_PATH, async ({ request }) => {
-        const body = bodySchema.parse(await request.json());
-        const operation = graphqlOperationName(body.query);
-        if (operation === 'AcknowledgeSuppressedNotifications') {
-          const variables = writeSchema.parse(body.variables);
-          writes.push({
-            key: variables.meta.idempotencyKey,
-            authorization: request.headers.get('authorization'),
-          });
-          if (writes.length === 1)
-            return HttpResponse.json({
-              errors: [{ message: 'private error', extensions: { code: 'INTERNAL' } }],
-            });
-          if (writes.length === 3) await gate.promise;
-          return HttpResponse.json({
-            data: {
-              acknowledgeSuppressedNotifications: {
-                replayed: writes.length === 2,
-                affectedCount: 2,
-              },
-            },
-          });
-        }
-        return dispatchFeatureGraphql(body);
-      }),
-    );
-    const h = preview();
-    try {
-      await waitFor(() => expect(h.result.current.login.ready).toBe(true));
-      act(() => h.result.current.login.ack.mutate());
-      await waitFor(() =>
-        expect(h.result.current.login.ack.error?.kind).toBe('upstream'),
-      );
-      act(() => h.result.current.login.ack.mutate());
-      await waitFor(() =>
-        expect(h.result.current.login.ack.feedback).toBe(
-          'Cleared 2 alerts for removed pages.',
-        ),
-      );
-      expect(writes[0]).toEqual(writes[1]);
-      const oldCallback = h.result.current.login.ack.mutate;
-      act(() => h.result.current.login.ack.mutate());
-      await waitFor(() => expect(writes).toHaveLength(3));
-      expect(writes[2].key).not.toBe(writes[1].key);
-      act(() => h.result.current.auth.storeToken(currentToken('new')));
-      await waitFor(() => expect(h.result.current.login.ready).toBe(true));
-      await act(async () => {
-        oldCallback();
-        gate.release();
-      });
-      await waitFor(() => expect(h.client.isMutating()).toBe(0));
-      expect(writes).toHaveLength(3);
-      expect(h.result.current.login.ack.feedback).toBeNull();
-      expect(h.result.current.login.ack.error).toBeNull();
-      expect(h.result.current.auth.isAuthenticated).toBe(true);
-    } finally {
-      gate.release();
-      h.dispose();
-    }
-  });
-
-  it.each([
-    ['keeps', 'the same member refreshes the token', goodMe.id],
-    ['drops', 'another member signs in', '99999999-9999-4999-8999-999999999999'],
-  ] as const)('%s the acknowledgement key when %s (D52)', async (verb, _case, nextId) => {
-    const keys: string[] = [];
-    let memberId = goodMe.id;
-    server.use(
-      http.post(GRAPHQL_PATH, async ({ request }) => {
-        const body = bodySchema.parse(await request.json());
-        const operation = graphqlOperationName(body.query);
-        if (operation === 'MemberMe')
-          return HttpResponse.json({ data: { memberMe: { ...goodMe, id: memberId } } });
-        if (operation === 'AcknowledgeSuppressedNotifications') {
-          keys.push(writeSchema.parse(body.variables).meta.idempotencyKey);
-          return HttpResponse.json({
-            errors: [{ message: 'uncertain', extensions: { code: 'INTERNAL' } }],
-          });
-        }
-        return dispatchFeatureGraphql(body);
-      }),
-    );
-    const h = preview();
-    try {
-      await waitFor(() => expect(h.result.current.login.ready).toBe(true));
-      act(() => h.result.current.login.ack.mutate());
-      await waitFor(() => expect(h.result.current.login.ack.error).not.toBeNull());
-      memberId = nextId;
-      act(() => h.result.current.auth.storeToken(currentToken('new')));
-      await waitFor(() => expect(h.result.current.me.data?.id).toBe(nextId));
-      await waitFor(() => expect(h.result.current.login.ready).toBe(true));
-      act(() => h.result.current.login.ack.mutate());
-      await waitFor(() => expect(keys).toHaveLength(2));
-      if (verb === 'keeps') expect(keys[1]).toBe(keys[0]);
-      else expect(keys[1]).not.toBe(keys[0]);
-    } finally {
-      h.dispose();
-    }
-  });
-
+describe('notification command retries', () => {
   it('reuses the exact mark-read batch key after an uncertain response', async () => {
     const keys: string[] = [];
     server.use(

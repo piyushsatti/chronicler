@@ -1,4 +1,0 @@
-/* Card stacks space their lines with the gap; default heading and paragraph margins doubled it. */
-.panel > :where(h2, p) {
-  margin: 0;
-}
