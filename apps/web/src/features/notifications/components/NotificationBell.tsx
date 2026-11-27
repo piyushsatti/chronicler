@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { useAuth } from '../auth/AuthContext.js';
-import { NotificationRow } from '../features/notifications/components/NotificationRow.js';
-import { useNotificationsPage } from '../features/notifications/hooks/useNotificationsPage.js';
-import { useUnreadCount } from '../features/notifications/hooks/useUnreadCount.js';
+import { useAuth } from '../../../auth/AuthContext.js';
+import { NotificationRow } from './NotificationRow.js';
+import { useNotificationsPage } from '../hooks/useNotificationsPage.js';
+import { useUnreadCount } from '../hooks/useUnreadCount.js';
 import styles from './notificationBell.module.css';
 
 function BellIcon(): React.JSX.Element {

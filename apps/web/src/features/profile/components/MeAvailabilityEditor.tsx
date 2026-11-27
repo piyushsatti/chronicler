@@ -1,15 +1,15 @@
-import { Button } from '../components/primitives/Button.js';
-import { Card } from '../components/primitives/Card.js';
-import { StatePanel } from '../components/foundation/StatePanel.js';
-import { toAppError } from '../errors/toAppError.js';
-import { useMemberProfile } from '../hooks/useMemberProfile.js';
-import { useUrlParam } from '../hooks/useUrlParam.js';
-import { ProfileOwnerActions } from '../features/profile/components/ProfileOwnerActions.js';
-import type { MemberViewModel } from '../view-models/member.js';
+import { Button } from '../../../components/primitives/Button.js';
+import { Card } from '../../../components/primitives/Card.js';
+import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { toAppError } from '../../../errors/toAppError.js';
+import { useMemberProfile } from '../../../hooks/useMemberProfile.js';
+import { useUrlParam } from '../../../hooks/useUrlParam.js';
+import { ProfileOwnerActions } from './ProfileOwnerActions.js';
+import type { MemberViewModel } from '../../../view-models/member.js';
 
 /**
  * The profile editor (availability form focused) opened on /me by `?edit=availability`.
- * Lives in chrome so the member feature does not import the profile feature. Closing
+ * The member feature reaches it through `featureParts`, not by importing profile. Closing
  * removes the param; saving keeps the editor open, as on the public profile page.
  */
 export function MeAvailabilityEditor({ me }: { me: MemberViewModel }): React.JSX.Element {

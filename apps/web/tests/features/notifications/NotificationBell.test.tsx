@@ -3,16 +3,16 @@ import { http, HttpResponse } from 'msw';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
-import { GRAPHQL_PATH } from '../../src/api/endpoints.js';
-import { queryKeys } from '../../src/api/queryKeys.js';
-import { TOKEN_KEY } from '../../src/auth/storage.js';
-import { NotificationBell } from '../../src/chrome/NotificationBell.js';
-import { NotificationsRedirect } from '../../src/features/notifications/pages/NotificationsPage.js';
-import { server } from '../../src/mocks/server.js';
-import { renderWithProviders } from '../test-utils.js';
-import goodMe from '../fixtures/wire/me/good.json';
-import { dispatchFeatureGraphql } from '../features/notifications/graphql-test-utils.js';
-import notifications from '../fixtures/wire/notifications/list-good.json';
+import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
+import { queryKeys } from '../../../src/api/queryKeys.js';
+import { TOKEN_KEY } from '../../../src/auth/storage.js';
+import { NotificationBell } from '../../../src/features/notifications/components/NotificationBell.js';
+import { NotificationsRedirect } from '../../../src/features/notifications/pages/NotificationsPage.js';
+import { server } from '../../../src/mocks/server.js';
+import { renderWithProviders } from '../../test-utils.js';
+import goodMe from '../../fixtures/wire/me/good.json';
+import { dispatchFeatureGraphql } from './graphql-test-utils.js';
+import notifications from '../../fixtures/wire/notifications/list-good.json';
 
 function seedToken(): void {
   const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));

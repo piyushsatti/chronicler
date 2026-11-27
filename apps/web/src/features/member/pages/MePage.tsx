@@ -10,9 +10,9 @@ import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { useDmDashboard } from '../../../hooks/useDmDashboard.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { useProfileActivity } from '../../../hooks/useProfileActivity.js';
+import { featureParts } from '../../../chrome/featureParts.js';
 import { characterStatusLabel, isSentinelDate, pluralize, statusLabel } from '../../../utils/format.js';
 import { formatMemberFor, formatVoiceHours } from '../memberFormat.js';
 import { useRecentEntries, type RecentEntry, type RecentState } from '../hooks/useRecentEntries.js';
@@ -21,7 +21,6 @@ import { usePrivateNotes } from '../hooks/usePrivateNotes.js';
 import type { RosterCharacter } from '../adapters/memberHubAdapter.js';
 import type { MemberHub } from '../hooks/useMemberHub.js';
 import { MeShell, type MeShellState } from '../../../chrome/MeShell.js';
-import { MeAvailabilityEditor } from '../../../chrome/MeAvailabilityEditor.js';
 import { useUrlParam } from '../../../hooks/useUrlParam.js';
 import styles from './me.module.css';
 
@@ -225,7 +224,7 @@ function SeeAll({ label }: { label: string }): React.JSX.Element {
   return <Link className="type-link" to="/dm">{label}</Link>;
 }
 
-function DmWork({ view }: { view: ReturnType<typeof useDmDashboard> }): React.JSX.Element | null {
+function DmWork({ view }: { view: ReturnType<typeof featureParts.useDmDashboard> }): React.JSX.Element | null {
   const { query } = view;
   if (query.isError) return <StatePanel variant="inline" status="error" error={query.error} onRetry={view.retry} retryLabel="Retry DM work" />;
   if (query.isLoading || !query.data) return <Skeleton height="8rem" aria-label="Loading your series and quests" />;
@@ -247,7 +246,7 @@ function DmWork({ view }: { view: ReturnType<typeof useDmDashboard> }): React.JS
 }
 
 function DmOverview({ data, notes, recent }: { data: MemberHub; notes: ReturnType<typeof usePrivateNotes>; recent: RecentState }): React.JSX.Element {
-  const view = useDmDashboard('all');
+  const view = featureParts.useDmDashboard('all');
   const adminAccess = useCurrentAccess('admin');
   const noSignups = data.upcoming.status === 'ready' && data.upcoming.data.length === 0;
   const noRecent = recent.status === 'ready' && recent.entries.length === 0;
@@ -378,7 +377,7 @@ function MeSections({ section, notes }: { section: Section; notes: ReturnType<ty
       : section === 'history' ? <HistoryPage activity={activity} />
         : section === 'summaries' ? <SummariesPage activity={activity} />
           : section === 'notes' ? null
-            : <>{edit === 'availability' ? <MeAvailabilityEditor me={state.me} /> : null}<OverviewPage {...state} notes={notes} /></>}
+            : <>{edit === 'availability' ? <featureParts.MeAvailabilityEditor me={state.me} /> : null}<OverviewPage {...state} notes={notes} /></>}
     <div hidden={section !== 'notes'}><PrivateNotesPanel notes={notes} /></div>
   </>}</MeShell>;
 }

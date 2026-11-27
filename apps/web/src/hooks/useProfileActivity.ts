@@ -2,8 +2,7 @@ import { queryKeys } from '../api/queryKeys.js';
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthContext.js';
 import { useQuery } from '@tanstack/react-query';
-import { loadCharacterDirectory } from '../features/character/adapters/characterDirectoryAdapter.js';
-import { loadCharacterParticipations } from '../features/character/adapters/characterTabsAdapter.js';
+import { featureParts } from '../chrome/featureParts.js';
 import { loadProfileActivity } from '../adapters/profileActivityAdapter.js';
 
 /** `loadHistory` loads quest history without the profile's own tab state (the /me history route). */
@@ -20,7 +19,7 @@ export function useProfileActivity(
     // An empty member id would read the whole directory, not one member's characters.
     enabled: sessionReady && Boolean(memberId),
     queryFn: ({ signal }) =>
-      loadCharacterDirectory({ ownerId: memberId }, 24, (characterPage - 1) * 24, {
+      featureParts.loadCharacterDirectory({ ownerId: memberId }, 24, (characterPage - 1) * 24, {
         signal,
         headers,
       }),
@@ -37,7 +36,7 @@ export function useProfileActivity(
       const roster = [];
       for (;;) {
         signal.throwIfAborted();
-        const page = await loadCharacterDirectory(
+        const page = await featureParts.loadCharacterDirectory(
           { ownerId: memberId },
           100,
           roster.length,
@@ -55,7 +54,7 @@ export function useProfileActivity(
             roster
               .slice(offset, offset + 4)
               .map((character) =>
-                loadCharacterParticipations(character.id, { signal, headers }),
+                featureParts.loadCharacterParticipations(character.id, { signal, headers }),
               ),
           )),
         );

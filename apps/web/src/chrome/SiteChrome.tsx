@@ -5,8 +5,6 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCurrentAccess } from '../auth/useCurrentAccess.js';
 import { useAuth } from '../auth/AuthContext.js';
-import { useOwnsCharacter } from '../features/member/hooks/useOwnsCharacter.js';
-import { useSearchDialog } from '../features/search/components/SearchCommandRoot.js';
 import { hasRole, isDm } from '../auth/roles.js';
 import { useMe } from '../hooks/useMe.js';
 import { personName } from '../utils/format.js';
@@ -16,7 +14,7 @@ import {
   type SiteDestination,
 } from './destinations.js';
 import { NavDrawer } from './NavDrawer.js';
-import { NotificationBell } from './NotificationBell.js';
+import { featureParts } from './featureParts.js';
 import { SegmentedNav } from '../components/primitives/SegmentedNav.js';
 
 function SearchIcon(): React.JSX.Element {
@@ -121,7 +119,7 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
     };
   }, []);
 
-  const searchDialog = useSearchDialog();
+  const searchDialog = featureParts.useSearchDialog();
   const { widthClass, heightClass, twoPaneCapable } = useSizeClasses();
   const pattern = navPatternFor(widthClass, heightClass);
   const location = useLocation();
@@ -143,7 +141,7 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
     isDm: isSignedIn && isDm(me.data?.roles),
     isVerifier: isSignedIn && hasRole(me.data?.roles, 'verifier'),
   });
-  const ownCharacter = useOwnsCharacter(
+  const ownCharacter = featureParts.useOwnsCharacter(
     /^\/characters\/([^/]+)/.exec(location.pathname)?.[1] ?? null,
   );
   // The DM dashboard has its own bar item when shown, so the avatar yields.
@@ -209,7 +207,7 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
             Retry staff access
           </button>
         ) : null}
-        <NotificationBell />
+        <featureParts.NotificationBell />
         <AccountSlot
           isAuthenticated={isSignedIn}
           name={personName(me.data)}

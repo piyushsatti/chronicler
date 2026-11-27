@@ -45,7 +45,7 @@ app/app/components/interactive/Tooltip.tsx,src/components/interactive/Tooltip.ts
 app/app/components/layout/BottomNav.tsx,src/chrome/BottomNav.tsx,pending,no,no
 app/app/components/layout/Nav.tsx,src/chrome/Nav.tsx,pending,no,no
 app/app/components/layout/NavDrawer.tsx,src/chrome/NavDrawer.tsx,pending,no,no
-app/app/components/layout/NotificationBell.tsx,src/chrome/NotificationBell.tsx,pending,no,no
+app/app/components/layout/NotificationBell.tsx,src/features/notifications/components/NotificationBell.tsx,pending,no,no
 app/app/components/layout/ThemeSwatch.tsx,src/chrome/ThemeSwatch.tsx,pending,no,no
 app/app/components/layout/navItems.tsx,src/chrome/navItems.tsx,pending,no,no
 app/app/components/primitives/Avatar.tsx,src/components/primitives/Avatar.tsx,done,no,no
