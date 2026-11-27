@@ -522,3 +522,62 @@ describe('quest voice channel', () => {
     expect(adapters.createQuest).not.toHaveBeenCalled();
   });
 });
+
+describe('editor save keys follow the member (D52)', () => {
+  function memberSetup(memberId: string) {
+    const onSuccess = vi.fn();
+    const hook = renderHook(
+      ({ member }: { member: string }) =>
+        useEditorPublish({
+          typeKey: 'quest',
+          mode: 'edit',
+          initial,
+          meta: {
+            title: 'Keyed',
+            scheduledAt: '2026-10-15T18:00:00Z',
+            additionalInfo: 'Notes',
+            durationHours: '3',
+            slotsMax: '4',
+            kinds: ['standard'],
+            regions: ['region-id'],
+            genres: [],
+            tags: [],
+            apl: '',
+            signupType: 'dm_pick',
+          },
+          body: initial.body ?? '',
+          memberId: member,
+          onSuccess,
+          onInvalidTitle: vi.fn(),
+        }),
+      { wrapper, initialProps: { member: memberId } },
+    );
+    return hook;
+  }
+  async function failedSave(hook: ReturnType<typeof memberSetup>) {
+    await act(async () => {
+      await hook.result.current.mutateAsync(false).catch(() => undefined);
+    });
+  }
+  const keys = () => vi.mocked(adapters.updateQuest).mock.calls.map((call) => call[3]);
+
+  it('reuses the key when the same member retries a lost save', async () => {
+    vi.mocked(adapters.updateQuest).mockRejectedValue(new Error('lost'));
+    const hook = memberSetup('member-a');
+    await failedSave(hook);
+    hook.rerender({ member: 'member-a' });
+    await failedSave(hook);
+    expect(keys()).toHaveLength(2);
+    expect(keys()[1]).toBe(keys()[0]);
+  });
+
+  it('starts a new key when another member retries the same save', async () => {
+    vi.mocked(adapters.updateQuest).mockRejectedValue(new Error('lost'));
+    const hook = memberSetup('member-a');
+    await failedSave(hook);
+    hook.rerender({ member: 'member-b' });
+    await failedSave(hook);
+    expect(keys()).toHaveLength(2);
+    expect(keys()[1]).not.toBe(keys()[0]);
+  });
+});
