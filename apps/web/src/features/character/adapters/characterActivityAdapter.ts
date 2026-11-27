@@ -6,6 +6,7 @@ import type {
   UpsertDowntimeProjectMutation,
   UpsertDowntimeProjectMutationVariables,
 } from '../../../api/graphql.operations.gen.js';
+import { commandRequest, type CommandAuth } from '../../../api/command.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import ACTIVITY from './characterActivity.graphql?raw';
@@ -59,35 +60,47 @@ export async function loadCharacterActivity(
 export async function writeCharacterActivity(
   characterId: string,
   command: ActivityCommand,
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ): Promise<void> {
-  const meta = { idempotencyKey };
+  const { meta, init } = commandRequest(cmd);
   switch (command.kind) {
     case 'xp': {
-      const data = await graphqlRequest<AdjustPcxpMutation>(ADJUST, {
-        characterId,
-        amount: command.amount,
-        note: command.note,
-        meta,
-      });
+      const data = await graphqlRequest<AdjustPcxpMutation>(
+        ADJUST,
+        {
+          characterId,
+          amount: command.amount,
+          note: command.note,
+          meta,
+        },
+        init,
+      );
       z.object({ id: z.string().uuid() }).parse(data.adjustPcxp);
       return;
     }
     case 'log': {
-      const data = await graphqlRequest<LogCharacterEventMutation>(LOG, {
-        characterId,
-        body: command.body,
-        meta,
-      });
+      const data = await graphqlRequest<LogCharacterEventMutation>(
+        LOG,
+        {
+          characterId,
+          body: command.body,
+          meta,
+        },
+        init,
+      );
       z.object({ id: z.string().uuid() }).parse(data.logCharacterEvent);
       return;
     }
     case 'downtime': {
-      const data = await graphqlRequest<UpsertDowntimeProjectMutation>(DOWNTIME, {
-        characterId,
-        input: command.input,
-        meta,
-      });
+      const data = await graphqlRequest<UpsertDowntimeProjectMutation>(
+        DOWNTIME,
+        {
+          characterId,
+          input: command.input,
+          meta,
+        },
+        init,
+      );
       z.object({ id: z.string().uuid() }).parse(data.upsertDowntimeProject);
       return;
     }

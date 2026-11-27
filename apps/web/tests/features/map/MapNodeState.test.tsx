@@ -80,7 +80,7 @@ function page(nodeId: string) {
 describe('hex state', () => {
   it('sends the node, the state and an idempotency key', async () => {
     const calls = serve(['admin']);
-    await expect(setNodeState(hexMap.id, river.id, 'UNLOCKED', 'key-1')).resolves.toEqual({
+    await expect(setNodeState(hexMap.id, river.id, 'UNLOCKED', { token: 'test-token', idempotencyKey: 'key-1' })).resolves.toEqual({
       id: river.id,
       state: 'UNLOCKED',
     });

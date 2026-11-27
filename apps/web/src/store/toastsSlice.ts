@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { ToastTone } from '../components/primitives/Toast.js';
+import { newClientId } from '../utils/clientId.js';
 
 export type { ToastTone };
 
@@ -49,7 +50,7 @@ const toastsSlice = createSlice({
             message: input.message,
             tone: input.tone ?? 'info',
             generation: input.generation,
-            id: input.id ?? crypto.randomUUID(),
+            id: input.id ?? newClientId(),
             ...(input.durationMs !== undefined ? { durationMs: input.durationMs } : {}),
           },
         };

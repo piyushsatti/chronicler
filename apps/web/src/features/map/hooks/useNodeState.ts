@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { isAdmin } from '../../../auth/roles.js';
 import { TransportError } from '../../../errors/types.js';
+import { useCommandFence } from '../../../hooks/useFencedMutation.js';
 import { useMe } from '../../../hooks/useMe.js';
 import {
   mapWriteError,
@@ -43,18 +44,21 @@ export function useNodeState({
     isCurrentSession(token) &&
     current.current.token === token &&
     current.current.epoch === epoch;
-  const replay = useRef(new Map<string, string>());
+  const fence = useCommandFence('map:session');
   const write = useMutation({
     mutationFn: async (next: NodeState) => {
       if (!isCurrent() || !canSet || next === node.state)
         throw new Error('stale');
       const identity = `${node.id}:${next}`;
-      const key = replay.current.get(identity) ?? crypto.randomUUID();
-      replay.current.set(identity, key);
-      await setNodeState(map.id, node.id, next, key);
-      if (!isCurrent()) return { identity, skipped: true as const };
-      replay.current.delete(identity);
-      return { identity, skipped: false as const };
+      // A retry of the same state change reuses its idempotency key.
+      return fence.runExclusive(async (cmd) => {
+        await setNodeState(map.id, node.id, next, {
+          token: cmd.token,
+          idempotencyKey: cmd.keyFor(identity),
+          signal: cmd.signal,
+        });
+        return { identity, skipped: !isCurrent() };
+      });
     },
   });
   const active =

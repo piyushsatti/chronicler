@@ -1,3 +1,4 @@
+import { commandRequest, type CommandAuth } from '../../../api/command.js';
 import { z } from 'zod';
 import type { HomeWithdrawFromQuestMutation } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
@@ -13,13 +14,18 @@ const withdrawalReceipt = z.object({
 
 export async function withdrawFromHomeQuest(
   input: HomeWithdrawal,
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ): Promise<void> {
+  const { meta, init } = commandRequest(cmd);
   try {
-    const data = await graphqlRequest<HomeWithdrawFromQuestMutation>(WITHDRAW, {
-      ...input,
-      meta: { idempotencyKey },
-    });
+    const data = await graphqlRequest<HomeWithdrawFromQuestMutation>(
+      WITHDRAW,
+      {
+        ...input,
+        meta,
+      },
+      init,
+    );
     const receipt = withdrawalReceipt.parse(data.withdrawFromQuest);
     if (receipt.questId !== input.questId || receipt.characterId !== input.characterId)
       throw toAppError({ failure: 'InvalidWire' }, 'home:withdraw');

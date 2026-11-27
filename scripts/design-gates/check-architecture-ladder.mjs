@@ -16,6 +16,12 @@ const QUERY_HOOKS = new Set([
   'useSuspenseInfiniteQuery',
   'useSuspenseQueries',
 ]);
+// The two places allowed to mint random ids: the fence (idempotency keys)
+// and newClientId (client-only ids that are never sent as keys).
+const RANDOM_UUID_HOMES = new Set([
+  'src/hooks/useFencedMutation.ts',
+  'src/utils/clientId.ts',
+]);
 const QUERY_KEY_OPTION_CALLS = new Set([
   'useQuery',
   'useInfiniteQuery',
@@ -324,7 +330,7 @@ export function scanSource(
       add(node, 'no-generated-wire-in-view', 'dynamic generated-wire import');
     const info = callInfo(node.expression);
     if (
-      file !== 'src/hooks/useFencedMutation.ts' &&
+      !RANDOM_UUID_HOMES.has(file) &&
       ts.isPropertyAccessExpression(node.expression) &&
       node.expression.name.text === 'randomUUID' &&
       unwrap(node.expression.expression)?.getText(sf) === 'crypto'

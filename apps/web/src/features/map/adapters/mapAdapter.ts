@@ -1,3 +1,4 @@
+import { commandRequest, type CommandAuth } from '../../../api/command.js';
 import { z } from 'zod';
 import type {
   MapDocumentsQuery,
@@ -301,48 +302,68 @@ export async function loadLocationDocuments(search: string, offset: number) {
 }
 export async function createMap(
   input: MapCreateMutationVariables['input'],
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ) {
-  const data = await graphqlRequest<MapCreateMutation>(CREATE, {
-    input,
-    meta: { idempotencyKey },
-  });
+  const { meta, init } = commandRequest(cmd);
+  const data = await graphqlRequest<MapCreateMutation>(
+    CREATE,
+    {
+      input,
+      meta,
+    },
+    init,
+  );
   return parse(z.object({ id, atlasCode: z.string() }), data.createMap);
 }
 export async function updateMap(
   mapId: string,
   input: MapUpdateMutationVariables['input'],
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ) {
-  const data = await graphqlRequest<MapUpdateMutation>(UPDATE, {
-    id: mapId,
-    input,
-    meta: { idempotencyKey },
-  });
+  const { meta, init } = commandRequest(cmd);
+  const data = await graphqlRequest<MapUpdateMutation>(
+    UPDATE,
+    {
+      id: mapId,
+      input,
+      meta,
+    },
+    init,
+  );
   return parse(z.object({ id, atlasCode: z.string() }), data.updateMap);
 }
 export async function saveNode(
   mapId: string,
   input: MapSaveNodeMutationVariables['input'],
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ) {
-  const data = await graphqlRequest<MapSaveNodeMutation>(NODE, {
-    mapId,
-    input,
-    meta: { idempotencyKey },
-  });
+  const { meta, init } = commandRequest(cmd);
+  const data = await graphqlRequest<MapSaveNodeMutation>(
+    NODE,
+    {
+      mapId,
+      input,
+      meta,
+    },
+    init,
+  );
   return parse(z.object({ id }), data.upsertPointcrawlNode);
 }
 export async function saveEdge(
   mapId: string,
   input: MapSaveEdgeMutationVariables['input'],
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ) {
-  const data = await graphqlRequest<MapSaveEdgeMutation>(EDGE, {
-    mapId,
-    input,
-    meta: { idempotencyKey },
-  });
+  const { meta, init } = commandRequest(cmd);
+  const data = await graphqlRequest<MapSaveEdgeMutation>(
+    EDGE,
+    {
+      mapId,
+      input,
+      meta,
+    },
+    init,
+  );
   return parse(z.object({ id }), data.setPointcrawlEdge);
 }
 /** Admin-only: records a hex's display state. The server rejects every other caller. */
@@ -350,27 +371,34 @@ export async function setNodeState(
   mapId: string,
   nodeId: string,
   state: NodeState,
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ) {
-  const data = await graphqlRequest<MapSetNodeStateMutation>(NODE_STATE, {
-    mapId,
-    nodeId,
-    state,
-    meta: { idempotencyKey },
-  });
+  const { meta, init } = commandRequest(cmd);
+  const data = await graphqlRequest<MapSetNodeStateMutation>(
+    NODE_STATE,
+    {
+      mapId,
+      nodeId,
+      state,
+      meta,
+    },
+    init,
+  );
   return parse(z.object({ id, state: nodeState }), data.setPointcrawlNodeState);
 }
 export async function changeEntry(
   input: Omit<MapLinkEntryMutationVariables, 'meta'>,
   unlink: boolean,
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ) {
+  const { meta, init } = commandRequest(cmd);
   await graphqlRequest<MapLinkEntryMutation | MapUnlinkEntryMutation>(
     unlink ? UNLINK : LINK,
     {
       ...input,
-      meta: { idempotencyKey },
+      meta,
     },
+    init,
   );
 }
 

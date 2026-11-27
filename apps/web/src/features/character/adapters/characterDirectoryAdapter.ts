@@ -7,6 +7,7 @@ import type {
   CreateCharacterMutation,
   CreateCharacterMutationVariables,
 } from '../../../api/graphql.operations.gen.js';
+import { commandRequest, type CommandAuth } from '../../../api/command.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { characterListWireSchema } from './character.wire.schema.js';
@@ -126,14 +127,13 @@ export async function loadCreationOptions(regionId: string): Promise<CreationOpt
     regions,
   };
 }
-export async function createCharacter(
-  input: NewCharacterFields,
-  idempotencyKey: string,
-) {
-  const data = await graphqlRequest<CreateCharacterMutation>(CREATE, {
-    input,
-    meta: { idempotencyKey },
-  });
+export async function createCharacter(input: NewCharacterFields, cmd: CommandAuth) {
+  const { meta, init } = commandRequest(cmd);
+  const data = await graphqlRequest<CreateCharacterMutation>(
+    CREATE,
+    { input, meta },
+    init,
+  );
   return z
     .object({ id: z.string().uuid(), shortCode: z.string().min(1) })
     .parse(data.createCharacter);

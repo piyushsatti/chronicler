@@ -206,7 +206,7 @@ for (const [kind, operation, field, receipt] of [
         }
       });
     }
-    it('starts a new replay key after an account-session change', async () => {
+    it('keeps the replay key when the same member refreshes the token (D52)', async () => {
       const keys: unknown[] = [];
       server.use(
         graphql.mutation(operation, ({ variables }) => {
@@ -220,6 +220,39 @@ for (const [kind, operation, field, receipt] of [
       await waitFor(() => expect(result.current.feedback(kind).error).not.toBeNull());
       act(() => result.current.auth.storeToken(characterToken('character-second')));
       await ready(client);
+      act(() => result.current.execute(kind));
+      await waitFor(() => expect(keys).toHaveLength(2));
+      expect(keys[0]).toBe(keys[1]);
+    });
+    it('starts a new replay key when another member signs in (D52)', async () => {
+      const keys: unknown[] = [];
+      server.use(
+        graphql.mutation(operation, ({ variables }) => {
+          keys.push(variables.meta.idempotencyKey);
+          return HttpResponse.error();
+        }),
+      );
+      const { result, client } = setup();
+      await ready(client);
+      act(() => result.current.execute(kind));
+      await waitFor(() => expect(result.current.feedback(kind).error).not.toBeNull());
+      // An admin may edit any profile, so the owner write still runs for them.
+      const other = {
+        ...characterActor,
+        id: '22222222-2222-4222-8222-222222222222',
+        roles: ['admin'],
+      };
+      server.use(
+        graphql.query('MemberMe', () =>
+          HttpResponse.json({ data: { memberMe: other } }),
+        ),
+      );
+      act(() =>
+        result.current.auth.storeToken(
+          characterToken('character-second', Date.now() + 3600000, other.id),
+        ),
+      );
+      await ready(client, other.id);
       act(() => result.current.execute(kind));
       await waitFor(() => expect(keys).toHaveLength(2));
       expect(keys[0]).not.toBe(keys[1]);

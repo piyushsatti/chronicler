@@ -637,7 +637,7 @@ describe('MapPage', () => {
       );
       fireEvent.submit(form);
       await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
-      expect(save.mock.calls[1]?.[2]).toBe(save.mock.calls[0]?.[2]);
+      expect(save.mock.calls[1]?.[2]?.idempotencyKey).toBe(save.mock.calls[0]?.[2]?.idempotencyKey);
       expect(screen.getByRole('textbox', { name: 'Location name' })).toHaveValue(
         'Retry me',
       );
@@ -1018,7 +1018,8 @@ describe('MapPage', () => {
           await screen.findByRole('button', { name: 'Unlink Private location' }),
         );
         fireEvent.click(await screen.findByRole('button', { name: 'Unlink' }));
-        expect(unlink).toHaveBeenCalledTimes(1);
+        // The fence dispatches on the next microtask, after its session check.
+        await waitFor(() => expect(unlink).toHaveBeenCalledTimes(1));
         fireEvent.click(screen.getByRole('button', { name: 'Account B' }));
         fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
         fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
@@ -1041,7 +1042,41 @@ describe('MapPage', () => {
       }
     },
   );
-  it('does not let an old unlink completion unlock a new request after capability is restored', async () => {
+  it('reuses the unlink key when the same unlink is retried after a lost response', async () => {
+    session();
+    server.use(
+      graphql.query('MapAtlas', () => HttpResponse.json({ data: { map: linkedMap } })),
+    );
+    const load = vi
+      .spyOn(adapter, 'loadMapDocuments')
+      .mockResolvedValue([locationDocument]);
+    const unlink = vi
+      .spyOn(adapter, 'changeEntry')
+      .mockRejectedValueOnce(new Error('lost'))
+      .mockRejectedValueOnce(new Error('lost again'));
+    try {
+      renderMap();
+      for (const attempt of [1, 2]) {
+        fireEvent.click(
+          await screen.findByRole('button', { name: 'Unlink Private location' }),
+        );
+        fireEvent.click(await screen.findByRole('button', { name: 'Unlink' }));
+        await waitFor(() => expect(unlink).toHaveBeenCalledTimes(attempt));
+        await waitFor(() =>
+          expect(
+            screen.getByRole('button', { name: 'Unlink Private location' }),
+          ).toBeEnabled(),
+        );
+      }
+      expect(unlink.mock.calls[1]?.[2]?.idempotencyKey).toBe(
+        unlink.mock.calls[0]?.[2]?.idempotencyKey,
+      );
+    } finally {
+      load.mockRestore();
+      unlink.mockRestore();
+    }
+  });
+  it('keeps one unlink in flight when capability is restored mid-request', async () => {
     session();
     server.use(
       graphql.query('MapAtlas', () => HttpResponse.json({ data: { map: linkedMap } })),
@@ -1061,6 +1096,7 @@ describe('MapPage', () => {
         await screen.findByRole('button', { name: 'Unlink Private location' }),
       );
       fireEvent.click(await screen.findByRole('button', { name: 'Unlink' }));
+      await waitFor(() => expect(unlink).toHaveBeenCalledTimes(1));
       const map = queryClient.getQueryData<adapter.Pointcrawl>(queryKeys.map('LFC'));
       expect(map).toBeDefined();
       await act(async () => {
@@ -1074,17 +1110,23 @@ describe('MapPage', () => {
       await act(async () => {
         queryClient.setQueryData(queryKeys.map('LFC'), map);
       });
+      // The fence allows one write at a time, so a second unlink waits for the first.
       fireEvent.click(
         await screen.findByRole('button', { name: 'Unlink Private location' }),
       );
       fireEvent.click(await screen.findByRole('button', { name: 'Unlink' }));
-      expect(unlink).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(unlink).toHaveBeenCalledTimes(1);
       await act(async () => {
         first.resolve();
       });
-      expect(
-        screen.getByRole('button', { name: 'Unlink Private location' }),
-      ).toBeDisabled();
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Unlink Private location' }),
+      );
+      fireEvent.click(await screen.findByRole('button', { name: 'Unlink' }));
+      await waitFor(() => expect(unlink).toHaveBeenCalledTimes(2));
       await act(async () => {
         second.resolve();
       });

@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { CommandAuth } from '../../../api/command.js';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { isAdmin } from '../../../auth/roles.js';
+import { useCommandFence } from '../../../hooks/useFencedMutation.js';
 import { useMe } from '../../../hooks/useMe.js';
 import {
   retireCharacter,
@@ -23,19 +25,54 @@ type OwnerCommand =
     }
   | { kind: 'sync'; id: string; url: string }
   | { kind: 'submit' | 'retire'; id: string; version: string | null };
+type Attempt = { identity: string; command: OwnerCommand; token: string | null; memberId: string };
+
+async function runOwnerCommand(command: OwnerCommand, cmd: CommandAuth): Promise<string> {
+  switch (command.kind) {
+    case 'profile':
+      await updateCharacterProfile(command.id, command.input, cmd);
+      return 'Profile saved.';
+    case 'sync': {
+      const receipt = await syncCharacterDdb(command.id, command.url, cmd);
+      if (receipt.succeeded) return 'D&D Beyond synchronized.';
+      const reason =
+        receipt.safeError === 'TIMEOUT'
+          ? 'The provider timed out.'
+          : receipt.safeError === 'PROVIDER_HTTP'
+            ? 'The provider did not return a character.'
+            : receipt.safeError === 'PAYLOAD_DRIFT'
+              ? 'The provider returned an unsupported character format.'
+              : 'The provider is unavailable.';
+      return `${reason} Your saved profile and last synchronized data were kept.`;
+    }
+    case 'submit':
+      if (!command.version)
+        throw toAppError({ failure: 'InvalidWire' }, 'character:verification');
+      await submitCharacterForVerification(command.id, command.version, cmd);
+      return 'Submitted for verification.';
+    case 'retire':
+      if (!command.version)
+        throw toAppError({ failure: 'InvalidWire' }, 'character:retire');
+      await retireCharacter(command.id, command.version, cmd);
+      return 'Character retired.';
+    default: {
+      const exhaustive: never = command;
+      return exhaustive;
+    }
+  }
+}
+
 export function useOwnerActions({ character }: { character: CharacterViewModel }) {
   const { token, isCurrentSession } = useAuth();
   const me = useMe();
   const client = useQueryClient();
   const authorityRefreshed = useRef(false);
   const busy = useRef(false);
-  const replay = useRef<{
-    identity: string;
-    key: string;
-    command: OwnerCommand;
-    token: string | null;
-    memberId: string;
-  } | null>(null);
+  const fence = useCommandFence('character:session');
+  // The command a retry resends: submit and retire keep the version first loaded.
+  const replay = useRef<{ identity: string; command: OwnerCommand; memberId: string } | null>(
+    null,
+  );
   const [description, setDescription] = useState(character.description ?? '');
   const [ddbUrl, setDdbUrl] = useState(character.ddbUrl ?? '');
   const [imageUrl, setImageUrl] = useState(character.imageUrl ?? '');
@@ -72,49 +109,24 @@ export function useOwnerActions({ character }: { character: CharacterViewModel }
     ]);
   };
   const write = useMutation({
-    mutationFn: async (attempt: NonNullable<typeof replay.current>) => {
-      const { command, key } = attempt;
+    mutationFn: async (attempt: Attempt) => {
+      const { command } = attempt;
       if (!canRun(attempt, command.kind))
         throw toAppError({ failure: 'Unauthorized' }, 'character:session');
-      switch (command.kind) {
-        case 'profile':
-          await updateCharacterProfile(command.id, command.input, key);
-          return 'Profile saved.';
-        case 'sync': {
-          const receipt = await syncCharacterDdb(command.id, command.url, key);
-          if (receipt.succeeded) return 'D&D Beyond synchronized.';
-          const reason =
-            receipt.safeError === 'TIMEOUT'
-              ? 'The provider timed out.'
-              : receipt.safeError === 'PROVIDER_HTTP'
-                ? 'The provider did not return a character.'
-                : receipt.safeError === 'PAYLOAD_DRIFT'
-                  ? 'The provider returned an unsupported character format.'
-                  : 'The provider is unavailable.';
-          return `${reason} Your saved profile and last synchronized data were kept.`;
-        }
-        case 'submit':
-          if (!command.version)
-            throw toAppError({ failure: 'InvalidWire' }, 'character:verification');
-          await submitCharacterForVerification(command.id, command.version, key);
-          return 'Submitted for verification.';
-        case 'retire':
-          if (!command.version)
-            throw toAppError({ failure: 'InvalidWire' }, 'character:retire');
-          await retireCharacter(command.id, command.version, key);
-          return 'Character retired.';
-        default: {
-          const exhaustive: never = command;
-          return exhaustive;
-        }
-      }
+      return fence.runExclusive((cmd) =>
+        runOwnerCommand(command, {
+          token: cmd.token,
+          idempotencyKey: cmd.keyFor(JSON.stringify(command)),
+          signal: cmd.signal,
+        }),
+      );
     },
     onMutate: (attempt) => {
       if (canRun(attempt, attempt.command.kind)) setMessage(null);
     },
     onSuccess: async (result, attempt) => {
       if (!canRun(attempt, attempt.command.kind)) return;
-      if (replay.current === attempt) replay.current = null;
+      if (replay.current?.identity === attempt.identity) replay.current = null;
       setMessage({ token: attempt.token, memberId: attempt.memberId, value: result });
       await refresh(attempt);
     },
@@ -140,10 +152,10 @@ export function useOwnerActions({ character }: { character: CharacterViewModel }
         ? [command.kind, command.id]
         : command,
     );
-    if (replay.current?.identity !== identity || replay.current.token !== token)
-      replay.current = { identity, key: crypto.randomUUID(), command, token, memberId };
+    if (replay.current?.identity !== identity || replay.current.memberId !== memberId)
+      replay.current = { identity, command, memberId };
     busy.current = true;
-    write.mutate(replay.current);
+    write.mutate({ ...replay.current, token });
   };
   return {
     description,

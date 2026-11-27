@@ -192,4 +192,58 @@ describe('usePersonalizePage', () => {
       result.current.client.getQueryData([...queryKeys.personalization, 'discord-dev']),
     ).toBeUndefined();
   });
+  function failSaves(keys: string[]): void {
+    server.use(
+      http.post(GRAPHQL_PATH, async ({ request }) => {
+        const body = (await request.json()) as {
+          query?: string;
+          variables?: { meta?: { idempotencyKey?: string } };
+        };
+        if (body.query?.includes('UpdateMySettings')) {
+          keys.push(body.variables?.meta?.idempotencyKey ?? '');
+          return HttpResponse.error();
+        }
+        return HttpResponse.json({ data: { myPersonalization: good } });
+      }),
+    );
+  }
+
+  it('reuses the save key for a retried patch, also across a same-member token refresh (D52)', async () => {
+    const keys: string[] = [];
+    failSaves(keys);
+    const { result } = renderHook(
+      () => ({ page: usePersonalizePage(), auth: useAuth() }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.page.personalization.isSuccess).toBe(true));
+    act(() => result.current.page.settingsMutation.mutate({ timezone: 'America/New_York' }));
+    await waitFor(() => expect(result.current.page.settingsMutation.isError).toBe(true));
+    act(() => result.current.page.settingsMutation.mutate({ timezone: 'America/New_York' }));
+    await waitFor(() => expect(keys).toHaveLength(2));
+    act(() => result.current.auth.storeToken(seedToken('discord-dev', 7200)));
+    await waitFor(() => expect(result.current.page.personalization.isSuccess).toBe(true));
+    act(() => result.current.page.settingsMutation.mutate({ timezone: 'America/New_York' }));
+    await waitFor(() => expect(keys).toHaveLength(3));
+    expect(new Set(keys).size).toBe(1);
+    act(() => result.current.page.settingsMutation.mutate({ timezone: 'Europe/London' }));
+    await waitFor(() => expect(keys).toHaveLength(4));
+    expect(keys[3]).not.toBe(keys[0]);
+  });
+
+  it('never reuses a save key for another member (D52)', async () => {
+    const keys: string[] = [];
+    failSaves(keys);
+    const { result } = renderHook(
+      () => ({ page: usePersonalizePage(), auth: useAuth() }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.page.personalization.isSuccess).toBe(true));
+    act(() => result.current.page.settingsMutation.mutate({ timezone: 'America/New_York' }));
+    await waitFor(() => expect(keys).toHaveLength(1));
+    act(() => result.current.auth.storeToken(seedToken('other-member')));
+    await waitFor(() => expect(result.current.page.personalization.isSuccess).toBe(true));
+    act(() => result.current.page.settingsMutation.mutate({ timezone: 'America/New_York' }));
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[1]).not.toBe(keys[0]);
+  });
 });

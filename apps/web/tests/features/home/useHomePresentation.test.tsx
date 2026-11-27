@@ -170,6 +170,43 @@ describe('Home participation', () => {
     expect(attempts[2]?.meta.idempotencyKey).not.toBe(attempts[1]?.meta.idempotencyKey);
   });
 
+  it('keeps the retry key when the same member refreshes the token (D52)', async () => {
+    const attempts: z.infer<typeof attemptSchema>[] = [];
+    server.use(
+      graphql.mutation('HomeWithdrawFromQuest', ({ variables }) => {
+        attempts.push(attemptSchema.parse(variables));
+        return HttpResponse.json({
+          errors: [{ message: 'temporary', extensions: { code: 'INTERNAL' } }],
+        });
+      }),
+    );
+    const state = setup('waitlisted');
+    await waitFor(() =>
+      expect(state.result.current.view.cards[0]?.onWithdrawConfirm).toBeTypeOf(
+        'function',
+      ),
+    );
+    act(() => state.result.current.view.cards[0]?.onWithdrawConfirm?.());
+    await waitFor(() => expect(attempts).toHaveLength(1));
+    await waitFor(() =>
+      expect(state.result.current.view.cards[0]?.isMutating).toBe(false),
+    );
+    act(() =>
+      state.result.current.auth.storeToken(
+        `${btoa('{}')}.${btoa(JSON.stringify({ sub: 'unit-home-refreshed', exp: Date.now() / 1000 + 3600 }))}.test`,
+      ),
+    );
+    await waitFor(() =>
+      expect(state.result.current.view.cards[0]?.onWithdrawConfirm).toBeTypeOf(
+        'function',
+      ),
+    );
+    await waitFor(() => expect(state.client.getQueryState(['me'])?.status).toBe('success'));
+    act(() => state.result.current.view.cards[0]?.onWithdrawConfirm?.());
+    await waitFor(() => expect(attempts).toHaveLength(2));
+    expect(attempts[1]?.meta.idempotencyKey).toBe(attempts[0]?.meta.idempotencyKey);
+  });
+
   it('rejects a retained callback after logout and ignores late success feedback', async () => {
     let calls = 0;
     let release: () => void = () => undefined;

@@ -1,6 +1,6 @@
 # D52: Idempotency Keys Belong To One Member
 
-**Status:** ruled-provisional 2026-11-14
+**Status:** decided 2026-11-27 (ruled-provisional 2026-11-14)
 **Kind:** local
 **Owner:** `apps/web/docs/decisions/`
 **Interface:** n/a
@@ -18,7 +18,9 @@ Pattern: idempotency key, scoped per actor. The client follows the scope the API
 - A command refused by the fence reports an error to the caller. It never fails silently.
 - The busy guard is not reset by a token or role change for the same member while a call is in flight.
 
-Decided by the lead agent under the owner's 2026-11-14 delegation; provisional until the owner confirms.
+Decided by the lead agent under the owner's 2026-11-14 delegation. The owner confirmed it on 2026-11-27 after a review of the IETF Idempotency-Key draft, Stripe and AWS practice (reuse the key on retry, scope it to the caller, reject a reused key with a different payload): "If that's how standards and systems have defined this, please let's do that."
+
+Web writes take their key from `useFencedMutation` (`useCommandFence` for hooks that keep their own mutation state, `useMemberKeys` for the settings save, which must survive a token refresh mid-flight). The notification and editor writes are still moving onto it. Client-only ids that are never sent as keys come from `newClientId()` in `src/utils/clientId.ts`.
 
 ## Alternatives rejected
 

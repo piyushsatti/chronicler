@@ -10,13 +10,25 @@ import type { MapEdit } from '../../../src/features/map/hooks/useMapEdit.js';
 import * as adapter from '../../../src/features/map/adapters/mapAdapter.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
+import { queryKeys } from '../../../src/api/queryKeys.js';
 import good from '../../fixtures/wire/map/goodMap.js';
 
 const map = { ...good, canEdit: true };
 const region = { id: 'ffffffff-ffff-4fff-8fff-ffffffffffff', name: 'Coast', canCreateMap: true, kind: 'charter', charterDeadline: null, documentId: null, createdAt: good.createdAt };
 const location = { id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', title: 'Harbor', slug: 'harbor', kind: 'codex_entry', category: 'Locations', effectiveBody: '' };
+// The fenced write carries the session token and an idempotency key.
+const command = expect.objectContaining({ token: expect.any(String), idempotencyKey: expect.any(String) });
+// Writes are fenced to a loaded member, so each submit waits for /me first.
+let rendered: ReturnType<typeof renderWithProviders> | undefined;
+function renderSignedIn(...args: Parameters<typeof renderWithProviders>) {
+  rendered = renderWithProviders(...args);
+  return rendered;
+}
+async function ready() {
+  await waitFor(() => expect(rendered?.queryClient.getQueryState(queryKeys.me)?.status).toBe('success'));
+}
 function show(edit: MapEdit) {
-  return renderWithProviders(<MapEditDialog edit={edit} scopeKey="test" admit={() => true} onClose={vi.fn()} onSaved={async () => {}} onDenied={async () => {}} />);
+  return renderSignedIn(<MapEditDialog edit={edit} scopeKey="test" admit={() => true} onClose={vi.fn()} onSaved={async () => {}} onDenied={async () => {}} />);
 }
 function form() {
   const value = screen.getByRole('button', { name: 'Save' }).closest('form');
@@ -43,7 +55,7 @@ it('keeps the default region and updates the hidden FormData value through the m
 
 it('preserves the optional global-map choice and the selected submap', async () => {
   const child = { ...map, id: region.id, name: 'Lower harbor' };
-  const rendered = renderWithProviders(<MapEditDialog edit={{ kind: 'create', global: true, regions: [region] }} scopeKey="global" admit={() => true} onClose={vi.fn()} onSaved={async () => {}} onDenied={async () => {}} />);
+  const rendered = renderSignedIn(<MapEditDialog edit={{ kind: 'create', global: true, regions: [region] }} scopeKey="global" admit={() => true} onClose={vi.fn()} onSaved={async () => {}} onDenied={async () => {}} />);
   expect(new FormData(form()).get('regionId')).toBe('');
   expect(screen.getByRole('button', { name: /^Region/ })).not.toHaveAccessibleDescription('Required');
   rendered.unmount();
@@ -67,10 +79,11 @@ it('creates a hex map with a plain-word address, group and image address', async
   expect(new FormData(form()).get('grid')).toBe('hex');
   await userEvent.type(screen.getByRole('textbox', { name: /^Map name/ }), 'Lightfall Hexflower');
   await userEvent.type(screen.getByRole('textbox', { name: /^Map image/ }), '/maps/hexflower.png');
+  await ready();
   fireEvent.submit(form());
   await waitFor(() => expect(create).toHaveBeenCalledWith(
     expect.objectContaining({ name: 'Lightfall Hexflower', atlasCode: 'LIGHTFALL-HEXFLOWER', family: 'campaign', grid: 'hex', mapKind: 'pointcrawl', assetPath: '/maps/hexflower.png' }),
-    expect.any(String),
+    command,
   ));
 });
 
@@ -85,11 +98,12 @@ it('edits a map: shows its current values and saves name, type, group and image'
   await userEvent.type(screen.getByRole('textbox', { name: /^Map name/ }), 'Renamed map');
   await userEvent.click(screen.getByRole('button', { name: 'Hex map' }));
   await userEvent.clear(screen.getByRole('textbox', { name: /^Map image/ }));
+  await ready();
   fireEvent.submit(form());
   await waitFor(() => expect(update).toHaveBeenCalledWith(
     map.id,
     { name: 'Renamed map', family: map.family, grid: 'hex', assetPath: null },
-    expect.any(String),
+    command,
   ));
 });
 
@@ -111,8 +125,9 @@ it('closes after a successful save when onSaved re-renders with a new callback i
       />
     );
   }
-  renderWithProviders(<WarmSave />);
+  renderSignedIn(<WarmSave />);
   expect(screen.getByRole('dialog', { name: 'Edit map' })).toBeVisible();
+  await ready();
   fireEvent.submit(form());
   await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 });
@@ -127,7 +142,7 @@ it('keeps Save and Cancel blocked until onSaved finishes', async () => {
   );
   const onClose = vi.fn();
   vi.spyOn(adapter, 'updateMap').mockResolvedValue({ id: map.id, atlasCode: map.atlasCode });
-  renderWithProviders(
+  renderSignedIn(
     <MapEditDialog
       edit={{ kind: 'map', map }}
       scopeKey="pending-reload"
@@ -137,6 +152,7 @@ it('keeps Save and Cancel blocked until onSaved finishes', async () => {
       onDenied={async () => {}}
     />,
   );
+  await ready();
   fireEvent.submit(form());
   await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
   expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
@@ -156,7 +172,7 @@ it('does not call onDenied when a save fails after unmount', async () => {
       }),
   );
   const onDenied = vi.fn(async () => {});
-  const view = renderWithProviders(
+  const view = renderSignedIn(
     <MapEditDialog
       edit={{ kind: 'map', map }}
       scopeKey="fail-unmount"
@@ -166,6 +182,7 @@ it('does not call onDenied when a save fails after unmount', async () => {
       onDenied={onDenied}
     />,
   );
+  await ready();
   fireEvent.submit(form());
   await waitFor(() => expect(fail).toEqual(expect.any(Function)));
   const errors: unknown[] = [];
@@ -203,13 +220,15 @@ it('requires a Location, then submits the menu choice', async () => {
   const save = vi.spyOn(adapter, 'changeEntry').mockResolvedValue(undefined);
   show({ kind: 'link', map, node: good.pointcrawlNodes[0]! });
   await screen.findByRole('button', { name: /^Location/ });
+  await ready();
   fireEvent.submit(form());
   expect(await screen.findByRole('alert')).toHaveTextContent('Please select an item in the list.');
   expect(save).not.toHaveBeenCalled();
   await choose('Location', 'Harbor');
   expect(new FormData(form()).get('documentId')).toBe(location.id);
+  await ready();
   fireEvent.submit(form());
-  await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ documentId: location.id }), false, expect.any(String)));
+  await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ documentId: location.id }), false, command));
 });
 
 it.each(['search', 'page'] as const)('clears a selected document when the result %s changes', async (change) => {
@@ -225,17 +244,20 @@ it.each(['search', 'page'] as const)('clears a selected document when the result
   else await userEvent.click(screen.getByRole('button', { name: 'Next' }));
   await waitFor(() => expect(screen.getByRole('button', { name: /^Location/ })).toHaveTextContent('Choose a Location'));
   expect(new FormData(form()).get('documentId')).toBe('');
+  await ready();
   fireEvent.submit(form());
   expect(await screen.findByRole('alert')).toHaveTextContent('Please select an item in the list.');
   expect(save).not.toHaveBeenCalled();
   await choose('Location', 'Forest');
+  await ready();
   fireEvent.submit(form());
-  await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ documentId: next.id }), false, expect.any(String)));
+  await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ documentId: next.id }), false, command));
 });
 
 it('blocks an empty required region choice before saving', async () => {
   const create = vi.spyOn(adapter, 'createMap');
   show({ kind: 'create', global: false, regions: [] });
+  await ready();
   fireEvent.submit(form());
   expect(await screen.findByRole('alert')).toHaveTextContent('Please select an item in the list.');
   expect(create).not.toHaveBeenCalled();
@@ -246,13 +268,15 @@ it('saves a bare site path from the image hint as a site-root path', async () =>
   const created = show({ kind: 'create', global: false, regions: [region] });
   await userEvent.type(screen.getByRole('textbox', { name: /^Map name/ }), 'X');
   await userEvent.type(screen.getByRole('textbox', { name: /^Map image/ }), 'maps/x.png');
+  await ready();
   fireEvent.submit(form());
-  await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ assetPath: '/maps/x.png' }), expect.any(String)));
+  await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ assetPath: '/maps/x.png' }), command));
   created.unmount();
   const update = vi.spyOn(adapter, 'updateMap').mockResolvedValue({ id: map.id, atlasCode: map.atlasCode });
   show({ kind: 'map', map: { ...map, assetPath: 'maps/x.png' } });
+  await ready();
   fireEvent.submit(form());
-  await waitFor(() => expect(update).toHaveBeenCalledWith(map.id, expect.objectContaining({ assetPath: '/maps/x.png' }), expect.any(String)));
+  await waitFor(() => expect(update).toHaveBeenCalledWith(map.id, expect.objectContaining({ assetPath: '/maps/x.png' }), command));
 });
 
 it('keeps Previous when the list shrinks to one page while on the second page', async () => {

@@ -6,5 +6,6 @@
 | `graphql.ts`   | `POST /v1/graphql` (errors[] always fails) |
 | `rest.ts`      | Typed REST helpers                         |
 | `queryKeys.ts` | TanStack Query key factory                 |
+| `command.ts`   | Token, key and signal for one fenced write |
 
 Slice order: site → member → document → spatial → character → quest. Screens use `/v1` only; no legacy `/graphql`.

@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
+import { useCommandFence } from '../../../hooks/useFencedMutation.js';
 import { useMe } from '../../../hooks/useMe.js';
 import {
   loadMyPrivateNotes,
@@ -19,7 +20,7 @@ export type PrivateNotesData =
   | { status: 'empty'; view: PrivateNotesView }
   | { status: 'ready'; view: PrivateNotesView };
 
-type Attempt = { token: string | null; memberId: string; body: string; key: string };
+type Attempt = { token: string | null; memberId: string; body: string };
 
 /** The signed-in member's private notes: load, a local draft, and an explicit save. */
 export function usePrivateNotes() {
@@ -35,7 +36,7 @@ export function usePrivateNotes() {
   // The draft is tied to the member who typed it, so an account switch never shows it.
   const [draft, setDraft] = useState<{ memberId: string; value: string } | null>(null);
   const [savedFor, setSavedFor] = useState<Attempt | null>(null);
-  const replay = useRef<Attempt | null>(null);
+  const fence = useCommandFence('notes:session');
 
   const current = (attempt: Attempt | null | undefined) => {
     const account = client.getQueryState<NonNullable<typeof me.data>>(queryKeys.me);
@@ -51,14 +52,20 @@ export function usePrivateNotes() {
     mutationFn: (attempt: Attempt) => {
       if (!current(attempt))
         throw toAppError({ failure: 'Unauthorized' }, 'notes:session');
-      return saveMyPrivateNotes(attempt.body, attempt.key);
+      // A retry of the same text reuses its idempotency key.
+      return fence.runExclusive((cmd) =>
+        saveMyPrivateNotes(attempt.body, {
+          token: cmd.token,
+          idempotencyKey: cmd.keyFor(attempt.body),
+          signal: cmd.signal,
+        }),
+      );
     },
     onMutate: (attempt) => {
       if (current(attempt)) setSavedFor(null);
     },
     onSuccess: (saved, attempt) => {
       if (!current(attempt)) return;
-      if (replay.current === attempt) replay.current = null;
       client.setQueryData(queryKeys.myPrivateNotes(attempt.memberId), saved);
       setSavedFor(attempt);
       setDraft((value) =>
@@ -92,14 +99,7 @@ export function usePrivateNotes() {
         : null,
     save: () => {
       if (!memberId || overLimit || !dirty || save.isPending) return;
-      // A retry of the same text reuses its idempotency key.
-      if (
-        replay.current?.body !== text ||
-        replay.current.token !== token ||
-        replay.current.memberId !== memberId
-      )
-        replay.current = { token, memberId, body: text, key: crypto.randomUUID() };
-      save.mutate(replay.current);
+      save.mutate({ token, memberId, body: text });
     },
   };
 
