@@ -456,6 +456,45 @@ describe('notification command retries and feedback', () => {
     }
   });
 
+  it.each([
+    ['keeps', 'the same member refreshes the token', goodMe.id],
+    ['drops', 'another member signs in', '99999999-9999-4999-8999-999999999999'],
+  ] as const)('%s the acknowledgement key when %s (D52)', async (verb, _case, nextId) => {
+    const keys: string[] = [];
+    let memberId = goodMe.id;
+    server.use(
+      http.post(GRAPHQL_PATH, async ({ request }) => {
+        const body = bodySchema.parse(await request.json());
+        const operation = graphqlOperationName(body.query);
+        if (operation === 'MemberMe')
+          return HttpResponse.json({ data: { memberMe: { ...goodMe, id: memberId } } });
+        if (operation === 'AcknowledgeSuppressedNotifications') {
+          keys.push(writeSchema.parse(body.variables).meta.idempotencyKey);
+          return HttpResponse.json({
+            errors: [{ message: 'uncertain', extensions: { code: 'INTERNAL' } }],
+          });
+        }
+        return dispatchFeatureGraphql(body);
+      }),
+    );
+    const h = preview();
+    try {
+      await waitFor(() => expect(h.result.current.login.ready).toBe(true));
+      act(() => h.result.current.login.ack.mutate());
+      await waitFor(() => expect(h.result.current.login.ack.error).not.toBeNull());
+      memberId = nextId;
+      act(() => h.result.current.auth.storeToken(currentToken('new')));
+      await waitFor(() => expect(h.result.current.me.data?.id).toBe(nextId));
+      await waitFor(() => expect(h.result.current.login.ready).toBe(true));
+      act(() => h.result.current.login.ack.mutate());
+      await waitFor(() => expect(keys).toHaveLength(2));
+      if (verb === 'keeps') expect(keys[1]).toBe(keys[0]);
+      else expect(keys[1]).not.toBe(keys[0]);
+    } finally {
+      h.dispose();
+    }
+  });
+
   it('reuses the exact mark-read batch key after an uncertain response', async () => {
     const keys: string[] = [];
     server.use(
