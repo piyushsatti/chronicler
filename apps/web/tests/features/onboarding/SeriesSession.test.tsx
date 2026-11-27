@@ -287,7 +287,7 @@ describe('Series session-bound command admission', () => {
       client.clear();
     });
   }
-  it('never shares an ambiguous retry key with another validated session', async () => {
+  it('keeps an ambiguous retry key when the same member refreshes the token (D52)', async () => {
     const keys: unknown[] = [];
     server.use(
       graphql.mutation('RetainedUpsertArc', ({ variables }) => {
@@ -301,6 +301,45 @@ describe('Series session-bound command admission', () => {
       expect(await result.current.series.save(null, 'Same payload')).toBe(false);
     });
     act(() => result.current.auth.storeToken(token('two')));
+    await ready(result);
+    await act(async () => {
+      expect(await result.current.series.save(null, 'Same payload')).toBe(false);
+    });
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBe(keys[1]);
+    unmount();
+    client.clear();
+  });
+  it('never shares an ambiguous retry key with another member (D52)', async () => {
+    const keys: unknown[] = [];
+    let who = actor;
+    server.use(
+      graphql.query('MemberMe', () => HttpResponse.json({ data: { memberMe: who } })),
+      graphql.query('RetainedSeriesAuthority', () =>
+        HttpResponse.json({
+          data: {
+            memberProfile: {
+              member: { id: who.id, roles: ['dm'], status: 'active' },
+              dmProfile: { status: 'approved' },
+            },
+          },
+        }),
+      ),
+      graphql.mutation('RetainedUpsertArc', ({ variables }) => {
+        keys.push(variables.meta.idempotencyKey);
+        return HttpResponse.error();
+      }),
+    );
+    const { result, unmount, client } = setup();
+    await ready(result);
+    await act(async () => {
+      expect(await result.current.series.save(null, 'Same payload')).toBe(false);
+    });
+    who = { ...actor, id: '22222222-2222-4222-8222-222222222222', handle: 'other-dm' };
+    act(() => result.current.auth.storeToken(token('two')));
+    await waitFor(() =>
+      expect(client.getQueryData(['me'])).toMatchObject({ id: who.id }),
+    );
     await ready(result);
     await act(async () => {
       expect(await result.current.series.save(null, 'Same payload')).toBe(false);

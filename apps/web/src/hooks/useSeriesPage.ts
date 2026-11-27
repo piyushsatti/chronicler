@@ -9,6 +9,7 @@ import {
 } from '../auth/useCurrentAccess.js';
 import { toAppError } from '../errors/toAppError.js';
 import { TransportError } from '../errors/types.js';
+import { useCommandFence } from './useFencedMutation.js';
 import { useMe } from './useMe.js';
 import {
   loadSeriesArc,
@@ -41,7 +42,6 @@ type Attempt = {
   actorIdentity: string;
   target: string | null;
   name: string;
-  key: string;
 };
 
 export function useSeriesPage(identity: string) {
@@ -126,18 +126,21 @@ export function useSeriesPage(identity: string) {
     );
   };
   const pending = useRef<Attempt | null>(null);
-  const keys = useRef<{
-    token: string | null;
-    actorIdentity: string;
-    values: Map<string, string>;
-  } | null>(null);
+  const fence = useCommandFence('series:session');
   const write = useMutation({
     mutationFn: async (attempt: Attempt) => {
       if (!current(attempt))
         throw toAppError({ failure: 'Unauthorized' }, 'series:session');
       if (!admission(attempt, attempt.target))
         throw toAppError(new TransportError('FORBIDDEN'), 'series:authority');
-      return upsertSeriesArc(attempt.target, attempt.name, attempt.key);
+      // A retry of the same name for the same series reuses its idempotency key.
+      return fence.runExclusive((cmd) =>
+        upsertSeriesArc(attempt.target, attempt.name, {
+          token: cmd.token,
+          idempotencyKey: cmd.keyFor(JSON.stringify([attempt.target, attempt.name])),
+          signal: cmd.signal,
+        }),
+      );
     },
     retry: false,
     onSuccess: async (_value, attempt) => {
@@ -167,21 +170,11 @@ export function useSeriesPage(identity: string) {
       seriesNameError(name) !== null
     )
       return false;
-    if (
-      keys.current?.token !== token ||
-      keys.current.actorIdentity !== session.actorIdentity
-    )
-      keys.current = { token, actorIdentity: session.actorIdentity, values: new Map() };
-    const keySet = keys.current;
-    const signature = JSON.stringify([target, value]);
-    const key = keySet.values.get(signature) ?? crypto.randomUUID();
-    keySet.values.set(signature, key);
-    const attempt = { ...session, target, name: value, key };
+    const attempt = { ...session, target, name: value };
     pending.current = attempt;
     try {
       const result = await write.mutateAsync(attempt);
       if (!current(attempt)) return false;
-      keySet.values.delete(signature);
       onSuccess?.();
       if (!current(attempt)) return false;
       if (!target) navigate(`/series/${encodeURIComponent(result.id)}`);

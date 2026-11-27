@@ -1,3 +1,4 @@
+import { commandRequest, type CommandAuth } from '../../../api/command.js';
 import { z } from 'zod';
 import type {
   MemberMyPrivateNotesQuery,
@@ -50,16 +51,18 @@ export async function loadMyPrivateNotes(): Promise<PrivateNotesView> {
 
 export async function saveMyPrivateNotes(
   body: string,
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ): Promise<PrivateNotesView> {
+  const { meta, init } = commandRequest(cmd);
   try {
     const variables: MemberSetMyPrivateNotesMutationVariables = {
       body,
-      meta: { idempotencyKey },
+      meta,
     };
     const data = await graphqlRequest<MemberSetMyPrivateNotesMutation>(
       SET_NOTES,
       variables,
+      init,
     );
     const result = parsePrivateNotes(data.setMyPrivateNotes);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'notes:save');

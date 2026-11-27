@@ -1,3 +1,4 @@
+import { commandRequest, type CommandAuth } from '../api/command.js';
 import { z } from 'zod';
 import type {
   RetainedSeriesArcQuery,
@@ -118,14 +119,19 @@ export async function loadSeriesAuthority(handle: string) {
 export async function upsertSeriesArc(
   id: string | null,
   name: string,
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ) {
+  const { meta, init } = commandRequest(cmd);
   try {
-    const wire = await graphqlRequest<RetainedUpsertArcMutation>(UPSERT, {
-      id,
-      name,
-      meta: { idempotencyKey },
-    });
+    const wire = await graphqlRequest<RetainedUpsertArcMutation>(
+      UPSERT,
+      {
+        id,
+        name,
+        meta,
+      },
+      init,
+    );
     return arcSchema.parse(wire.upsertQuestArc);
   } catch (error) {
     // Expected refusals carry the API's reason; anything else stays generic.

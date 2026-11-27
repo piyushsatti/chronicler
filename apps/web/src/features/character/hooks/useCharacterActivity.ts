@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useAuth } from '../../../auth/AuthContext.js';
+import { useCommandFence } from '../../../hooks/useFencedMutation.js';
 import { useMe } from '../../../hooks/useMe.js';
 import {
   ACTIVITY_PAGE_SIZE,
@@ -10,6 +11,12 @@ import {
   writeCharacterActivity,
   type ActivityCommand,
 } from '../adapters/characterActivityAdapter.js';
+type Attempt = {
+  characterId: string;
+  command: ActivityCommand;
+  token: string | null;
+  memberId: string;
+};
 export function useCharacterActivity(characterId: string) {
   const { token, isCurrentSession } = useAuth();
   const me = useMe();
@@ -17,14 +24,7 @@ export function useCharacterActivity(characterId: string) {
   const client = useQueryClient();
   const authorityRefreshed = useRef(false);
   const busy = useRef(false);
-  const replay = useRef<{
-    payload: string;
-    key: string;
-    characterId: string;
-    command: ActivityCommand;
-    token: string | null;
-    memberId: string;
-  } | null>(null);
+  const fence = useCommandFence('character:session');
   const query = useQuery({
     queryKey: queryKeys.characterActivity(characterId, page),
     queryFn: () => loadCharacterActivity(characterId, (page - 1) * ACTIVITY_PAGE_SIZE),
@@ -39,14 +39,19 @@ export function useCharacterActivity(characterId: string) {
     );
   };
   const write = useMutation({
-    mutationFn: (attempt: NonNullable<typeof replay.current>) => {
+    mutationFn: (attempt: Attempt) => {
       if (!current(attempt))
         throw toAppError({ failure: 'Unauthorized' }, 'character:session');
-      return writeCharacterActivity(attempt.characterId, attempt.command, attempt.key);
+      return fence.runExclusive((cmd) =>
+        writeCharacterActivity(attempt.characterId, attempt.command, {
+          token: cmd.token,
+          idempotencyKey: cmd.keyFor(JSON.stringify([attempt.characterId, attempt.command])),
+          signal: cmd.signal,
+        }),
+      );
     },
     onSuccess: async (_value, attempt) => {
       if (!current(attempt)) return;
-      if (replay.current === attempt) replay.current = null;
       await Promise.all([
         client.invalidateQueries({ queryKey: queryKeys.characterActivity(characterId) }),
         client.invalidateQueries({
@@ -72,25 +77,14 @@ export function useCharacterActivity(characterId: string) {
   const reset = write.reset;
   const memberId = me.data?.id;
   useEffect(() => {
-    replay.current = null;
     busy.current = false;
     authorityRefreshed.current = false;
     reset();
   }, [token, memberId, characterId, reset]);
   const submit = (command: ActivityCommand, options?: { onSuccess: () => void }) => {
     if (!memberId || busy.current || !current({ token, memberId })) return;
-    const payload = JSON.stringify([characterId, command]);
-    if (replay.current?.payload !== payload || replay.current.token !== token)
-      replay.current = {
-        payload,
-        key: crypto.randomUUID(),
-        characterId,
-        command,
-        token,
-        memberId,
-      };
     busy.current = true;
-    write.mutate(replay.current, {
+    write.mutate({ characterId, command, token, memberId }, {
       onSuccess: (_value, attempt) => {
         if (current(attempt)) options?.onSuccess();
       },

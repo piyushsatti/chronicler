@@ -2,6 +2,7 @@ import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import { useCommandFence } from '../../../hooks/useFencedMutation.js';
 import { TransportError } from '../../../errors/types.js';
 import {
   mapWriteError,
@@ -67,7 +68,7 @@ export function useMapNodeDetails({ map, node, maps, onReload }: MapNodeDetailsP
   const [pending, setPending] = useState('');
   const [error, setError] = useState('');
   const lock = useRef(false);
-  const replay = useRef(new Map<string, string>());
+  const fence = useCommandFence('map:session');
   useLayoutEffect(() => {
     lock.current = false;
     setPending('');
@@ -107,19 +108,19 @@ export function useMapNodeDetails({ map, node, maps, onReload }: MapNodeDetailsP
     )
       return;
     const identity = `${documentId}:${relation}`;
-    const key = replay.current.get(identity) ?? crypto.randomUUID();
-    replay.current.set(identity, key);
     lock.current = true;
     setPending(identity);
     setError('');
     try {
-      await changeEntry(
-        { mapId: map.id, nodeId: node.id, documentId, relation },
-        true,
-        key,
+      // A retry of the same unlink reuses its idempotency key.
+      await fence.runExclusive((cmd) =>
+        changeEntry({ mapId: map.id, nodeId: node.id, documentId, relation }, true, {
+          token: cmd.token,
+          idempotencyKey: cmd.keyFor(identity),
+          signal: cmd.signal,
+        }),
       );
       if (!canWrite()) return;
-      replay.current.delete(identity);
       await onReload();
     } catch (cause) {
       if (!canWrite()) return;

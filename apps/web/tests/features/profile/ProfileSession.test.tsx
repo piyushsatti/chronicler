@@ -190,7 +190,7 @@ describe('Profile session admission', () => {
       });
     });
   }
-  it('does not reuse an ambiguous retry key in another account session', async () => {
+  it('reuses an ambiguous retry key after the same member refreshes the token (D52)', async () => {
     const attempts: Record<string, unknown>[] = [];
     server.use(
       graphql.mutation('ProfileUpdateMyProfile', ({ variables }) => {
@@ -205,6 +205,27 @@ describe('Profile session admission', () => {
     act(() => result.current.auth.storeToken(profileToken('profile-second')));
     await ready(client);
     act(() => result.current.actions.execute(command));
+    await waitFor(() => expect(attempts).toHaveLength(2));
+    expect(attempts[0]?.meta).toEqual(attempts[1]?.meta);
+  });
+  it('does not reuse an ambiguous retry key for another member (D52)', async () => {
+    const attempts: Record<string, unknown>[] = [];
+    server.use(
+      graphql.mutation('ProfileUpdateMyProfile', ({ variables }) => {
+        attempts.push(variables);
+        return HttpResponse.error();
+      }),
+    );
+    const { result, client } = setup();
+    await ready(client);
+    act(() => result.current.actions.execute(command));
+    await waitFor(() => expect(result.current.actions.error).not.toBeNull());
+    server.use(
+      graphql.query('MemberMe', () => HttpResponse.json({ data: { memberMe: other } })),
+    );
+    act(() => result.current.auth.storeToken(profileToken('profile-second', Date.now() + 3600000, other.id)));
+    await ready(client, other.id);
+    act(() => result.current.actions.execute({ ...command, memberId: other.id }));
     await waitFor(() => expect(attempts).toHaveLength(2));
     expect(attempts[0]?.meta).not.toEqual(attempts[1]?.meta);
   });

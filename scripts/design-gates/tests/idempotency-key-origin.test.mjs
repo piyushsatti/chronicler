@@ -25,3 +25,8 @@ test('crypto.randomUUID inside useFencedMutation passes', () => {
   const hits = scanSource(fixture('inside.ts.txt'), 'src/hooks/useFencedMutation.ts');
   assert.equal(hits.filter((hit) => hit.rule === 'idempotency-key-origin').length, 0);
 });
+
+test('crypto.randomUUID inside the client-id helper passes', () => {
+  const hits = scanSource(fixture('inside.ts.txt'), 'src/utils/clientId.ts');
+  assert.equal(hits.filter((hit) => hit.rule === 'idempotency-key-origin').length, 0);
+});

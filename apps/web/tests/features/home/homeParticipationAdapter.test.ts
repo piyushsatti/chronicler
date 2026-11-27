@@ -114,7 +114,7 @@ describe('Home adapters', () => {
         });
       }),
     );
-    await expect(withdrawFromHomeQuest(input, 'stable-home-key')).rejects.toMatchObject(
+    await expect(withdrawFromHomeQuest(input, { token: 'test-token', idempotencyKey: 'stable-home-key' })).rejects.toMatchObject(
       { kind: 'invalid' },
     );
     expect(seen).toEqual([{ ...input, meta: { idempotencyKey: 'stable-home-key' } }]);

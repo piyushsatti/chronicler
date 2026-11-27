@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { CommandAuth } from '../../../api/command.js';
 import { useAuth } from '../../../auth/AuthContext.js';
+import { useCommandFence } from '../../../hooks/useFencedMutation.js';
 import { TransportError } from '../../../errors/types.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -42,6 +44,68 @@ export function suggestMapAddress(name: string): string {
 
 type SaveInput = { data: FormData; regionId?: string | null };
 type SaveResult = { atlasCode?: string; nodeId?: string; regionId?: string | null };
+
+async function runSave(
+  edit: MapEdit,
+  data: FormData,
+  regionId: string | null | undefined,
+  cmd: CommandAuth,
+): Promise<SaveResult> {
+  const text = (name: string) => String(data.get(name) ?? '').trim();
+  if (edit.kind === 'create') {
+    const created = await createMap(
+      {
+        name: text('name'),
+        atlasCode: text('atlasCode') || suggestMapAddress(text('name')),
+        family: text('family'),
+        grid: text('grid') === 'hex' ? 'hex' : 'point',
+        mapKind: 'pointcrawl',
+        regionId: text('regionId') || null,
+        assetPath: mapAssetHref(text('assetPath')),
+      },
+      cmd,
+    );
+    return { atlasCode: created.atlasCode, regionId };
+  }
+  if (edit.kind === 'map') {
+    await updateMap(
+      edit.map.id,
+      {
+        name: text('name'),
+        family: text('family'),
+        grid: text('grid') === 'hex' ? 'hex' : 'point',
+        assetPath: mapAssetHref(text('assetPath')),
+      },
+      cmd,
+    );
+    return { regionId };
+  }
+  if (edit.kind === 'node') {
+    const node = await saveNode(
+      edit.map.id,
+      {
+        id: edit.node?.id,
+        name: text('name'),
+        x: Number(text('x')),
+        y: Number(text('y')),
+        submapId: text('submapId') || null,
+      },
+      cmd,
+    );
+    return { nodeId: node.id, regionId };
+  }
+  await changeEntry(
+    {
+      mapId: edit.map.id,
+      nodeId: edit.node.id,
+      documentId: text('documentId'),
+      relation: 'location',
+    },
+    false,
+    cmd,
+  );
+  return { regionId };
+}
 
 export function useMapEdit({
   edit,
@@ -97,7 +161,7 @@ export function useMapEdit({
   const [search, setSearch] = useState('');
   const [offset, setOffset] = useState(0);
   const [busy, setBusy] = useState(false);
-  const replay = useRef({ payload: '', key: crypto.randomUUID() });
+  const fence = useCommandFence('map:session');
   const locations = useQuery({
     queryKey: queryKeys.mapLocations(search, offset),
     queryFn: async () => {
@@ -114,64 +178,14 @@ export function useMapEdit({
     mutationFn: async ({ data, regionId }: SaveInput): Promise<SaveResult> => {
       if (!isCurrent() || !current.current.admit(regionId))
         throw toAppError({ failure: 'Unauthorized' }, 'map:session');
-      const text = (name: string) => String(data.get(name) ?? '').trim();
-      const payload = JSON.stringify([...data.entries()]);
-      if (replay.current.payload !== payload)
-        replay.current = { payload, key: crypto.randomUUID() };
-      const key = replay.current.key;
-      if (edit.kind === 'create') {
-        const created = await createMap(
-          {
-            name: text('name'),
-            atlasCode: text('atlasCode') || suggestMapAddress(text('name')),
-            family: text('family'),
-            grid: text('grid') === 'hex' ? 'hex' : 'point',
-            mapKind: 'pointcrawl',
-            regionId: text('regionId') || null,
-            assetPath: mapAssetHref(text('assetPath')),
-          },
-          key,
-        );
-        return { atlasCode: created.atlasCode, regionId };
-      }
-      if (edit.kind === 'map') {
-        await updateMap(
-          edit.map.id,
-          {
-            name: text('name'),
-            family: text('family'),
-            grid: text('grid') === 'hex' ? 'hex' : 'point',
-            assetPath: mapAssetHref(text('assetPath')),
-          },
-          key,
-        );
-        return { regionId };
-      }
-      if (edit.kind === 'node') {
-        const node = await saveNode(
-          edit.map.id,
-          {
-            id: edit.node?.id,
-            name: text('name'),
-            x: Number(text('x')),
-            y: Number(text('y')),
-            submapId: text('submapId') || null,
-          },
-          key,
-        );
-        return { nodeId: node.id, regionId };
-      }
-      await changeEntry(
-        {
-          mapId: edit.map.id,
-          nodeId: edit.node.id,
-          documentId: text('documentId'),
-          relation: 'location',
-        },
-        false,
-        key,
+      // A retry of the same form entries reuses its idempotency key.
+      return fence.runExclusive((cmd) =>
+        runSave(edit, data, regionId, {
+          token: cmd.token,
+          idempotencyKey: cmd.keyFor(JSON.stringify([identity, ...data.entries()])),
+          signal: cmd.signal,
+        }),
       );
-      return { regionId };
     },
     onError: (cause, input) => {
       if (!isCurrent() || !current.current.admit(input.regionId)) return;

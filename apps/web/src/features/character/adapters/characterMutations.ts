@@ -1,3 +1,4 @@
+import { commandRequest, type CommandAuth } from '../../../api/command.js';
 import type {
   RetireCharacterMutation,
   SubmitForVerificationMutation,
@@ -16,14 +17,19 @@ import RETIRE from './retireCharacter.graphql?raw';
 export async function updateCharacterProfile(
   characterId: string,
   input: { description?: string | null; imageUrl?: string | null },
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ): Promise<void> {
+  const { meta, init } = commandRequest(cmd);
   try {
-    await graphqlRequest<UpdateCharacterProfileMutation>(UPDATE_PROFILE, {
-      characterId,
-      input,
-      meta: { idempotencyKey },
-    });
+    await graphqlRequest<UpdateCharacterProfileMutation>(
+      UPDATE_PROFILE,
+      {
+        characterId,
+        input,
+        meta,
+      },
+      init,
+    );
   } catch (err) {
     throw toAppError(err, 'character:profile:update');
   }
@@ -32,14 +38,19 @@ export async function updateCharacterProfile(
 export async function syncCharacterDdb(
   characterId: string,
   ddbUrl: string,
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ) {
+  const { meta, init } = commandRequest(cmd);
   try {
-    const data = await graphqlRequest<SyncCharacterDdbMutation>(SYNC_DDB, {
-      characterId,
-      ddbUrl,
-      meta: { idempotencyKey },
-    });
+    const data = await graphqlRequest<SyncCharacterDdbMutation>(
+      SYNC_DDB,
+      {
+        characterId,
+        ddbUrl,
+        meta,
+      },
+      init,
+    );
     return z
       .object({
         succeeded: z.boolean(),
@@ -62,14 +73,19 @@ export async function syncCharacterDdb(
 export async function submitCharacterForVerification(
   characterId: string,
   expectedUpdatedAt: string,
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ): Promise<void> {
+  const { meta, init } = commandRequest(cmd);
   try {
-    await graphqlRequest<SubmitForVerificationMutation>(SUBMIT_VERIFICATION, {
-      characterId,
-      expectedUpdatedAt,
-      meta: { idempotencyKey },
-    });
+    await graphqlRequest<SubmitForVerificationMutation>(
+      SUBMIT_VERIFICATION,
+      {
+        characterId,
+        expectedUpdatedAt,
+        meta,
+      },
+      init,
+    );
   } catch (err) {
     if (err instanceof TransportError && err.code === 'CONFLICT') {
       throw safeAppError(
@@ -85,14 +101,19 @@ export async function submitCharacterForVerification(
 export async function retireCharacter(
   characterId: string,
   expectedUpdatedAt: string,
-  idempotencyKey: string,
+  cmd: CommandAuth,
 ): Promise<void> {
+  const { meta, init } = commandRequest(cmd);
   try {
-    await graphqlRequest<RetireCharacterMutation>(RETIRE, {
-      characterId,
-      expectedUpdatedAt,
-      meta: { idempotencyKey },
-    });
+    await graphqlRequest<RetireCharacterMutation>(
+      RETIRE,
+      {
+        characterId,
+        expectedUpdatedAt,
+        meta,
+      },
+      init,
+    );
   } catch (err) {
     if (err instanceof TransportError && err.code === 'CONFLICT') {
       throw safeAppError(

@@ -8,6 +8,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { queryKeys } from '../../../api/queryKeys.js';
+import { useCommandFence } from '../../../hooks/useFencedMutation.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import {
@@ -15,18 +16,13 @@ import {
   loadCreationOptions,
   type NewCharacterFields,
 } from '../adapters/characterDirectoryAdapter.js';
+type Attempt = { input: NewCharacterFields; token: string | null; memberId: string };
 export function useCharacterCreation() {
   const { token, isCurrentSession } = useAuth();
   const me = useMe();
   const [regionId, setRegionId] = useState('');
   const busy = useRef(false);
-  const replay = useRef<{
-    payload: string;
-    key: string;
-    input: NewCharacterFields;
-    token: string | null;
-    memberId: string;
-  } | null>(null);
+  const fence = useCommandFence('character:session');
   const query = useQuery({
     queryKey: queryKeys.characterCreationOptions(regionId),
     queryFn: () => loadCreationOptions(regionId),
@@ -45,14 +41,19 @@ export function useCharacterCreation() {
     );
   };
   const create = useMutation({
-    mutationFn: (attempt: NonNullable<typeof replay.current>) => {
+    mutationFn: (attempt: Attempt) => {
       if (!current(attempt))
         throw toAppError({ failure: 'Unauthorized' }, 'character:session');
-      return createCharacter(attempt.input, attempt.key);
+      return fence.runExclusive((cmd) =>
+        createCharacter(attempt.input, {
+          token: cmd.token,
+          idempotencyKey: cmd.keyFor(JSON.stringify(attempt.input)),
+          signal: cmd.signal,
+        }),
+      );
     },
     onSuccess: async (character, attempt) => {
       if (!current(attempt)) return;
-      if (replay.current === attempt) replay.current = null;
       await client.invalidateQueries({ queryKey: queryKeys.charactersAll });
       if (!current(attempt)) return;
       navigate(`/characters/${character.shortCode}`);
@@ -64,11 +65,8 @@ export function useCharacterCreation() {
   const memberId = me.data?.id;
   const submit = (input: NewCharacterFields) => {
     if (!memberId || busy.current || !current({ token, memberId })) return;
-    const payload = JSON.stringify(input);
-    if (replay.current?.payload !== payload || replay.current.token !== token)
-      replay.current = { payload, key: crypto.randomUUID(), input, token, memberId };
     busy.current = true;
-    create.mutate(replay.current);
+    create.mutate({ input, token, memberId });
   };
   const active = current(create.variables);
   return {

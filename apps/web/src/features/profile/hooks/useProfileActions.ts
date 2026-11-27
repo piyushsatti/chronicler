@@ -4,6 +4,7 @@ import { queryKeys } from '../../../api/queryKeys.js';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
+import { useCommandFence } from '../../../hooks/useFencedMutation.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { loadMemberProfile } from '../../../adapters/memberProfileAdapter.js';
 import {
@@ -11,13 +12,15 @@ import {
   type ProfileCommand,
 } from '../adapters/profileMutations.js';
 type Session = { token: string | null; memberId: string };
-type Attempt = Session & { identity: string; key: string; command: ProfileCommand };
+type Attempt = Session & { identity: string; command: ProfileCommand };
 export function useProfileActions(handle: string) {
   const client = useQueryClient();
   const { token, isCurrentSession } = useAuth();
   const me = useMe();
   const busy = useRef(false);
   const authorityRefreshed = useRef(false);
+  const fence = useCommandFence('profile:session');
+  // The command a retry resends: submit keeps the revision first loaded.
   const replay = useRef<Attempt | null>(null);
   const [message, setMessage] = useState<(Session & { value: string }) | null>(null);
   const [reloadError, setReloadError] = useState<
@@ -42,7 +45,13 @@ export function useProfileActions(handle: string) {
     mutationFn: (attempt: Attempt) => {
       if (!current(attempt))
         throw toAppError({ failure: 'Unauthorized' }, 'profile:session');
-      return writeProfileCommand(attempt.command, attempt.key);
+      return fence.runExclusive((cmd) =>
+        writeProfileCommand(attempt.command, {
+          token: cmd.token,
+          idempotencyKey: cmd.keyFor(JSON.stringify(attempt.command)),
+          signal: cmd.signal,
+        }),
+      );
     },
     onMutate: (attempt) => {
       if (!current(attempt)) return;
@@ -51,7 +60,7 @@ export function useProfileActions(handle: string) {
     },
     onSuccess: async (value, attempt) => {
       if (!current(attempt)) return;
-      if (replay.current === attempt) replay.current = null;
+      if (replay.current?.identity === attempt.identity) replay.current = null;
       setMessage({ token: attempt.token, memberId: attempt.memberId, value });
       await refresh(attempt);
     },
@@ -76,10 +85,10 @@ export function useProfileActions(handle: string) {
     const identity = JSON.stringify(
       command.kind === 'submit' ? [command.kind, command.memberId] : command,
     );
-    if (replay.current?.identity !== identity || replay.current.token !== token)
-      replay.current = { ...session, identity, key: crypto.randomUUID(), command };
+    if (replay.current?.identity !== identity || replay.current.memberId !== memberId)
+      replay.current = { ...session, identity, command };
     busy.current = true;
-    mutation.mutate(replay.current);
+    mutation.mutate({ ...replay.current, token });
   };
   return {
     execute,

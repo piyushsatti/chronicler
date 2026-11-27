@@ -205,7 +205,7 @@ describe('Private notes on /me', () => {
         }),
       ),
     );
-    await expect(saveMyPrivateNotes('x', 'key-1')).rejects.toMatchObject({
+    await expect(saveMyPrivateNotes('x', { token: 'test-token', idempotencyKey: 'key-1' })).rejects.toMatchObject({
       kind: 'safe',
       userMessage: 'Notes can be at most 10,000 characters.',
     });

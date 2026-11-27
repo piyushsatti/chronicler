@@ -4,6 +4,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
+import type { CommandAuth } from '../api/command.js';
 import { queryKeys } from '../api/queryKeys.js';
 import { useAuth } from '../auth/AuthContext.js';
 import { currentAccessIdentity } from '../auth/useCurrentAccess.js';
@@ -11,11 +12,7 @@ import { toAppError } from '../errors/toAppError.js';
 import { TransportError, type AppError } from '../errors/types.js';
 import { useMe } from './useMe.js';
 
-export type FencedCommand = {
-  token: string;
-  idempotencyKey: string;
-  signal?: AbortSignal;
-};
+export type FencedCommand = CommandAuth;
 
 type Owner = {
   id: string;
@@ -205,5 +202,49 @@ export function useFencedMutation<TInput, TResult>(opts: {
     token: owner.token,
     runExclusive,
     assertCurrent,
+  };
+}
+
+/**
+ * The fence for hooks that keep their own mutation state: call runExclusive
+ * and take each payload's key from cmd.keyFor. Keys stay with the member
+ * across token refresh and drop on sign-out or member change (D52).
+ */
+export function useCommandFence(context: string, assert?: () => void) {
+  return useFencedMutation<never, never>({
+    context,
+    assert,
+    run: async () => {
+      throw toAppError(new TransportError('CONFLICT'), context);
+    },
+  });
+}
+
+/**
+ * The D52 key policy without the session fence: one key per payload, kept for
+ * the member across token refresh and dropped when the member changes. For a
+ * write that must survive a token refresh mid-flight (settings save).
+ */
+export function useMemberKeys(memberId: string | null): {
+  keyFor: (payload: string) => string;
+  release: (payload: string) => void;
+} {
+  const ref = useRef<{ memberId: string | null; keys: Map<string, string> }>({
+    memberId,
+    keys: new Map(),
+  });
+  if (ref.current.memberId !== memberId) ref.current = { memberId, keys: new Map() };
+  const owned = ref.current;
+  return {
+    keyFor: (payload) => {
+      const existing = owned.keys.get(payload);
+      if (existing) return existing;
+      const key = crypto.randomUUID();
+      owned.keys.set(payload, key);
+      return key;
+    },
+    release: (payload) => {
+      owned.keys.delete(payload);
+    },
   };
 }

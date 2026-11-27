@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { safeAppError } from '../../../errors/toAppError.js';
+import { newClientId } from '../../../utils/clientId.js';
 
 export type RegionDraft = {
   name: string;
@@ -48,7 +49,7 @@ export type CalendarPeriodDraft = {
   days: string;
 };
 export function newCalendarPeriodDraft(): CalendarPeriodDraft {
-  return { id: crypto.randomUUID(), name: '', type: 'month', days: '' };
+  return { id: newClientId(), name: '', type: 'month', days: '' };
 }
 export type CalendarForm = {
   eraName: string;

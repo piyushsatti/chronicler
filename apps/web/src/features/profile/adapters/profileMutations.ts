@@ -9,6 +9,7 @@ import type {
   ProfileUpdateMyDmProfileMutationVariables,
   ProfileSubmitDmProfileMutationVariables,
 } from '../../../api/graphql.operations.gen.js';
+import { commandRequest, type CommandAuth } from '../../../api/command.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { TransportError } from '../../../errors/types.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -54,10 +55,10 @@ const slotsReceipt = z.array(
 );
 export async function writeProfileCommand(
   command: ProfileCommand,
-  key: string,
+  cmd: CommandAuth,
 ): Promise<string> {
   try {
-    const meta = { idempotencyKey: key };
+    const { meta, init } = commandRequest(cmd);
     switch (command.kind) {
       case 'profile': {
         const variables: ProfileUpdateMyProfileMutationVariables = {
@@ -67,6 +68,7 @@ export async function writeProfileCommand(
         const data = await graphqlRequest<ProfileUpdateMyProfileMutation>(
           PROFILE,
           variables,
+          init,
         );
         memberReceipt.parse(data.updateMyProfile);
         return 'Profile saved.';
@@ -79,6 +81,7 @@ export async function writeProfileCommand(
         const data = await graphqlRequest<ProfileSetMyAvailabilityMutation>(
           AVAILABILITY,
           variables,
+          init,
         );
         slotsReceipt.parse(data.setMyAvailability);
         return 'Availability saved.';
@@ -91,6 +94,7 @@ export async function writeProfileCommand(
         const data = await graphqlRequest<ProfileUpdateMyDmProfileMutation>(
           DM,
           variables,
+          init,
         );
         dmReceipt.parse(data.updateMyDmProfile);
         return 'DM profile saved as draft. Submit it for review.';
@@ -103,6 +107,7 @@ export async function writeProfileCommand(
         const data = await graphqlRequest<ProfileSubmitDmProfileMutation>(
           SUBMIT,
           variables,
+          init,
         );
         dmReceipt.parse(data.submitDmProfileForVerification);
         return 'Submitted for verification.';

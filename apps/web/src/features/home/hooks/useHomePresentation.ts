@@ -4,6 +4,7 @@ import { queryKeys } from '../../../api/queryKeys.js';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { useToast } from '../../../hooks/useToast.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import { useCommandFence } from '../../../hooks/useFencedMutation.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import {
@@ -16,7 +17,7 @@ import {
 } from '../adapters/homeParticipationAdapter.js';
 import { useSiteStats } from './useSiteStats.js';
 
-type Attempt = { input: HomeWithdrawal; key: string; token: string | null };
+type Attempt = { input: HomeWithdrawal; token: string | null };
 
 export function useHomePresentation(quests: HomeQuestView[]) {
   const { timeZone } = useDateFormatter();
@@ -26,20 +27,23 @@ export function useHomePresentation(quests: HomeQuestView[]) {
   const { addToast } = useToast();
   const client = useQueryClient();
   const busy = useRef(false);
-  const keys = useRef<{ token: string | null; payloads: Map<string, string> }>({
-    token,
-    payloads: new Map(),
-  });
+  const fence = useCommandFence('home:session');
   const withdrawal = useMutation({
     mutationFn: async (attempt: Attempt) => {
       if (!sessionReady || !isCurrentSession(attempt.token))
         throw toAppError({ failure: 'Unauthorized' }, 'home:session');
-      await withdrawFromHomeQuest(attempt.input, attempt.key);
+      // A retry of the same withdrawal reuses its idempotency key.
+      await fence.runExclusive((cmd) =>
+        withdrawFromHomeQuest(attempt.input, {
+          token: cmd.token,
+          idempotencyKey: cmd.keyFor(JSON.stringify(attempt.input)),
+          signal: cmd.signal,
+        }),
+      );
     },
     retry: false,
     onSuccess: async (_result, attempt) => {
       if (!isCurrentSession(attempt.token)) return;
-      keys.current.payloads.delete(JSON.stringify(attempt.input));
       addToast('Your character has withdrawn.', 'success');
       await Promise.all(
         [
@@ -65,12 +69,8 @@ export function useHomePresentation(quests: HomeQuestView[]) {
   async function withdraw(input: HomeWithdrawal) {
     if (busy.current || !memberId || !sessionReady || !isCurrentSession(token)) return;
     busy.current = true;
-    if (keys.current.token !== token) keys.current = { token, payloads: new Map() };
-    const signature = JSON.stringify(input);
-    const key = keys.current.payloads.get(signature) ?? crypto.randomUUID();
-    keys.current.payloads.set(signature, key);
     try {
-      await withdrawal.mutateAsync({ input, key, token });
+      await withdrawal.mutateAsync({ input, token });
     } catch {
       /* The mutation reports a session-scoped error and retains the replay key. */
     } finally {
