@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useBlocker, useNavigate } from 'react-router-dom';
 import { safeAppError, toAppError } from '../../../errors/toAppError.js';
 import { TransportError, type AppError } from '../../../errors/types.js';
+import { useMemberKeys } from '../../../hooks/useFencedMutation.js';
 import type { EditorLoadResult } from '../adapters/editorLoad.js';
 import {
   changeDocumentLifecycle,
@@ -259,6 +260,7 @@ export function useEditorWorkspace({
     category,
     admit,
     scopeKey: `${actorId ?? 'anonymous'}:${typeKey}:${initial.recordId}`,
+    memberId: actorId ?? null,
     onInvalidTitle: showErrorsAndFocus,
     onSuccess: (result, published) => {
       if (!sessionIsCurrent()) return;
@@ -273,7 +275,8 @@ export function useEditorWorkspace({
       else void onReloadRef.current();
     },
   });
-  const lifecycleKeys = useRef(new Map<string, string>());
+  // Keyed per member (D52); the version in the fingerprint changes after a success.
+  const lifecycleKeys = useMemberKeys(actorId ?? null);
   const lifecycle = useMutation({
     mutationFn: async (command: LifecycleAction) => {
       if (
@@ -296,11 +299,7 @@ export function useEditorWorkspace({
         initial.documentVersion,
         command,
       ]);
-      let idempotencyKey = lifecycleKeys.current.get(fingerprint);
-      if (!idempotencyKey) {
-        idempotencyKey = crypto.randomUUID();
-        lifecycleKeys.current.set(fingerprint, idempotencyKey);
-      }
+      const idempotencyKey = lifecycleKeys.keyFor(fingerprint);
       await changeDocumentLifecycle(
         initial.documentId,
         initial.documentVersion,

@@ -20,7 +20,7 @@ Pattern: idempotency key, scoped per actor. The client follows the scope the API
 
 Decided by the lead agent under the owner's 2026-11-14 delegation. The owner confirmed it on 2026-11-27 after a review of the IETF Idempotency-Key draft, Stripe and AWS practice (reuse the key on retry, scope it to the caller, reject a reused key with a different payload): "If that's how standards and systems have defined this, please let's do that."
 
-Web writes take their key from `useFencedMutation` (`useCommandFence` for hooks that keep their own mutation state, `useMemberKeys` for the settings save, which must survive a token refresh mid-flight). The editor writes are still moving onto it. Client-only ids that are never sent as keys come from `newClientId()` in `src/utils/clientId.ts`.
+Web writes take their key from `useFencedMutation` (`useCommandFence` for hooks that keep their own mutation state; `useMemberKeys` for the settings save, which must survive a token refresh mid-flight, and for the editor, whose multi-step save retires each step's key on its own). Client-only ids that are never sent as keys come from `newClientId()` in `src/utils/clientId.ts`.
 
 ## Alternatives rejected
 

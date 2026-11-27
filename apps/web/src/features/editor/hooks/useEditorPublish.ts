@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { safeAppError } from '../../../errors/toAppError.js';
+import { useMemberKeys } from '../../../hooks/useFencedMutation.js';
 import { documentHref } from '../../../utils/documentHref.js';
 import {
   createDocument,
@@ -78,6 +79,7 @@ export function useEditorPublish({
   category,
   admit = () => true,
   scopeKey = initial.recordId,
+  memberId = null,
   onInvalidTitle,
   onSuccess,
 }: {
@@ -89,6 +91,8 @@ export function useEditorPublish({
   category?: string;
   admit?: () => boolean;
   scopeKey?: string;
+  /** The signed-in member; replay keys are dropped when it changes (D52). */
+  memberId?: string | null;
   onInvalidTitle: () => void;
   onSuccess: (result: EditorPublishResult, publish?: boolean) => void;
 }) {
@@ -106,19 +110,14 @@ export function useEditorPublish({
   const writing = useRef(false);
   const currentAdmission = useRef({ admit, scopeKey });
   currentAdmission.current = { admit, scopeKey };
-  const replayKeys = useRef(new Map<string, string>());
-  const replayKey = (operation: string, input: unknown) => {
-    const fingerprint = JSON.stringify([operation, scopeKey, input]);
-    let key = replayKeys.current.get(fingerprint);
-    if (!key) {
-      key = crypto.randomUUID();
-      replayKeys.current.set(fingerprint, key);
-    }
-    return key;
-  };
+  // Keys stay with the member across a token refresh and drop when the member
+  // changes (D52). Each step of a save has its own key.
+  const replayKeys = useMemberKeys(memberId);
+  const replayKey = (operation: string, input: unknown) =>
+    replayKeys.keyFor(JSON.stringify([operation, scopeKey, input]));
   // A succeeded request's key is retired so a later return to the same input writes again.
   const retireReplayKey = (operation: string, input: unknown) => {
-    replayKeys.current.delete(JSON.stringify([operation, scopeKey, input]));
+    replayKeys.release(JSON.stringify([operation, scopeKey, input]));
   };
   // Places the server acknowledged for the loaded quest, which may differ from `initial`
   // when the quest update after them failed.

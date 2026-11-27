@@ -157,19 +157,6 @@
     }
   ],
   "pageLayoutPendingMigration": [],
-  "idempotencyKeyOrigin": [
-    {
-      "file": "src/features/editor/hooks/useEditorPublish.ts",
-      "rule": "idempotency-key-origin",
-      "value": "crypto.randomUUID",
-      "seenAtLine": 121
-    },
-    {
-      "file": "src/features/editor/hooks/useEditorWorkspace.ts",
-      "rule": "idempotency-key-origin",
-      "value": "crypto.randomUUID",
-      "seenAtLine": 307
-    }
-  ],
+  "idempotencyKeyOrigin": [],
   "queryKeyOrigin": []
 }
