@@ -4,6 +4,7 @@ import { queryKeys } from '../../../api/queryKeys.js';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { currentAccessIdentity } from '../../../auth/useCurrentAccess.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import { useCommandFence } from '../../../hooks/useFencedMutation.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { markNotificationsRead } from '../adapters/notificationsAdapter.js';
 
@@ -16,7 +17,6 @@ type ReadOwner = {
   generation: number;
   controller: AbortController | null;
   ids: Map<string, ReadState>;
-  attempts: Map<string, string>;
 };
 
 export function useMarkNotificationsRead() {
@@ -33,10 +33,14 @@ export function useMarkNotificationsRead() {
       generation: 0,
       controller: null,
       ids: new Map(),
-      attempts: new Map(),
     }),
     [token, authority],
   );
+  // Batch keys live in the fence: kept for the member across a token refresh,
+  // dropped on sign-out or a member change (D52).
+  const fence = useCommandFence('notifications:mark-read');
+  const fenceRef = useRef(fence);
+  fenceRef.current = fence;
   const current = useRef(owner);
   current.current = owner;
   const [, refresh] = useState(0);
@@ -84,7 +88,6 @@ export function useMarkNotificationsRead() {
       owner.generation += 1;
       owner.controller?.abort();
       owner.ids.clear();
-      owner.attempts.clear();
       unsubscribe();
     };
   }, [owner, stop]);
@@ -97,22 +100,16 @@ export function useMarkNotificationsRead() {
       owner: ReadOwner;
       generation: number;
       ids: string[];
-      signal: AbortSignal;
-      idempotencyKey: string;
+      cmd: { token: string; idempotencyKey: string; signal: AbortSignal };
     }) => {
       if (
         !isCurrentOwner(request.owner) ||
         request.owner.generation !== request.generation ||
-        request.signal.aborted ||
-        !request.owner.token
+        request.cmd.signal.aborted
       ) {
         throw toAppError({ failure: 'Unauthorized' }, 'notifications:mark-read');
       }
-      await markNotificationsRead(request.ids, {
-        token: request.owner.token,
-        signal: request.signal,
-        idempotencyKey: request.idempotencyKey,
-      });
+      await markNotificationsRead(request.ids, request.cmd);
     },
   });
 
@@ -136,17 +133,19 @@ export function useMarkNotificationsRead() {
           const controller = new AbortController();
           candidate.controller = controller;
           const identity = JSON.stringify(ids);
-          const idempotencyKey =
-            candidate.attempts.get(identity) ?? crypto.randomUUID();
-          candidate.attempts.set(identity, idempotencyKey);
           try {
-            await mutateAsync({
-              owner: candidate,
-              generation,
-              ids,
-              signal: controller.signal,
-              idempotencyKey,
-            });
+            await fenceRef.current.runExclusive((cmd) =>
+              mutateAsync({
+                owner: candidate,
+                generation,
+                ids,
+                cmd: {
+                  token: cmd.token,
+                  idempotencyKey: cmd.keyFor(identity),
+                  signal: controller.signal,
+                },
+              }),
+            );
           } catch {
             if (!isCurrentOwner(candidate) || candidate.generation !== generation)
               break;

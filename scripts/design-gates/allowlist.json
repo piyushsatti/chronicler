@@ -169,18 +169,6 @@
       "rule": "idempotency-key-origin",
       "value": "crypto.randomUUID",
       "seenAtLine": 307
-    },
-    {
-      "file": "src/features/notifications/hooks/useLoginNotifications.ts",
-      "rule": "idempotency-key-origin",
-      "value": "crypto.randomUUID",
-      "seenAtLine": 117
-    },
-    {
-      "file": "src/features/notifications/hooks/useMarkNotificationsRead.ts",
-      "rule": "idempotency-key-origin",
-      "value": "crypto.randomUUID",
-      "seenAtLine": 140
     }
   ],
   "queryKeyOrigin": []

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import { useCommandFence } from '../../../hooks/useFencedMutation.js';
 import { pluralize } from '../../../utils/format.js';
 import {
   acknowledgeSuppressedNotifications,
@@ -15,9 +16,11 @@ import {
 
 type Acknowledgement = {
   session: NotificationSession;
-  key: string;
   controller: AbortController;
 };
+
+// One payload: a retry of the clear reuses its key until it succeeds (D52).
+const ACK_PAYLOAD = 'acknowledgeSuppressed';
 
 export function useLoginNotifications(enabled: boolean) {
   const client = useQueryClient();
@@ -38,6 +41,7 @@ export function useLoginNotifications(enabled: boolean) {
     enabled: enabled && session !== null,
     retry: false,
   });
+  const fence = useCommandFence('notifications:session');
   const attempt = useRef<Acknowledgement | null>(null);
   const busy = useRef(false);
   const [feedback, setFeedback] = useState<{
@@ -49,11 +53,13 @@ export function useLoginNotifications(enabled: boolean) {
     networkMode: 'always',
     mutationFn: async (request: Acknowledgement) => {
       requireCurrent(request.session);
-      const receipt = await acknowledgeSuppressedNotifications({
-        token: request.session.token,
-        signal: request.controller.signal,
-        idempotencyKey: request.key,
-      });
+      const receipt = await fence.runExclusive((cmd) =>
+        acknowledgeSuppressedNotifications({
+          token: cmd.token,
+          signal: request.controller.signal,
+          idempotencyKey: cmd.keyFor(ACK_PAYLOAD),
+        }),
+      );
       requireCurrent(request.session);
       return receipt;
     },
@@ -109,14 +115,7 @@ export function useLoginNotifications(enabled: boolean) {
       feedback: feedback && isCurrent(feedback.session) ? feedback.message : null,
       mutate: () => {
         if (!session || busy.current || !isCurrent(session) || !enabled) return;
-        const next = {
-          session,
-          key:
-            attempt.current?.session === session
-              ? attempt.current.key
-              : crypto.randomUUID(),
-          controller: new AbortController(),
-        };
+        const next = { session, controller: new AbortController() };
         attempt.current = next;
         busy.current = true;
         setFeedback(null);
